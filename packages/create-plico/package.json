@@ -19,6 +19,7 @@
   },
   "files": ["dist"],
   "dependencies": {
+    "@clack/prompts": "^1.6.0",
     "@plico/core": "workspace:*"
   },
   "scripts": {
