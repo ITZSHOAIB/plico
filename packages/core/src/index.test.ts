@@ -110,6 +110,29 @@ describe("validateProject", () => {
     );
   });
 
+  it("rejects a config that throws during load", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-core-"));
+    await writeValidProject(root, {
+      configBody: [
+        'throw new Error("boom");',
+        "",
+      ].join("\n"),
+    });
+
+    const result = await validateProject(root);
+
+    expect(result.ok).toBe(false);
+    expect(result.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          path: "plico.config.ts",
+          message: expect.stringContaining("Failed to execute plico.config.ts: boom"),
+          severity: "error",
+        }),
+      ]),
+    );
+  });
+
   it("accepts a valid internal-ops project", async () => {
     const root = await mkdtemp(join(tmpdir(), "plico-core-"));
     await writeValidProject(root);
@@ -169,6 +192,46 @@ describe("validateProject", () => {
         expect.objectContaining({
           path: "plico.config.ts",
           message: "Missing required field: name",
+          severity: "error",
+        }),
+      ]),
+    );
+  });
+
+  it("rejects configs with wrong field types", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-core-"));
+    await mkdir(join(root, "skills"), { recursive: true });
+    await mkdir(join(root, "tools"), { recursive: true });
+    await mkdir(join(root, "evals"), { recursive: true });
+    await mkdir(join(root, "artifacts"), { recursive: true });
+    await mkdir(join(root, "memory"), { recursive: true });
+
+    await writeFile(
+      join(root, "plico.config.ts"),
+      [
+        "export default {",
+        '  schemaVersion: "1",',
+        "  name: 123,",
+        "} as const;",
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+    await writeFile(join(root, "agent.md"), "# Agent", "utf8");
+
+    const result = await validateProject(root);
+
+    expect(result.ok).toBe(false);
+    expect(result.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          path: "plico.config.ts",
+          message: "Expected schemaVersion to be an integer",
+          severity: "error",
+        }),
+        expect.objectContaining({
+          path: "plico.config.ts",
+          message: "Expected name to be a string",
           severity: "error",
         }),
       ]),
