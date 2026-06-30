@@ -1,7 +1,6 @@
 import { readFile, stat } from "node:fs/promises";
+import { createRequire } from "node:module";
 import { join } from "node:path";
-import { pathToFileURL } from "node:url";
-import { tsImport } from "tsx/esm/api";
 
 export type ValidationSeverity = "error" | "warning";
 
@@ -162,7 +161,7 @@ async function readProjectConfig(configPath: string): Promise<ProjectConfig> {
 
   let configModule: unknown;
   try {
-    configModule = await tsImport(pathToFileURL(configPath).href, import.meta.url);
+    configModule = await importTranspiledProjectConfig(configPath);
   } catch (error) {
     throw new ProjectConfigError(configPath, [
       {
@@ -177,6 +176,27 @@ async function readProjectConfig(configPath: string): Promise<ProjectConfig> {
   return normalizeProjectConfig(exportedConfig, configPath);
 }
 
+async function importTranspiledProjectConfig(configPath: string): Promise<unknown> {
+  const source = await readFile(configPath, "utf8");
+  const { transpileModule, ModuleKind, ScriptTarget } = getTypeScript();
+  const transpiled = transpileModule(source, {
+    compilerOptions: {
+      module: ModuleKind.ESNext,
+      target: ScriptTarget.ES2022,
+      verbatimModuleSyntax: true,
+    },
+    fileName: configPath,
+  });
+
+  const encoded = Buffer.from(transpiled.outputText, "utf8").toString("base64");
+  const moduleUrl = `data:text/javascript;base64,${encoded}`;
+  return import(moduleUrl);
+}
+
+function getTypeScript(): typeof import("typescript") {
+  return createRequire(import.meta.url)("typescript") as typeof import("typescript");
+}
+
 function readDefaultExport(configModule: unknown, configPath: string): unknown {
   if (!isRecord(configModule) || !Object.hasOwn(configModule, "default")) {
     throw new ProjectConfigError(configPath, [
@@ -188,17 +208,7 @@ function readDefaultExport(configModule: unknown, configPath: string): unknown {
     ]);
   }
 
-  if (!isRecord(configModule.default) || !Object.hasOwn(configModule.default, "default")) {
-    throw new ProjectConfigError(configPath, [
-      {
-        path: CONFIG_FILENAME,
-        message: `Missing default export in ${CONFIG_FILENAME}`,
-        severity: "error",
-      },
-    ]);
-  }
-
-  return unwrapDefaultExport(configModule.default.default);
+  return unwrapDefaultExport(configModule.default);
 }
 
 function normalizeProjectConfig(value: unknown, configPath: string): ProjectConfig {
