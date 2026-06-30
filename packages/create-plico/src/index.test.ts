@@ -15,6 +15,8 @@ describe("createInternalOpsScaffold", () => {
     const configText = await readFile(join(root, "plico.config.ts"), "utf8");
 
     expect(result.ok).toBe(true);
+    expect(result.errors).toHaveLength(0);
+    expect(result.warnings).toHaveLength(0);
     expect(configText).toContain('template: "internal-ops"');
     expect(await readFile(join(root, "skills", "triage.md"), "utf8")).toContain("Triage");
   });

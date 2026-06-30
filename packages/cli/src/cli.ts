@@ -14,12 +14,19 @@ export async function main(argv: string[]): Promise<number> {
     }
 
     if (result.ok) {
+      for (const warning of result.warnings) {
+        console.warn(`${warning.path}: ${warning.message}`);
+      }
       console.log(`Valid Plico project: ${target}`);
       return 0;
     }
 
-    for (const issue of result.issues) {
-      console.error(`${issue.path}: ${issue.message}`);
+    for (const error of result.errors) {
+      console.error(`${error.path}: ${error.message}`);
+    }
+
+    for (const warning of result.warnings) {
+      console.warn(`${warning.path}: ${warning.message}`);
     }
 
     return 1;
