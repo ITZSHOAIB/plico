@@ -1,7 +1,7 @@
 import { basename } from "node:path";
+import { pathToFileURL } from "node:url";
 import { createInternalOpsScaffold } from "./index.js";
 import { defaultScaffoldPrompts, type ScaffoldPrompts } from "./prompts.js";
-import { pathToFileURL } from "node:url";
 
 function deriveProjectName(targetDir: string): string {
   const baseName = basename(targetDir).trim();

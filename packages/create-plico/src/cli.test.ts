@@ -26,10 +26,7 @@ describe("create-plico main", () => {
     const prompts: ScaffoldPrompts = {
       intro: vi.fn(),
       outro: vi.fn(),
-      text: vi
-        .fn()
-        .mockResolvedValueOnce(root)
-        .mockResolvedValueOnce("My Project"),
+      text: vi.fn().mockResolvedValueOnce(root).mockResolvedValueOnce("My Project"),
       spinner: () => ({ start, stop }),
       cancel: vi.fn(),
       isCancel: (value): value is symbol => typeof value === "symbol",

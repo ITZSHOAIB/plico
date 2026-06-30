@@ -1,13 +1,10 @@
-import { mkdtemp, mkdir, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { loadProject, validateProject } from "./index.js";
 
-async function writeValidProject(
-  root: string,
-  options: { configBody?: string } = {},
-) {
+async function writeValidProject(root: string, options: { configBody?: string } = {}) {
   await mkdir(join(root, "skills"), { recursive: true });
   await mkdir(join(root, "tools"), { recursive: true });
   await mkdir(join(root, "evals"), { recursive: true });
@@ -16,14 +13,15 @@ async function writeValidProject(
 
   await writeFile(
     join(root, "plico.config.ts"),
-    options.configBody ?? [
-      "export default {",
-      "  schemaVersion: 1,",
-      '  name: "Internal Ops Agent",',
-      '  template: "internal-ops",',
-      "} as const;",
-      "",
-    ].join("\n"),
+    options.configBody ??
+      [
+        "export default {",
+        "  schemaVersion: 1,",
+        '  name: "Internal Ops Agent",',
+        '  template: "internal-ops",',
+        "} as const;",
+        "",
+      ].join("\n"),
     "utf8",
   );
 
@@ -67,7 +65,7 @@ describe("validateProject", () => {
     const root = await mkdtemp(join(tmpdir(), "plico-core-"));
     await writeValidProject(root, {
       configBody: [
-        'export const schemaVersion = 1;',
+        "export const schemaVersion = 1;",
         'export const name = "Internal Ops Agent";',
         "",
       ].join("\n"),
@@ -90,10 +88,7 @@ describe("validateProject", () => {
   it("rejects a malformed default export", async () => {
     const root = await mkdtemp(join(tmpdir(), "plico-core-"));
     await writeValidProject(root, {
-      configBody: [
-        'export default "nope";',
-        "",
-      ].join("\n"),
+      configBody: ['export default "nope";', ""].join("\n"),
     });
 
     const result = await validateProject(root);
@@ -113,10 +108,7 @@ describe("validateProject", () => {
   it("rejects a config that throws during load", async () => {
     const root = await mkdtemp(join(tmpdir(), "plico-core-"));
     await writeValidProject(root, {
-      configBody: [
-        'throw new Error("boom");',
-        "",
-      ].join("\n"),
+      configBody: ['throw new Error("boom");', ""].join("\n"),
     });
 
     const result = await validateProject(root);
@@ -208,13 +200,7 @@ describe("validateProject", () => {
 
     await writeFile(
       join(root, "plico.config.ts"),
-      [
-        "export default {",
-        '  schemaVersion: "1",',
-        "  name: 123,",
-        "} as const;",
-        "",
-      ].join("\n"),
+      ["export default {", '  schemaVersion: "1",', "  name: 123,", "} as const;", ""].join("\n"),
       "utf8",
     );
     await writeFile(join(root, "agent.md"), "# Agent", "utf8");
@@ -318,11 +304,7 @@ describe("validateProject", () => {
         "",
       ].join("\n"),
     });
-    await writeFile(
-      join(root, "agent.md"),
-      "# Agent\n\nFollow the project instructions.",
-      "utf8",
-    );
+    await writeFile(join(root, "agent.md"), "# Agent\n\nFollow the project instructions.", "utf8");
 
     const result = await validateProject(root);
 
@@ -358,13 +340,7 @@ describe("validateProject", () => {
 
     expect(result.ok).toBe(false);
     expect(result.issues.map((issue) => issue.path)).toEqual(
-      expect.arrayContaining([
-        "skills",
-        "tools",
-        "evals",
-        "artifacts",
-        "memory",
-      ]),
+      expect.arrayContaining(["skills", "tools", "evals", "artifacts", "memory"]),
     );
   });
 

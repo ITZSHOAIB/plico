@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
@@ -91,7 +91,9 @@ describe("main", () => {
     const exitCode = await main(["node", "plico", "validate", root]);
 
     expect(exitCode).toBe(1);
-    expect(errorSpy).toHaveBeenCalledWith("plico.config.ts: Missing required file: plico.config.ts");
+    expect(errorSpy).toHaveBeenCalledWith(
+      "plico.config.ts: Missing required file: plico.config.ts",
+    );
     expect(warnSpy).not.toHaveBeenCalled();
     expect(logSpy).not.toHaveBeenCalledWith(expect.stringContaining("Valid Plico project"));
 
