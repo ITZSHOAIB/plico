@@ -21,7 +21,8 @@
     "dist"
   ],
   "dependencies": {
-    "@plico/core": "workspace:*"
+    "@plico/core": "workspace:*",
+    "@plico/runtime": "workspace:*"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",

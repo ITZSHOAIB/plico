@@ -2,6 +2,7 @@ import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { validateProject } from "@plico/core";
+import { runProject } from "@plico/runtime";
 import { describe, expect, it } from "vitest";
 import { createInternalOpsScaffold } from "./index.js";
 
@@ -42,5 +43,23 @@ describe("createInternalOpsScaffold", () => {
     await expect(createInternalOpsScaffold({ targetDir: join(root, "existing") })).rejects.toThrow(
       "Target directory is not empty",
     );
+  });
+
+  it("completes a default dry run for a generated scaffold", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-create-"));
+
+    await createInternalOpsScaffold({ targetDir: root });
+
+    const result = await runProject(root);
+
+    expect(result.status).toBe("completed");
+    expect(result.output).toBe("Dry run complete for Internal Ops Agent.");
+    expect(result.events.map((event) => event.type)).toEqual([
+      "run.started",
+      "instructions.composed",
+      "tools.discovered",
+      "assistant.output",
+      "run.completed",
+    ]);
   });
 });

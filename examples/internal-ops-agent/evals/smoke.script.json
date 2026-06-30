@@ -1,0 +1,13 @@
+[
+  {
+    "type": "assistant.output",
+    "content": "I will create the ticket."
+  },
+  {
+    "type": "tool.call",
+    "toolName": "create_ticket",
+    "arguments": {
+      "title": "VPN down"
+    }
+  }
+]

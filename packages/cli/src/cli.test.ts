@@ -154,4 +154,208 @@ describe("main", () => {
     errorSpy.mockRestore();
     warnSpy.mockRestore();
   });
+
+  it("runs a dry runtime for a valid project", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-cli-"));
+    await writeValidProject(root);
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    const exitCode = await main(["node", "plico", "run", "--dry", root]);
+
+    expect(exitCode).toBe(0);
+    expect(errorSpy).not.toHaveBeenCalled();
+    expect(logSpy.mock.calls.map(([line]) => String(line))).toEqual([
+      `Running dry runtime for ${root}`,
+      "run.started: Internal Ops Agent",
+      "instructions.composed: 1 source(s)",
+      "tools.discovered: 0 tool(s)",
+      "assistant.output: Dry run complete for Internal Ops Agent.",
+      "run.completed: completed",
+    ]);
+
+    logSpy.mockRestore();
+    errorSpy.mockRestore();
+  });
+
+  it("emits JSON for dry run --json", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-cli-"));
+    await writeValidProject(root);
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    const exitCode = await main(["node", "plico", "run", "--dry", "--json", root]);
+
+    expect(exitCode).toBe(0);
+    expect(errorSpy).not.toHaveBeenCalled();
+    expect(logSpy).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(String(logSpy.mock.calls[0]?.[0]))).toMatchObject({
+      runId: "run-0001",
+      status: "completed",
+      output: "Dry run complete for Internal Ops Agent.",
+      events: expect.arrayContaining([
+        expect.objectContaining({
+          type: "run.started",
+        }),
+        expect.objectContaining({
+          type: "instructions.composed",
+        }),
+        expect.objectContaining({
+          type: "tools.discovered",
+        }),
+        expect.objectContaining({
+          type: "assistant.output",
+        }),
+        expect.objectContaining({
+          type: "run.completed",
+        }),
+      ]),
+    });
+
+    logSpy.mockRestore();
+    errorSpy.mockRestore();
+  });
+
+  it("runs a scripted dry runtime from a JSON file", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-cli-"));
+    await writeValidProject(root);
+    await writeFile(
+      join(root, "tools", "create-ticket.tool.ts"),
+      [
+        "export default {",
+        '  name: "create_ticket",',
+        '  description: "Create an internal support ticket.",',
+        '  inputSchema: { type: "object", properties: { title: { type: "string" } }, required: ["title"], additionalProperties: false },',
+        '  capabilities: ["ticket:write"],',
+        "  approval: { required: false },",
+        '  handler: async (input) => ({ ticketId: "TCK-" + input.title.length }),',
+        "} as const;",
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+
+    const scriptPath = join(root, "dry-run.script.json");
+    await writeFile(
+      scriptPath,
+      JSON.stringify(
+        [
+          { type: "assistant.output", content: "I will create the ticket." },
+          { type: "tool.call", toolName: "create_ticket", arguments: { title: "VPN down" } },
+        ],
+        null,
+        2,
+      ),
+      "utf8",
+    );
+
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    const exitCode = await main(["node", "plico", "run", "--dry", "--script", scriptPath, root]);
+
+    expect(exitCode).toBe(0);
+    expect(errorSpy).not.toHaveBeenCalled();
+    expect(logSpy.mock.calls.map(([line]) => String(line))).toEqual([
+      `Running dry runtime for ${root}`,
+      "run.started: Internal Ops Agent",
+      "instructions.composed: 1 source(s)",
+      "tools.discovered: 1 tool(s)",
+      "assistant.output: I will create the ticket.",
+      "tool.call: create_ticket",
+      "tool.result: create_ticket",
+      "run.completed: completed",
+    ]);
+
+    logSpy.mockRestore();
+    errorSpy.mockRestore();
+  });
+
+  it("reports validation diagnostics for invalid dry runs", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-cli-"));
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    const exitCode = await main(["node", "plico", "run", "--dry", root]);
+
+    expect(exitCode).toBe(1);
+    expect(logSpy).not.toHaveBeenCalledWith(expect.stringContaining("run.started"));
+    expect(errorSpy).toHaveBeenCalledWith(
+      "plico.config.ts: Missing required file: plico.config.ts",
+    );
+
+    logSpy.mockRestore();
+    errorSpy.mockRestore();
+  });
+
+  it("reports approval-blocked dry runs as failures", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-cli-"));
+    await writeValidProject(root);
+    await writeFile(
+      join(root, "tools", "delete-ticket.tool.ts"),
+      [
+        "export default {",
+        '  name: "delete_ticket",',
+        '  description: "Delete an internal support ticket.",',
+        '  inputSchema: { type: "object", properties: { ticketId: { type: "string" } }, required: ["ticketId"], additionalProperties: false },',
+        '  capabilities: ["ticket:delete"],',
+        '  approval: { required: true, reason: "Deletes support records." },',
+        "  handler: async () => ({ ok: true }),",
+        "} as const;",
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+    const scriptPath = join(root, "blocked.script.json");
+    await writeFile(
+      scriptPath,
+      JSON.stringify(
+        [{ type: "tool.call", toolName: "delete_ticket", arguments: { ticketId: "TCK-1" } }],
+        null,
+        2,
+      ),
+      "utf8",
+    );
+
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    const exitCode = await main(["node", "plico", "run", "--dry", "--script", scriptPath, root]);
+
+    expect(exitCode).toBe(1);
+    expect(errorSpy.mock.calls.map(([line]) => String(line))).toEqual([
+      `Running dry runtime for ${root}`,
+      "run.started: Internal Ops Agent",
+      "instructions.composed: 1 source(s)",
+      "tools.discovered: 1 tool(s)",
+      "tool.call: delete_ticket",
+      "approval.required: delete_ticket",
+      "run.blocked: approval required",
+      "Dry run blocked.",
+    ]);
+    expect(logSpy).not.toHaveBeenCalledWith(expect.stringContaining("run.completed"));
+
+    logSpy.mockRestore();
+    errorSpy.mockRestore();
+  });
+
+  it("reports malformed dry-run scripts as actionable failures", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-cli-"));
+    await writeValidProject(root);
+    const scriptPath = join(root, "broken.script.json");
+    await writeFile(scriptPath, "{ not json", "utf8");
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    const exitCode = await main(["node", "plico", "run", "--dry", "--script", scriptPath, root]);
+
+    expect(exitCode).toBe(1);
+    expect(logSpy).not.toHaveBeenCalledWith(expect.stringContaining("run.started"));
+    expect(errorSpy).toHaveBeenCalledWith(
+      expect.stringContaining(`Unable to parse dry run script ${scriptPath}`),
+    );
+
+    logSpy.mockRestore();
+    errorSpy.mockRestore();
+  });
 });
