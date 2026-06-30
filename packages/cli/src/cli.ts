@@ -1,5 +1,5 @@
-import { validateProject } from "@plico/core";
 import { pathToFileURL } from "node:url";
+import { validateProject } from "@plico/core";
 
 export async function main(argv: string[]): Promise<number> {
   const command = argv[2] ?? "help";

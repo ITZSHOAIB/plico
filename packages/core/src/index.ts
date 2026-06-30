@@ -203,10 +203,7 @@ function readDefaultExport(configModule: unknown, configPath: string): unknown {
   return unwrapDefaultExport(configModule.default.default);
 }
 
-function normalizeProjectConfig(
-  value: unknown,
-  configPath: string,
-): ProjectConfig {
+function normalizeProjectConfig(value: unknown, configPath: string): ProjectConfig {
   const issues = validateProjectConfigShape(value);
 
   if (issues.length > 0) {

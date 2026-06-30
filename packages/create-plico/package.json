@@ -17,7 +17,9 @@
       "default": "./dist/cli.js"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "dependencies": {
     "@clack/prompts": "^1.6.0",
     "@plico/core": "workspace:*"

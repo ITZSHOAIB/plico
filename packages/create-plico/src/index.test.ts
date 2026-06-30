@@ -1,9 +1,9 @@
-import { mkdtemp, mkdir, writeFile, readFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { validateProject } from "@plico/core";
 import { describe, expect, it } from "vitest";
 import { createInternalOpsScaffold } from "./index.js";
-import { validateProject } from "@plico/core";
 
 describe("createInternalOpsScaffold", () => {
   it("creates a valid internal-ops scaffold", async () => {
@@ -18,12 +18,20 @@ describe("createInternalOpsScaffold", () => {
     expect(result.errors).toHaveLength(0);
     expect(result.warnings).toHaveLength(0);
     expect(configText).toContain('template: "internal-ops"');
-    expect(await readFile(join(root, "skills", "triage.md"), "utf8")).toContain("smallest safe next step");
+    expect(await readFile(join(root, "skills", "triage.md"), "utf8")).toContain(
+      "smallest safe next step",
+    );
     expect(await readFile(join(root, "tools", "readme.md"), "utf8")).toContain("file-first");
     expect(await readFile(join(root, "evals", "smoke.md"), "utf8")).toContain("validates");
-    expect(await readFile(join(root, "memory", "README.md"), "utf8")).toContain("durable project notes");
-    expect(await readFile(join(root, "artifacts", "README.md"), "utf8")).toContain("generated outputs");
-    expect(await readFile(join(root, "README.md"), "utf8")).toContain("Canonical internal-ops starter project");
+    expect(await readFile(join(root, "memory", "README.md"), "utf8")).toContain(
+      "durable project notes",
+    );
+    expect(await readFile(join(root, "artifacts", "README.md"), "utf8")).toContain(
+      "generated outputs",
+    );
+    expect(await readFile(join(root, "README.md"), "utf8")).toContain(
+      "Canonical internal-ops starter project",
+    );
   });
 
   it("refuses to overwrite a non-empty target directory", async () => {
