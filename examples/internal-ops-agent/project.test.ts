@@ -7,5 +7,7 @@ describe("internal-ops-agent example", () => {
 
     expect(result.ok).toBe(true);
     expect(result.issues).toHaveLength(0);
+    expect(result.errors).toHaveLength(0);
+    expect(result.warnings).toHaveLength(0);
   });
 });

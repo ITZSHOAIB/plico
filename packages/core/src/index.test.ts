@@ -29,7 +29,14 @@ async function writeValidProject(
 
   await writeFile(
     join(root, "agent.md"),
-    "# Internal Ops Agent\n\nFollow the project instructions.",
+    [
+      "# Internal Ops Agent",
+      "",
+      "This project is organized file-first.",
+      "",
+      "Use the local Markdown instructions as the source of truth.",
+      "",
+    ].join("\n"),
     "utf8",
   );
 }
@@ -111,6 +118,8 @@ describe("validateProject", () => {
 
     expect(result.ok).toBe(true);
     expect(result.issues).toHaveLength(0);
+    expect(result.errors).toHaveLength(0);
+    expect(result.warnings).toHaveLength(0);
     expect(result.project?.config.name).toBe("Internal Ops Agent");
   });
 
@@ -195,6 +204,73 @@ describe("validateProject", () => {
           path: "agent.md",
           message: "Missing required file: agent.md",
           severity: "error",
+        }),
+      ]),
+    );
+  });
+
+  it("rejects an empty agent.md", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-core-"));
+    await mkdir(join(root, "skills"), { recursive: true });
+    await mkdir(join(root, "tools"), { recursive: true });
+    await mkdir(join(root, "evals"), { recursive: true });
+    await mkdir(join(root, "artifacts"), { recursive: true });
+    await mkdir(join(root, "memory"), { recursive: true });
+
+    await writeFile(
+      join(root, "plico.config.ts"),
+      [
+        "export default {",
+        "  schemaVersion: 1,",
+        '  name: "Internal Ops Agent",',
+        "} as const;",
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+    await writeFile(join(root, "agent.md"), "   \n", "utf8");
+
+    const result = await validateProject(root);
+
+    expect(result.ok).toBe(false);
+    expect(result.errors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          path: "agent.md",
+          message: "agent.md must not be empty",
+          severity: "error",
+        }),
+      ]),
+    );
+  });
+
+  it("warns when agent.md looks like placeholder content", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-core-"));
+    await writeValidProject(root, {
+      configBody: [
+        "export default {",
+        "  schemaVersion: 1,",
+        '  name: "Internal Ops Agent",',
+        "} as const;",
+        "",
+      ].join("\n"),
+    });
+    await writeFile(
+      join(root, "agent.md"),
+      "# Agent\n\nFollow the project instructions.",
+      "utf8",
+    );
+
+    const result = await validateProject(root);
+
+    expect(result.ok).toBe(true);
+    expect(result.errors).toHaveLength(0);
+    expect(result.warnings).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          path: "agent.md",
+          message: "agent.md looks like placeholder content",
+          severity: "warning",
         }),
       ]),
     );

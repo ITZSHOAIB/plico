@@ -27,6 +27,8 @@ export interface LoadedProject {
 export interface ValidationResult {
   ok: boolean;
   issues: ValidationIssue[];
+  errors: ValidationIssue[];
+  warnings: ValidationIssue[];
   project?: LoadedProject;
 }
 
@@ -45,33 +47,59 @@ export async function loadProject(root: string): Promise<LoadedProject> {
 }
 
 export async function validateProject(root: string): Promise<ValidationResult> {
-  const issues: ValidationIssue[] = [];
+  const errors: ValidationIssue[] = [];
+  const warnings: ValidationIssue[] = [];
 
   let project: LoadedProject | undefined;
   try {
     project = await loadProject(root);
   } catch (error) {
     if (error instanceof ProjectConfigError) {
-      issues.push(...error.issues);
+      errors.push(...error.issues);
     } else {
-      issues.push({
+      errors.push({
         path: CONFIG_FILENAME,
         message: missingFileMessage(error),
         severity: "error",
       });
     }
-    return { ok: false, issues };
+    return {
+      ok: false,
+      issues: [...errors, ...warnings],
+      errors,
+      warnings,
+    };
   }
 
   const agentPath = join(root, "agent.md");
+  let agentText: string | undefined;
   try {
-    await readFile(agentPath, "utf8");
-  } catch {
-    issues.push({
+    agentText = await readFile(agentPath, "utf8");
+  } catch (error) {
+    errors.push({
       path: "agent.md",
-      message: "Missing required file: agent.md",
+      message: missingFileMessageFor("agent.md", error),
       severity: "error",
     });
+  }
+
+  if (typeof agentText === "string") {
+    if (agentText.trim().length === 0) {
+      errors.push({
+        path: "agent.md",
+        message: "agent.md must not be empty",
+        severity: "error",
+      });
+    } else {
+      const warning = detectWeakAgentContent(agentText);
+      if (warning) {
+        warnings.push({
+          path: "agent.md",
+          message: warning,
+          severity: "warning",
+        });
+      }
+    }
   }
 
   for (const directory of REQUIRED_DIRECTORIES) {
@@ -79,14 +107,14 @@ export async function validateProject(root: string): Promise<ValidationResult> {
     try {
       const directoryStat = await stat(directoryPath);
       if (!directoryStat.isDirectory()) {
-        issues.push({
+        errors.push({
           path: directory,
           message: `Expected ${directory} to be a directory`,
           severity: "error",
         });
       }
     } catch {
-      issues.push({
+      errors.push({
         path: directory,
         message: `Missing required directory: ${directory}`,
         severity: "error",
@@ -95,7 +123,7 @@ export async function validateProject(root: string): Promise<ValidationResult> {
   }
 
   if (project && project.config.schemaVersion !== 1) {
-    issues.push({
+    errors.push({
       path: CONFIG_FILENAME,
       message: "Unsupported schemaVersion. Expected 1.",
       severity: "error",
@@ -103,7 +131,7 @@ export async function validateProject(root: string): Promise<ValidationResult> {
   }
 
   if (project && !project.config.name.trim()) {
-    issues.push({
+    errors.push({
       path: CONFIG_FILENAME,
       message: "Project name is required.",
       severity: "error",
@@ -111,8 +139,10 @@ export async function validateProject(root: string): Promise<ValidationResult> {
   }
 
   return {
-    ok: issues.length === 0,
-    issues,
+    ok: errors.length === 0,
+    issues: [...errors, ...warnings],
+    errors,
+    warnings,
     project,
   };
 }
@@ -277,6 +307,14 @@ function missingFileMessage(error: unknown): string {
   return `Unable to read ${CONFIG_FILENAME}`;
 }
 
+function missingFileMessageFor(path: string, error: unknown): string {
+  if (error instanceof Error && error.message.includes("ENOENT")) {
+    return `Missing required file: ${path}`;
+  }
+
+  return `Unable to read ${path}`;
+}
+
 function configLoadMessage(error: unknown): string {
   if (error instanceof Error && error.message) {
     return `Failed to execute ${CONFIG_FILENAME}: ${error.message}`;
@@ -305,4 +343,18 @@ function unwrapDefaultExport(value: unknown): unknown {
   }
 
   return current;
+}
+
+function detectWeakAgentContent(agentText: string): string | undefined {
+  const normalized = agentText.trim().toLowerCase();
+
+  if (
+    normalized.includes("follow the project instructions") ||
+    normalized === "# agent" ||
+    normalized.includes("placeholder agent instructions")
+  ) {
+    return "agent.md looks like placeholder content";
+  }
+
+  return undefined;
 }
