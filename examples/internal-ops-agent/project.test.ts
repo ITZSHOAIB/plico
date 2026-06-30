@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { validateProject } from "../../packages/core/src/index.js";
+import { runProject } from "../../packages/runtime/src/index.js";
 
 describe("internal-ops-agent example", () => {
   it("validates as a Plico project", async () => {
@@ -17,5 +18,26 @@ describe("internal-ops-agent example", () => {
     expect(
       await readFile(join("examples/internal-ops-agent", "artifacts", "README.md"), "utf8"),
     ).toContain("generated outputs");
+  });
+
+  it("completes a scripted dry run with the checked-in tool", async () => {
+    const result = await runProject("examples/internal-ops-agent", {
+      script: [
+        { type: "assistant.output", content: "I will create the ticket." },
+        { type: "tool.call", toolName: "create_ticket", arguments: { title: "VPN down" } },
+      ],
+    });
+
+    expect(result.status).toBe("completed");
+    expect(result.output).toBe("I will create the ticket.");
+    expect(result.events.map((event) => event.type)).toEqual([
+      "run.started",
+      "instructions.composed",
+      "tools.discovered",
+      "assistant.output",
+      "tool.call",
+      "tool.result",
+      "run.completed",
+    ]);
   });
 });

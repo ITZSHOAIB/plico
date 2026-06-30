@@ -22,7 +22,8 @@
   ],
   "dependencies": {
     "@clack/prompts": "^1.6.0",
-    "@plico/core": "workspace:*"
+    "@plico/core": "workspace:*",
+    "@plico/runtime": "workspace:*"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",

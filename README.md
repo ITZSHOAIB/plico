@@ -6,13 +6,13 @@ This repo is intentionally narrow in phase one:
 
 - scaffold valid Plico projects
 - validate projects with `@plico/core`
-- expose validation through `@plico/cli`
+- expose validation and dry runs through `@plico/cli`
 - generate the internal-ops starter with `create-plico`
 
 ## Repo Layout
 
 - `packages/core` contains the project loader and validator
-- `packages/cli` contains the `plico validate [path]` command
+- `packages/cli` contains `plico validate [path]` and `plico run --dry`
 - `packages/create-plico` contains the scaffold generator
 - `examples/internal-ops-agent` is the canonical internal-ops starter project
 
@@ -55,6 +55,12 @@ Validate the example project from the repo root:
 
 ```sh
 pnpm --filter @plico/cli exec plico validate examples/internal-ops-agent
+```
+
+Run the dry runtime with the checked-in example tool:
+
+```sh
+pnpm --filter @plico/cli exec plico run --dry --script examples/internal-ops-agent/evals/smoke.script.json examples/internal-ops-agent
 ```
 
 ## Scaffold
