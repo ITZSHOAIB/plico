@@ -25,6 +25,34 @@ async function writeValidProject(root: string) {
 }
 
 describe("main", () => {
+  it("emits JSON for validate --json", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-cli-"));
+    await writeValidProject(root);
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    const exitCode = await main(["node", "plico", "validate", "--json", root]);
+
+    expect(exitCode).toBe(0);
+    expect(errorSpy).not.toHaveBeenCalled();
+    expect(logSpy).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(String(logSpy.mock.calls[0]?.[0]))).toMatchObject({
+      ok: true,
+      issues: [],
+      project: {
+        root,
+        configPath: join(root, "plico.config.ts"),
+        config: {
+          schemaVersion: 1,
+          name: "Internal Ops Agent",
+        },
+      },
+    });
+
+    logSpy.mockRestore();
+    errorSpy.mockRestore();
+  });
+
   it("validates a project successfully", async () => {
     const root = await mkdtemp(join(tmpdir(), "plico-cli-"));
     await writeValidProject(root);
@@ -51,6 +79,31 @@ describe("main", () => {
     expect(exitCode).toBe(1);
     expect(errorSpy).toHaveBeenCalledWith("plico.config.ts: Missing required file: plico.config.ts");
     expect(logSpy).not.toHaveBeenCalledWith(expect.stringContaining("Valid Plico project"));
+
+    logSpy.mockRestore();
+    errorSpy.mockRestore();
+  });
+
+  it("emits JSON for failed validation", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-cli-"));
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    const exitCode = await main(["node", "plico", "validate", "--json", root]);
+
+    expect(exitCode).toBe(1);
+    expect(errorSpy).not.toHaveBeenCalled();
+    expect(logSpy).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(String(logSpy.mock.calls[0]?.[0]))).toMatchObject({
+      ok: false,
+      issues: expect.arrayContaining([
+        expect.objectContaining({
+          path: "plico.config.ts",
+          message: "Missing required file: plico.config.ts",
+          severity: "error",
+        }),
+      ]),
+    });
 
     logSpy.mockRestore();
     errorSpy.mockRestore();

@@ -3,10 +3,16 @@ import { pathToFileURL } from "node:url";
 
 export async function main(argv: string[]): Promise<number> {
   const command = argv[2] ?? "help";
-  const target = argv[3] ?? process.cwd();
 
   if (command === "validate") {
+    const { json, target } = parseValidateArgs(argv.slice(3));
     const result = await validateProject(target);
+
+    if (json) {
+      console.log(JSON.stringify(result));
+      return result.ok ? 0 : 1;
+    }
+
     if (result.ok) {
       console.log(`Valid Plico project: ${target}`);
       return 0;
@@ -21,6 +27,22 @@ export async function main(argv: string[]): Promise<number> {
 
   console.log("Usage: plico validate [path]");
   return 0;
+}
+
+function parseValidateArgs(args: string[]): { json: boolean; target: string } {
+  let json = false;
+  let target = process.cwd();
+
+  for (const arg of args) {
+    if (arg === "--json") {
+      json = true;
+      continue;
+    }
+
+    target = arg;
+  }
+
+  return { json, target };
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
