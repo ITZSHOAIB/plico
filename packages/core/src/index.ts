@@ -162,9 +162,7 @@ async function readProjectConfig(configPath: string): Promise<ProjectConfig> {
 
   let configModule: unknown;
   try {
-    configModule = await tsImport(pathToFileURL(configPath).href, {
-      parentURL: pathToFileURL(join(configPath, "..", "project-loader.ts")).href,
-    });
+    configModule = await tsImport(pathToFileURL(configPath).href, import.meta.url);
   } catch (error) {
     throw new ProjectConfigError(configPath, [
       {
