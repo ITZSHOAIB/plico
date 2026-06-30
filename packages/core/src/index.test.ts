@@ -2,9 +2,12 @@ import { mkdtemp, mkdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { validateProject } from "./index.js";
+import { loadProject, validateProject } from "./index.js";
 
-async function writeValidProject(root: string) {
+async function writeValidProject(
+  root: string,
+  options: { configBody?: string } = {},
+) {
   await mkdir(join(root, "skills"), { recursive: true });
   await mkdir(join(root, "tools"), { recursive: true });
   await mkdir(join(root, "evals"), { recursive: true });
@@ -13,7 +16,7 @@ async function writeValidProject(root: string) {
 
   await writeFile(
     join(root, "plico.config.ts"),
-    [
+    options.configBody ?? [
       "export default {",
       "  schemaVersion: 1,",
       '  name: "Internal Ops Agent",',
@@ -32,6 +35,74 @@ async function writeValidProject(root: string) {
 }
 
 describe("validateProject", () => {
+  it("loads a computed config export from plico.config.ts", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-core-"));
+    await writeValidProject(root, {
+      configBody: [
+        'const parts = ["Internal", "Ops", "Agent"];',
+        'const name = parts.join(" ");',
+        "export default {",
+        "  schemaVersion: 1,",
+        "  name,",
+        '  template: "internal-ops",',
+        "} as const;",
+        "",
+      ].join("\n"),
+    });
+
+    const project = await loadProject(root);
+
+    expect(project.config.name).toBe("Internal Ops Agent");
+    expect(project.config.template).toBe("internal-ops");
+  });
+
+  it("rejects a config without a default export", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-core-"));
+    await writeValidProject(root, {
+      configBody: [
+        'export const schemaVersion = 1;',
+        'export const name = "Internal Ops Agent";',
+        "",
+      ].join("\n"),
+    });
+
+    const result = await validateProject(root);
+
+    expect(result.ok).toBe(false);
+    expect(result.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          path: "plico.config.ts",
+          message: "Missing default export in plico.config.ts",
+          severity: "error",
+        }),
+      ]),
+    );
+  });
+
+  it("rejects a malformed default export", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-core-"));
+    await writeValidProject(root, {
+      configBody: [
+        'export default "nope";',
+        "",
+      ].join("\n"),
+    });
+
+    const result = await validateProject(root);
+
+    expect(result.ok).toBe(false);
+    expect(result.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          path: "plico.config.ts",
+          message: "Expected default export to be an object",
+          severity: "error",
+        }),
+      ]),
+    );
+  });
+
   it("accepts a valid internal-ops project", async () => {
     const root = await mkdtemp(join(tmpdir(), "plico-core-"));
     await writeValidProject(root);
