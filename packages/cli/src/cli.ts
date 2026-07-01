@@ -10,7 +10,6 @@ import {
   type RunSummary,
   runProject,
 } from "@plico/runtime";
-import { servePlico } from "@plico/server";
 
 export async function main(argv: string[]): Promise<number> {
   const command = argv[2] ?? "help";
@@ -150,6 +149,7 @@ export async function main(argv: string[]): Promise<number> {
     try {
       const { dbPath, host, port, target } = parseServeArgs(argv.slice(3));
       const databasePath = resolveDatabasePath(target, dbPath);
+      const { servePlico } = await import("@plico/server");
       const server = await servePlico({
         projectRoot: target,
         databasePath,
