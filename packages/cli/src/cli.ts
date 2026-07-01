@@ -1,7 +1,15 @@
-import { readFile } from "node:fs/promises";
+import { constants as fsConstants } from "node:fs";
+import { access, readFile } from "node:fs/promises";
+import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { validateProject } from "@plico/core";
-import { type DryRunScriptStep, runProject } from "@plico/runtime";
+import {
+  createSqliteEventStore,
+  type DryRunScriptStep,
+  type PlicoEvent,
+  type RunSummary,
+  runProject,
+} from "@plico/runtime";
 
 export async function main(argv: string[]): Promise<number> {
   const command = argv[2] ?? "help";
@@ -36,14 +44,22 @@ export async function main(argv: string[]): Promise<number> {
 
   if (command === "run") {
     try {
-      const { dry, json, target, scriptPath } = parseRunArgs(argv.slice(3));
+      const { dbPath, dry, json, persist, target, scriptPath } = parseRunArgs(argv.slice(3));
       if (!dry) {
         console.error("plico run only supports --dry in this release.");
         return 1;
       }
 
       const script = scriptPath ? await loadDryRunScript(scriptPath) : undefined;
-      const result = await runProject(target, script ? { script } : {});
+      const eventStore = persist
+        ? createSqliteEventStore({
+            databasePath: resolveDatabasePath(target, dbPath),
+          })
+        : undefined;
+      const result = await runProject(target, {
+        ...(script ? { script } : {}),
+        ...(eventStore ? { eventStore } : {}),
+      });
 
       if (json) {
         console.log(JSON.stringify(result));
@@ -60,6 +76,9 @@ export async function main(argv: string[]): Promise<number> {
               console.error(line);
             }
           }
+          if (persist && result.status === "completed") {
+            console.log(`Persisted run ID: ${result.runId}`);
+          }
         }
       }
 
@@ -70,8 +89,66 @@ export async function main(argv: string[]): Promise<number> {
     }
   }
 
+  if (command === "runs") {
+    try {
+      const { dbPath, json, target } = parseRunsArgs(argv.slice(3));
+      const databasePath = resolveDatabasePath(target, dbPath);
+      await ensureDatabaseExists(databasePath);
+      const eventStore = createSqliteEventStore({ databasePath });
+      const runs = await eventStore.listRuns();
+
+      if (json) {
+        console.log(JSON.stringify(runs));
+      } else {
+        for (const line of formatRunSummaries(target, databasePath, runs)) {
+          console.log(line);
+        }
+      }
+
+      return 0;
+    } catch (error) {
+      console.error(errorMessage(error));
+      return 1;
+    }
+  }
+
+  if (command === "events") {
+    try {
+      const { afterSequence, dbPath, json, runId, target } = parseEventsArgs(argv.slice(3));
+      const databasePath = resolveDatabasePath(target, dbPath);
+      await ensureDatabaseExists(databasePath);
+      const eventStore = createSqliteEventStore({ databasePath });
+      const run = await eventStore.getRun(runId);
+
+      if (!run) {
+        console.error(`Unknown run ID: ${runId}`);
+        return 1;
+      }
+
+      const events = await eventStore.getEvents(
+        runId,
+        afterSequence === undefined ? {} : { afterSequence },
+      );
+
+      if (json) {
+        console.log(JSON.stringify(events));
+      } else {
+        for (const line of formatEvents(runId, events)) {
+          console.log(line);
+        }
+      }
+
+      return 0;
+    } catch (error) {
+      console.error(errorMessage(error));
+      return 1;
+    }
+  }
+
   console.log("Usage: plico validate [path]");
-  console.log("Usage: plico run --dry [--json] [--script <file>] [path]");
+  console.log("Usage: plico run --dry [--persist] [--db <path>] [--json] [--script <file>] [path]");
+  console.log("Usage: plico runs [--db <path>] [--json] [path]");
+  console.log("Usage: plico events <runId> [--after <sequence>] [--db <path>] [--json] [path]");
   return 0;
 }
 
@@ -92,18 +169,29 @@ function parseValidateArgs(args: string[]): { json: boolean; target: string } {
 }
 
 function parseRunArgs(args: string[]): {
+  dbPath?: string;
   dry: boolean;
   json: boolean;
+  persist: boolean;
   target: string;
   scriptPath?: string;
 } {
   let dry = false;
   let json = false;
+  let persist = false;
   let target = process.cwd();
   let scriptPath: string | undefined;
+  let dbPath: string | undefined;
   let awaitingScriptPath = false;
+  let awaitingDbPath = false;
 
   for (const arg of args) {
+    if (awaitingDbPath) {
+      dbPath = arg;
+      awaitingDbPath = false;
+      continue;
+    }
+
     if (awaitingScriptPath) {
       scriptPath = arg;
       awaitingScriptPath = false;
@@ -120,8 +208,18 @@ function parseRunArgs(args: string[]): {
       continue;
     }
 
+    if (arg === "--persist") {
+      persist = true;
+      continue;
+    }
+
     if (arg === "--script") {
       awaitingScriptPath = true;
+      continue;
+    }
+
+    if (arg === "--db") {
+      awaitingDbPath = true;
       continue;
     }
 
@@ -132,6 +230,10 @@ function parseRunArgs(args: string[]): {
     target = arg;
   }
 
+  if (awaitingDbPath) {
+    throw new Error("Missing database path after --db");
+  }
+
   if (awaitingScriptPath) {
     throw new Error("Missing script file after --script");
   }
@@ -139,8 +241,131 @@ function parseRunArgs(args: string[]): {
   return {
     dry,
     json,
+    persist,
     target,
     ...(scriptPath === undefined ? {} : { scriptPath }),
+    ...(dbPath === undefined ? {} : { dbPath }),
+  };
+}
+
+function parseRunsArgs(args: string[]): {
+  dbPath?: string;
+  json: boolean;
+  target: string;
+} {
+  let json = false;
+  let target = process.cwd();
+  let dbPath: string | undefined;
+  let awaitingDbPath = false;
+
+  for (const arg of args) {
+    if (awaitingDbPath) {
+      dbPath = arg;
+      awaitingDbPath = false;
+      continue;
+    }
+
+    if (arg === "--json") {
+      json = true;
+      continue;
+    }
+
+    if (arg === "--db") {
+      awaitingDbPath = true;
+      continue;
+    }
+
+    if (arg.startsWith("-")) {
+      throw new Error(`Unknown option: ${arg}`);
+    }
+
+    target = arg;
+  }
+
+  if (awaitingDbPath) {
+    throw new Error("Missing database path after --db");
+  }
+
+  return {
+    json,
+    target,
+    ...(dbPath === undefined ? {} : { dbPath }),
+  };
+}
+
+function parseEventsArgs(args: string[]): {
+  afterSequence?: number;
+  dbPath?: string;
+  json: boolean;
+  runId: string;
+  target: string;
+} {
+  let json = false;
+  let afterSequence: number | undefined;
+  let target = process.cwd();
+  let runId: string | undefined;
+  let dbPath: string | undefined;
+  let awaitingAfter = false;
+  let awaitingDbPath = false;
+
+  for (const arg of args) {
+    if (awaitingAfter) {
+      afterSequence = parseCursor(arg);
+      awaitingAfter = false;
+      continue;
+    }
+
+    if (awaitingDbPath) {
+      dbPath = arg;
+      awaitingDbPath = false;
+      continue;
+    }
+
+    if (arg === "--json") {
+      json = true;
+      continue;
+    }
+
+    if (arg === "--after") {
+      awaitingAfter = true;
+      continue;
+    }
+
+    if (arg === "--db") {
+      awaitingDbPath = true;
+      continue;
+    }
+
+    if (arg.startsWith("-")) {
+      throw new Error(`Unknown option: ${arg}`);
+    }
+
+    if (runId === undefined) {
+      runId = arg;
+      continue;
+    }
+
+    target = arg;
+  }
+
+  if (awaitingAfter) {
+    throw new Error("Missing sequence after --after");
+  }
+
+  if (awaitingDbPath) {
+    throw new Error("Missing database path after --db");
+  }
+
+  if (!runId) {
+    throw new Error("Missing run ID for events command");
+  }
+
+  return {
+    json,
+    runId,
+    target,
+    ...(afterSequence === undefined ? {} : { afterSequence }),
+    ...(dbPath === undefined ? {} : { dbPath }),
   };
 }
 
@@ -190,6 +415,55 @@ function normalizeScriptStep(step: unknown, index: number, scriptPath: string): 
   throw new Error(
     `Script step ${index + 1} in ${scriptPath} has an unsupported type: ${step.type}`,
   );
+}
+
+function parseCursor(value: string): number {
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 0) {
+    throw new Error(`Malformed cursor: ${value}`);
+  }
+
+  return parsed;
+}
+
+function resolveDatabasePath(target: string, dbPath: string | undefined): string {
+  return dbPath ?? join(target, ".plico", "plico.sqlite");
+}
+
+async function ensureDatabaseExists(databasePath: string): Promise<void> {
+  try {
+    await access(databasePath, fsConstants.F_OK);
+  } catch {
+    throw new Error(`Missing database: ${databasePath}`);
+  }
+}
+
+function formatRunSummaries(target: string, databasePath: string, runs: RunSummary[]): string[] {
+  const lines = [`Persisted runs for ${target} (${databasePath})`];
+
+  if (runs.length === 0) {
+    lines.push("No persisted runs found.");
+    return lines;
+  }
+
+  for (const run of runs) {
+    const summary = [run.runId, run.status, run.projectName || "unknown project", run.endedAt].join(
+      " | ",
+    );
+    lines.push(summary);
+  }
+
+  return lines;
+}
+
+function formatEvents(runId: string, events: PlicoEvent[]): string[] {
+  const lines = [`Events for ${runId}`];
+
+  for (const event of events) {
+    lines.push(`${event.sequence} ${event.type} ${JSON.stringify(event.payload)}`);
+  }
+
+  return lines;
 }
 
 function formatRunResult(target: string, result: Awaited<ReturnType<typeof runProject>>): string[] {

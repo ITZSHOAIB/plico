@@ -51,3 +51,4 @@ Run the narrowest useful check first:
 - `pnpm exec vitest run <test files>` for focused behavior.
 - `pnpm --filter <package> build` for changed packages.
 - `pnpm test` or root build only when cross-package behavior changed.
+- Before raising a PR, all relevant tests must pass.
