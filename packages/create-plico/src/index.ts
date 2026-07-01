@@ -1,5 +1,6 @@
 import { mkdir, readdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { getProjectPaths, REQUIRED_PROJECT_DIRECTORIES } from "@plico/core";
 
 export interface ScaffoldOptions {
   targetDir: string;
@@ -9,18 +10,19 @@ export interface ScaffoldOptions {
 export async function createInternalOpsScaffold(options: ScaffoldOptions): Promise<void> {
   const root = options.targetDir;
   const projectName = options.projectName ?? "Internal Ops Agent";
+  const projectPaths = getProjectPaths(root);
 
   await ensureEmptyTarget(root);
 
   await mkdir(root, { recursive: true });
   await Promise.all(
-    ["skills", "tools", "evals", "artifacts", "memory"].map((directory) =>
-      mkdir(join(root, directory), { recursive: true }),
+    REQUIRED_PROJECT_DIRECTORIES.map((directoryRole) =>
+      mkdir(projectPaths.directories[directoryRole], { recursive: true }),
     ),
   );
 
   await writeFile(
-    join(root, "plico.config.ts"),
+    projectPaths.configFile,
     [
       "export default {",
       "  schemaVersion: 1,",
@@ -33,7 +35,7 @@ export async function createInternalOpsScaffold(options: ScaffoldOptions): Promi
   );
 
   await writeFile(
-    join(root, "agent.md"),
+    projectPaths.agentFile,
     [
       `# ${projectName}`,
       "",
@@ -56,7 +58,7 @@ export async function createInternalOpsScaffold(options: ScaffoldOptions): Promi
   );
 
   await writeFile(
-    join(root, "skills", "triage.md"),
+    join(projectPaths.directories.skills, "triage.md"),
     [
       "# Triage",
       "",
@@ -69,7 +71,7 @@ export async function createInternalOpsScaffold(options: ScaffoldOptions): Promi
   );
 
   await writeFile(
-    join(root, "tools", "readme.md"),
+    join(projectPaths.directories.tools, "readme.md"),
     [
       "# Tools",
       "",
@@ -82,7 +84,7 @@ export async function createInternalOpsScaffold(options: ScaffoldOptions): Promi
   );
 
   await writeFile(
-    join(root, "evals", "smoke.md"),
+    join(projectPaths.directories.evals, "smoke.md"),
     [
       "# Smoke Eval",
       "",
@@ -92,7 +94,7 @@ export async function createInternalOpsScaffold(options: ScaffoldOptions): Promi
     "utf8",
   );
   await writeFile(
-    join(root, "memory", "README.md"),
+    join(projectPaths.directories.memory, "README.md"),
     [
       "# Memory",
       "",
@@ -102,7 +104,7 @@ export async function createInternalOpsScaffold(options: ScaffoldOptions): Promi
     "utf8",
   );
   await writeFile(
-    join(root, "artifacts", "README.md"),
+    join(projectPaths.directories.artifacts, "README.md"),
     [
       "# Artifacts",
       "",

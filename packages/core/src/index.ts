@@ -2,6 +2,54 @@ import { readFile, stat } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { join } from "node:path";
 
+export interface ProjectLayoutDirectories {
+  skills: "skills";
+  tools: "tools";
+  evals: "evals";
+  artifacts: "artifacts";
+  memory: "memory";
+}
+
+export interface ProjectLayout {
+  configFile: "plico.config.ts";
+  agentFile: "agent.md";
+  directories: ProjectLayoutDirectories;
+}
+
+export interface ProjectRelativePaths {
+  configFile: string;
+  agentFile: string;
+  directories: Record<ProjectDirectoryRole, string>;
+}
+
+export interface ProjectPaths {
+  configFile: string;
+  agentFile: string;
+  directories: Record<ProjectDirectoryRole, string>;
+}
+
+export type ProjectDirectoryRole = keyof ProjectLayoutDirectories;
+
+export const PROJECT_LAYOUT: ProjectLayout = {
+  configFile: "plico.config.ts",
+  agentFile: "agent.md",
+  directories: {
+    skills: "skills",
+    tools: "tools",
+    evals: "evals",
+    artifacts: "artifacts",
+    memory: "memory",
+  },
+};
+
+export const REQUIRED_PROJECT_DIRECTORIES: readonly ProjectDirectoryRole[] = [
+  "skills",
+  "tools",
+  "evals",
+  "artifacts",
+  "memory",
+];
+
 export type ValidationSeverity = "error" | "warning";
 
 export interface ValidationIssue {
@@ -31,11 +79,32 @@ export interface ValidationResult {
   project?: LoadedProject;
 }
 
-const REQUIRED_DIRECTORIES = ["skills", "tools", "evals", "artifacts", "memory"];
-const CONFIG_FILENAME = "plico.config.ts";
+export function getProjectRelativePaths(): ProjectRelativePaths {
+  return {
+    configFile: PROJECT_LAYOUT.configFile,
+    agentFile: PROJECT_LAYOUT.agentFile,
+    directories: { ...PROJECT_LAYOUT.directories },
+  };
+}
+
+export function getProjectPaths(root: string): ProjectPaths {
+  const relative = getProjectRelativePaths();
+
+  return {
+    configFile: join(root, relative.configFile),
+    agentFile: join(root, relative.agentFile),
+    directories: {
+      skills: join(root, relative.directories.skills),
+      tools: join(root, relative.directories.tools),
+      evals: join(root, relative.directories.evals),
+      artifacts: join(root, relative.directories.artifacts),
+      memory: join(root, relative.directories.memory),
+    },
+  };
+}
 
 export async function loadProject(root: string): Promise<LoadedProject> {
-  const configPath = join(root, CONFIG_FILENAME);
+  const configPath = getProjectPaths(root).configFile;
   const config = await readProjectConfig(configPath);
 
   return {
@@ -48,6 +117,8 @@ export async function loadProject(root: string): Promise<LoadedProject> {
 export async function validateProject(root: string): Promise<ValidationResult> {
   const errors: ValidationIssue[] = [];
   const warnings: ValidationIssue[] = [];
+  const relativePaths = getProjectRelativePaths();
+  const projectPaths = getProjectPaths(root);
 
   let project: LoadedProject | undefined;
   try {
@@ -57,7 +128,7 @@ export async function validateProject(root: string): Promise<ValidationResult> {
       errors.push(...error.issues);
     } else {
       errors.push({
-        path: CONFIG_FILENAME,
+        path: relativePaths.configFile,
         message: missingFileMessage(error),
         severity: "error",
       });
@@ -70,14 +141,13 @@ export async function validateProject(root: string): Promise<ValidationResult> {
     };
   }
 
-  const agentPath = join(root, "agent.md");
   let agentText: string | undefined;
   try {
-    agentText = await readFile(agentPath, "utf8");
+    agentText = await readFile(projectPaths.agentFile, "utf8");
   } catch (error) {
     errors.push({
-      path: "agent.md",
-      message: missingFileMessageFor("agent.md", error),
+      path: relativePaths.agentFile,
+      message: missingFileMessageFor(relativePaths.agentFile, error),
       severity: "error",
     });
   }
@@ -85,15 +155,15 @@ export async function validateProject(root: string): Promise<ValidationResult> {
   if (typeof agentText === "string") {
     if (agentText.trim().length === 0) {
       errors.push({
-        path: "agent.md",
-        message: "agent.md must not be empty",
+        path: relativePaths.agentFile,
+        message: `${relativePaths.agentFile} must not be empty`,
         severity: "error",
       });
     } else {
       const warning = detectWeakAgentContent(agentText);
       if (warning) {
         warnings.push({
-          path: "agent.md",
+          path: relativePaths.agentFile,
           message: warning,
           severity: "warning",
         });
@@ -101,8 +171,9 @@ export async function validateProject(root: string): Promise<ValidationResult> {
     }
   }
 
-  for (const directory of REQUIRED_DIRECTORIES) {
-    const directoryPath = join(root, directory);
+  for (const directoryRole of REQUIRED_PROJECT_DIRECTORIES) {
+    const directory = relativePaths.directories[directoryRole];
+    const directoryPath = projectPaths.directories[directoryRole];
     try {
       const directoryStat = await stat(directoryPath);
       if (!directoryStat.isDirectory()) {
@@ -123,7 +194,7 @@ export async function validateProject(root: string): Promise<ValidationResult> {
 
   if (project && project.config.schemaVersion !== 1) {
     errors.push({
-      path: CONFIG_FILENAME,
+      path: relativePaths.configFile,
       message: "Unsupported schemaVersion. Expected 1.",
       severity: "error",
     });
@@ -131,7 +202,7 @@ export async function validateProject(root: string): Promise<ValidationResult> {
 
   if (project && !project.config.name.trim()) {
     errors.push({
-      path: CONFIG_FILENAME,
+      path: relativePaths.configFile,
       message: "Project name is required.",
       severity: "error",
     });
@@ -147,12 +218,14 @@ export async function validateProject(root: string): Promise<ValidationResult> {
 }
 
 async function readProjectConfig(configPath: string): Promise<ProjectConfig> {
+  const relativePaths = getProjectRelativePaths();
+
   try {
     await stat(configPath);
   } catch (error) {
     throw new ProjectConfigError(configPath, [
       {
-        path: CONFIG_FILENAME,
+        path: relativePaths.configFile,
         message: missingFileMessage(error),
         severity: "error",
       },
@@ -165,7 +238,7 @@ async function readProjectConfig(configPath: string): Promise<ProjectConfig> {
   } catch (error) {
     throw new ProjectConfigError(configPath, [
       {
-        path: CONFIG_FILENAME,
+        path: relativePaths.configFile,
         message: configLoadMessage(error),
         severity: "error",
       },
@@ -198,11 +271,13 @@ function getTypeScript(): typeof import("typescript") {
 }
 
 function readDefaultExport(configModule: unknown, configPath: string): unknown {
+  const relativePaths = getProjectRelativePaths();
+
   if (!isRecord(configModule) || !Object.hasOwn(configModule, "default")) {
     throw new ProjectConfigError(configPath, [
       {
-        path: CONFIG_FILENAME,
-        message: `Missing default export in ${CONFIG_FILENAME}`,
+        path: relativePaths.configFile,
+        message: `Missing default export in ${relativePaths.configFile}`,
         severity: "error",
       },
     ]);
@@ -237,11 +312,12 @@ function normalizeProjectConfig(value: unknown, configPath: string): ProjectConf
 }
 
 function validateProjectConfigShape(value: unknown): ValidationIssue[] {
+  const relativePaths = getProjectRelativePaths();
   const issues: ValidationIssue[] = [];
 
   if (!isRecord(value) || Array.isArray(value)) {
     issues.push({
-      path: CONFIG_FILENAME,
+      path: relativePaths.configFile,
       message: "Expected default export to be an object",
       severity: "error",
     });
@@ -250,13 +326,13 @@ function validateProjectConfigShape(value: unknown): ValidationIssue[] {
 
   if (!Object.hasOwn(value, "schemaVersion")) {
     issues.push({
-      path: CONFIG_FILENAME,
+      path: relativePaths.configFile,
       message: "Missing required field: schemaVersion",
       severity: "error",
     });
   } else if (!Number.isInteger(value.schemaVersion)) {
     issues.push({
-      path: CONFIG_FILENAME,
+      path: relativePaths.configFile,
       message: "Expected schemaVersion to be an integer",
       severity: "error",
     });
@@ -264,13 +340,13 @@ function validateProjectConfigShape(value: unknown): ValidationIssue[] {
 
   if (!Object.hasOwn(value, "name")) {
     issues.push({
-      path: CONFIG_FILENAME,
+      path: relativePaths.configFile,
       message: "Missing required field: name",
       severity: "error",
     });
   } else if (typeof value.name !== "string") {
     issues.push({
-      path: CONFIG_FILENAME,
+      path: relativePaths.configFile,
       message: "Expected name to be a string",
       severity: "error",
     });
@@ -278,7 +354,7 @@ function validateProjectConfigShape(value: unknown): ValidationIssue[] {
 
   if (Object.hasOwn(value, "description") && typeof value.description !== "string") {
     issues.push({
-      path: CONFIG_FILENAME,
+      path: relativePaths.configFile,
       message: "Expected description to be a string",
       severity: "error",
     });
@@ -286,7 +362,7 @@ function validateProjectConfigShape(value: unknown): ValidationIssue[] {
 
   if (Object.hasOwn(value, "template") && typeof value.template !== "string") {
     issues.push({
-      path: CONFIG_FILENAME,
+      path: relativePaths.configFile,
       message: "Expected template to be a string",
       severity: "error",
     });
@@ -305,11 +381,13 @@ class ProjectConfigError extends Error {
 }
 
 function missingFileMessage(error: unknown): string {
+  const relativePaths = getProjectRelativePaths();
+
   if (error instanceof Error && error.message.includes("ENOENT")) {
-    return `Missing required file: ${CONFIG_FILENAME}`;
+    return `Missing required file: ${relativePaths.configFile}`;
   }
 
-  return `Unable to read ${CONFIG_FILENAME}`;
+  return `Unable to read ${relativePaths.configFile}`;
 }
 
 function missingFileMessageFor(path: string, error: unknown): string {
@@ -321,11 +399,13 @@ function missingFileMessageFor(path: string, error: unknown): string {
 }
 
 function configLoadMessage(error: unknown): string {
+  const relativePaths = getProjectRelativePaths();
+
   if (error instanceof Error && error.message) {
-    return `Failed to execute ${CONFIG_FILENAME}: ${error.message}`;
+    return `Failed to execute ${relativePaths.configFile}: ${error.message}`;
   }
 
-  return `Failed to execute ${CONFIG_FILENAME}`;
+  return `Failed to execute ${relativePaths.configFile}`;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
