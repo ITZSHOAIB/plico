@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { loadProject } from "@plico/core";
 import { describe, expect, it } from "vitest";
-import { discoverTools, runProject } from "./index.js";
+import { createSqliteEventStore, discoverTools, runProject } from "./index.js";
 
 async function writeValidProject(root: string) {
   await mkdir(join(root, "skills"), { recursive: true });
@@ -395,6 +395,191 @@ describe("runProject", () => {
       phase: "runtime",
       message: "ticket system unavailable",
     });
+  });
+
+  it("persists a completed dry run and reads it back after reopening the SQLite store", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-runtime-"));
+    await writeValidProject(root);
+
+    const databasePath = join(root, ".plico", "plico.sqlite");
+    const eventStore = createSqliteEventStore({ databasePath });
+
+    const result = await runProject(root, {
+      runId: "run-test-001",
+      eventStore,
+    });
+
+    expect(result.status).toBe("completed");
+    expect(result.runId).toBe("run-test-001");
+
+    expect(await eventStore.listRuns()).toEqual([
+      expect.objectContaining({
+        runId: "run-test-001",
+        projectRoot: root,
+        projectName: "Internal Ops Agent",
+        status: "completed",
+        output: "Dry run complete for Internal Ops Agent.",
+        startedAt: expect.any(String),
+        endedAt: expect.any(String),
+      }),
+    ]);
+
+    expect(await eventStore.getRun("run-test-001")).toMatchObject({
+      runId: "run-test-001",
+      projectRoot: root,
+      projectName: "Internal Ops Agent",
+      status: "completed",
+      output: "Dry run complete for Internal Ops Agent.",
+    });
+
+    expect(await eventStore.getEvents("run-test-001")).toEqual(
+      result.events.map((event) =>
+        expect.objectContaining({
+          schemaVersion: 1,
+          runId: "run-test-001",
+          id: event.id,
+          sequence: event.sequence,
+          timestamp: event.timestamp,
+          type: event.type,
+          payload: event.payload,
+        }),
+      ),
+    );
+
+    const reopenedStore = createSqliteEventStore({ databasePath });
+    expect(await reopenedStore.getRun("run-test-001")).toMatchObject({
+      runId: "run-test-001",
+      status: "completed",
+    });
+    expect(await reopenedStore.getEvents("run-test-001", { afterSequence: 3 })).toEqual([
+      expect.objectContaining({
+        sequence: 4,
+        type: "assistant.output",
+      }),
+      expect.objectContaining({
+        sequence: 5,
+        type: "run.completed",
+      }),
+    ]);
+  });
+
+  it("generates unique default run IDs when no deterministic run ID is provided", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-runtime-"));
+    await writeValidProject(root);
+
+    const first = await runProject(root);
+    const second = await runProject(root);
+
+    expect(first.runId).not.toBe("run-0001");
+    expect(second.runId).not.toBe("run-0001");
+    expect(first.runId).not.toBe(second.runId);
+  });
+
+  it("persists a failed dry run and reads back its terminal events after reopening", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-runtime-"));
+    await writeValidProject(root);
+    await symlink(join(root, "missing.md"), join(root, "skills", "broken.md"));
+
+    const databasePath = join(root, ".plico", "plico.sqlite");
+    const eventStore = createSqliteEventStore({ databasePath });
+
+    const result = await runProject(root, {
+      runId: "run-test-002",
+      eventStore,
+    });
+
+    expect(result.status).toBe("failed");
+    expect(result.events.map((event) => event.type)).toEqual([
+      "run.started",
+      "run.error",
+      "run.failed",
+    ]);
+
+    expect(await eventStore.getRun("run-test-002")).toMatchObject({
+      runId: "run-test-002",
+      status: "failed",
+      projectName: "Internal Ops Agent",
+    });
+
+    const reopenedStore = createSqliteEventStore({ databasePath });
+    expect(await reopenedStore.listRuns()).toEqual([
+      expect.objectContaining({
+        runId: "run-test-002",
+        status: "failed",
+      }),
+    ]);
+    expect(await reopenedStore.getEvents("run-test-002", { afterSequence: 1 })).toEqual([
+      expect.objectContaining({
+        sequence: 2,
+        type: "run.error",
+      }),
+      expect.objectContaining({
+        sequence: 3,
+        type: "run.failed",
+      }),
+    ]);
+  });
+
+  it("persists a blocked dry run and replays the approval sequence after reopening", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-runtime-"));
+    await writeValidProject(root);
+    await writeFile(
+      join(root, "tools", "delete-ticket.tool.ts"),
+      [
+        "export default {",
+        '  name: "delete_ticket",',
+        '  description: "Delete an internal support ticket.",',
+        "  inputSchema: {",
+        '    type: "object",',
+        "    properties: {",
+        '      ticketId: { type: "string" },',
+        "    },",
+        '    required: ["ticketId"],',
+        "    additionalProperties: false,",
+        "  },",
+        '  capabilities: ["ticket:delete"],',
+        '  approval: { required: true, reason: "Deletes support records." },',
+        "  handler: async () => ({ ok: true }),",
+        "} as const;",
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+
+    const databasePath = join(root, ".plico", "plico.sqlite");
+    const eventStore = createSqliteEventStore({ databasePath });
+
+    const result = await runProject(root, {
+      runId: "run-test-003",
+      eventStore,
+      script: [{ type: "tool.call", toolName: "delete_ticket", arguments: { ticketId: "TCK-1" } }],
+    });
+
+    expect(result.status).toBe("blocked");
+    expect(result.events.map((event) => event.type)).toEqual([
+      "run.started",
+      "instructions.composed",
+      "tools.discovered",
+      "tool.call",
+      "approval.required",
+      "run.blocked",
+    ]);
+
+    const reopenedStore = createSqliteEventStore({ databasePath });
+    expect(await reopenedStore.getRun("run-test-003")).toMatchObject({
+      runId: "run-test-003",
+      status: "blocked",
+    });
+    expect(await reopenedStore.getEvents("run-test-003", { afterSequence: 4 })).toEqual([
+      expect.objectContaining({
+        sequence: 5,
+        type: "approval.required",
+      }),
+      expect.objectContaining({
+        sequence: 6,
+        type: "run.blocked",
+      }),
+    ]);
   });
 });
 
