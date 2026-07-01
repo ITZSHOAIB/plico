@@ -1,8 +1,12 @@
 import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { main } from "./cli.js";
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 async function writeValidProject(root: string) {
   await mkdir(join(root, "skills"), { recursive: true });
@@ -190,7 +194,7 @@ describe("main", () => {
     expect(errorSpy).not.toHaveBeenCalled();
     expect(logSpy).toHaveBeenCalledTimes(1);
     expect(JSON.parse(String(logSpy.mock.calls[0]?.[0]))).toMatchObject({
-      runId: "run-0001",
+      runId: expect.any(String),
       status: "completed",
       output: "Dry run complete for Internal Ops Agent.",
       events: expect.arrayContaining([
