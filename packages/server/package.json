@@ -1,20 +1,13 @@
 {
-  "name": "@plico/cli",
+  "name": "@plico/server",
   "version": "0.0.0",
   "type": "module",
-  "bin": {
-    "plico": "./dist/cli.js"
-  },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
-    },
-    "./cli": {
-      "types": "./dist/cli.d.ts",
-      "default": "./dist/cli.js"
     }
   },
   "files": [
@@ -22,7 +15,6 @@
   ],
   "dependencies": {
     "@plico/core": "workspace:*",
-    "@plico/server": "workspace:*",
     "@plico/runtime": "workspace:*"
   },
   "scripts": {

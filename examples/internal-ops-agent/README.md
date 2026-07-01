@@ -11,3 +11,12 @@ Validate this project from the repo root with:
 ```sh
 pnpm --filter @plico/cli exec plico validate examples/internal-ops-agent
 ```
+
+Persist and inspect the checked-in smoke run:
+
+```sh
+pnpm --filter @plico/cli exec plico run --dry --persist --script examples/internal-ops-agent/evals/smoke.script.json examples/internal-ops-agent
+pnpm --filter @plico/cli exec plico runs examples/internal-ops-agent
+pnpm --filter @plico/cli exec plico events <run-id> examples/internal-ops-agent
+pnpm --filter @plico/cli exec plico serve --db examples/internal-ops-agent/.plico/plico.sqlite examples/internal-ops-agent
+```

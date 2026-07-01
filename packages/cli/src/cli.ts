@@ -145,10 +145,37 @@ export async function main(argv: string[]): Promise<number> {
     }
   }
 
+  if (command === "serve") {
+    try {
+      const { dbPath, host, port, target } = parseServeArgs(argv.slice(3));
+      const databasePath = resolveDatabasePath(target, dbPath);
+      const { servePlico } = await import("@plico/server");
+      const server = await servePlico({
+        projectRoot: target,
+        databasePath,
+        ...(host === undefined ? {} : { host }),
+        ...(port === undefined ? {} : { port }),
+      });
+      const address = server.address();
+      if (!address || typeof address === "string") {
+        throw new Error("Unable to determine the listening address.");
+      }
+
+      const resolvedHost = normalizeDisplayHost(host ?? "127.0.0.1");
+      console.log(`Serving Plico at http://${resolvedHost}:${address.port}`);
+      console.log(`Database: ${databasePath}`);
+      return 0;
+    } catch (error) {
+      console.error(errorMessage(error));
+      return 1;
+    }
+  }
+
   console.log("Usage: plico validate [path]");
   console.log("Usage: plico run --dry [--persist] [--db <path>] [--json] [--script <file>] [path]");
   console.log("Usage: plico runs [--db <path>] [--json] [path]");
   console.log("Usage: plico events <runId> [--after <sequence>] [--db <path>] [--json] [path]");
+  console.log("Usage: plico serve [--host <host>] [--port <port>] [--db <path>] [path]");
   return 0;
 }
 
@@ -369,6 +396,81 @@ function parseEventsArgs(args: string[]): {
   };
 }
 
+function parseServeArgs(args: string[]): {
+  dbPath?: string;
+  host?: string;
+  port?: number;
+  target: string;
+} {
+  let target = process.cwd();
+  let host: string | undefined;
+  let port: number | undefined;
+  let dbPath: string | undefined;
+  let awaitingHost = false;
+  let awaitingPort = false;
+  let awaitingDbPath = false;
+
+  for (const arg of args) {
+    if (awaitingHost) {
+      host = arg;
+      awaitingHost = false;
+      continue;
+    }
+
+    if (awaitingPort) {
+      port = parsePort(arg);
+      awaitingPort = false;
+      continue;
+    }
+
+    if (awaitingDbPath) {
+      dbPath = arg;
+      awaitingDbPath = false;
+      continue;
+    }
+
+    if (arg === "--host") {
+      awaitingHost = true;
+      continue;
+    }
+
+    if (arg === "--port") {
+      awaitingPort = true;
+      continue;
+    }
+
+    if (arg === "--db") {
+      awaitingDbPath = true;
+      continue;
+    }
+
+    if (arg.startsWith("-")) {
+      throw new Error(`Unknown option: ${arg}`);
+    }
+
+    target = arg;
+  }
+
+  if (awaitingHost) {
+    throw new Error("Missing host after --host");
+  }
+
+  if (awaitingPort) {
+    throw new Error("Missing port after --port");
+  }
+
+  if (awaitingDbPath) {
+    throw new Error("Missing database path after --db");
+  }
+
+  return {
+    target,
+    ...(host === undefined ? {} : { host }),
+    ...(port === undefined ? {} : { port }),
+    ...(dbPath === undefined ? {} : { dbPath }),
+  };
+}
+
 async function loadDryRunScript(scriptPath: string): Promise<DryRunScriptStep[]> {
   try {
     const raw = await readFile(scriptPath, "utf8");
@@ -426,8 +528,25 @@ function parseCursor(value: string): number {
   return parsed;
 }
 
+function parsePort(value: string): number {
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 0 || parsed > 65535) {
+    throw new Error(`Invalid port: ${value}`);
+  }
+
+  return parsed;
+}
+
 function resolveDatabasePath(target: string, dbPath: string | undefined): string {
   return dbPath ?? join(target, ".plico", "plico.sqlite");
+}
+
+function normalizeDisplayHost(host: string): string {
+  if (host === "0.0.0.0" || host === "::") {
+    return "127.0.0.1";
+  }
+
+  return host;
 }
 
 async function ensureDatabaseExists(databasePath: string): Promise<void> {

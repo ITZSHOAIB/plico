@@ -1,8 +1,9 @@
-import { readFile } from "node:fs/promises";
+import { mkdtemp, readFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { validateProject } from "../../packages/core/src/index.js";
-import { runProject } from "../../packages/runtime/src/index.js";
+import { createSqliteEventStore, runProject } from "../../packages/runtime/src/index.js";
 
 describe("internal-ops-agent example", () => {
   it("validates as a Plico project", async () => {
@@ -38,6 +39,33 @@ describe("internal-ops-agent example", () => {
       "tool.call",
       "tool.result",
       "run.completed",
+    ]);
+  });
+
+  it("persists the checked-in smoke run and replays stored events", async () => {
+    const databasePath = join(await mkdtemp(join(tmpdir(), "plico-example-")), "plico.sqlite");
+    const eventStore = createSqliteEventStore({ databasePath });
+
+    const result = await runProject("examples/internal-ops-agent", {
+      eventStore,
+      script: [
+        { type: "assistant.output", content: "I will create the ticket." },
+        { type: "tool.call", toolName: "create_ticket", arguments: { title: "VPN down" } },
+      ],
+    });
+
+    expect(result.status).toBe("completed");
+    expect(await eventStore.listRuns()).toEqual([
+      expect.objectContaining({
+        status: "completed",
+        projectRoot: "examples/internal-ops-agent",
+      }),
+    ]);
+    expect(await eventStore.getEvents(result.runId, { afterSequence: 3 })).toEqual([
+      expect.objectContaining({ sequence: 4, type: "assistant.output" }),
+      expect.objectContaining({ sequence: 5, type: "tool.call" }),
+      expect.objectContaining({ sequence: 6, type: "tool.result" }),
+      expect.objectContaining({ sequence: 7, type: "run.completed" }),
     ]);
   });
 });
