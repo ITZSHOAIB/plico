@@ -11,9 +11,10 @@ Phase one is deliberately narrow: scaffold and validate Plico projects.
 - Build on `pnpm`, ESM-only TypeScript, `tsc`, and Vitest.
 - Keep `plico.config.ts` as the project anchor.
 - Required project files/directories are `agent.md`, `skills/`, `tools/`, `evals/`, `artifacts/`, and `memory/`.
-- Current packages are `@plico/core`, `@plico/cli`, and `create-plico`.
+- Current packages are `@plico/core`, `@plico/cli`, `@plico/server`, and `create-plico`.
 - `@plico/core` owns `loadProject(root)` and `validateProject(root)`.
-- `@plico/cli` currently exposes `plico validate [path]`.
+- `@plico/cli` currently exposes `plico validate [path]`, `plico run --dry`, `plico runs`, `plico events`, and `plico serve`.
+- `@plico/server` owns the thin native HTTP API over the runtime and event store.
 - `create-plico` creates the internal-ops pilot scaffold.
 
 Do not add runtime execution, Studio, server APIs, persistence, AG-UI, React UI, provider calls, approvals, or artifact semantics unless the work explicitly enters that phase.

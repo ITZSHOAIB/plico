@@ -7,12 +7,13 @@ This repo is intentionally narrow in phase one:
 - scaffold valid Plico projects
 - validate projects with `@plico/core`
 - expose validation and dry runs through `@plico/cli`
+- expose persisted runs, replay, and the native HTTP API through `@plico/server`
 - generate the internal-ops starter with `create-plico`
 
 ## Repo Layout
 
 - `packages/core` contains the project loader and validator
-- `packages/cli` contains `plico validate [path]` and `plico run --dry`
+- `packages/cli` contains `plico validate [path]`, `plico run --dry`, `plico runs`, `plico events`, and `plico serve`
 - `packages/create-plico` contains the scaffold generator
 - `examples/internal-ops-agent` is the canonical internal-ops starter project
 
@@ -61,6 +62,15 @@ Run the dry runtime with the checked-in example tool:
 
 ```sh
 pnpm --filter @plico/cli exec plico run --dry --script examples/internal-ops-agent/evals/smoke.script.json examples/internal-ops-agent
+```
+
+Persist the smoke run, list stored runs, replay events, and start the native API server:
+
+```sh
+pnpm --filter @plico/cli exec plico run --dry --persist --script examples/internal-ops-agent/evals/smoke.script.json examples/internal-ops-agent
+pnpm --filter @plico/cli exec plico runs examples/internal-ops-agent
+pnpm --filter @plico/cli exec plico events <run-id> examples/internal-ops-agent
+pnpm --filter @plico/cli exec plico serve --db examples/internal-ops-agent/.plico/plico.sqlite examples/internal-ops-agent
 ```
 
 ## Scaffold
