@@ -1,7 +1,13 @@
 import { readdir, readFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { join } from "node:path";
-import { type LoadedProject, type ValidationIssue, validateProject } from "@plico/core";
+import {
+  getProjectPaths,
+  getProjectRelativePaths,
+  type LoadedProject,
+  type ValidationIssue,
+  validateProject,
+} from "@plico/core";
 
 export type RunStatus = "completed" | "failed" | "blocked";
 
@@ -228,16 +234,18 @@ export interface ComposedInstructions {
 }
 
 export async function composeInstructions(project: LoadedProject): Promise<ComposedInstructions> {
-  const sources = ["agent.md"];
-  const parts = [await readFile(join(project.root, "agent.md"), "utf8")];
-  const skillNames = (await readdir(join(project.root, "skills")))
+  const relativePaths = getProjectRelativePaths();
+  const projectPaths = getProjectPaths(project.root);
+  const sources = [relativePaths.agentFile];
+  const parts = [await readFile(projectPaths.agentFile, "utf8")];
+  const skillNames = (await readdir(projectPaths.directories.skills))
     .filter((entry) => entry.endsWith(".md"))
     .sort((left, right) => left.localeCompare(right));
 
   for (const skillName of skillNames) {
-    const source = `skills/${skillName}`;
+    const source = `${relativePaths.directories.skills}/${skillName}`;
     sources.push(source);
-    parts.push(await readFile(join(project.root, source), "utf8"));
+    parts.push(await readFile(join(projectPaths.directories.skills, skillName), "utf8"));
   }
 
   return {
@@ -247,14 +255,16 @@ export async function composeInstructions(project: LoadedProject): Promise<Compo
 }
 
 export async function discoverTools(project: LoadedProject): Promise<DeclaredTool[]> {
-  const entries = (await readdir(join(project.root, "tools")))
+  const relativePaths = getProjectRelativePaths();
+  const projectPaths = getProjectPaths(project.root);
+  const entries = (await readdir(projectPaths.directories.tools))
     .filter((entry) => entry.endsWith(".tool.ts"))
     .sort((left, right) => left.localeCompare(right));
 
   const tools: DeclaredTool[] = [];
   for (const entry of entries) {
-    const source = `tools/${entry}`;
-    const module = await importTranspiledTool(join(project.root, source));
+    const source = `${relativePaths.directories.tools}/${entry}`;
+    const module = await importTranspiledTool(join(projectPaths.directories.tools, entry));
     const exportedTool = readDefaultExport(module, source);
     tools.push(normalizeDeclaredTool(exportedTool, source));
   }

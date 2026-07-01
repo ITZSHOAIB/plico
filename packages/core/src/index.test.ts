@@ -2,7 +2,14 @@ import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { loadProject, validateProject } from "./index.js";
+import {
+  getProjectPaths,
+  getProjectRelativePaths,
+  loadProject,
+  PROJECT_LAYOUT,
+  REQUIRED_PROJECT_DIRECTORIES,
+  validateProject,
+} from "./index.js";
 
 async function writeValidProject(root: string, options: { configBody?: string } = {}) {
   await mkdir(join(root, "skills"), { recursive: true });
@@ -38,6 +45,47 @@ async function writeValidProject(root: string, options: { configBody?: string } 
     "utf8",
   );
 }
+
+describe("Project Layout", () => {
+  it("exposes the source project roles and root-based paths", () => {
+    const root = join(tmpdir(), "plico-layout");
+
+    expect(PROJECT_LAYOUT).toEqual({
+      configFile: "plico.config.ts",
+      agentFile: "agent.md",
+      directories: {
+        skills: "skills",
+        tools: "tools",
+        evals: "evals",
+        artifacts: "artifacts",
+        memory: "memory",
+      },
+    });
+    expect(REQUIRED_PROJECT_DIRECTORIES).toEqual([
+      "skills",
+      "tools",
+      "evals",
+      "artifacts",
+      "memory",
+    ]);
+    expect(getProjectRelativePaths()).toEqual({
+      configFile: "plico.config.ts",
+      agentFile: "agent.md",
+      directories: PROJECT_LAYOUT.directories,
+    });
+    expect(getProjectPaths(root)).toEqual({
+      configFile: join(root, "plico.config.ts"),
+      agentFile: join(root, "agent.md"),
+      directories: {
+        skills: join(root, "skills"),
+        tools: join(root, "tools"),
+        evals: join(root, "evals"),
+        artifacts: join(root, "artifacts"),
+        memory: join(root, "memory"),
+      },
+    });
+  });
+});
 
 describe("validateProject", () => {
   it("loads a computed config export from plico.config.ts", async () => {

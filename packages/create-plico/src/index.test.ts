@@ -1,7 +1,7 @@
 import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { validateProject } from "@plico/core";
+import { getProjectPaths, validateProject } from "@plico/core";
 import { runProject } from "@plico/runtime";
 import { describe, expect, it } from "vitest";
 import { createInternalOpsScaffold } from "./index.js";
@@ -12,22 +12,27 @@ describe("createInternalOpsScaffold", () => {
 
     await createInternalOpsScaffold({ targetDir: root });
 
+    const projectPaths = getProjectPaths(root);
     const result = await validateProject(root);
-    const configText = await readFile(join(root, "plico.config.ts"), "utf8");
+    const configText = await readFile(projectPaths.configFile, "utf8");
 
     expect(result.ok).toBe(true);
     expect(result.errors).toHaveLength(0);
     expect(result.warnings).toHaveLength(0);
     expect(configText).toContain('template: "internal-ops"');
-    expect(await readFile(join(root, "skills", "triage.md"), "utf8")).toContain(
+    expect(await readFile(join(projectPaths.directories.skills, "triage.md"), "utf8")).toContain(
       "smallest safe next step",
     );
-    expect(await readFile(join(root, "tools", "readme.md"), "utf8")).toContain("file-first");
-    expect(await readFile(join(root, "evals", "smoke.md"), "utf8")).toContain("validates");
-    expect(await readFile(join(root, "memory", "README.md"), "utf8")).toContain(
+    expect(await readFile(join(projectPaths.directories.tools, "readme.md"), "utf8")).toContain(
+      "file-first",
+    );
+    expect(await readFile(join(projectPaths.directories.evals, "smoke.md"), "utf8")).toContain(
+      "validates",
+    );
+    expect(await readFile(join(projectPaths.directories.memory, "README.md"), "utf8")).toContain(
       "durable project notes",
     );
-    expect(await readFile(join(root, "artifacts", "README.md"), "utf8")).toContain(
+    expect(await readFile(join(projectPaths.directories.artifacts, "README.md"), "utf8")).toContain(
       "generated outputs",
     );
     expect(await readFile(join(root, "README.md"), "utf8")).toContain(
