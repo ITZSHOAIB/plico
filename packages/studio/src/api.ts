@@ -4,6 +4,7 @@ import type {
   EvalSummary,
   LoadedProject,
   PlicoEvent,
+  ReadinessReport,
   RunSummary,
 } from "./types";
 
@@ -43,4 +44,9 @@ export async function fetchArtifactWorkspace(runId: string): Promise<ArtifactWor
 export async function fetchEvalResults(): Promise<EvalSummary> {
   const response = await fetch("/v1/eval", { method: "POST" });
   return (await response.json()) as EvalSummary;
+}
+
+export async function fetchReadiness(): Promise<ReadinessReport> {
+  const response = await fetch("/v1/readiness");
+  return (await response.json()) as ReadinessReport;
 }

@@ -648,3 +648,62 @@ describe("eval", () => {
     errorSpy.mockRestore();
   });
 });
+
+describe("readiness", () => {
+  it("reports local readiness diagnostics in human-readable form", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-cli-"));
+    await writeValidProject(root);
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    const exitCode = await main(["node", "plico", "readiness", root]);
+
+    expect(exitCode).toBe(0);
+    expect(errorSpy).not.toHaveBeenCalled();
+    const output = logSpy.mock.calls.map(([line]) => String(line));
+    expect(output.some((l) => l.includes("project.structure"))).toBe(true);
+    expect(output.some((l) => l.includes("tools.discovery"))).toBe(true);
+    expect(output.some((l) => l.includes("ok"))).toBe(true);
+    expect(output[output.length - 1]).toMatch(/\d+ ok/);
+
+    logSpy.mockRestore();
+    errorSpy.mockRestore();
+  });
+
+  it("emits machine-readable JSON with --json flag", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-cli-"));
+    await writeValidProject(root);
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    const exitCode = await main(["node", "plico", "readiness", "--json", root]);
+
+    expect(exitCode).toBe(0);
+    expect(errorSpy).not.toHaveBeenCalled();
+    expect(logSpy).toHaveBeenCalledTimes(1);
+    const parsed = JSON.parse(String(logSpy.mock.calls[0]?.[0]));
+    expect(parsed).toMatchObject({
+      projectRoot: root,
+      timestamp: expect.any(String),
+      summary: { ok: expect.any(Number), warning: expect.any(Number), error: expect.any(Number) },
+      diagnostics: expect.any(Array),
+    });
+
+    logSpy.mockRestore();
+    errorSpy.mockRestore();
+  });
+
+  it("exits 1 for invalid projects", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-cli-"));
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    const exitCode = await main(["node", "plico", "readiness", root]);
+
+    expect(exitCode).toBe(1);
+    expect(logSpy.mock.calls.some(([line]) => String(line).includes("ERROR"))).toBe(true);
+
+    logSpy.mockRestore();
+    errorSpy.mockRestore();
+  });
+});

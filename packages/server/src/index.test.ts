@@ -680,6 +680,34 @@ describe("Artifact workspace", () => {
   });
 });
 
+describe("Readiness endpoint", () => {
+  it("returns the same report shape as the CLI JSON mode via GET /v1/readiness", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-server-"));
+    await writeValidProject(root);
+    const eventStore = createSqliteEventStore({
+      databasePath: join(root, ".plico", "plico.sqlite"),
+    });
+    const serverApi = await createPlicoServer({ projectRoot: root, eventStore });
+    const { baseUrl, server } = await startTestServer(serverApi.requestListener);
+
+    const response = await jsonRequest(baseUrl, "/v1/readiness");
+
+    expect(response.status).toBe(200);
+    expect(response.body).toMatchObject({
+      projectRoot: root,
+      timestamp: expect.any(String),
+      summary: { ok: expect.any(Number), warning: expect.any(Number), error: expect.any(Number) },
+      diagnostics: expect.any(Array),
+    });
+
+    const body = response.body as { diagnostics: Array<Record<string, unknown>> };
+    expect(body.diagnostics.some((d) => d.subsystem === "project.structure")).toBe(true);
+    expect(body.diagnostics.some((d) => d.subsystem === "tools.discovery")).toBe(true);
+
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  });
+});
+
 describe("Eval endpoint", () => {
   it("runs eval cases via POST /v1/eval and returns summary", async () => {
     const root = await mkdtemp(join(tmpdir(), "plico-server-"));

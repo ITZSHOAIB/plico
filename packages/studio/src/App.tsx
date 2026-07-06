@@ -5,6 +5,7 @@ import {
   fetchEvents,
   fetchInstructions,
   fetchProject,
+  fetchReadiness,
   fetchRuns,
 } from "./api";
 import type {
@@ -15,10 +16,11 @@ import type {
   EvalSummary,
   LoadedProject,
   PlicoEvent,
+  ReadinessReport,
   RunSummary,
 } from "./types";
 
-type View = "runs" | "instructions" | "artifacts" | "evals";
+type View = "runs" | "instructions" | "artifacts" | "evals" | "readiness";
 
 export function App() {
   const [project, setProject] = useState<LoadedProject | null>(null);
@@ -30,6 +32,7 @@ export function App() {
   const [previewFile, setPreviewFile] = useState<ArtifactFile | null>(null);
   const [evalSummary, setEvalSummary] = useState<EvalSummary | null>(null);
   const [selectedEvalResult, setSelectedEvalResult] = useState<EvalCaseResult | null>(null);
+  const [readinessReport, setReadinessReport] = useState<ReadinessReport | null>(null);
   const [view, setView] = useState<View>("runs");
   const [error, setError] = useState<string | null>(null);
 
@@ -85,6 +88,16 @@ export function App() {
     setView("evals");
   }, []);
 
+  const showReadiness = useCallback(async () => {
+    setView("readiness");
+    try {
+      const report = await fetchReadiness();
+      setReadinessReport(report);
+    } catch {
+      setReadinessReport(null);
+    }
+  }, []);
+
   return (
     <div
       style={{
@@ -112,6 +125,7 @@ export function App() {
         }}
         onShowArtifacts={showArtifacts}
         onShowEvals={showEvals}
+        onShowReadiness={showReadiness}
       />
       <Main
         project={project}
@@ -125,6 +139,7 @@ export function App() {
         evalSummary={evalSummary}
         selectedEvalResult={selectedEvalResult}
         onSelectEvalRun={selectEvalRun}
+        readinessReport={readinessReport}
         error={error}
       />
     </div>
@@ -141,6 +156,7 @@ interface SidebarProps {
   onShowRuns: () => void;
   onShowArtifacts: () => void;
   onShowEvals: () => void;
+  onShowReadiness: () => void;
 }
 
 function Sidebar({
@@ -153,6 +169,7 @@ function Sidebar({
   onShowRuns,
   onShowArtifacts,
   onShowEvals,
+  onShowReadiness,
 }: SidebarProps) {
   return (
     <div
@@ -202,6 +219,9 @@ function Sidebar({
         </button>
         <button type="button" onClick={onShowEvals} style={buttonStyle(view === "evals")}>
           Evals
+        </button>
+        <button type="button" onClick={onShowReadiness} style={buttonStyle(view === "readiness")}>
+          Readiness
         </button>
       </div>
       <div>
@@ -261,6 +281,7 @@ interface MainProps {
   evalSummary: EvalSummary | null;
   selectedEvalResult: EvalCaseResult | null;
   onSelectEvalRun: (result: EvalCaseResult) => void;
+  readinessReport: ReadinessReport | null;
   error: string | null;
 }
 
@@ -276,6 +297,7 @@ function Main({
   evalSummary,
   selectedEvalResult,
   onSelectEvalRun,
+  readinessReport,
   error,
 }: MainProps) {
   if (error) {
@@ -343,7 +365,7 @@ function Main({
           {selectedEvalResult.diagnostics?.length ? (
             <div>
               <strong style={{ fontSize: "12px" }}>Diagnostics:</strong>
-              {selectedEvalResult.diagnostics.map((d, i) => (
+              {selectedEvalResult.diagnostics.map((d, _i) => (
                 <div
                   key={`diag-${d}`}
                   style={{ fontSize: "12px", color: "#c00", marginTop: "4px" }}
@@ -393,6 +415,57 @@ function Main({
             </span>
             <span style={{ marginLeft: "8px", color: "#999" }}>{result.runId}</span>
           </button>
+        ))}
+      </div>
+    );
+  }
+
+  if (view === "readiness") {
+    if (!readinessReport) {
+      return (
+        <div style={{ flex: 1, padding: "16px", color: "#666" }}>Loading readiness report…</div>
+      );
+    }
+
+    const severityColor = (s: string) => {
+      if (s === "error") return "#c00";
+      if (s === "warning") return "#b60";
+      return "#080";
+    };
+
+    return (
+      <div style={{ flex: 1, padding: "16px", overflowY: "auto" }}>
+        <h3 style={{ fontSize: "14px", margin: "0 0 8px" }}>Local Readiness Report</h3>
+        <div style={{ fontSize: "12px", color: "#666", marginBottom: "12px" }}>
+          {readinessReport.summary.ok} ok, {readinessReport.summary.warning} warning(s),{" "}
+          {readinessReport.summary.error} error(s)
+        </div>
+        {readinessReport.diagnostics.map((d) => (
+          <div
+            key={`rd-${d.subsystem}-${d.message}`}
+            style={{
+              padding: "6px 8px",
+              marginBottom: "4px",
+              borderRadius: "3px",
+              border: `1px solid ${severityColor(d.severity)}`,
+              background:
+                d.severity === "error"
+                  ? "#fff0f0"
+                  : d.severity === "warning"
+                    ? "#fff8f0"
+                    : "#f0fff0",
+              fontSize: "12px",
+            }}
+          >
+            <div style={{ fontWeight: 500 }}>
+              <span style={{ color: severityColor(d.severity) }}>
+                {d.severity === "error" ? "ERROR" : d.severity === "warning" ? "WARN" : "OK"}
+              </span>{" "}
+              {d.subsystem}
+              {d.path ? ` [${d.path}]` : ""}
+            </div>
+            <div style={{ marginTop: "2px", color: "#333" }}>{d.message}</div>
+          </div>
         ))}
       </div>
     );

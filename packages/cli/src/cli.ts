@@ -5,10 +5,12 @@ import { dirname, join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { validateProject } from "@plico/core";
 import {
+  checkReadiness,
   createSqliteEventStore,
   type DryRunScriptStep,
   type EvalSummary,
   type PlicoEvent,
+  type ReadinessReport,
   type RunSummary,
   runEvals,
   runProject,
@@ -187,6 +189,27 @@ export async function main(argv: string[]): Promise<number> {
     }
   }
 
+  if (command === "readiness") {
+    try {
+      const { json, target } = parseReadinessArgs(argv.slice(3));
+      const databasePath = resolveDatabasePath(target, undefined);
+      const report = await checkReadiness(target, { databasePath });
+
+      if (json) {
+        console.log(JSON.stringify(report));
+      } else {
+        for (const line of formatReadinessReport(report)) {
+          console.log(line);
+        }
+      }
+
+      return report.summary.error > 0 ? 1 : 0;
+    } catch (error) {
+      console.error(errorMessage(error));
+      return 1;
+    }
+  }
+
   if (command === "eval") {
     try {
       const { json, target } = parseEvalArgs(argv.slice(3));
@@ -212,6 +235,7 @@ export async function main(argv: string[]): Promise<number> {
   console.log("Usage: plico runs [--db <path>] [--json] [path]");
   console.log("Usage: plico events <runId> [--after <sequence>] [--db <path>] [--json] [path]");
   console.log("Usage: plico eval [--json] [path]");
+  console.log("Usage: plico readiness [--json] [path]");
   console.log("Usage: plico serve [--host <host>] [--port <port>] [--db <path>] [--studio] [path]");
   return 0;
 }
@@ -695,6 +719,51 @@ function formatRunResult(target: string, result: Awaited<ReturnType<typeof runPr
     lines.push("Dry run failed.");
   }
 
+  return lines;
+}
+
+function parseReadinessArgs(args: string[]): { json: boolean; target: string } {
+  let json = false;
+  let target = process.cwd();
+
+  for (const arg of args) {
+    if (arg === "--json") {
+      json = true;
+      continue;
+    }
+
+    if (arg.startsWith("-")) {
+      throw new Error(`Unknown option: ${arg}`);
+    }
+
+    target = arg;
+  }
+
+  return { json, target };
+}
+
+function formatReadinessReport(report: ReadinessReport): string[] {
+  const lines: string[] = [];
+  const subsystems = new Set(report.diagnostics.map((d) => d.subsystem));
+
+  for (const sub of subsystems) {
+    const items = report.diagnostics.filter((d) => d.subsystem === sub);
+    const hasError = items.some((d) => d.severity === "error");
+    const hasWarning = items.some((d) => d.severity === "warning");
+    const symbol = hasError ? "✗" : hasWarning ? "!" : "✓";
+    lines.push(`${symbol} ${sub}`);
+
+    for (const item of items) {
+      const prefix =
+        item.severity === "error" ? "  ERROR" : item.severity === "warning" ? "  WARN " : "  OK   ";
+      const pathInfo = item.path ? ` [${item.path}]` : "";
+      lines.push(`${prefix}${pathInfo} ${item.message}`);
+    }
+  }
+
+  lines.push(
+    `\n${report.summary.ok} ok, ${report.summary.warning} warning(s), ${report.summary.error} error(s)`,
+  );
   return lines;
 }
 

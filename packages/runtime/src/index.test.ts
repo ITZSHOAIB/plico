@@ -5,6 +5,7 @@ import { loadProject } from "@plico/core";
 import { describe, expect, it } from "vitest";
 import {
   buildArtifactWorkspace,
+  checkReadiness,
   createSqliteEventStore,
   discoverTools,
   runEvals,
@@ -867,5 +868,62 @@ describe("runEvals", () => {
     expect(summary.total).toBe(2);
     expect(summary.results[0].name).toBe("first-eval");
     expect(summary.results[1].name).toBe("second-eval");
+  });
+});
+
+describe("checkReadiness", () => {
+  it("returns ok diagnostics for a valid project", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-readiness-"));
+    await writeValidProject(root);
+
+    const report = await checkReadiness(root);
+
+    expect(report.projectRoot).toBe(root);
+    expect(report.timestamp).toBeDefined();
+    expect(report.summary.error).toBe(0);
+    expect(
+      report.diagnostics.some((d) => d.subsystem === "project.structure" && d.severity === "ok"),
+    ).toBe(true);
+    expect(report.diagnostics.some((d) => d.subsystem === "tools.discovery")).toBe(true);
+  });
+
+  it("reports validation errors for an invalid project", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-readiness-"));
+
+    const report = await checkReadiness(root);
+
+    expect(report.summary.error).toBeGreaterThan(0);
+    expect(
+      report.diagnostics.some((d) => d.severity === "error" && d.subsystem === "project.structure"),
+    ).toBe(true);
+  });
+
+  it("includes eval fixture and eval results diagnostics when eventStore has eval runs", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-readiness-"));
+    await writeValidProject(root);
+    await mkdir(join(root, "evals"), { recursive: true });
+    await writeFile(
+      join(root, "evals", "test.script.json"),
+      JSON.stringify({
+        name: "test-eval",
+        script: [{ type: "assistant.output", content: "Hi" }],
+      }),
+      "utf8",
+    );
+
+    // Run an eval to produce persisted results
+    const databasePath = join(root, ".plico", "plico.sqlite");
+    const eventStore = createSqliteEventStore({ databasePath });
+    await runEvals(root, { eventStore });
+
+    const report = await checkReadiness(root, { databasePath, eventStore });
+
+    expect(
+      report.diagnostics.some((d) => d.subsystem === "evals.fixtures" && d.severity === "ok"),
+    ).toBe(true);
+    expect(
+      report.diagnostics.some((d) => d.subsystem === "evals.results" && d.severity === "ok"),
+    ).toBe(true);
+    expect(report.diagnostics.some((d) => d.subsystem === "persistence.storage")).toBe(true);
   });
 });

@@ -2,6 +2,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { loadProject } from "@plico/core";
 import {
   buildArtifactWorkspace,
+  checkReadiness,
   composeInstructions,
   type EventStore,
   runEvals,
@@ -59,6 +60,14 @@ export async function handleRequest(options: HandleRequestOptions): Promise<void
         eventStore: options.eventStore,
       });
       sendJson(options.response, 200, summary);
+      return;
+    }
+
+    if (options.request.method === "GET" && url.pathname === "/v1/readiness") {
+      const report = await checkReadiness(options.projectRoot, {
+        eventStore: options.eventStore,
+      });
+      sendJson(options.response, 200, report);
       return;
     }
 

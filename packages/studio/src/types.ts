@@ -72,3 +72,21 @@ export interface ComposedInstructions {
   sources: string[];
   content: string;
 }
+
+export interface ReadinessDiagnostic {
+  severity: "ok" | "warning" | "error";
+  subsystem: string;
+  path?: string;
+  message: string;
+}
+
+export interface ReadinessReport {
+  projectRoot: string;
+  timestamp: string;
+  diagnostics: ReadinessDiagnostic[];
+  summary: {
+    ok: number;
+    warning: number;
+    error: number;
+  };
+}
