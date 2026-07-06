@@ -1,7 +1,7 @@
 import { access, constants, mkdir, readdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { validateProject } from "@plico/core";
-import { discoverTools } from "./tools.js";
+import { getProjectPaths, getProjectRelativePaths, validateProject } from "@plico/core";
+import { discoverToolFiles, loadToolFile } from "./tools.js";
 import type { ReadinessDiagnostic, ReadinessOptions, ReadinessReport } from "./types.js";
 
 function diag(
@@ -53,10 +53,13 @@ export async function checkReadiness(
     return finalize(projectRoot, diagnostics);
   }
 
-  // 2. Tools discovery
-  try {
-    const tools = await discoverTools(project);
-    if (tools.length === 0) {
+  // 2. Tools discovery and schema validation
+  {
+    const projectPaths = getProjectPaths(project.root);
+    const relativePaths = getProjectRelativePaths();
+    const toolFiles = await discoverToolFiles(project);
+
+    if (toolFiles.length === 0) {
       diagnostics.push(
         diag(
           "warning",
@@ -65,10 +68,31 @@ export async function checkReadiness(
         ),
       );
     } else {
-      diagnostics.push(diag("ok", "tools.discovery", `${tools.length} tool(s) discovered`));
+      let validCount = 0;
+      for (const entry of toolFiles) {
+        const source = `${relativePaths.directories.tools}/${entry}`;
+        try {
+          await loadToolFile(join(projectPaths.directories.tools, entry), source);
+          validCount++;
+        } catch (error) {
+          diagnostics.push(
+            diag(
+              "error",
+              "tools.discovery",
+              `Schema validation failed for ${entry}: ${String(error)}`,
+              source,
+            ),
+          );
+        }
+      }
+      diagnostics.push(
+        diag(
+          validCount === toolFiles.length ? "ok" : "warning",
+          "tools.discovery",
+          `${validCount}/${toolFiles.length} tool(s) valid`,
+        ),
+      );
     }
-  } catch (error) {
-    diagnostics.push(diag("error", "tools.discovery", `Tool discovery failed: ${String(error)}`));
   }
 
   // 3. Eval fixtures
@@ -171,11 +195,16 @@ export async function checkReadiness(
 
   // 6. Server/Studio config
   try {
-    await access(join(projectRoot, "plico.config.ts"), constants.F_OK);
-    diagnostics.push(diag("ok", "server.config", "Project config found for server"));
+    const { loadProject } = await import("@plico/core");
+    await loadProject(projectRoot);
+    diagnostics.push(diag("ok", "server.config", "Project config loads successfully for server"));
   } catch {
     diagnostics.push(
-      diag("warning", "server.config", "plico.config.ts not found. Server may not start."),
+      diag(
+        "warning",
+        "server.config",
+        "plico.config.ts could not be loaded. Server may not start.",
+      ),
     );
   }
 

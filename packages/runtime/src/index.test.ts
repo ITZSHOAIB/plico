@@ -926,4 +926,83 @@ describe("checkReadiness", () => {
     ).toBe(true);
     expect(report.diagnostics.some((d) => d.subsystem === "persistence.storage")).toBe(true);
   });
+
+  it("reports per-tool schema errors for invalid tool files", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-readiness-"));
+    await writeValidProject(root);
+    await writeFile(
+      join(root, "tools", "bad.tool.ts"),
+      [
+        "export default {",
+        '  name: "bad_tool",',
+        "  description: 123,",
+        '  inputSchema: { type: "object", properties: {}, additionalProperties: false },',
+        '  capabilities: ["test"],',
+        "  approval: { required: false },",
+        "  handler: async () => ({}),",
+        "} as const;",
+      ].join("\n"),
+      "utf8",
+    );
+
+    const report = await checkReadiness(root);
+
+    expect(
+      report.diagnostics.some((d) => d.subsystem === "tools.discovery" && d.severity === "error"),
+    ).toBe(true);
+    expect(report.diagnostics.some((d) => d.message.includes("bad.tool.ts"))).toBe(true);
+  });
+
+  it("reports ok for all-valid tool files", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-readiness-"));
+    await writeValidProject(root);
+    await writeFile(
+      join(root, "tools", "valid.tool.ts"),
+      [
+        "export default {",
+        '  name: "valid_tool",',
+        '  description: "A valid test tool.",',
+        "  inputSchema: {",
+        '    type: "object",',
+        "    properties: {",
+        '      msg: { type: "string" },',
+        "    },",
+        '    required: ["msg"],',
+        "    additionalProperties: false,",
+        "  },",
+        '  capabilities: ["test:read"],',
+        "  approval: { required: false },",
+        "  handler: async () => ({}),",
+        "} as const;",
+      ].join("\n"),
+      "utf8",
+    );
+
+    const report = await checkReadiness(root);
+
+    const validDiag = report.diagnostics.find((d) => d.subsystem === "tools.discovery");
+    expect(validDiag).toBeDefined();
+    expect(validDiag!.message).toContain("1/1 tool(s) valid");
+  });
+
+  it("reports a warning when no eval fixtures exist", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-readiness-"));
+    await writeValidProject(root);
+
+    const report = await checkReadiness(root);
+
+    expect(
+      report.diagnostics.some((d) => d.subsystem === "evals.fixtures" && d.severity === "warning"),
+    ).toBe(true);
+  });
+
+  it("includes artifact workspace and server config diagnostics for a valid project", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-readiness-"));
+    await writeValidProject(root);
+
+    const report = await checkReadiness(root);
+
+    expect(report.diagnostics.some((d) => d.subsystem === "artifacts.workspace")).toBe(true);
+    expect(report.diagnostics.some((d) => d.subsystem === "server.config")).toBe(true);
+  });
 });

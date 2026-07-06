@@ -5,19 +5,30 @@ import { getProjectPaths, getProjectRelativePaths, type LoadedProject } from "@p
 import { isJsonSchemaSubset } from "./schema.js";
 import type { DeclaredTool } from "./types.js";
 
-export async function discoverTools(project: LoadedProject): Promise<DeclaredTool[]> {
-  const relativePaths = getProjectRelativePaths();
+export async function discoverToolFiles(project: LoadedProject): Promise<string[]> {
   const projectPaths = getProjectPaths(project.root);
   const entries = (await readdir(projectPaths.directories.tools))
     .filter((entry) => entry.endsWith(".tool.ts"))
     .sort((left, right) => left.localeCompare(right));
+  return entries;
+}
+
+export async function loadToolFile(toolPath: string, source: string): Promise<DeclaredTool> {
+  const module = await importTranspiledTool(toolPath);
+  const exportedTool = readDefaultExport(module, source);
+  return normalizeDeclaredTool(exportedTool, source);
+}
+
+export async function discoverTools(project: LoadedProject): Promise<DeclaredTool[]> {
+  const relativePaths = getProjectRelativePaths();
+  const projectPaths = getProjectPaths(project.root);
+  const entries = await discoverToolFiles(project);
 
   const tools: DeclaredTool[] = [];
   for (const entry of entries) {
     const source = `${relativePaths.directories.tools}/${entry}`;
-    const module = await importTranspiledTool(join(projectPaths.directories.tools, entry));
-    const exportedTool = readDefaultExport(module, source);
-    tools.push(normalizeDeclaredTool(exportedTool, source));
+    const tool = await loadToolFile(join(projectPaths.directories.tools, entry), source);
+    tools.push(tool);
   }
 
   return tools;
