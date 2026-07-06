@@ -120,4 +120,30 @@ describe("serve", () => {
     logSpy.mockRestore();
     errorSpy.mockRestore();
   });
+
+  it("passes --studio flag by resolving the studio dist path", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-cli-"));
+    await writeValidProject(root);
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    servePlicoMock.mockResolvedValue({
+      address: () => ({ family: "IPv4", address: "127.0.0.1", port: 3000 }),
+      close: vi.fn(),
+    });
+
+    const exitCode = await main(["node", "plico", "serve", "--studio", root]);
+
+    expect(exitCode).toBe(0);
+    expect(errorSpy).not.toHaveBeenCalled();
+    expect(servePlicoMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        projectRoot: root,
+        studioPath: expect.stringContaining("studio"),
+      }),
+    );
+
+    logSpy.mockRestore();
+    errorSpy.mockRestore();
+  });
 });

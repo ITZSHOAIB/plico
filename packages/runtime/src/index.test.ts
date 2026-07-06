@@ -3,7 +3,12 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { loadProject } from "@plico/core";
 import { describe, expect, it } from "vitest";
-import { createSqliteEventStore, discoverTools, runProject } from "./index.js";
+import {
+  buildArtifactWorkspace,
+  createSqliteEventStore,
+  discoverTools,
+  runProject,
+} from "./index.js";
 
 async function writeValidProject(root: string) {
   await mkdir(join(root, "skills"), { recursive: true });
@@ -580,6 +585,58 @@ describe("runProject", () => {
         type: "run.blocked",
       }),
     ]);
+  });
+
+  it("produces artifact events from artifact.write script steps and reconstructs workspace from events", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-runtime-"));
+    await writeValidProject(root);
+
+    const result = await runProject(root, {
+      script: [
+        {
+          type: "artifact.write",
+          files: [
+            {
+              path: "summary.md",
+              content: "# Summary\n\nWork completed.",
+              mimeType: "text/markdown",
+            },
+            { path: "output.json", content: '{"key": "value"}' },
+          ],
+        },
+      ],
+    });
+
+    expect(result.status).toBe("completed");
+    expect(result.events.map((event) => event.type)).toEqual([
+      "run.started",
+      "instructions.composed",
+      "tools.discovered",
+      "artifact.workspace.created",
+      "artifact.file.written",
+      "artifact.file.written",
+      "artifact.snapshot.created",
+      "run.completed",
+    ]);
+    expect(result.output).toContain("Artifact workspace");
+
+    const workspace = buildArtifactWorkspace(result.runId, result.events);
+    expect(workspace).toBeDefined();
+    expect(workspace?.files).toHaveLength(2);
+    expect(workspace?.files[0]).toMatchObject({
+      path: "summary.md",
+      content: "# Summary\n\nWork completed.",
+      mimeType: "text/markdown",
+    });
+    expect(workspace?.files[1]).toMatchObject({
+      path: "output.json",
+      content: '{"key": "value"}',
+      mimeType: "text/plain",
+    });
+    expect(workspace?.snapshots).toHaveLength(1);
+    expect(workspace?.snapshots[0]).toMatchObject({
+      fileCount: 2,
+    });
   });
 });
 

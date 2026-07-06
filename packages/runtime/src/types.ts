@@ -10,6 +10,9 @@ export type PlicoEventType =
   | "tool.call"
   | "tool.result"
   | "approval.required"
+  | "artifact.workspace.created"
+  | "artifact.file.written"
+  | "artifact.snapshot.created"
   | "run.completed"
   | "run.blocked"
   | "run.failed"
@@ -58,6 +61,32 @@ export interface CreateSqliteEventStoreOptions {
   databasePath: string;
 }
 
+export interface ArtifactFileInput {
+  path: string;
+  content: string;
+  mimeType?: string;
+}
+
+export interface ArtifactFile {
+  path: string;
+  content: string;
+  mimeType: string;
+}
+
+export interface ArtifactSnapshot {
+  snapshotId: string;
+  fileCount: number;
+  createdAt: string;
+}
+
+export interface ArtifactWorkspace {
+  workspaceId: string;
+  runId: string;
+  files: ArtifactFile[];
+  snapshots: ArtifactSnapshot[];
+  createdAt: string;
+}
+
 export type DryRunScriptStep =
   | {
       type: "assistant.output";
@@ -67,6 +96,10 @@ export type DryRunScriptStep =
       type: "tool.call";
       toolName: string;
       arguments: unknown;
+    }
+  | {
+      type: "artifact.write";
+      files: ArtifactFileInput[];
     };
 
 export interface RunProjectOptions {

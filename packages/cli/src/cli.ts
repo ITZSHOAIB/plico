@@ -1,6 +1,7 @@
 import { constants as fsConstants } from "node:fs";
 import { access, readFile } from "node:fs/promises";
-import { join } from "node:path";
+import { createRequire } from "node:module";
+import { dirname, join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { validateProject } from "@plico/core";
 import {
@@ -147,14 +148,27 @@ export async function main(argv: string[]): Promise<number> {
 
   if (command === "serve") {
     try {
-      const { dbPath, host, port, target } = parseServeArgs(argv.slice(3));
+      const { dbPath, host, port, studio, target } = parseServeArgs(argv.slice(3));
       const databasePath = resolveDatabasePath(target, dbPath);
+      let studioPath: string | undefined;
+      if (studio) {
+        try {
+          const _require = createRequire(import.meta.url);
+          const pkgPath = _require.resolve("@plico/studio/package.json");
+          studioPath = join(dirname(pkgPath), "dist");
+        } catch {
+          throw new Error(
+            "Cannot resolve @plico/studio. Build it first with: pnpm --filter @plico/studio build",
+          );
+        }
+      }
       const { servePlico } = await import("@plico/server");
       const server = await servePlico({
         projectRoot: target,
         databasePath,
         ...(host === undefined ? {} : { host }),
         ...(port === undefined ? {} : { port }),
+        ...(studioPath === undefined ? {} : { studioPath }),
       });
       const address = server.address();
       if (!address || typeof address === "string") {
@@ -175,7 +189,7 @@ export async function main(argv: string[]): Promise<number> {
   console.log("Usage: plico run --dry [--persist] [--db <path>] [--json] [--script <file>] [path]");
   console.log("Usage: plico runs [--db <path>] [--json] [path]");
   console.log("Usage: plico events <runId> [--after <sequence>] [--db <path>] [--json] [path]");
-  console.log("Usage: plico serve [--host <host>] [--port <port>] [--db <path>] [path]");
+  console.log("Usage: plico serve [--host <host>] [--port <port>] [--db <path>] [--studio] [path]");
   return 0;
 }
 
@@ -400,11 +414,13 @@ function parseServeArgs(args: string[]): {
   dbPath?: string;
   host?: string;
   port?: number;
+  studio: boolean;
   target: string;
 } {
   let target = process.cwd();
   let host: string | undefined;
   let port: number | undefined;
+  let studio = false;
   let dbPath: string | undefined;
   let awaitingHost = false;
   let awaitingPort = false;
@@ -444,6 +460,11 @@ function parseServeArgs(args: string[]): {
       continue;
     }
 
+    if (arg === "--studio") {
+      studio = true;
+      continue;
+    }
+
     if (arg.startsWith("-")) {
       throw new Error(`Unknown option: ${arg}`);
     }
@@ -465,6 +486,7 @@ function parseServeArgs(args: string[]): {
 
   return {
     target,
+    studio,
     ...(host === undefined ? {} : { host }),
     ...(port === undefined ? {} : { port }),
     ...(dbPath === undefined ? {} : { dbPath }),

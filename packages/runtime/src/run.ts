@@ -171,6 +171,28 @@ async function runScriptedDryRun(
       continue;
     }
 
+    if (step.type === "artifact.write") {
+      const workspaceId = randomUUID();
+      events.append("artifact.workspace.created", { workspaceId });
+
+      for (const file of step.files) {
+        events.append("artifact.file.written", {
+          path: file.path,
+          content: file.content,
+          mimeType: file.mimeType ?? "text/plain",
+        });
+      }
+
+      const snapshotId = randomUUID();
+      events.append("artifact.snapshot.created", {
+        snapshotId,
+        fileCount: step.files.length,
+      });
+
+      output = `Artifact workspace ${workspaceId} created with ${step.files.length} files`;
+      continue;
+    }
+
     const tool = toolsByName.get(step.toolName);
     if (!tool) {
       throw new Error(`Unknown tool: ${step.toolName}`);

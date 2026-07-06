@@ -3,7 +3,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { validateProject } from "../../packages/core/src/index.js";
-import { createSqliteEventStore, runProject } from "../../packages/runtime/src/index.js";
+import {
+  buildArtifactWorkspace,
+  createSqliteEventStore,
+  runProject,
+} from "../../packages/runtime/src/index.js";
 
 describe("internal-ops-agent example", () => {
   it("validates as a Plico project", async () => {
@@ -67,5 +71,47 @@ describe("internal-ops-agent example", () => {
       expect.objectContaining({ sequence: 6, type: "tool.result" }),
       expect.objectContaining({ sequence: 7, type: "run.completed" }),
     ]);
+  });
+
+  it("produces a persisted artifact workspace in a dry run with artifact.write", async () => {
+    const result = await runProject("examples/internal-ops-agent", {
+      script: [
+        { type: "assistant.output", content: "Creating ticket and recording artifacts." },
+        { type: "tool.call", toolName: "create_ticket", arguments: { title: "VPN down" } },
+        {
+          type: "artifact.write",
+          files: [
+            {
+              path: "ticket-summary.md",
+              content: "# Ticket Created\n\nTitle: VPN down",
+              mimeType: "text/markdown",
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(result.status).toBe("completed");
+    expect(result.events.map((event) => event.type)).toEqual([
+      "run.started",
+      "instructions.composed",
+      "tools.discovered",
+      "assistant.output",
+      "tool.call",
+      "tool.result",
+      "artifact.workspace.created",
+      "artifact.file.written",
+      "artifact.snapshot.created",
+      "run.completed",
+    ]);
+
+    const workspace = buildArtifactWorkspace(result.runId, result.events);
+    expect(workspace).toBeDefined();
+    expect(workspace?.files).toHaveLength(1);
+    expect(workspace?.files[0]).toMatchObject({
+      path: "ticket-summary.md",
+      mimeType: "text/markdown",
+    });
+    expect(result.output).toContain("Artifact workspace");
   });
 });

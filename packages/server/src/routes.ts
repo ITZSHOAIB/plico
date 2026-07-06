@@ -1,10 +1,17 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { type EventStore, runProject } from "@plico/runtime";
+import { loadProject } from "@plico/core";
+import {
+  buildArtifactWorkspace,
+  composeInstructions,
+  type EventStore,
+  runProject,
+} from "@plico/runtime";
 import { readJsonBody } from "./body.js";
 import { errorMessage, HttpError, sendError } from "./errors.js";
 import { loadProjectOrThrow } from "./project.js";
 import { sendJson } from "./responses.js";
 import { normalizeScript } from "./script.js";
+import { handleEventStream, parseAfterCursor } from "./stream.js";
 
 interface HandleRequestOptions {
   projectRoot: string;
@@ -25,6 +32,13 @@ export async function handleRequest(options: HandleRequestOptions): Promise<void
     if (options.request.method === "GET" && url.pathname === "/v1/project") {
       const project = await loadProjectOrThrow(options.projectRoot);
       sendJson(options.response, 200, { project });
+      return;
+    }
+
+    if (options.request.method === "GET" && url.pathname === "/v1/instructions") {
+      const project = await loadProject(options.projectRoot);
+      const instructions = await composeInstructions(project);
+      sendJson(options.response, 200, instructions);
       return;
     }
 
@@ -52,6 +66,22 @@ export async function handleRequest(options: HandleRequestOptions): Promise<void
       return;
     }
 
+    const streamMatch = url.pathname.match(/^\/v1\/runs\/([^/]+)\/events\/stream$/);
+    if (options.request.method === "GET" && streamMatch) {
+      const runId = decodeURIComponent(streamMatch[1] ?? "");
+      const after = url.searchParams.get("after");
+      const afterSequence = after === null ? undefined : parseAfterCursor(after);
+      await handleEventStream({
+        projectRoot: options.projectRoot,
+        eventStore: options.eventStore,
+        request: options.request,
+        response: options.response,
+        runId,
+        afterSequence,
+      });
+      return;
+    }
+
     const eventsMatch = url.pathname.match(/^\/v1\/runs\/([^/]+)\/events$/);
     if (options.request.method === "GET" && eventsMatch) {
       const runId = decodeURIComponent(eventsMatch[1] ?? "");
@@ -71,6 +101,31 @@ export async function handleRequest(options: HandleRequestOptions): Promise<void
       return;
     }
 
+    const workspaceMatch = url.pathname.match(/^\/v1\/runs\/([^/]+)\/workspace$/);
+    if (options.request.method === "GET" && workspaceMatch) {
+      const runId = decodeURIComponent(workspaceMatch[1] ?? "");
+      const run = await options.eventStore.getRun(runId);
+      if (!run) {
+        sendError(options.response, 404, "run.not_found", `Unknown run ID: ${runId}`);
+        return;
+      }
+
+      const events = await options.eventStore.getEvents(runId);
+      const workspace = buildArtifactWorkspace(runId, events);
+      if (!workspace) {
+        sendError(
+          options.response,
+          404,
+          "workspace.not_found",
+          `No artifact workspace for run: ${runId}`,
+        );
+        return;
+      }
+
+      sendJson(options.response, 200, workspace);
+      return;
+    }
+
     if (options.request.method === "GET" && url.pathname === "/v1/runs") {
       const runs = await options.eventStore.listRuns();
       sendJson(options.response, 200, runs);
@@ -86,13 +141,4 @@ export async function handleRequest(options: HandleRequestOptions): Promise<void
 
     sendError(options.response, 500, "server.error", errorMessage(error));
   }
-}
-
-function parseAfterCursor(value: string): number {
-  const parsed = Number(value);
-  if (!Number.isInteger(parsed) || parsed < 0) {
-    throw new HttpError(400, "cursor.invalid", `Malformed cursor: ${value}`);
-  }
-
-  return parsed;
 }
