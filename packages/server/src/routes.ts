@@ -4,6 +4,7 @@ import {
   buildArtifactWorkspace,
   composeInstructions,
   type EventStore,
+  runEvals,
   runProject,
 } from "@plico/runtime";
 import { readJsonBody } from "./body.js";
@@ -50,6 +51,14 @@ export async function handleRequest(options: HandleRequestOptions): Promise<void
         eventStore: options.eventStore,
       });
       sendJson(options.response, 200, result);
+      return;
+    }
+
+    if (options.request.method === "POST" && url.pathname === "/v1/eval") {
+      const summary = await runEvals(options.projectRoot, {
+        eventStore: options.eventStore,
+      });
+      sendJson(options.response, 200, summary);
       return;
     }
 

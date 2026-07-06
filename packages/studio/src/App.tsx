@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   fetchArtifactWorkspace,
+  fetchEvalResults,
   fetchEvents,
   fetchInstructions,
   fetchProject,
@@ -10,12 +11,14 @@ import type {
   ArtifactFile,
   ArtifactWorkspace,
   ComposedInstructions,
+  EvalCaseResult,
+  EvalSummary,
   LoadedProject,
   PlicoEvent,
   RunSummary,
 } from "./types";
 
-type View = "runs" | "instructions" | "artifacts";
+type View = "runs" | "instructions" | "artifacts" | "evals";
 
 export function App() {
   const [project, setProject] = useState<LoadedProject | null>(null);
@@ -25,6 +28,8 @@ export function App() {
   const [instructions, setInstructions] = useState<ComposedInstructions | null>(null);
   const [workspace, setWorkspace] = useState<ArtifactWorkspace | null>(null);
   const [previewFile, setPreviewFile] = useState<ArtifactFile | null>(null);
+  const [evalSummary, setEvalSummary] = useState<EvalSummary | null>(null);
+  const [selectedEvalResult, setSelectedEvalResult] = useState<EvalCaseResult | null>(null);
   const [view, setView] = useState<View>("runs");
   const [error, setError] = useState<string | null>(null);
 
@@ -64,6 +69,22 @@ export function App() {
     }
   }, [selectedRun]);
 
+  const showEvals = useCallback(async () => {
+    setView("evals");
+    setSelectedEvalResult(null);
+    try {
+      const summary = await fetchEvalResults();
+      setEvalSummary(summary);
+    } catch {
+      setEvalSummary(null);
+    }
+  }, []);
+
+  const selectEvalRun = useCallback(async (result: EvalCaseResult) => {
+    setSelectedEvalResult(result);
+    setView("evals");
+  }, []);
+
   return (
     <div
       style={{
@@ -90,6 +111,7 @@ export function App() {
           setPreviewFile(null);
         }}
         onShowArtifacts={showArtifacts}
+        onShowEvals={showEvals}
       />
       <Main
         project={project}
@@ -100,6 +122,9 @@ export function App() {
         workspace={workspace}
         previewFile={previewFile}
         onPreviewFile={setPreviewFile}
+        evalSummary={evalSummary}
+        selectedEvalResult={selectedEvalResult}
+        onSelectEvalRun={selectEvalRun}
         error={error}
       />
     </div>
@@ -115,6 +140,7 @@ interface SidebarProps {
   onShowInstructions: () => void;
   onShowRuns: () => void;
   onShowArtifacts: () => void;
+  onShowEvals: () => void;
 }
 
 function Sidebar({
@@ -126,6 +152,7 @@ function Sidebar({
   onShowInstructions,
   onShowRuns,
   onShowArtifacts,
+  onShowEvals,
 }: SidebarProps) {
   return (
     <div
@@ -172,6 +199,9 @@ function Sidebar({
           disabled={!selectedRun}
         >
           Artifacts
+        </button>
+        <button type="button" onClick={onShowEvals} style={buttonStyle(view === "evals")}>
+          Evals
         </button>
       </div>
       <div>
@@ -228,6 +258,9 @@ interface MainProps {
   workspace: ArtifactWorkspace | null;
   previewFile: ArtifactFile | null;
   onPreviewFile: (file: ArtifactFile | null) => void;
+  evalSummary: EvalSummary | null;
+  selectedEvalResult: EvalCaseResult | null;
+  onSelectEvalRun: (result: EvalCaseResult) => void;
   error: string | null;
 }
 
@@ -240,6 +273,9 @@ function Main({
   workspace,
   previewFile,
   onPreviewFile,
+  evalSummary,
+  selectedEvalResult,
+  onSelectEvalRun,
   error,
 }: MainProps) {
   if (error) {
@@ -267,6 +303,97 @@ function Main({
         >
           {instructions.content}
         </pre>
+      </div>
+    );
+  }
+
+  if (view === "evals") {
+    if (selectedEvalResult) {
+      return (
+        <div style={{ flex: 1, padding: "16px", overflowY: "auto" }}>
+          <button
+            type="button"
+            onClick={() => onSelectEvalRun(selectedEvalResult)}
+            style={{ marginBottom: "8px", fontSize: "12px", cursor: "pointer" }}
+          >
+            ← Back to evals
+          </button>
+          <h3 style={{ fontSize: "14px", margin: "0 0 4px" }}>{selectedEvalResult.name}</h3>
+          <div style={{ fontSize: "12px", color: "#666", marginBottom: "8px" }}>
+            {selectedEvalResult.status === "pass" ? "PASS" : "FAIL"} &middot; Run:{" "}
+            {selectedEvalResult.runId}
+          </div>
+          {selectedEvalResult.output && (
+            <div style={{ marginBottom: "8px" }}>
+              <strong style={{ fontSize: "12px" }}>Output:</strong>
+              <pre
+                style={{
+                  whiteSpace: "pre-wrap",
+                  fontSize: "12px",
+                  background: "#f9f9f9",
+                  padding: "8px",
+                  border: "1px solid #ddd",
+                  borderRadius: "4px",
+                }}
+              >
+                {selectedEvalResult.output}
+              </pre>
+            </div>
+          )}
+          {selectedEvalResult.diagnostics?.length ? (
+            <div>
+              <strong style={{ fontSize: "12px" }}>Diagnostics:</strong>
+              {selectedEvalResult.diagnostics.map((d, i) => (
+                <div
+                  key={`diag-${d}`}
+                  style={{ fontSize: "12px", color: "#c00", marginTop: "4px" }}
+                >
+                  {d}
+                </div>
+              ))}
+            </div>
+          ) : null}
+        </div>
+      );
+    }
+
+    if (!evalSummary) {
+      return <div style={{ flex: 1, padding: "16px", color: "#666" }}>No eval data available.</div>;
+    }
+
+    return (
+      <div style={{ flex: 1, padding: "16px", overflowY: "auto" }}>
+        <h3 style={{ fontSize: "14px", margin: "0 0 8px" }}>Eval Results</h3>
+        <div style={{ fontSize: "12px", color: "#666", marginBottom: "12px" }}>
+          {evalSummary.passed}/{evalSummary.total} passed, {evalSummary.failed} failed
+        </div>
+        {evalSummary.results.map((result) => (
+          <button
+            key={result.runId}
+            type="button"
+            onClick={() => onSelectEvalRun(result)}
+            style={{
+              display: "block",
+              width: "100%",
+              padding: "6px 8px",
+              cursor: "pointer",
+              borderRadius: "3px",
+              background: result.status === "pass" ? "#f0fff0" : "#fff0f0",
+              marginBottom: "2px",
+              fontSize: "12px",
+              border: "1px solid #ddd",
+              textAlign: "left",
+              fontFamily: "inherit",
+              color: "inherit",
+            }}
+          >
+            <span style={{ fontWeight: 500 }}>{result.name}</span>
+            <span style={{ marginLeft: "8px", color: result.status === "pass" ? "#080" : "#c00" }}>
+              {result.status === "pass" ? "PASS" : "FAIL"}
+            </span>
+            <span style={{ marginLeft: "8px", color: "#999" }}>{result.runId}</span>
+          </button>
+        ))}
       </div>
     );
   }

@@ -57,6 +57,39 @@ export interface EventStore {
   getEvents(runId: string, options?: { afterSequence?: number }): Promise<PlicoEvent[]>;
 }
 
+export interface EvalExpectation {
+  status?: RunStatus;
+  outputContains?: string;
+}
+
+export interface EvalCase {
+  name: string;
+  description?: string;
+  script: DryRunScriptStep[];
+  expect?: EvalExpectation;
+}
+
+export interface EvalCaseResult {
+  name: string;
+  description?: string;
+  status: "pass" | "fail";
+  runId: string;
+  runStatus: RunStatus;
+  output?: string;
+  diagnostics?: string[];
+}
+
+export interface EvalSummary {
+  total: number;
+  passed: number;
+  failed: number;
+  results: EvalCaseResult[];
+}
+
+export interface RunEvalsOptions {
+  eventStore?: EventStore;
+}
+
 export interface CreateSqliteEventStoreOptions {
   databasePath: string;
 }

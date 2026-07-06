@@ -1,6 +1,7 @@
 import type {
   ArtifactWorkspace,
   ComposedInstructions,
+  EvalSummary,
   LoadedProject,
   PlicoEvent,
   RunSummary,
@@ -37,4 +38,9 @@ export async function fetchArtifactWorkspace(runId: string): Promise<ArtifactWor
   const response = await fetch(`/v1/runs/${encodeURIComponent(runId)}/workspace`);
   if (!response.ok) return null;
   return (await response.json()) as ArtifactWorkspace;
+}
+
+export async function fetchEvalResults(): Promise<EvalSummary> {
+  const response = await fetch("/v1/eval", { method: "POST" });
+  return (await response.json()) as EvalSummary;
 }

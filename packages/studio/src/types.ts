@@ -51,6 +51,23 @@ export interface ArtifactWorkspace {
   createdAt: string;
 }
 
+export interface EvalCaseResult {
+  name: string;
+  description?: string;
+  status: "pass" | "fail";
+  runId: string;
+  runStatus: string;
+  output?: string;
+  diagnostics?: string[];
+}
+
+export interface EvalSummary {
+  total: number;
+  passed: number;
+  failed: number;
+  results: EvalCaseResult[];
+}
+
 export interface ComposedInstructions {
   sources: string[];
   content: string;

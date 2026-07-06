@@ -7,8 +7,10 @@ import { validateProject } from "@plico/core";
 import {
   createSqliteEventStore,
   type DryRunScriptStep,
+  type EvalSummary,
   type PlicoEvent,
   type RunSummary,
+  runEvals,
   runProject,
 } from "@plico/runtime";
 
@@ -185,10 +187,31 @@ export async function main(argv: string[]): Promise<number> {
     }
   }
 
+  if (command === "eval") {
+    try {
+      const { json, target } = parseEvalArgs(argv.slice(3));
+      const summary = await runEvals(target);
+
+      if (json) {
+        console.log(JSON.stringify(summary));
+      } else {
+        for (const line of formatEvalSummary(target, summary)) {
+          console.log(line);
+        }
+      }
+
+      return summary.failed > 0 ? 1 : 0;
+    } catch (error) {
+      console.error(errorMessage(error));
+      return 1;
+    }
+  }
+
   console.log("Usage: plico validate [path]");
   console.log("Usage: plico run --dry [--persist] [--db <path>] [--json] [--script <file>] [path]");
   console.log("Usage: plico runs [--db <path>] [--json] [path]");
   console.log("Usage: plico events <runId> [--after <sequence>] [--db <path>] [--json] [path]");
+  console.log("Usage: plico eval [--json] [path]");
   console.log("Usage: plico serve [--host <host>] [--port <port>] [--db <path>] [--studio] [path]");
   return 0;
 }
@@ -672,6 +695,49 @@ function formatRunResult(target: string, result: Awaited<ReturnType<typeof runPr
     lines.push("Dry run failed.");
   }
 
+  return lines;
+}
+
+function parseEvalArgs(args: string[]): { json: boolean; target: string } {
+  let json = false;
+  let target = process.cwd();
+
+  for (const arg of args) {
+    if (arg === "--json") {
+      json = true;
+      continue;
+    }
+
+    if (arg.startsWith("-")) {
+      throw new Error(`Unknown option: ${arg}`);
+    }
+
+    target = arg;
+  }
+
+  return { json, target };
+}
+
+function formatEvalSummary(target: string, summary: EvalSummary): string[] {
+  const lines = [`Eval results for ${target}`];
+
+  if (summary.total === 0) {
+    lines.push("No eval cases found.");
+    return lines;
+  }
+
+  for (const result of summary.results) {
+    const statusSymbol = result.status === "pass" ? "PASS" : "FAIL";
+    lines.push(`  ${statusSymbol} ${result.name} (${result.runId})`);
+
+    if (result.diagnostics?.length) {
+      for (const diag of result.diagnostics) {
+        lines.push(`       ${diag}`);
+      }
+    }
+  }
+
+  lines.push(`\n${summary.passed}/${summary.total} passed, ${summary.failed} failed`);
   return lines;
 }
 

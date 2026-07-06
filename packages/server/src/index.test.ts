@@ -679,3 +679,85 @@ describe("Artifact workspace", () => {
     await new Promise<void>((resolve) => server.close(() => resolve()));
   });
 });
+
+describe("Eval endpoint", () => {
+  it("runs eval cases via POST /v1/eval and returns summary", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-server-"));
+    await writeValidProject(root);
+    await writeFile(
+      join(root, "evals", "test.script.json"),
+      JSON.stringify({
+        name: "server-eval",
+        script: [{ type: "assistant.output", content: "Hello from server eval" }],
+      }),
+      "utf8",
+    );
+
+    const eventStore = createSqliteEventStore({
+      databasePath: join(root, ".plico", "plico.sqlite"),
+    });
+    const serverApi = await createPlicoServer({ projectRoot: root, eventStore });
+    const { baseUrl, server } = await startTestServer(serverApi.requestListener);
+
+    const response = await jsonRequest(baseUrl, "/v1/eval", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: "{}",
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body).toMatchObject({
+      total: 1,
+      passed: 1,
+      failed: 0,
+      results: [
+        {
+          name: "server-eval",
+          status: "pass",
+          runStatus: "completed",
+          output: "Hello from server eval",
+        },
+      ],
+    });
+
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  });
+
+  it("persists eval runs through the event store and returns run IDs", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-server-"));
+    await writeValidProject(root);
+    await writeFile(
+      join(root, "evals", "persist-test.script.json"),
+      JSON.stringify({
+        name: "persist-eval",
+        script: [{ type: "assistant.output", content: "Persist this" }],
+      }),
+      "utf8",
+    );
+
+    const eventStore = createSqliteEventStore({
+      databasePath: join(root, ".plico", "plico.sqlite"),
+    });
+    const serverApi = await createPlicoServer({ projectRoot: root, eventStore });
+    const { baseUrl, server } = await startTestServer(serverApi.requestListener);
+
+    const response = await jsonRequest(baseUrl, "/v1/eval", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: "{}",
+    });
+
+    expect(response.status).toBe(200);
+    const summary = response.body as { results?: Array<Record<string, unknown>> };
+    const runId = String(summary.results?.[0]?.runId ?? "");
+
+    const run = await jsonRequest(baseUrl, `/v1/runs/${runId}`);
+    expect(run.status).toBe(200);
+    expect(run.body).toMatchObject({
+      runId,
+      status: "completed",
+    });
+
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  });
+});
