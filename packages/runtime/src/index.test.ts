@@ -3,7 +3,14 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { loadProject } from "@plico/core";
 import { describe, expect, it } from "vitest";
-import { createSqliteEventStore, discoverTools, runProject } from "./index.js";
+import {
+  buildArtifactWorkspace,
+  checkReadiness,
+  createSqliteEventStore,
+  discoverTools,
+  runEvals,
+  runProject,
+} from "./index.js";
 
 async function writeValidProject(root: string) {
   await mkdir(join(root, "skills"), { recursive: true });
@@ -581,6 +588,58 @@ describe("runProject", () => {
       }),
     ]);
   });
+
+  it("produces artifact events from artifact.write script steps and reconstructs workspace from events", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-runtime-"));
+    await writeValidProject(root);
+
+    const result = await runProject(root, {
+      script: [
+        {
+          type: "artifact.write",
+          files: [
+            {
+              path: "summary.md",
+              content: "# Summary\n\nWork completed.",
+              mimeType: "text/markdown",
+            },
+            { path: "output.json", content: '{"key": "value"}' },
+          ],
+        },
+      ],
+    });
+
+    expect(result.status).toBe("completed");
+    expect(result.events.map((event) => event.type)).toEqual([
+      "run.started",
+      "instructions.composed",
+      "tools.discovered",
+      "artifact.workspace.created",
+      "artifact.file.written",
+      "artifact.file.written",
+      "artifact.snapshot.created",
+      "run.completed",
+    ]);
+    expect(result.output).toContain("Artifact workspace");
+
+    const workspace = buildArtifactWorkspace(result.runId, result.events);
+    expect(workspace).toBeDefined();
+    expect(workspace?.files).toHaveLength(2);
+    expect(workspace?.files[0]).toMatchObject({
+      path: "summary.md",
+      content: "# Summary\n\nWork completed.",
+      mimeType: "text/markdown",
+    });
+    expect(workspace?.files[1]).toMatchObject({
+      path: "output.json",
+      content: '{"key": "value"}',
+      mimeType: "text/plain",
+    });
+    expect(workspace?.snapshots).toHaveLength(1);
+    expect(workspace?.snapshots[0]).toMatchObject({
+      fileCount: 2,
+    });
+  });
 });
 
 describe("discoverTools", () => {
@@ -657,5 +716,293 @@ describe("discoverTools", () => {
     await expect(discoverTools(project)).rejects.toThrow(
       "tools/bad-name.tool.ts tool name must match /^[a-z][a-z0-9_]*$/",
     );
+  });
+});
+
+describe("runEvals", () => {
+  it("discovers and runs .script.json eval cases, returning pass/fail summaries", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-evals-"));
+    await writeValidProject(root);
+    await mkdir(join(root, "evals"), { recursive: true });
+
+    await writeFile(
+      join(root, "evals", "passing.script.json"),
+      JSON.stringify({
+        name: "passing-eval",
+        description: "A passing eval case.",
+        script: [{ type: "assistant.output", content: "Hello from eval" }],
+      }),
+      "utf8",
+    );
+
+    const summary = await runEvals(root);
+
+    expect(summary.total).toBe(1);
+    expect(summary.passed).toBe(1);
+    expect(summary.failed).toBe(0);
+    expect(summary.results[0]).toMatchObject({
+      name: "passing-eval",
+      status: "pass",
+      runStatus: "completed",
+      output: "Hello from eval",
+    });
+    expect(summary.results[0].runId).toContain("eval-passing-eval-");
+  });
+
+  it("reports failure when expect.status does not match", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-evals-"));
+    await writeValidProject(root);
+    await mkdir(join(root, "evals"), { recursive: true });
+
+    await writeFile(
+      join(root, "evals", "failing.script.json"),
+      JSON.stringify({
+        name: "failing-eval",
+        description: "A failing eval case.",
+        script: [{ type: "assistant.output", content: "Will this fail?" }],
+        expect: { status: "failed" },
+      }),
+      "utf8",
+    );
+
+    const summary = await runEvals(root);
+
+    expect(summary.total).toBe(1);
+    expect(summary.passed).toBe(0);
+    expect(summary.failed).toBe(1);
+    expect(summary.results[0]).toMatchObject({
+      name: "failing-eval",
+      status: "fail",
+      runStatus: "completed",
+    });
+    expect(summary.results[0].diagnostics).toBeDefined();
+    expect(summary.results[0].diagnostics?.[0]).toContain('Expected status "failed"');
+  });
+
+  it("reports failure when expect.outputContains does not match", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-evals-"));
+    await writeValidProject(root);
+    await mkdir(join(root, "evals"), { recursive: true });
+
+    await writeFile(
+      join(root, "evals", "output-check.script.json"),
+      JSON.stringify({
+        name: "output-check",
+        script: [{ type: "assistant.output", content: "Hello world" }],
+        expect: { outputContains: "Goodbye" },
+      }),
+      "utf8",
+    );
+
+    const summary = await runEvals(root);
+
+    expect(summary.total).toBe(1);
+    expect(summary.passed).toBe(0);
+    expect(summary.failed).toBe(1);
+    expect(summary.results[0].diagnostics?.[0]).toContain('Expected output to contain "Goodbye"');
+  });
+
+  it("returns empty summary when evals directory has no .script.json files", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-evals-"));
+    await writeValidProject(root);
+
+    const summary = await runEvals(root);
+
+    expect(summary.total).toBe(0);
+    expect(summary.passed).toBe(0);
+    expect(summary.failed).toBe(0);
+    expect(summary.results).toEqual([]);
+  });
+
+  it("persists eval runs when eventStore is provided", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-evals-"));
+    await writeValidProject(root);
+    await mkdir(join(root, "evals"), { recursive: true });
+
+    await writeFile(
+      join(root, "evals", "persisted.script.json"),
+      JSON.stringify({
+        name: "persisted-eval",
+        script: [{ type: "assistant.output", content: "Persist me" }],
+      }),
+      "utf8",
+    );
+
+    const databasePath = join(root, ".plico", "plico.sqlite");
+    const eventStore = createSqliteEventStore({ databasePath });
+    const summary = await runEvals(root, { eventStore });
+
+    expect(summary.total).toBe(1);
+    expect(summary.passed).toBe(1);
+
+    const runs = await eventStore.listRuns();
+    expect(runs).toHaveLength(1);
+    expect(runs[0].runId).toContain("eval-persisted-eval-");
+    expect(runs[0].status).toBe("completed");
+  });
+
+  it("runs multiple eval cases in deterministic sorted order", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-evals-"));
+    await writeValidProject(root);
+    await mkdir(join(root, "evals"), { recursive: true });
+
+    await writeFile(
+      join(root, "evals", "b-second.script.json"),
+      JSON.stringify({
+        name: "second-eval",
+        script: [{ type: "assistant.output", content: "Second" }],
+      }),
+      "utf8",
+    );
+    await writeFile(
+      join(root, "evals", "a-first.script.json"),
+      JSON.stringify({
+        name: "first-eval",
+        script: [{ type: "assistant.output", content: "First" }],
+      }),
+      "utf8",
+    );
+
+    const summary = await runEvals(root);
+
+    expect(summary.total).toBe(2);
+    expect(summary.results[0].name).toBe("first-eval");
+    expect(summary.results[1].name).toBe("second-eval");
+  });
+});
+
+describe("checkReadiness", () => {
+  it("returns ok diagnostics for a valid project", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-readiness-"));
+    await writeValidProject(root);
+
+    const report = await checkReadiness(root);
+
+    expect(report.projectRoot).toBe(root);
+    expect(report.timestamp).toBeDefined();
+    expect(report.summary.error).toBe(0);
+    expect(
+      report.diagnostics.some((d) => d.subsystem === "project.structure" && d.severity === "ok"),
+    ).toBe(true);
+    expect(report.diagnostics.some((d) => d.subsystem === "tools.discovery")).toBe(true);
+  });
+
+  it("reports validation errors for an invalid project", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-readiness-"));
+
+    const report = await checkReadiness(root);
+
+    expect(report.summary.error).toBeGreaterThan(0);
+    expect(
+      report.diagnostics.some((d) => d.severity === "error" && d.subsystem === "project.structure"),
+    ).toBe(true);
+  });
+
+  it("includes eval fixture and eval results diagnostics when eventStore has eval runs", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-readiness-"));
+    await writeValidProject(root);
+    await mkdir(join(root, "evals"), { recursive: true });
+    await writeFile(
+      join(root, "evals", "test.script.json"),
+      JSON.stringify({
+        name: "test-eval",
+        script: [{ type: "assistant.output", content: "Hi" }],
+      }),
+      "utf8",
+    );
+
+    // Run an eval to produce persisted results
+    const databasePath = join(root, ".plico", "plico.sqlite");
+    const eventStore = createSqliteEventStore({ databasePath });
+    await runEvals(root, { eventStore });
+
+    const report = await checkReadiness(root, { databasePath, eventStore });
+
+    expect(
+      report.diagnostics.some((d) => d.subsystem === "evals.fixtures" && d.severity === "ok"),
+    ).toBe(true);
+    expect(
+      report.diagnostics.some((d) => d.subsystem === "evals.results" && d.severity === "ok"),
+    ).toBe(true);
+    expect(report.diagnostics.some((d) => d.subsystem === "persistence.storage")).toBe(true);
+  });
+
+  it("reports per-tool schema errors for invalid tool files", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-readiness-"));
+    await writeValidProject(root);
+    await writeFile(
+      join(root, "tools", "bad.tool.ts"),
+      [
+        "export default {",
+        '  name: "bad_tool",',
+        "  description: 123,",
+        '  inputSchema: { type: "object", properties: {}, additionalProperties: false },',
+        '  capabilities: ["test"],',
+        "  approval: { required: false },",
+        "  handler: async () => ({}),",
+        "} as const;",
+      ].join("\n"),
+      "utf8",
+    );
+
+    const report = await checkReadiness(root);
+
+    expect(
+      report.diagnostics.some((d) => d.subsystem === "tools.discovery" && d.severity === "error"),
+    ).toBe(true);
+    expect(report.diagnostics.some((d) => d.message.includes("bad.tool.ts"))).toBe(true);
+  });
+
+  it("reports ok for all-valid tool files", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-readiness-"));
+    await writeValidProject(root);
+    await writeFile(
+      join(root, "tools", "valid.tool.ts"),
+      [
+        "export default {",
+        '  name: "valid_tool",',
+        '  description: "A valid test tool.",',
+        "  inputSchema: {",
+        '    type: "object",',
+        "    properties: {",
+        '      msg: { type: "string" },',
+        "    },",
+        '    required: ["msg"],',
+        "    additionalProperties: false,",
+        "  },",
+        '  capabilities: ["test:read"],',
+        "  approval: { required: false },",
+        "  handler: async () => ({}),",
+        "} as const;",
+      ].join("\n"),
+      "utf8",
+    );
+
+    const report = await checkReadiness(root);
+
+    const validDiag = report.diagnostics.find((d) => d.subsystem === "tools.discovery");
+    expect(validDiag).toBeDefined();
+    expect(validDiag!.message).toContain("1/1 tool(s) valid");
+  });
+
+  it("reports a warning when no eval fixtures exist", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-readiness-"));
+    await writeValidProject(root);
+
+    const report = await checkReadiness(root);
+
+    expect(
+      report.diagnostics.some((d) => d.subsystem === "evals.fixtures" && d.severity === "warning"),
+    ).toBe(true);
+  });
+
+  it("includes artifact workspace and server config diagnostics for a valid project", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-readiness-"));
+    await writeValidProject(root);
+
+    const report = await checkReadiness(root);
+
+    expect(report.diagnostics.some((d) => d.subsystem === "artifacts.workspace")).toBe(true);
+    expect(report.diagnostics.some((d) => d.subsystem === "server.config")).toBe(true);
   });
 });

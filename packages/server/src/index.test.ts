@@ -6,6 +6,62 @@ import { createSqliteEventStore } from "@plico/runtime";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createPlicoServer, servePlico } from "./index.js";
 
+interface SSEMessage {
+  event?: string;
+  id?: string;
+  data?: string;
+  comment?: string;
+}
+
+async function readSSEStream(
+  baseUrl: string,
+  path: string,
+  signal: AbortSignal,
+): Promise<SSEMessage[]> {
+  const response = await fetch(`${baseUrl}${path}`, { signal });
+  const reader = response.body?.getReader();
+  if (!reader) return [];
+  const decoder = new TextDecoder();
+  let buffer = "";
+  const messages: SSEMessage[] = [];
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+
+    const parts = buffer.split("\n\n");
+    buffer = parts.pop() ?? "";
+
+    for (const part of parts) {
+      if (!part.trim()) continue;
+      const msg = parseSSEMessage(part);
+      if (msg) messages.push(msg);
+    }
+  }
+
+  return messages;
+}
+
+function parseSSEMessage(text: string): SSEMessage | null {
+  const lines = text.split("\n");
+  const msg: SSEMessage = {};
+
+  for (const line of lines) {
+    if (line.startsWith("event: ")) {
+      msg.event = line.slice(7);
+    } else if (line.startsWith("data: ")) {
+      msg.data = line.slice(6);
+    } else if (line.startsWith("id: ")) {
+      msg.id = line.slice(4);
+    } else if (line.startsWith(": ")) {
+      msg.comment = line.slice(2);
+    }
+  }
+
+  return Object.keys(msg).length > 0 ? msg : null;
+}
+
 afterEach(() => {
   vi.restoreAllMocks();
 });
@@ -279,6 +335,456 @@ describe("createPlicoServer", () => {
     if (address && typeof address !== "string") {
       expect(address.port).toBeGreaterThan(0);
     }
+
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  });
+});
+
+describe("Studio", () => {
+  it("serves Studio index.html and preserves API when studioPath is provided", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-server-"));
+    await writeValidProject(root);
+
+    const studioDir = await mkdtemp(join(tmpdir(), "plico-studio-"));
+    await mkdir(join(studioDir, "assets"), { recursive: true });
+    await writeFile(join(studioDir, "index.html"), "<html><body>Studio</body></html>", "utf8");
+    await writeFile(join(studioDir, "assets", "app.js"), "console.log('studio')", "utf8");
+
+    const eventStore = createSqliteEventStore({
+      databasePath: join(root, ".plico", "plico.sqlite"),
+    });
+    const serverApi = await createPlicoServer({
+      projectRoot: root,
+      eventStore,
+      studioPath: studioDir,
+    });
+    const { baseUrl, server } = await startTestServer(serverApi.requestListener);
+
+    const health = await jsonRequest(baseUrl, "/health");
+    expect(health).toEqual({ status: 200, body: { ok: true } });
+
+    const indexResponse = await fetch(`${baseUrl}/`);
+    expect(indexResponse.status).toBe(200);
+    expect(await indexResponse.text()).toBe("<html><body>Studio</body></html>");
+
+    const assetResponse = await fetch(`${baseUrl}/assets/app.js`);
+    expect(assetResponse.status).toBe(200);
+
+    const spaResponse = await fetch(`${baseUrl}/some/studio/route`);
+    expect(spaResponse.status).toBe(200);
+    expect(await spaResponse.text()).toBe("<html><body>Studio</body></html>");
+
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  });
+
+  it("preserves API-only behavior when studioPath is omitted", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-server-"));
+    await writeValidProject(root);
+    const eventStore = createSqliteEventStore({
+      databasePath: join(root, ".plico", "plico.sqlite"),
+    });
+    const serverApi = await createPlicoServer({ projectRoot: root, eventStore });
+    const { baseUrl, server } = await startTestServer(serverApi.requestListener);
+
+    const notFound = await jsonRequest(baseUrl, "/some/route");
+    expect(notFound).toEqual({
+      status: 404,
+      body: { error: { code: "route.not_found", message: "Unknown route." } },
+    });
+
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  });
+});
+
+describe("Instructions", () => {
+  it("serves composed instructions via /v1/instructions", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-server-"));
+    await writeValidProject(root);
+    const eventStore = createSqliteEventStore({
+      databasePath: join(root, ".plico", "plico.sqlite"),
+    });
+    const serverApi = await createPlicoServer({ projectRoot: root, eventStore });
+    const { baseUrl, server } = await startTestServer(serverApi.requestListener);
+
+    const response = await jsonRequest(baseUrl, "/v1/instructions");
+    expect(response.status).toBe(200);
+    expect(response.body).toMatchObject({
+      sources: ["agent.md"],
+      content: expect.stringContaining("Use the local Markdown instructions"),
+    });
+
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  });
+});
+
+describe("SSE stream", () => {
+  async function persistDryRun(baseUrl: string): Promise<string> {
+    const run = await jsonRequest(baseUrl, "/v1/runs/dry", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        script: [{ type: "assistant.output", content: "Hello" }],
+      }),
+    });
+    expect(run.status).toBe(200);
+    return String((run.body as { runId: string }).runId);
+  }
+
+  it("replays persisted events after cursor via GET /v1/runs/:runId/events/stream?after=N", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-sse-"));
+    await writeValidProject(root);
+    const eventStore = createSqliteEventStore({
+      databasePath: join(root, ".plico", "plico.sqlite"),
+    });
+    const serverApi = await createPlicoServer({ projectRoot: root, eventStore });
+    const { baseUrl, server } = await startTestServer(serverApi.requestListener);
+
+    const runId = await persistDryRun(baseUrl);
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+    const messages = await readSSEStream(
+      baseUrl,
+      `/v1/runs/${runId}/events/stream?after=2`,
+      controller.signal,
+    );
+    clearTimeout(timeout);
+
+    const eventMessages = messages.filter((m) => m.event === "plico.event");
+    expect(eventMessages.length).toBeGreaterThan(0);
+    expect(eventMessages[0]?.id).toBe("3");
+    expect(eventMessages[0]?.data).toContain("tools.discovered");
+    expect(eventMessages[eventMessages.length - 1]?.data).toContain("run.completed");
+
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  });
+
+  it("returns JSON 404 for unknown run IDs before starting a stream", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-sse-"));
+    await writeValidProject(root);
+    const eventStore = createSqliteEventStore({
+      databasePath: join(root, ".plico", "plico.sqlite"),
+    });
+    const serverApi = await createPlicoServer({ projectRoot: root, eventStore });
+    const { baseUrl, server } = await startTestServer(serverApi.requestListener);
+
+    const response = await jsonRequest(baseUrl, "/v1/runs/no-such-run/events/stream");
+    expect(response).toEqual({
+      status: 404,
+      body: { error: { code: "run.not_found", message: "Unknown run ID: no-such-run" } },
+    });
+
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  });
+
+  it("returns JSON 400 for malformed cursors before starting a stream", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-sse-"));
+    await writeValidProject(root);
+    const eventStore = createSqliteEventStore({
+      databasePath: join(root, ".plico", "plico.sqlite"),
+    });
+    const serverApi = await createPlicoServer({ projectRoot: root, eventStore });
+    const { baseUrl, server } = await startTestServer(serverApi.requestListener);
+
+    const response = await jsonRequest(baseUrl, "/v1/runs/any-run/events/stream?after=nope");
+    expect(response).toEqual({
+      status: 400,
+      body: {
+        error: {
+          code: "cursor.invalid",
+          message: "Malformed cursor: nope",
+        },
+      },
+    });
+
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  });
+
+  it("sends heartbeats during the stream", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-sse-"));
+    await writeValidProject(root);
+    const eventStore = createSqliteEventStore({
+      databasePath: join(root, ".plico", "plico.sqlite"),
+    });
+    const serverApi = await createPlicoServer({ projectRoot: root, eventStore });
+    const { baseUrl, server } = await startTestServer(serverApi.requestListener);
+
+    const runId = await persistDryRun(baseUrl);
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+    const messages = await readSSEStream(
+      baseUrl,
+      `/v1/runs/${runId}/events/stream?after=0`,
+      controller.signal,
+    );
+    clearTimeout(timeout);
+
+    const heartbeats = messages.filter((m) => m.comment === "heartbeat");
+    expect(heartbeats.length).toBeGreaterThanOrEqual(1);
+
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  });
+
+  it("closes the stream cleanly after terminal event", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-sse-"));
+    await writeValidProject(root);
+    const eventStore = createSqliteEventStore({
+      databasePath: join(root, ".plico", "plico.sqlite"),
+    });
+    const serverApi = await createPlicoServer({ projectRoot: root, eventStore });
+    const { baseUrl, server } = await startTestServer(serverApi.requestListener);
+
+    const runId = await persistDryRun(baseUrl);
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+    const messages = await readSSEStream(
+      baseUrl,
+      `/v1/runs/${runId}/events/stream?after=0`,
+      controller.signal,
+    );
+    clearTimeout(timeout);
+
+    const eventMessages = messages.filter((m) => m.event === "plico.event");
+    expect(eventMessages.length).toBeGreaterThan(0);
+    const lastEventData = eventMessages[eventMessages.length - 1]?.data;
+    expect(lastEventData).toBeDefined();
+    expect(JSON.parse(lastEventData as string)).toMatchObject({
+      type: expect.stringMatching(/^run\.(completed|failed|blocked|error)$/),
+    });
+
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  });
+
+  it("preserves existing non-stream event endpoints", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-sse-"));
+    await writeValidProject(root);
+    const eventStore = createSqliteEventStore({
+      databasePath: join(root, ".plico", "plico.sqlite"),
+    });
+    const serverApi = await createPlicoServer({ projectRoot: root, eventStore });
+    const { baseUrl, server } = await startTestServer(serverApi.requestListener);
+
+    const runId = await persistDryRun(baseUrl);
+
+    const events = await jsonRequest(baseUrl, `/v1/runs/${runId}/events?after=0`);
+    expect(events.status).toBe(200);
+    expect(events.body).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ type: "run.started" }),
+        expect.objectContaining({ type: "run.completed" }),
+      ]),
+    );
+
+    const runs = await jsonRequest(baseUrl, "/v1/runs");
+    expect(runs.status).toBe(200);
+    expect(Array.isArray(runs.body)).toBe(true);
+    expect((runs.body as Array<unknown>).length).toBeGreaterThan(0);
+
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  });
+});
+
+describe("Artifact workspace", () => {
+  it("returns reconstructed artifact workspace from a dry run with artifact.write steps", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-server-"));
+    await writeValidProject(root);
+    const eventStore = createSqliteEventStore({
+      databasePath: join(root, ".plico", "plico.sqlite"),
+    });
+    const serverApi = await createPlicoServer({ projectRoot: root, eventStore });
+    const { baseUrl, server } = await startTestServer(serverApi.requestListener);
+
+    const run = await jsonRequest(baseUrl, "/v1/runs/dry", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        script: [
+          {
+            type: "artifact.write",
+            files: [
+              { path: "summary.md", content: "# Done", mimeType: "text/markdown" },
+              { path: "data.json", content: '{"ok":true}' },
+            ],
+          },
+        ],
+      }),
+    });
+
+    expect(run.status).toBe(200);
+    const runId = String((run.body as { runId: string }).runId);
+
+    const workspace = await jsonRequest(baseUrl, `/v1/runs/${runId}/workspace`);
+    expect(workspace.status).toBe(200);
+    const ws = workspace.body as Record<string, unknown>;
+    expect(ws.workspaceId).toBeDefined();
+    expect(ws.runId).toBe(runId);
+    expect(ws.files).toHaveLength(2);
+    expect((ws.files as Array<Record<string, unknown>>)[0]).toMatchObject({
+      path: "summary.md",
+      mimeType: "text/markdown",
+    });
+    expect((ws.files as Array<Record<string, unknown>>)[1]).toMatchObject({
+      path: "data.json",
+      mimeType: "text/plain",
+    });
+    expect(ws.snapshots).toHaveLength(1);
+
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  });
+
+  it("returns 404 for a run without artifact events", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-server-"));
+    await writeValidProject(root);
+    const eventStore = createSqliteEventStore({
+      databasePath: join(root, ".plico", "plico.sqlite"),
+    });
+    const serverApi = await createPlicoServer({ projectRoot: root, eventStore });
+    const { baseUrl, server } = await startTestServer(serverApi.requestListener);
+
+    const run = await jsonRequest(baseUrl, "/v1/runs/dry", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        script: [{ type: "assistant.output", content: "Hello" }],
+      }),
+    });
+
+    const runId = String((run.body as { runId: string }).runId);
+    const workspace = await jsonRequest(baseUrl, `/v1/runs/${runId}/workspace`);
+    expect(workspace).toEqual({
+      status: 404,
+      body: { error: { code: "workspace.not_found", message: expect.stringContaining(runId) } },
+    });
+
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  });
+
+  it("returns 404 for an unknown run ID", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-server-"));
+    await writeValidProject(root);
+    const eventStore = createSqliteEventStore({
+      databasePath: join(root, ".plico", "plico.sqlite"),
+    });
+    const serverApi = await createPlicoServer({ projectRoot: root, eventStore });
+    const { baseUrl, server } = await startTestServer(serverApi.requestListener);
+
+    const workspace = await jsonRequest(baseUrl, "/v1/runs/no-such-run/workspace");
+    expect(workspace).toEqual({
+      status: 404,
+      body: { error: { code: "run.not_found", message: "Unknown run ID: no-such-run" } },
+    });
+
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  });
+});
+
+describe("Readiness endpoint", () => {
+  it("returns the same report shape as the CLI JSON mode via GET /v1/readiness", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-server-"));
+    await writeValidProject(root);
+    const eventStore = createSqliteEventStore({
+      databasePath: join(root, ".plico", "plico.sqlite"),
+    });
+    const serverApi = await createPlicoServer({ projectRoot: root, eventStore });
+    const { baseUrl, server } = await startTestServer(serverApi.requestListener);
+
+    const response = await jsonRequest(baseUrl, "/v1/readiness");
+
+    expect(response.status).toBe(200);
+    expect(response.body).toMatchObject({
+      projectRoot: root,
+      timestamp: expect.any(String),
+      summary: { ok: expect.any(Number), warning: expect.any(Number), error: expect.any(Number) },
+      diagnostics: expect.any(Array),
+    });
+
+    const body = response.body as { diagnostics: Array<Record<string, unknown>> };
+    expect(body.diagnostics.some((d) => d.subsystem === "project.structure")).toBe(true);
+    expect(body.diagnostics.some((d) => d.subsystem === "tools.discovery")).toBe(true);
+
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  });
+});
+
+describe("Eval endpoint", () => {
+  it("runs eval cases via POST /v1/eval and returns summary", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-server-"));
+    await writeValidProject(root);
+    await writeFile(
+      join(root, "evals", "test.script.json"),
+      JSON.stringify({
+        name: "server-eval",
+        script: [{ type: "assistant.output", content: "Hello from server eval" }],
+      }),
+      "utf8",
+    );
+
+    const eventStore = createSqliteEventStore({
+      databasePath: join(root, ".plico", "plico.sqlite"),
+    });
+    const serverApi = await createPlicoServer({ projectRoot: root, eventStore });
+    const { baseUrl, server } = await startTestServer(serverApi.requestListener);
+
+    const response = await jsonRequest(baseUrl, "/v1/eval", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: "{}",
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body).toMatchObject({
+      total: 1,
+      passed: 1,
+      failed: 0,
+      results: [
+        {
+          name: "server-eval",
+          status: "pass",
+          runStatus: "completed",
+          output: "Hello from server eval",
+        },
+      ],
+    });
+
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  });
+
+  it("persists eval runs through the event store and returns run IDs", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-server-"));
+    await writeValidProject(root);
+    await writeFile(
+      join(root, "evals", "persist-test.script.json"),
+      JSON.stringify({
+        name: "persist-eval",
+        script: [{ type: "assistant.output", content: "Persist this" }],
+      }),
+      "utf8",
+    );
+
+    const eventStore = createSqliteEventStore({
+      databasePath: join(root, ".plico", "plico.sqlite"),
+    });
+    const serverApi = await createPlicoServer({ projectRoot: root, eventStore });
+    const { baseUrl, server } = await startTestServer(serverApi.requestListener);
+
+    const response = await jsonRequest(baseUrl, "/v1/eval", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: "{}",
+    });
+
+    expect(response.status).toBe(200);
+    const summary = response.body as { results?: Array<Record<string, unknown>> };
+    const runId = String(summary.results?.[0]?.runId ?? "");
+
+    const run = await jsonRequest(baseUrl, `/v1/runs/${runId}`);
+    expect(run.status).toBe(200);
+    expect(run.body).toMatchObject({
+      runId,
+      status: "completed",
+    });
 
     await new Promise<void>((resolve) => server.close(() => resolve()));
   });

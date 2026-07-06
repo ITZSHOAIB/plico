@@ -23,6 +23,7 @@
   "dependencies": {
     "@plico/core": "workspace:*",
     "@plico/server": "workspace:*",
+    "@plico/studio": "workspace:*",
     "@plico/runtime": "workspace:*"
   },
   "scripts": {

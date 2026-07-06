@@ -49,6 +49,32 @@ function normalizeScriptStep(step: unknown, index: number): DryRunScriptStep {
     };
   }
 
+  if (step.type === "artifact.write") {
+    if (!Array.isArray(step.files)) {
+      throw new HttpError(
+        400,
+        "request.invalid_body",
+        `script step ${index + 1} must include a files array.`,
+      );
+    }
+
+    return {
+      type: "artifact.write",
+      files: step.files.map((file: unknown, fi: number) => {
+        if (!isRecord(file) || typeof file.path !== "string" || typeof file.content !== "string") {
+          throw new HttpError(
+            400,
+            "request.invalid_body",
+            `script step ${index + 1} file ${fi + 1} must have path and content strings.`,
+          );
+        }
+        const out: Record<string, string> = { path: file.path, content: file.content };
+        if (typeof file.mimeType === "string") out.mimeType = file.mimeType;
+        return out as { path: string; content: string; mimeType?: string };
+      }),
+    };
+  }
+
   throw new HttpError(
     400,
     "request.invalid_body",

@@ -1,10 +1,19 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { type EventStore, runProject } from "@plico/runtime";
+import { loadProject } from "@plico/core";
+import {
+  buildArtifactWorkspace,
+  checkReadiness,
+  composeInstructions,
+  type EventStore,
+  runEvals,
+  runProject,
+} from "@plico/runtime";
 import { readJsonBody } from "./body.js";
 import { errorMessage, HttpError, sendError } from "./errors.js";
 import { loadProjectOrThrow } from "./project.js";
 import { sendJson } from "./responses.js";
 import { normalizeScript } from "./script.js";
+import { handleEventStream, parseAfterCursor } from "./stream.js";
 
 interface HandleRequestOptions {
   projectRoot: string;
@@ -28,6 +37,13 @@ export async function handleRequest(options: HandleRequestOptions): Promise<void
       return;
     }
 
+    if (options.request.method === "GET" && url.pathname === "/v1/instructions") {
+      const project = await loadProject(options.projectRoot);
+      const instructions = await composeInstructions(project);
+      sendJson(options.response, 200, instructions);
+      return;
+    }
+
     if (options.request.method === "POST" && url.pathname === "/v1/runs/dry") {
       const body = await readJsonBody(options.request);
       const script = body.script === undefined ? undefined : normalizeScript(body.script);
@@ -36,6 +52,22 @@ export async function handleRequest(options: HandleRequestOptions): Promise<void
         eventStore: options.eventStore,
       });
       sendJson(options.response, 200, result);
+      return;
+    }
+
+    if (options.request.method === "POST" && url.pathname === "/v1/eval") {
+      const summary = await runEvals(options.projectRoot, {
+        eventStore: options.eventStore,
+      });
+      sendJson(options.response, 200, summary);
+      return;
+    }
+
+    if (options.request.method === "GET" && url.pathname === "/v1/readiness") {
+      const report = await checkReadiness(options.projectRoot, {
+        eventStore: options.eventStore,
+      });
+      sendJson(options.response, 200, report);
       return;
     }
 
@@ -49,6 +81,22 @@ export async function handleRequest(options: HandleRequestOptions): Promise<void
       }
 
       sendJson(options.response, 200, run);
+      return;
+    }
+
+    const streamMatch = url.pathname.match(/^\/v1\/runs\/([^/]+)\/events\/stream$/);
+    if (options.request.method === "GET" && streamMatch) {
+      const runId = decodeURIComponent(streamMatch[1] ?? "");
+      const after = url.searchParams.get("after");
+      const afterSequence = after === null ? undefined : parseAfterCursor(after);
+      await handleEventStream({
+        projectRoot: options.projectRoot,
+        eventStore: options.eventStore,
+        request: options.request,
+        response: options.response,
+        runId,
+        afterSequence,
+      });
       return;
     }
 
@@ -71,6 +119,31 @@ export async function handleRequest(options: HandleRequestOptions): Promise<void
       return;
     }
 
+    const workspaceMatch = url.pathname.match(/^\/v1\/runs\/([^/]+)\/workspace$/);
+    if (options.request.method === "GET" && workspaceMatch) {
+      const runId = decodeURIComponent(workspaceMatch[1] ?? "");
+      const run = await options.eventStore.getRun(runId);
+      if (!run) {
+        sendError(options.response, 404, "run.not_found", `Unknown run ID: ${runId}`);
+        return;
+      }
+
+      const events = await options.eventStore.getEvents(runId);
+      const workspace = buildArtifactWorkspace(runId, events);
+      if (!workspace) {
+        sendError(
+          options.response,
+          404,
+          "workspace.not_found",
+          `No artifact workspace for run: ${runId}`,
+        );
+        return;
+      }
+
+      sendJson(options.response, 200, workspace);
+      return;
+    }
+
     if (options.request.method === "GET" && url.pathname === "/v1/runs") {
       const runs = await options.eventStore.listRuns();
       sendJson(options.response, 200, runs);
@@ -86,13 +159,4 @@ export async function handleRequest(options: HandleRequestOptions): Promise<void
 
     sendError(options.response, 500, "server.error", errorMessage(error));
   }
-}
-
-function parseAfterCursor(value: string): number {
-  const parsed = Number(value);
-  if (!Number.isInteger(parsed) || parsed < 0) {
-    throw new HttpError(400, "cursor.invalid", `Malformed cursor: ${value}`);
-  }
-
-  return parsed;
 }

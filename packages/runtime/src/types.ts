@@ -10,6 +10,9 @@ export type PlicoEventType =
   | "tool.call"
   | "tool.result"
   | "approval.required"
+  | "artifact.workspace.created"
+  | "artifact.file.written"
+  | "artifact.snapshot.created"
   | "run.completed"
   | "run.blocked"
   | "run.failed"
@@ -54,8 +57,92 @@ export interface EventStore {
   getEvents(runId: string, options?: { afterSequence?: number }): Promise<PlicoEvent[]>;
 }
 
+export interface EvalExpectation {
+  status?: RunStatus;
+  outputContains?: string;
+}
+
+export interface EvalCase {
+  name: string;
+  description?: string;
+  script: DryRunScriptStep[];
+  expect?: EvalExpectation;
+}
+
+export interface EvalCaseResult {
+  name: string;
+  description?: string;
+  status: "pass" | "fail";
+  runId: string;
+  runStatus: RunStatus;
+  output?: string;
+  diagnostics?: string[];
+}
+
+export interface EvalSummary {
+  total: number;
+  passed: number;
+  failed: number;
+  results: EvalCaseResult[];
+}
+
+export interface RunEvalsOptions {
+  eventStore?: EventStore;
+}
+
+export type DiagnosticSeverity = "ok" | "warning" | "error";
+
+export interface ReadinessDiagnostic {
+  severity: DiagnosticSeverity;
+  subsystem: string;
+  path?: string;
+  message: string;
+}
+
+export interface ReadinessReport {
+  projectRoot: string;
+  timestamp: string;
+  diagnostics: ReadinessDiagnostic[];
+  summary: {
+    ok: number;
+    warning: number;
+    error: number;
+  };
+}
+
+export interface ReadinessOptions {
+  databasePath?: string;
+  eventStore?: EventStore;
+}
+
 export interface CreateSqliteEventStoreOptions {
   databasePath: string;
+}
+
+export interface ArtifactFileInput {
+  path: string;
+  content: string;
+  mimeType?: string;
+}
+
+export interface ArtifactFile {
+  path: string;
+  content: string;
+  mimeType: string;
+}
+
+export interface ArtifactSnapshot {
+  snapshotId: string;
+  fileCount: number;
+  createdAt: string;
+}
+
+export interface ArtifactWorkspace {
+  workspaceId: string;
+  runId: string;
+  files: ArtifactFile[];
+  snapshots: ArtifactSnapshot[];
+  createdAt: string;
 }
 
 export type DryRunScriptStep =
@@ -67,6 +154,10 @@ export type DryRunScriptStep =
       type: "tool.call";
       toolName: string;
       arguments: unknown;
+    }
+  | {
+      type: "artifact.write";
+      files: ArtifactFileInput[];
     };
 
 export interface RunProjectOptions {

@@ -1,13 +1,18 @@
 import { constants as fsConstants } from "node:fs";
 import { access, readFile } from "node:fs/promises";
-import { join } from "node:path";
+import { createRequire } from "node:module";
+import { dirname, join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { validateProject } from "@plico/core";
 import {
+  checkReadiness,
   createSqliteEventStore,
   type DryRunScriptStep,
+  type EvalSummary,
   type PlicoEvent,
+  type ReadinessReport,
   type RunSummary,
+  runEvals,
   runProject,
 } from "@plico/runtime";
 
@@ -147,14 +152,27 @@ export async function main(argv: string[]): Promise<number> {
 
   if (command === "serve") {
     try {
-      const { dbPath, host, port, target } = parseServeArgs(argv.slice(3));
+      const { dbPath, host, port, studio, target } = parseServeArgs(argv.slice(3));
       const databasePath = resolveDatabasePath(target, dbPath);
+      let studioPath: string | undefined;
+      if (studio) {
+        try {
+          const _require = createRequire(import.meta.url);
+          const pkgPath = _require.resolve("@plico/studio/package.json");
+          studioPath = join(dirname(pkgPath), "dist");
+        } catch {
+          throw new Error(
+            "Cannot resolve @plico/studio. Build it first with: pnpm --filter @plico/studio build",
+          );
+        }
+      }
       const { servePlico } = await import("@plico/server");
       const server = await servePlico({
         projectRoot: target,
         databasePath,
         ...(host === undefined ? {} : { host }),
         ...(port === undefined ? {} : { port }),
+        ...(studioPath === undefined ? {} : { studioPath }),
       });
       const address = server.address();
       if (!address || typeof address === "string") {
@@ -171,11 +189,54 @@ export async function main(argv: string[]): Promise<number> {
     }
   }
 
+  if (command === "readiness") {
+    try {
+      const { json, target } = parseReadinessArgs(argv.slice(3));
+      const databasePath = resolveDatabasePath(target, undefined);
+      const report = await checkReadiness(target, { databasePath });
+
+      if (json) {
+        console.log(JSON.stringify(report));
+      } else {
+        for (const line of formatReadinessReport(report)) {
+          console.log(line);
+        }
+      }
+
+      return report.summary.error > 0 ? 1 : 0;
+    } catch (error) {
+      console.error(errorMessage(error));
+      return 1;
+    }
+  }
+
+  if (command === "eval") {
+    try {
+      const { json, target } = parseEvalArgs(argv.slice(3));
+      const summary = await runEvals(target);
+
+      if (json) {
+        console.log(JSON.stringify(summary));
+      } else {
+        for (const line of formatEvalSummary(target, summary)) {
+          console.log(line);
+        }
+      }
+
+      return summary.failed > 0 ? 1 : 0;
+    } catch (error) {
+      console.error(errorMessage(error));
+      return 1;
+    }
+  }
+
   console.log("Usage: plico validate [path]");
   console.log("Usage: plico run --dry [--persist] [--db <path>] [--json] [--script <file>] [path]");
   console.log("Usage: plico runs [--db <path>] [--json] [path]");
   console.log("Usage: plico events <runId> [--after <sequence>] [--db <path>] [--json] [path]");
-  console.log("Usage: plico serve [--host <host>] [--port <port>] [--db <path>] [path]");
+  console.log("Usage: plico eval [--json] [path]");
+  console.log("Usage: plico readiness [--json] [path]");
+  console.log("Usage: plico serve [--host <host>] [--port <port>] [--db <path>] [--studio] [path]");
   return 0;
 }
 
@@ -400,11 +461,13 @@ function parseServeArgs(args: string[]): {
   dbPath?: string;
   host?: string;
   port?: number;
+  studio: boolean;
   target: string;
 } {
   let target = process.cwd();
   let host: string | undefined;
   let port: number | undefined;
+  let studio = false;
   let dbPath: string | undefined;
   let awaitingHost = false;
   let awaitingPort = false;
@@ -444,6 +507,11 @@ function parseServeArgs(args: string[]): {
       continue;
     }
 
+    if (arg === "--studio") {
+      studio = true;
+      continue;
+    }
+
     if (arg.startsWith("-")) {
       throw new Error(`Unknown option: ${arg}`);
     }
@@ -465,6 +533,7 @@ function parseServeArgs(args: string[]): {
 
   return {
     target,
+    studio,
     ...(host === undefined ? {} : { host }),
     ...(port === undefined ? {} : { port }),
     ...(dbPath === undefined ? {} : { dbPath }),
@@ -650,6 +719,94 @@ function formatRunResult(target: string, result: Awaited<ReturnType<typeof runPr
     lines.push("Dry run failed.");
   }
 
+  return lines;
+}
+
+function parseReadinessArgs(args: string[]): { json: boolean; target: string } {
+  let json = false;
+  let target = process.cwd();
+
+  for (const arg of args) {
+    if (arg === "--json") {
+      json = true;
+      continue;
+    }
+
+    if (arg.startsWith("-")) {
+      throw new Error(`Unknown option: ${arg}`);
+    }
+
+    target = arg;
+  }
+
+  return { json, target };
+}
+
+function formatReadinessReport(report: ReadinessReport): string[] {
+  const lines: string[] = [];
+  const subsystems = new Set(report.diagnostics.map((d) => d.subsystem));
+
+  for (const sub of subsystems) {
+    const items = report.diagnostics.filter((d) => d.subsystem === sub);
+    const hasError = items.some((d) => d.severity === "error");
+    const hasWarning = items.some((d) => d.severity === "warning");
+    const symbol = hasError ? "✗" : hasWarning ? "!" : "✓";
+    lines.push(`${symbol} ${sub}`);
+
+    for (const item of items) {
+      const prefix =
+        item.severity === "error" ? "  ERROR" : item.severity === "warning" ? "  WARN " : "  OK   ";
+      const pathInfo = item.path ? ` [${item.path}]` : "";
+      lines.push(`${prefix}${pathInfo} ${item.message}`);
+    }
+  }
+
+  lines.push(
+    `\n${report.summary.ok} ok, ${report.summary.warning} warning(s), ${report.summary.error} error(s)`,
+  );
+  return lines;
+}
+
+function parseEvalArgs(args: string[]): { json: boolean; target: string } {
+  let json = false;
+  let target = process.cwd();
+
+  for (const arg of args) {
+    if (arg === "--json") {
+      json = true;
+      continue;
+    }
+
+    if (arg.startsWith("-")) {
+      throw new Error(`Unknown option: ${arg}`);
+    }
+
+    target = arg;
+  }
+
+  return { json, target };
+}
+
+function formatEvalSummary(target: string, summary: EvalSummary): string[] {
+  const lines = [`Eval results for ${target}`];
+
+  if (summary.total === 0) {
+    lines.push("No eval cases found.");
+    return lines;
+  }
+
+  for (const result of summary.results) {
+    const statusSymbol = result.status === "pass" ? "PASS" : "FAIL";
+    lines.push(`  ${statusSymbol} ${result.name} (${result.runId})`);
+
+    if (result.diagnostics?.length) {
+      for (const diag of result.diagnostics) {
+        lines.push(`       ${diag}`);
+      }
+    }
+  }
+
+  lines.push(`\n${summary.passed}/${summary.total} passed, ${summary.failed} failed`);
   return lines;
 }
 

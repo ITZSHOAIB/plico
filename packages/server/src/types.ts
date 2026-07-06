@@ -4,6 +4,7 @@ import type { EventStore } from "@plico/runtime";
 export interface CreatePlicoServerOptions {
   projectRoot: string;
   eventStore: EventStore;
+  studioPath?: string;
 }
 
 export interface ServePlicoOptions {
@@ -11,6 +12,7 @@ export interface ServePlicoOptions {
   databasePath: string;
   host?: string;
   port?: number;
+  studioPath?: string;
 }
 
 export interface PlicoServer {
