@@ -53,11 +53,53 @@
 </div>
 
 <style>
-  .editor-panel { overflow: hidden; }
+  .editor-panel {
+    max-width: 100%;
+    overflow: hidden;
+  }
 
   .editor-body {
     display: grid;
-    grid-template-columns: 230px 1fr;
+    grid-template-columns: minmax(180px, 230px) minmax(0, 1fr);
     min-height: 480px;
+  }
+
+  @media (max-width: 1120px) {
+    .editor-body {
+      grid-template-columns: 190px minmax(0, 1fr);
+      min-height: 360px;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .editor-body {
+      grid-template-columns: minmax(0, 1fr);
+      min-height: auto;
+    }
+
+    .file-editor {
+      display: none;
+    }
+
+    .file-sidebar {
+      border-right: 0;
+      padding-block: 10px;
+    }
+  }
+
+  @media (max-width: 420px) {
+    .tree-item {
+      gap: 6px;
+      padding-inline: 12px;
+      font-size: 12px;
+    }
+
+    .tree-item.indent {
+      padding-left: 24px;
+    }
+
+    .tree-item.deep {
+      padding-left: 34px;
+    }
   }
 </style>

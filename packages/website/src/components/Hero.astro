@@ -13,7 +13,7 @@ import EditorPanel from "./EditorPanel.astro";
       No SDK. No lock-in. Just files.
     </p>
     <div class="hero-cta">
-      <a class="btn btn-primary" href="https://github.com/anomalyco/plico">★ Star on GitHub</a>
+      <a class="btn btn-primary" href="https://github.com/ITZSHOAIB/plico">★ Star on GitHub</a>
       <a class="btn btn-secondary" href="#how-it-works">Explore the vision</a>
     </div>
   </div>
@@ -23,7 +23,7 @@ import EditorPanel from "./EditorPanel.astro";
 <style>
   .hero {
     display: grid;
-    grid-template-columns: minmax(0, 0.9fr) minmax(500px, 1fr);
+    grid-template-columns: minmax(0, 0.9fr) minmax(420px, 1fr);
     gap: 60px;
     align-items: center;
     min-height: calc(100vh - 80px);
@@ -33,6 +33,7 @@ import EditorPanel from "./EditorPanel.astro";
   .hero-badges {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 10px;
     margin-bottom: 20px;
   }
@@ -41,21 +42,21 @@ import EditorPanel from "./EditorPanel.astro";
     display: inline-flex;
     align-items: center;
     padding: 3px 9px;
-    border: 1px solid rgba(255,255,255,0.10);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 999px;
-    background: rgba(255,255,255,0.04);
+    background: rgba(255, 255, 255, 0.04);
     color: var(--muted-2);
     font-size: 11px;
     font-weight: 700;
-    letter-spacing: 0.06em;
+    letter-spacing: 0;
     text-transform: uppercase;
   }
 
   .hero-left h1 {
-    font-size: clamp(32px, 6.5vw, 88px);
+    font-size: 5rem;
     font-weight: 900;
-    letter-spacing: -0.04em;
-    line-height: 0.96;
+    letter-spacing: 0;
+    line-height: 1;
     overflow-wrap: break-word;
   }
 
@@ -69,8 +70,62 @@ import EditorPanel from "./EditorPanel.astro";
   .hero-left p {
     margin-top: 22px;
     color: var(--text-2);
-    font-size: clamp(16px, 1.3vw, 18px);
+    font-size: 1.125rem;
     line-height: 1.7;
     max-width: 560px;
+  }
+
+  @media (max-width: 1120px) {
+    .hero {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 40px;
+      min-height: auto;
+      padding: 28px 0 64px;
+    }
+
+    .hero-left {
+      max-width: 760px;
+    }
+
+    .hero-left h1 {
+      max-width: 720px;
+      font-size: 4rem;
+    }
+
+    .hero-left p {
+      max-width: 680px;
+    }
+  }
+
+  @media (max-width: 760px) {
+    .hero {
+      gap: 28px;
+      padding: 16px 0 56px;
+    }
+
+    .hero-left h1 {
+      font-size: 3rem;
+      line-height: 1.05;
+    }
+
+    .hero-left p {
+      margin-top: 18px;
+      font-size: 1rem;
+      line-height: 1.65;
+    }
+  }
+
+  @media (max-width: 460px) {
+    .hero {
+      padding-top: 10px;
+    }
+
+    .hero-badges {
+      margin-bottom: 16px;
+    }
+
+    .hero-left h1 {
+      font-size: 2.45rem;
+    }
   }
 </style>

@@ -2,10 +2,7 @@
 import DocLayout from "../../layouts/DocLayout.astro";
 
 export function getStaticPaths() {
-  return [
-    { params: { slug: "welcome" } },
-    { params: { slug: "getting-started" } },
-  ];
+  return [{ params: { slug: "welcome" } }, { params: { slug: "getting-started" } }];
 }
 
 const { slug } = Astro.params;

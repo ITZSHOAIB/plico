@@ -2,11 +2,14 @@
 import "../styles/global.css";
 
 export interface Props {
-  title?: string;
-  description?: string;
+  title?: string | undefined;
+  description?: string | undefined;
 }
 
-const { title = "Plico — file-first agent framework", description = "A file-first framework for agent development. Built in public." } = Astro.props;
+const {
+  title = "Plico — file-first agent framework",
+  description = "A file-first framework for agent development. Built in public.",
+} = Astro.props;
 ---
 
 <!doctype html>
