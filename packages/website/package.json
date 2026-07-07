@@ -7,7 +7,9 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "check": "astro check"
+    "check": "astro check",
+    "deploy:pages": "pnpm run build && pnpm dlx wrangler@latest pages deploy dist --project-name plico",
+    "deploy:pages:preview": "pnpm run build && pnpm dlx wrangler@latest pages deploy dist --project-name plico --branch preview"
   },
   "dependencies": {
     "@astrojs/mdx": "^4.2.0",
