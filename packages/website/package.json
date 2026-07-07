@@ -1,0 +1,22 @@
+{
+  "name": "@plico/website",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "check": "astro check",
+    "deploy:pages": "pnpm run build && pnpm dlx wrangler@latest pages deploy dist --project-name plico",
+    "deploy:pages:preview": "pnpm run build && pnpm dlx wrangler@latest pages deploy dist --project-name plico --branch preview"
+  },
+  "dependencies": {
+    "@astrojs/mdx": "^4.2.0",
+    "astro": "^5.7.0"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.9",
+    "typescript": "^6.0.3"
+  }
+}

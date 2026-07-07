@@ -982,7 +982,7 @@ describe("checkReadiness", () => {
 
     const validDiag = report.diagnostics.find((d) => d.subsystem === "tools.discovery");
     expect(validDiag).toBeDefined();
-    expect(validDiag!.message).toContain("1/1 tool(s) valid");
+    expect(validDiag?.message).toContain("1/1 tool(s) valid");
   });
 
   it("reports a warning when no eval fixtures exist", async () => {

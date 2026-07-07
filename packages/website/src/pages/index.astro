@@ -1,0 +1,18 @@
+---
+import CtaFooter from "../components/CtaFooter.astro";
+import Features from "../components/Features.astro";
+import Hero from "../components/Hero.astro";
+import Nav from "../components/Nav.astro";
+import Showcase from "../components/Showcase.astro";
+import BaseLayout from "../layouts/BaseLayout.astro";
+---
+
+<BaseLayout>
+  <div class="container">
+    <Nav />
+    <Hero />
+  </div>
+  <Showcase />
+  <Features />
+  <CtaFooter />
+</BaseLayout>

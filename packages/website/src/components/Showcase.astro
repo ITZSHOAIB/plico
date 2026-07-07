@@ -1,0 +1,76 @@
+---
+
+---
+
+<section class="showcase" id="how-it-works">
+  <div class="container">
+    <div class="showcase-header">
+      <div class="section-title">Preview: agent identity in one file.</div>
+      <p class="section-sub">
+        This is what an agent looks like in Plico. A single <code style="color:var(--green)">agent.md</code>
+        defines who it is, how it behaves, and what tools it can use.
+        The design is settled — the runtime is being built.
+      </p>
+    </div>
+
+    <div class="showcase-grid">
+      <div class="code-window showcase-code">
+        <div class="window-top">
+          <div class="traffic"><span></span><span></span><span></span></div>
+          <span class="filename">pr-review-agent / agent.md</span>
+          <span class="badge">identity + system prompt</span>
+        </div>
+        <pre><span class="hl-h1"># PR Review Agent</span>
+
+You are a code review assistant for a TypeScript monorepo.
+Your purpose is to help developers ship better code by
+reviewing pull requests for correctness and style.
+
+<span class="hl-section">## Identity</span>
+
+You work in a review workspace with access to the project's
+source files. You have context about the team's coding
+conventions, testing standards, and common patterns.
+
+You are thorough but constructive. You never block a PR
+without explaining the rationale behind each concern.
+
+<span class="hl-section">## Instructions</span>
+
+<span class="hl-list">1.</span> When a PR is opened, load and review the full diff.
+<span class="hl-list">2.</span> Check for type safety issues, missing error handling,
+    test coverage gaps, and style violations.
+<span class="hl-list">3.</span> Comment on specific lines when you find issues.
+<span class="hl-list">4.</span> Approve the PR only when all concerns are resolved.
+
+<span class="hl-section">## Tools</span>
+
+<span class="hl-list">-</span> <span class="hl-code">read-file</span>   — Read file contents from the PR
+<span class="hl-list">-</span> <span class="hl-code">search-code</span> — Search across the codebase
+<span class="hl-list">-</span> <span class="hl-code">post-comment</span> — Post review comments on lines</pre>
+      </div>
+
+      <div class="showcase-annotations">
+        <div class="anno-card">
+          <div class="anno-icon identity">🧠</div>
+          <h3>Identity</h3>
+          <p>Who your agent is, the context it operates in, and its personality. Written in plain English.</p>
+        </div>
+        <div class="anno-card">
+          <div class="anno-icon rules">📋</div>
+          <h3>Instructions</h3>
+          <p>Step-by-step behavioral rules. Numbered lists, priorities, constraints — whatever your agent needs.</p>
+        </div>
+        <div class="anno-card">
+          <div class="anno-icon tools-icon">🔧</div>
+          <h3>Tools</h3>
+          <p>Every TypeScript tool your agent can invoke. Declared by name — the implementation lives in <code style="color:var(--cyan);font-family:var(--mono);font-size:12px">tools/</code>.</p>
+        </div>
+        <div class="anno-callout">
+          <strong>No YAML. No JSON schema. No DSL.</strong><br />
+          Just Markdown — the most readable, reviewable format on the planet.
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

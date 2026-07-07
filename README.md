@@ -39,6 +39,12 @@ Or run the full local check in one shot:
 pnpm check
 ```
 
+## Website Deployment
+
+The Astro website lives in `packages/website` and is configured for Cloudflare Pages at `plico.sohab.dev`.
+
+See [docs/cloudflare-pages.md](docs/cloudflare-pages.md) for the Pages project settings, custom domain setup, and manual Wrangler deployment commands.
+
 ## Formatting And Linting
 
 The repo uses Biome for formatting and linting.

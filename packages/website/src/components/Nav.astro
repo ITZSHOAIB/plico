@@ -1,0 +1,91 @@
+---
+
+---
+
+<nav>
+  <a class="brand" href="/"><span class="brand-mark">P</span>Plico</a>
+  <div class="nav-links">
+    <a href="/#how-it-works">Vision</a>
+    <a href="/#features">Features</a>
+    <a href="https://github.com/ITZSHOAIB/plico">GitHub</a>
+  </div>
+  <div class="nav-actions">
+    <a class="btn btn-secondary" href="https://github.com/ITZSHOAIB/plico">★ Star on GitHub</a>
+  </div>
+</nav>
+
+<style>
+  nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    padding: 18px 0;
+    min-width: 0;
+  }
+
+  .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    flex: 0 0 auto;
+    font-weight: 850;
+    font-size: 15px;
+  }
+
+  .brand-mark {
+    display: grid;
+    width: 28px;
+    height: 28px;
+    place-items: center;
+    border: 1.5px solid currentColor;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 950;
+  }
+
+  .nav-links {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    min-width: 0;
+    color: var(--muted);
+    font-size: 14px;
+  }
+  .nav-links a {
+    transition: color 0.2s;
+  }
+  .nav-links a:hover {
+    color: var(--text);
+  }
+
+  .nav-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 0 0 auto;
+  }
+
+  @media (max-width: 760px) {
+    nav {
+      gap: 14px;
+      padding: 14px 0;
+    }
+
+    .nav-links {
+      display: none;
+    }
+  }
+
+  @media (max-width: 380px) {
+    nav {
+      gap: 10px;
+    }
+
+    .nav-actions .btn {
+      min-height: 40px;
+      padding-inline: 12px;
+      font-size: 13px;
+    }
+  }
+</style>
