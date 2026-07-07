@@ -1,0 +1,60 @@
+---
+import DocLayout from "../../layouts/DocLayout.astro";
+
+export function getStaticPaths() {
+  return [
+    { params: { slug: "welcome" } },
+    { params: { slug: "getting-started" } },
+  ];
+}
+
+const { slug } = Astro.params;
+const title = slug === "welcome" ? "Welcome" : "Getting Started";
+---
+
+<DocLayout title={`${title} — Plico Docs`}>
+  {
+    slug === "welcome" && (
+      <>
+        <h1>Welcome to Plico</h1>
+        <p>
+          Plico is a TypeScript-first agent app kit. A folder of Markdown instructions, skills,
+          TypeScript tools, config, evals, memory, and artifacts becomes a runnable, inspectable
+          agent app.
+        </p>
+        <h2>Why Plico?</h2>
+        <p>
+          Most agent frameworks lock you into an SDK, a provider, or a runtime. Plico starts from a
+          different premise: <strong>your agent should be a folder of files</strong> — readable,
+          version-controllable, reviewable alongside your app code.
+        </p>
+        <h2>Core Principles</h2>
+        <p><strong>File-first.</strong> The project model is a directory tree. No black boxes, no hidden state.</p>
+        <p><strong>Event-native.</strong> Every run produces a replayable canonical trace. Everything — Studio, evals, artifacts — derives from it.</p>
+        <p><strong>Provider-agnostic.</strong> Adapters map provider shapes to the contract. Swap models without rewriting your agent.</p>
+      </>
+    )
+  }
+  {
+    slug === "getting-started" && (
+      <>
+        <h1>Getting Started</h1>
+        <p>Plico is in early development. The documentation below describes the design — the runtime is being built.</p>
+        <h2>Project Shape</h2>
+        <p>A Plico project is a directory with this structure:</p>
+        <pre><code>my-agent/
+  plico.config.ts
+  agent.md
+  skills/
+  tools/
+  evals/
+  artifacts/
+  memory/</code></pre>
+        <h2>Configuration</h2>
+        <p>The <code>plico.config.ts</code> file anchors the project. It declares the agent name, entry point, and provider configuration.</p>
+        <h2>Agent Identity</h2>
+        <p>The <code>agent.md</code> file defines your agent's identity, instructions, and tool list. Written in plain Markdown — no DSL required.</p>
+      </>
+    )
+  }
+</DocLayout>

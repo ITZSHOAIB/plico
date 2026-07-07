@@ -1,0 +1,29 @@
+---
+import BaseLayout from "./BaseLayout.astro";
+import Nav from "../components/Nav.astro";
+
+export interface Props {
+  title?: string;
+  sidebarTitle?: string;
+}
+
+const { title, sidebarTitle = "Documentation" } = Astro.props;
+---
+
+<BaseLayout title={title}>
+  <div class="container">
+    <Nav />
+  </div>
+  <div class="doc-layout">
+    <aside class="doc-sidebar">
+      <div class="file-sidebar-label" style="padding: 0 12px 12px">{sidebarTitle}</div>
+      <nav>
+        <a href="/docs/welcome">Welcome</a>
+        <a href="/docs/getting-started">Getting Started</a>
+      </nav>
+    </aside>
+    <main class="doc-content">
+      <slot />
+    </main>
+  </div>
+</BaseLayout>

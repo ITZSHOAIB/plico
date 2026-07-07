@@ -1,0 +1,16 @@
+{
+  "name": "@plico/website",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "check": "astro check"
+  },
+  "dependencies": {
+    "@astrojs/mdx": "^4.2.0",
+    "astro": "^5.7.0"
+  }
+}

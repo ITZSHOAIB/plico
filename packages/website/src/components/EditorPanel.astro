@@ -1,0 +1,63 @@
+---
+
+---
+
+<div class="code-window editor-panel">
+  <div class="window-top">
+    <div class="traffic"><span></span><span></span><span></span></div>
+    <span class="window-title">agent / pr-review-agent</span>
+  </div>
+  <div class="editor-body">
+    <div class="file-sidebar">
+      <div class="file-sidebar-label">Explorer</div>
+      <div class="tree-item"><span class="icon">📁</span> pr-review-agent</div>
+      <div class="tree-item indent"><span class="icon">📄</span> plico.config.ts<span class="tag ts">ts</span></div>
+      <div class="tree-item indent active"><span class="icon">📄</span> agent.md<span class="tag md">md</span></div>
+      <div class="tree-item indent"><span class="icon">📁</span> skills</div>
+      <div class="tree-item indent deep"><span class="icon">📄</span> review.md<span class="tag skill">skill</span></div>
+      <div class="tree-item indent"><span class="icon">📁</span> tools</div>
+      <div class="tree-item indent deep"><span class="icon">📄</span> read-file.tool.ts<span class="tag ts">ts</span></div>
+      <div class="tree-item indent deep"><span class="icon">📄</span> search-code.tool.ts<span class="tag ts">ts</span></div>
+      <div class="tree-item indent deep"><span class="icon">📄</span> post-comment.tool.ts<span class="tag ts">ts</span></div>
+      <div class="tree-item indent"><span class="icon">📁</span> evals</div>
+      <div class="tree-item indent"><span class="icon">📁</span> artifacts</div>
+      <div class="tree-item indent"><span class="icon">📁</span> memory</div>
+    </div>
+    <div class="file-editor">
+      <div class="line-nums">
+        <div>1</div><div>2</div><div>3</div><div>4</div>
+        <div>5</div><div>6</div><div>7</div><div>8</div>
+        <div>9</div><div>10</div><div>11</div><div>12</div>
+        <div>13</div><div>14</div><div>15</div><div>16</div>
+      </div>
+      <div class="line-content">
+        <div><span class="hl-h1"># PR Review Agent</span></div>
+        <div></div>
+        <div><span class="hl-text">You are a code review assistant for a</span></div>
+        <div><span class="hl-text">TypeScript monorepo. Help developers</span></div>
+        <div><span class="hl-text">ship better code by reviewing PRs.</span></div>
+        <div></div>
+        <div><span class="hl-section">## Identity</span></div>
+        <div></div>
+        <div><span class="hl-text">You work in the team's review workspace.</span></div>
+        <div><span class="hl-text">You have context about the project's</span></div>
+        <div><span class="hl-text">style guide and testing conventions.</span></div>
+        <div></div>
+        <div><span class="hl-section">## Instructions</span></div>
+        <div></div>
+        <div><span class="hl-list">1.</span> <span class="hl-text">Review the full diff on each PR</span></div>
+        <div><span class="hl-list">2.</span> <span class="hl-text">Check type safety and test coverage</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .editor-panel { overflow: hidden; }
+
+  .editor-body {
+    display: grid;
+    grid-template-columns: 230px 1fr;
+    min-height: 480px;
+  }
+</style>
