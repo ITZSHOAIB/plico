@@ -9,6 +9,7 @@ import type {
   DeclaredTool,
   DryRunScriptStep,
   EventStore,
+  ModelProvider,
   PersistedRun,
   RunProjectOptions,
   RunResult,
@@ -79,9 +80,17 @@ export async function runProject(
     });
 
     const output =
-      options.script === undefined
-        ? await runDefaultDryRun(validation.project, events)
-        : await runScriptedDryRun(options.script, tools, events);
+      options.provider !== undefined
+        ? await runProviderBackedRun(
+            options.provider,
+            options.message,
+            validation.project,
+            instructions.content,
+            events,
+          )
+        : options.script === undefined
+          ? await runDefaultDryRun(validation.project, events)
+          : await runScriptedDryRun(options.script, tools, events);
     events.append("run.completed", { status: "completed" });
 
     const result: RunResult = {
@@ -148,6 +157,48 @@ export async function runProject(
 
     return result;
   }
+}
+
+async function runProviderBackedRun(
+  provider: ModelProvider,
+  message: string | undefined,
+  project: LoadedProject,
+  instructions: string,
+  events: InMemoryEventLog,
+): Promise<string> {
+  if (!message) {
+    throw new RuntimeDiagnosticError({
+      phase: "provider",
+      message:
+        "A user message is required when running with a provider. Provide --message or pipe input via stdin.",
+    });
+  }
+
+  events.append("input.received", { content: message });
+
+  const modelRequest = {
+    messages: [
+      { role: "system" as const, content: instructions },
+      { role: "user" as const, content: message },
+    ],
+    maxSteps: 10,
+  };
+
+  events.append("model.request", {
+    messages: modelRequest.messages,
+    maxSteps: modelRequest.maxSteps,
+  });
+
+  const modelResponse = await provider.complete(modelRequest);
+
+  events.append("model.response", {
+    content: modelResponse.content,
+    usage: modelResponse.usage,
+  });
+
+  events.append("assistant.output", { content: modelResponse.content });
+
+  return modelResponse.content;
 }
 
 async function runDefaultDryRun(project: LoadedProject, events: InMemoryEventLog): Promise<string> {

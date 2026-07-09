@@ -9,6 +9,7 @@ import {
   createSqliteEventStore,
   type DryRunScriptStep,
   type EvalSummary,
+  type ModelProvider,
   type PlicoEvent,
   type ReadinessReport,
   type RunSummary,
@@ -49,7 +50,9 @@ export async function main(argv: string[]): Promise<number> {
 
   if (command === "run") {
     try {
-      const { dbPath, dry, json, persist, target, scriptPath } = parseRunArgs(argv.slice(3));
+      const { dbPath, dry, json, message, persist, target, scriptPath } = parseRunArgs(
+        argv.slice(3),
+      );
       if (!dry) {
         console.error("plico run only supports --dry in this release.");
         return 1;
@@ -61,9 +64,22 @@ export async function main(argv: string[]): Promise<number> {
             databasePath: resolveDatabasePath(target, dbPath),
           })
         : undefined;
+
+      let provider: ModelProvider | undefined;
+      if (message !== undefined) {
+        provider = {
+          complete: async (request) => {
+            const lastUserMessage = [...request.messages].reverse().find((m) => m.role === "user");
+            const assistantContent = `Fake provider response to: ${lastUserMessage?.content ?? ""}`;
+            return { content: assistantContent, usage: { inputTokens: 10, outputTokens: 5 } };
+          },
+        };
+      }
+
       const result = await runProject(target, {
         ...(script ? { script } : {}),
         ...(eventStore ? { eventStore } : {}),
+        ...(provider ? { provider, message } : {}),
       });
 
       if (json) {
@@ -231,7 +247,9 @@ export async function main(argv: string[]): Promise<number> {
   }
 
   console.log("Usage: plico validate [path]");
-  console.log("Usage: plico run --dry [--persist] [--db <path>] [--json] [--script <file>] [path]");
+  console.log(
+    "Usage: plico run --dry [--persist] [--db <path>] [--json] [--script <file>] [--message <text>] [path]",
+  );
   console.log("Usage: plico runs [--db <path>] [--json] [path]");
   console.log("Usage: plico events <runId> [--after <sequence>] [--db <path>] [--json] [path]");
   console.log("Usage: plico eval [--json] [path]");
@@ -260,6 +278,7 @@ function parseRunArgs(args: string[]): {
   dbPath?: string;
   dry: boolean;
   json: boolean;
+  message?: string;
   persist: boolean;
   target: string;
   scriptPath?: string;
@@ -270,8 +289,10 @@ function parseRunArgs(args: string[]): {
   let target = process.cwd();
   let scriptPath: string | undefined;
   let dbPath: string | undefined;
+  let message: string | undefined;
   let awaitingScriptPath = false;
   let awaitingDbPath = false;
+  let awaitingMessage = false;
 
   for (const arg of args) {
     if (awaitingDbPath) {
@@ -283,6 +304,12 @@ function parseRunArgs(args: string[]): {
     if (awaitingScriptPath) {
       scriptPath = arg;
       awaitingScriptPath = false;
+      continue;
+    }
+
+    if (awaitingMessage) {
+      message = arg;
+      awaitingMessage = false;
       continue;
     }
 
@@ -306,6 +333,11 @@ function parseRunArgs(args: string[]): {
       continue;
     }
 
+    if (arg === "--message") {
+      awaitingMessage = true;
+      continue;
+    }
+
     if (arg === "--db") {
       awaitingDbPath = true;
       continue;
@@ -326,6 +358,10 @@ function parseRunArgs(args: string[]): {
     throw new Error("Missing script file after --script");
   }
 
+  if (awaitingMessage) {
+    throw new Error("Missing message text after --message");
+  }
+
   return {
     dry,
     json,
@@ -333,6 +369,7 @@ function parseRunArgs(args: string[]): {
     target,
     ...(scriptPath === undefined ? {} : { scriptPath }),
     ...(dbPath === undefined ? {} : { dbPath }),
+    ...(message === undefined ? {} : { message }),
   };
 }
 
@@ -670,6 +707,17 @@ function formatRunResult(target: string, result: Awaited<ReturnType<typeof runPr
 
     if (event.type === "tools.discovered") {
       lines.push(`tools.discovered: ${readCount(event.payload.tools)} tool(s)`);
+      continue;
+    }
+
+    if (event.type === "model.request") {
+      lines.push(`model.request: ${readCount(event.payload.messages)} message(s)`);
+      continue;
+    }
+
+    if (event.type === "model.response") {
+      const content = readString(event.payload.content);
+      lines.push(`model.response: ${content?.slice(0, 80) ?? "no content"}`);
       continue;
     }
 

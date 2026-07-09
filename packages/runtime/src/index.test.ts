@@ -8,6 +8,7 @@ import {
   checkReadiness,
   createSqliteEventStore,
   discoverTools,
+  type ModelProvider,
   runEvals,
   runProject,
 } from "./index.js";
@@ -587,6 +588,163 @@ describe("runProject", () => {
         type: "run.blocked",
       }),
     ]);
+  });
+
+  it("runs a valid project through a fake provider with a user message, emitting provider-neutral events", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-runtime-"));
+    await writeValidProject(root);
+
+    const fakeProvider: ModelProvider = {
+      complete: async (request) => ({
+        content: `Echo: ${request.messages[1]?.content ?? ""}`,
+        usage: { inputTokens: 10, outputTokens: 5 },
+      }),
+    };
+
+    const result = await runProject(root, {
+      provider: fakeProvider,
+      message: "Hello from user",
+    });
+
+    expect(result.status).toBe("completed");
+    expect(result.output).toBe("Echo: Hello from user");
+    expect(result.events.map((event) => event.type)).toEqual([
+      "run.started",
+      "instructions.composed",
+      "tools.discovered",
+      "input.received",
+      "model.request",
+      "model.response",
+      "assistant.output",
+      "run.completed",
+    ]);
+    expect(result.events[3]?.payload).toMatchObject({
+      content: "Hello from user",
+    });
+    expect(result.events[4]?.payload).toMatchObject({
+      messages: expect.arrayContaining([expect.objectContaining({ content: expect.any(String) })]),
+    });
+    expect(result.events[5]?.payload).toMatchObject({
+      content: "Echo: Hello from user",
+      usage: { inputTokens: 10, outputTokens: 5 },
+    });
+  });
+
+  it("fails with clear diagnostics when provider is configured but no message is provided", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-runtime-"));
+    await writeValidProject(root);
+
+    const fakeProvider: ModelProvider = {
+      complete: async () => ({ content: "", usage: { inputTokens: 0, outputTokens: 0 } }),
+    };
+
+    const result = await runProject(root, { provider: fakeProvider });
+
+    expect(result.status).toBe("failed");
+    expect(result.events.map((event) => event.type)).toEqual([
+      "run.started",
+      "instructions.composed",
+      "tools.discovered",
+      "run.error",
+      "run.failed",
+    ]);
+    expect(result.events[3]?.payload).toMatchObject({
+      phase: "provider",
+      message: expect.stringContaining("message"),
+    });
+  });
+
+  it("persists a provider-backed run and replays it through the event store", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-runtime-"));
+    await writeValidProject(root);
+
+    const databasePath = join(root, ".plico", "plico.sqlite");
+    const eventStore = createSqliteEventStore({ databasePath });
+
+    const fakeProvider: ModelProvider = {
+      complete: async (request) => ({
+        content: `Reply: ${request.messages[1]?.content ?? ""}`,
+        usage: { inputTokens: 10, outputTokens: 5 },
+      }),
+    };
+
+    const result = await runProject(root, {
+      runId: "run-provider-001",
+      provider: fakeProvider,
+      message: "Test message",
+      eventStore,
+    });
+
+    expect(result.status).toBe("completed");
+
+    const reopenedStore = createSqliteEventStore({ databasePath });
+    expect(await reopenedStore.getRun("run-provider-001")).toMatchObject({
+      runId: "run-provider-001",
+      status: "completed",
+    });
+    const events = await reopenedStore.getEvents("run-provider-001");
+    expect(events.some((e) => e.type === "model.request")).toBe(true);
+    expect(events.some((e) => e.type === "model.response")).toBe(true);
+  });
+
+  it("preserves existing provider-free dry run behavior when no provider is given", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-runtime-"));
+    await writeValidProject(root);
+
+    const result = await runProject(root);
+
+    expect(result.status).toBe("completed");
+    expect(result.output).toBe("Dry run complete for Internal Ops Agent.");
+    expect(result.events.map((event) => event.type)).toEqual([
+      "run.started",
+      "instructions.composed",
+      "tools.discovered",
+      "assistant.output",
+      "run.completed",
+    ]);
+  });
+
+  it("passes composed instructions, project metadata, and cancellation signals to the fake provider", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-runtime-"));
+    await writeValidProject(root);
+
+    let capturedRequest: unknown;
+    const fakeProvider: ModelProvider = {
+      complete: async (request) => {
+        capturedRequest = request;
+        return {
+          content: "response",
+          usage: { inputTokens: 0, outputTokens: 0 },
+        };
+      },
+    };
+
+    const result = await runProject(root, {
+      provider: fakeProvider,
+      message: "Hello",
+    });
+
+    expect(result.status).toBe("completed");
+    expect(capturedRequest).toMatchObject({
+      messages: [
+        { role: "system", content: expect.stringContaining("Internal Ops Agent") },
+        { role: "user", content: "Hello" },
+      ],
+      maxSteps: 10,
+    });
+  });
+
+  it("handles missing provider configuration with clear validation diagnostics", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-runtime-"));
+    await writeValidProject(root);
+
+    const result = await runProject(root, {
+      // @ts-expect-error - intentionally testing missing provider config
+      provider: undefined,
+    });
+
+    expect(result.status).toBe("completed");
+    expect(result.output).toBe("Dry run complete for Internal Ops Agent.");
   });
 
   it("produces artifact events from artifact.write script steps and reconstructs workspace from events", async () => {
