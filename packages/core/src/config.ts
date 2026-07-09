@@ -106,6 +106,10 @@ function normalizeProjectConfig(value: unknown, configPath: string): ProjectConf
     normalized.template = config.template;
   }
 
+  if (config.provider !== undefined && isRecord(config.provider)) {
+    normalized.provider = config.provider;
+  }
+
   return normalized;
 }
 

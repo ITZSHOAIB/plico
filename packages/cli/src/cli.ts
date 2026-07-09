@@ -67,24 +67,7 @@ export async function main(argv: string[]): Promise<number> {
 
       let provider: ModelProvider | undefined;
       if (message !== undefined) {
-        provider = {
-          complete: async (request) => {
-            const lastUserMessage = [...request.messages].reverse().find((m) => m.role === "user");
-            const lastToolMessage = [...request.messages].reverse().find((m) => m.role === "tool");
-            if (!lastToolMessage && request.tools && request.tools.length > 0) {
-              const tool = request.tools[0];
-              if (tool) {
-                return {
-                  content: "",
-                  usage: { inputTokens: 10, outputTokens: 1 },
-                  toolCalls: [{ name: tool.name, arguments: { title: "Test ticket" } }],
-                };
-              }
-            }
-            const assistantContent = `Fake provider response to: ${lastUserMessage?.content ?? ""}`;
-            return { content: assistantContent, usage: { inputTokens: 10, outputTokens: 5 } };
-          },
-        };
+        provider = await resolveProvider(target);
       }
 
       const result = await runProject(target, {
@@ -779,6 +762,40 @@ function formatRunResult(target: string, result: Awaited<ReturnType<typeof runPr
   }
 
   return lines;
+}
+
+async function resolveProvider(target: string): Promise<ModelProvider> {
+  try {
+    const { validateProject } = await import("@plico/core");
+    const validation = await validateProject(target);
+    const providerConfig = validation.project?.config?.provider;
+    if (providerConfig && typeof providerConfig === "object" && providerConfig.type === "openai") {
+      const { createOpenAIProvider } = await import("@plico/provider");
+      return createOpenAIProvider(
+        providerConfig as { type: "openai"; apiKey?: string; model?: string; baseUrl?: string },
+      );
+    }
+  } catch {
+    // Fall through to fake provider
+  }
+  return {
+    complete: async (request) => {
+      const lastUserMessage = [...request.messages].reverse().find((m) => m.role === "user");
+      const lastToolMessage = [...request.messages].reverse().find((m) => m.role === "tool");
+      if (!lastToolMessage && request.tools && request.tools.length > 0) {
+        const tool = request.tools[0];
+        if (tool) {
+          return {
+            content: "",
+            usage: { inputTokens: 10, outputTokens: 1 },
+            toolCalls: [{ name: tool.name, arguments: { title: "Test ticket" } }],
+          };
+        }
+      }
+      const assistantContent = `Fake provider response to: ${lastUserMessage?.content ?? ""}`;
+      return { content: assistantContent, usage: { inputTokens: 10, outputTokens: 5 } };
+    },
+  };
 }
 
 function parseReadinessArgs(args: string[]): { json: boolean; target: string } {

@@ -2,7 +2,7 @@ import { mkdir, mkdtemp, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { loadProject } from "@plico/core";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   buildArtifactWorkspace,
   checkReadiness,
@@ -1460,5 +1460,80 @@ describe("checkReadiness", () => {
 
     expect(report.diagnostics.some((d) => d.subsystem === "artifacts.workspace")).toBe(true);
     expect(report.diagnostics.some((d) => d.subsystem === "server.config")).toBe(true);
+  });
+
+  it("reports a warning when no provider configuration is present", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-readiness-"));
+    await writeValidProject(root);
+
+    const report = await checkReadiness(root);
+
+    expect(
+      report.diagnostics.some((d) => d.subsystem === "provider.config" && d.severity === "warning"),
+    ).toBe(true);
+  });
+
+  it("reports ok when provider configuration is present", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-readiness-"));
+    await mkdir(join(root, "skills"), { recursive: true });
+    await mkdir(join(root, "tools"), { recursive: true });
+    await mkdir(join(root, "evals"), { recursive: true });
+    await mkdir(join(root, "artifacts"), { recursive: true });
+    await mkdir(join(root, "memory"), { recursive: true });
+    vi.stubEnv("PLICO_OPENAI_API_KEY", "sk-test");
+    await writeFile(
+      join(root, "plico.config.ts"),
+      [
+        "export default {",
+        "  schemaVersion: 1,",
+        '  name: "Provider Agent",',
+        "  provider: {",
+        '    type: "openai",',
+        '    model: "gpt-4o",',
+        "  },",
+        "} as const;",
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+    await writeFile(join(root, "agent.md"), "# Agent\n\nInstructions.\n", "utf8");
+
+    const report = await checkReadiness(root);
+
+    expect(
+      report.diagnostics.some((d) => d.subsystem === "provider.config" && d.severity === "ok"),
+    ).toBe(true);
+
+    vi.unstubAllEnvs();
+  });
+
+  it("reports error when provider type is unsupported", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-readiness-"));
+    await mkdir(join(root, "skills"), { recursive: true });
+    await mkdir(join(root, "tools"), { recursive: true });
+    await mkdir(join(root, "evals"), { recursive: true });
+    await mkdir(join(root, "artifacts"), { recursive: true });
+    await mkdir(join(root, "memory"), { recursive: true });
+    await writeFile(
+      join(root, "plico.config.ts"),
+      [
+        "export default {",
+        "  schemaVersion: 1,",
+        '  name: "Bad Provider",',
+        "  provider: {",
+        '    type: "unknown-vendor",',
+        "  },",
+        "} as const;",
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+    await writeFile(join(root, "agent.md"), "# Agent\n\nInstructions.\n", "utf8");
+
+    const report = await checkReadiness(root);
+
+    expect(
+      report.diagnostics.some((d) => d.subsystem === "provider.config" && d.severity === "error"),
+    ).toBe(true);
   });
 });

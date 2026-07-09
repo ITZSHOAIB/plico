@@ -569,6 +569,70 @@ describe("main", () => {
     errorSpy.mockRestore();
   });
 
+  it("auto-creates provider from project config when --message is given without explicit provider", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-cli-"));
+    await mkdir(join(root, "skills"), { recursive: true });
+    await mkdir(join(root, "tools"), { recursive: true });
+    await mkdir(join(root, "evals"), { recursive: true });
+    await mkdir(join(root, "artifacts"), { recursive: true });
+    await mkdir(join(root, "memory"), { recursive: true });
+    await writeFile(
+      join(root, "plico.config.ts"),
+      [
+        "export default {",
+        "  schemaVersion: 1,",
+        '  name: "Provider Agent",',
+        "  provider: {",
+        '    type: "openai",',
+        '    model: "gpt-4o",',
+        "  },",
+        "} as const;",
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+    await writeFile(join(root, "agent.md"), "# Agent\n\nInstructions.\n", "utf8");
+
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    vi.stubEnv("PLICO_OPENAI_API_KEY", "sk-test");
+    const fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          id: "chatcmpl-test",
+          choices: [
+            { index: 0, message: { role: "assistant", content: "Hello!" }, finish_reason: "stop" },
+          ],
+          usage: { prompt_tokens: 5, completion_tokens: 3, total_tokens: 8 },
+        }),
+    });
+    vi.stubGlobal("fetch", fetch);
+
+    const exitCode = await main([
+      "node",
+      "plico",
+      "run",
+      "--dry",
+      "--message",
+      "Hello",
+      "--json",
+      root,
+    ]);
+
+    expect(exitCode).toBe(0);
+    expect(errorSpy).not.toHaveBeenCalled();
+    const parsed = JSON.parse(String(logSpy.mock.calls[0]?.[0]));
+    expect(parsed.status).toBe("completed");
+    expect(parsed.events.some((e: { type: string }) => e.type === "model.request")).toBe(true);
+    expect(parsed.events.some((e: { type: string }) => e.type === "model.response")).toBe(true);
+
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+    logSpy.mockRestore();
+    errorSpy.mockRestore();
+  });
+
   it("shows provider-requested tool events in CLI output with --message", async () => {
     const root = await mkdtemp(join(tmpdir(), "plico-cli-"));
     await writeValidProject(root);

@@ -193,7 +193,44 @@ export async function checkReadiness(
     );
   }
 
-  // 6. Server/Studio config
+  // 6. Provider config
+  if (project.config.provider) {
+    const providerType = project.config.provider.type;
+    if (providerType === "openai") {
+      const hasApiKey =
+        typeof project.config.provider.apiKey === "string" ||
+        typeof process.env.PLICO_OPENAI_API_KEY === "string";
+      diagnostics.push(
+        diag(
+          hasApiKey ? "ok" : "warning",
+          "provider.config",
+          `Provider configured: ${providerType}${hasApiKey ? "" : " (no API key found)"}`,
+        ),
+      );
+    } else if (typeof providerType === "string") {
+      diagnostics.push(
+        diag(
+          "error",
+          "provider.config",
+          `Unsupported provider type: ${providerType}. Supported types: openai`,
+        ),
+      );
+    } else {
+      diagnostics.push(
+        diag("warning", "provider.config", "Provider configured but type is missing or invalid."),
+      );
+    }
+  } else {
+    diagnostics.push(
+      diag(
+        "warning",
+        "provider.config",
+        "No provider configured. Add provider config to plico.config.ts for real model access.",
+      ),
+    );
+  }
+
+  // 7. Server/Studio config
   try {
     const { loadProject } = await import("@plico/core");
     await loadProject(projectRoot);

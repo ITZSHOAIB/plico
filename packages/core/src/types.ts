@@ -39,6 +39,7 @@ export interface ProjectConfig {
   name: string;
   description?: string;
   template?: string;
+  provider?: Record<string, unknown>;
 }
 
 export interface LoadedProject {
