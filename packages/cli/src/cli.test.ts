@@ -569,6 +569,91 @@ describe("main", () => {
     errorSpy.mockRestore();
   });
 
+  it("shows provider-requested tool events in CLI output with --message", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-cli-"));
+    await writeValidProject(root);
+    await writeFile(
+      join(root, "tools", "create-ticket.tool.ts"),
+      [
+        "export default {",
+        '  name: "create_ticket",',
+        '  description: "Create an internal support ticket.",',
+        '  inputSchema: { type: "object", properties: { title: { type: "string" } }, required: ["title"], additionalProperties: false },',
+        '  capabilities: ["ticket:write"],',
+        "  approval: { required: false },",
+        '  handler: async (input) => ({ ticketId: "TCK-" + input.title.length }),',
+        "} as const;",
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    const exitCode = await main([
+      "node",
+      "plico",
+      "run",
+      "--dry",
+      "--message",
+      "Create a ticket",
+      root,
+    ]);
+
+    expect(exitCode).toBe(0);
+    expect(errorSpy).not.toHaveBeenCalled();
+    const output = logSpy.mock.calls.map(([line]) => String(line));
+    expect(output.some((l) => l.includes("tool.call: create_ticket"))).toBe(true);
+    expect(output.some((l) => l.includes("tool.result: create_ticket"))).toBe(true);
+
+    logSpy.mockRestore();
+    errorSpy.mockRestore();
+  });
+
+  it("includes tool events in JSON output for provider-backed runs", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-cli-"));
+    await writeValidProject(root);
+    await writeFile(
+      join(root, "tools", "create-ticket.tool.ts"),
+      [
+        "export default {",
+        '  name: "create_ticket",',
+        '  description: "Create an internal support ticket.",',
+        '  inputSchema: { type: "object", properties: { title: { type: "string" } }, required: ["title"], additionalProperties: false },',
+        '  capabilities: ["ticket:write"],',
+        "  approval: { required: false },",
+        '  handler: async (input) => ({ ticketId: "TCK-" + input.title.length }),',
+        "} as const;",
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    const exitCode = await main([
+      "node",
+      "plico",
+      "run",
+      "--dry",
+      "--message",
+      "Hi",
+      "--json",
+      root,
+    ]);
+
+    expect(exitCode).toBe(0);
+    expect(errorSpy).not.toHaveBeenCalled();
+    const parsed = JSON.parse(String(logSpy.mock.calls[0]?.[0]));
+    expect(parsed.events.some((e: { type: string }) => e.type === "tool.call")).toBe(true);
+    expect(parsed.events.some((e: { type: string }) => e.type === "tool.result")).toBe(true);
+
+    logSpy.mockRestore();
+    errorSpy.mockRestore();
+  });
+
   it("reports missing databases, malformed cursors, and unknown run IDs", async () => {
     const root = await mkdtemp(join(tmpdir(), "plico-cli-"));
     await writeValidProject(root);

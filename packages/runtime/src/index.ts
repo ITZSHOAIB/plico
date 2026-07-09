@@ -24,6 +24,7 @@ export type {
   ModelProvider,
   ModelRequest,
   ModelResponse,
+  ModelToolCall,
   PersistedRun,
   PlicoEvent,
   PlicoEventType,

@@ -687,6 +687,304 @@ describe("runProject", () => {
     expect(events.some((e) => e.type === "model.response")).toBe(true);
   });
 
+  it("executes a provider-requested declared TypeScript tool and delivers result back to the provider loop", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-runtime-"));
+    await writeValidProject(root);
+    await writeFile(
+      join(root, "tools", "create-ticket.tool.ts"),
+      [
+        "export default {",
+        '  name: "create_ticket",',
+        '  description: "Create an internal support ticket.",',
+        "  inputSchema: {",
+        '    type: "object",',
+        "    properties: {",
+        '      title: { type: "string" },',
+        "    },",
+        '    required: ["title"],',
+        "    additionalProperties: false,",
+        "  },",
+        '  capabilities: ["ticket:write"],',
+        "  approval: { required: false },",
+        '  handler: async (input) => ({ ticketId: "TCK-" + input.title.length }),',
+        "} as const;",
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+
+    let callCount = 0;
+    const fakeProvider: ModelProvider = {
+      complete: async (request) => {
+        callCount++;
+        if (callCount === 1) {
+          return {
+            content: "",
+            usage: { inputTokens: 15, outputTokens: 2 },
+            toolCalls: [{ name: "create_ticket", arguments: { title: "VPN down" } }],
+          };
+        }
+        return {
+          content: "Ticket created successfully.",
+          usage: { inputTokens: 5, outputTokens: 4 },
+        };
+      },
+    };
+
+    const result = await runProject(root, {
+      provider: fakeProvider,
+      message: "Create a ticket for VPN down",
+    });
+
+    expect(result.status).toBe("completed");
+    expect(result.output).toBe("Ticket created successfully.");
+    expect(result.events.map((event) => event.type)).toEqual([
+      "run.started",
+      "instructions.composed",
+      "tools.discovered",
+      "input.received",
+      "model.request",
+      "model.response",
+      "tool.call",
+      "tool.result",
+      "model.request",
+      "model.response",
+      "assistant.output",
+      "run.completed",
+    ]);
+    expect(result.events[6]?.payload).toMatchObject({
+      toolName: "create_ticket",
+      arguments: { title: "VPN down" },
+    });
+    expect(result.events[7]?.payload).toMatchObject({
+      toolName: "create_ticket",
+      result: { ticketId: "TCK-8" },
+    });
+    expect(callCount).toBe(2);
+  });
+
+  it("rejects provider-requested tool call with invalid arguments via native error event", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-runtime-"));
+    await writeValidProject(root);
+    await writeFile(
+      join(root, "tools", "create-ticket.tool.ts"),
+      [
+        "export default {",
+        '  name: "create_ticket",',
+        '  description: "Create an internal support ticket.",',
+        "  inputSchema: {",
+        '    type: "object",',
+        "    properties: {",
+        '      title: { type: "string" },',
+        "    },",
+        '    required: ["title"],',
+        "    additionalProperties: false,",
+        "  },",
+        '  capabilities: ["ticket:write"],',
+        "  approval: { required: false },",
+        '  handler: async () => { throw new Error("should not run"); },',
+        "} as const;",
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+
+    const fakeProvider: ModelProvider = {
+      complete: async () => ({
+        content: "",
+        usage: { inputTokens: 5, outputTokens: 1 },
+        toolCalls: [{ name: "create_ticket", arguments: {} }],
+      }),
+    };
+
+    const result = await runProject(root, {
+      provider: fakeProvider,
+      message: "Create a ticket",
+    });
+
+    expect(result.status).toBe("failed");
+    expect(result.events.map((event) => event.type)).toEqual([
+      "run.started",
+      "instructions.composed",
+      "tools.discovered",
+      "input.received",
+      "model.request",
+      "model.response",
+      "tool.call",
+      "run.error",
+      "run.failed",
+    ]);
+    expect(result.events[7]?.payload).toMatchObject({
+      phase: "tool.validation",
+      toolName: "create_ticket",
+    });
+  });
+
+  it("emits native error events for provider-requested tool handler errors", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-runtime-"));
+    await writeValidProject(root);
+    await writeFile(
+      join(root, "tools", "failing.tool.ts"),
+      [
+        "export default {",
+        '  name: "failing_tool",',
+        '  description: "A tool that always fails.",',
+        '  inputSchema: { type: "object", properties: {}, additionalProperties: false },',
+        '  capabilities: ["test"],',
+        "  approval: { required: false },",
+        '  handler: async () => { throw new Error("tool crashed"); },',
+        "} as const;",
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+
+    const fakeProvider: ModelProvider = {
+      complete: async () => ({
+        content: "",
+        usage: { inputTokens: 5, outputTokens: 1 },
+        toolCalls: [{ name: "failing_tool", arguments: {} }],
+      }),
+    };
+
+    const result = await runProject(root, {
+      provider: fakeProvider,
+      message: "Run failing tool",
+    });
+
+    expect(result.status).toBe("failed");
+    expect(result.events.map((event) => event.type)).toEqual([
+      "run.started",
+      "instructions.composed",
+      "tools.discovered",
+      "input.received",
+      "model.request",
+      "model.response",
+      "tool.call",
+      "run.error",
+      "run.failed",
+    ]);
+    expect(result.events[7]?.payload).toMatchObject({
+      phase: "runtime",
+      message: "tool crashed",
+    });
+  });
+
+  it("blocks provider-requested approval-required tools without executing the handler", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-runtime-"));
+    await writeValidProject(root);
+    await writeFile(
+      join(root, "tools", "delete-ticket.tool.ts"),
+      [
+        "export default {",
+        '  name: "delete_ticket",',
+        '  description: "Delete an internal support ticket.",',
+        "  inputSchema: {",
+        '    type: "object",',
+        "    properties: {",
+        '      ticketId: { type: "string" },',
+        "    },",
+        '    required: ["ticketId"],',
+        "    additionalProperties: false,",
+        "  },",
+        '  capabilities: ["ticket:delete"],',
+        '  approval: { required: true, reason: "Deletes support records." },',
+        '  handler: async () => { throw new Error("handler should not run"); },',
+        "} as const;",
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+
+    const fakeProvider: ModelProvider = {
+      complete: async () => ({
+        content: "",
+        usage: { inputTokens: 5, outputTokens: 1 },
+        toolCalls: [{ name: "delete_ticket", arguments: { ticketId: "TCK-1" } }],
+      }),
+    };
+
+    const result = await runProject(root, {
+      provider: fakeProvider,
+      message: "Delete ticket",
+    });
+
+    expect(result.status).toBe("blocked");
+    expect(result.events.map((event) => event.type)).toEqual([
+      "run.started",
+      "instructions.composed",
+      "tools.discovered",
+      "input.received",
+      "model.request",
+      "model.response",
+      "tool.call",
+      "approval.required",
+      "run.blocked",
+    ]);
+  });
+
+  it("persists provider-requested tool events and replays them through the event store", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-runtime-"));
+    await writeValidProject(root);
+    await writeFile(
+      join(root, "tools", "create-ticket.tool.ts"),
+      [
+        "export default {",
+        '  name: "create_ticket",',
+        '  description: "Create an internal support ticket.",',
+        '  inputSchema: { type: "object", properties: { title: { type: "string" } }, required: ["title"], additionalProperties: false },',
+        '  capabilities: ["ticket:write"],',
+        "  approval: { required: false },",
+        '  handler: async (input) => ({ ticketId: "TCK-" + input.title.length }),',
+        "} as const;",
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+
+    const databasePath = join(root, ".plico", "plico.sqlite");
+    const eventStore = createSqliteEventStore({ databasePath });
+
+    const fakeProvider: ModelProvider = {
+      complete: async (request) => {
+        const hasToolResult = request.messages.some(
+          (m) => m.role === "assistant" && m.content.includes("ticketId"),
+        );
+        if (hasToolResult) {
+          return {
+            content: "Done",
+            usage: { inputTokens: 5, outputTokens: 3 },
+          };
+        }
+        return {
+          content: "",
+          usage: { inputTokens: 10, outputTokens: 1 },
+          toolCalls: [{ name: "create_ticket", arguments: { title: "Test" } }],
+        };
+      },
+    };
+
+    const result = await runProject(root, {
+      runId: "run-provider-tool-001",
+      provider: fakeProvider,
+      message: "Create ticket",
+      eventStore,
+    });
+
+    expect(result.status).toBe("completed");
+    expect(result.events.some((e) => e.type === "tool.call")).toBe(true);
+    expect(result.events.some((e) => e.type === "tool.result")).toBe(true);
+
+    const reopenedStore = createSqliteEventStore({ databasePath });
+    expect(await reopenedStore.getRun("run-provider-tool-001")).toMatchObject({
+      runId: "run-provider-tool-001",
+      status: "completed",
+    });
+    const events = await reopenedStore.getEvents("run-provider-tool-001");
+    expect(events.some((e) => e.type === "tool.call")).toBe(true);
+    expect(events.some((e) => e.type === "tool.result")).toBe(true);
+  });
+
   it("preserves existing provider-free dry run behavior when no provider is given", async () => {
     const root = await mkdtemp(join(tmpdir(), "plico-runtime-"));
     await writeValidProject(root);

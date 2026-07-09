@@ -10,6 +10,7 @@ import type {
   DryRunScriptStep,
   EventStore,
   ModelProvider,
+  ModelRequest,
   PersistedRun,
   RunProjectOptions,
   RunResult,
@@ -86,6 +87,7 @@ export async function runProject(
             options.message,
             validation.project,
             instructions.content,
+            tools,
             events,
           )
         : options.script === undefined
@@ -164,6 +166,7 @@ async function runProviderBackedRun(
   message: string | undefined,
   project: LoadedProject,
   instructions: string,
+  tools: DeclaredTool[],
   events: InMemoryEventLog,
 ): Promise<string> {
   if (!message) {
@@ -176,29 +179,117 @@ async function runProviderBackedRun(
 
   events.append("input.received", { content: message });
 
-  const modelRequest = {
-    messages: [
-      { role: "system" as const, content: instructions },
-      { role: "user" as const, content: message },
-    ],
-    maxSteps: 10,
-  };
+  const toolsByName = new Map(tools.map((tool) => [tool.name, tool]));
 
-  events.append("model.request", {
-    messages: modelRequest.messages,
-    maxSteps: modelRequest.maxSteps,
-  });
+  const providerTools = tools.map((tool) => ({
+    name: tool.name,
+    description: tool.description,
+    inputSchema: tool.inputSchema,
+  }));
 
-  const modelResponse = await provider.complete(modelRequest);
+  const messages: ModelRequest["messages"] = [
+    { role: "system", content: instructions },
+    { role: "user", content: message },
+  ];
 
-  events.append("model.response", {
-    content: modelResponse.content,
-    usage: modelResponse.usage,
-  });
+  let output: string | undefined;
 
-  events.append("assistant.output", { content: modelResponse.content });
+  for (let step = 0; step < 10; step++) {
+    const modelRequest: ModelRequest = {
+      messages,
+      maxSteps: 10,
+      tools: providerTools,
+    };
 
-  return modelResponse.content;
+    events.append("model.request", {
+      messages: modelRequest.messages,
+      maxSteps: modelRequest.maxSteps,
+      tools: providerTools,
+    });
+
+    const modelResponse = await provider.complete(modelRequest);
+
+    events.append("model.response", {
+      content: modelResponse.content,
+      usage: modelResponse.usage,
+      toolCalls: modelResponse.toolCalls,
+    });
+
+    if (modelResponse.toolCalls === undefined || modelResponse.toolCalls.length === 0) {
+      const finalContent = modelResponse.content;
+      if (finalContent) {
+        events.append("assistant.output", { content: finalContent });
+        output = finalContent;
+      }
+      return output ?? finalContent;
+    }
+
+    for (const toolCall of modelResponse.toolCalls) {
+      const tool = toolsByName.get(toolCall.name);
+      if (!tool) {
+        throw new RuntimeDiagnosticError({
+          phase: "tool.validation",
+          toolName: toolCall.name,
+          message: `Provider requested unknown tool: ${toolCall.name}`,
+        });
+      }
+
+      events.append("tool.call", {
+        toolName: tool.name,
+        arguments: toolCall.arguments,
+      });
+
+      const validationError = validateJsonSchemaSubset(toolCall.arguments, tool.inputSchema);
+      if (validationError) {
+        throw new RuntimeDiagnosticError({
+          phase: "tool.validation",
+          toolName: tool.name,
+          message: `Tool ${tool.name} arguments invalid: ${validationError}`,
+        });
+      }
+
+      if (tool.approval.required) {
+        events.append("approval.required", {
+          toolName: tool.name,
+          arguments: toolCall.arguments,
+          approval: tool.approval,
+        });
+        events.append("run.blocked", {
+          status: "blocked",
+          toolName: tool.name,
+        });
+        throw new RunBlockedError();
+      }
+
+      let result: unknown;
+      try {
+        result = await tool.handler(toolCall.arguments);
+      } catch (error) {
+        throw new RuntimeDiagnosticError({
+          phase: "runtime",
+          toolName: tool.name,
+          message: error instanceof Error ? error.message : String(error),
+        });
+      }
+
+      events.append("tool.result", {
+        toolName: tool.name,
+        result,
+      });
+
+      messages.push({
+        role: "assistant",
+        content: modelResponse.content || "",
+      });
+      messages.push({
+        role: "tool",
+        content: JSON.stringify(result),
+        toolName: tool.name,
+      });
+    }
+  }
+
+  return output ?? "Maximum steps reached";
 }
 
 async function runDefaultDryRun(project: LoadedProject, events: InMemoryEventLog): Promise<string> {
