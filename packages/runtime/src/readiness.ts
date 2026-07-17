@@ -2,7 +2,12 @@ import { access, constants, mkdir, readdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { getProjectPaths, getProjectRelativePaths, validateProject } from "@plico/core";
 import { discoverToolFiles, loadToolFile } from "./tools.js";
-import type { ReadinessDiagnostic, ReadinessOptions, ReadinessReport } from "./types.js";
+import type {
+  DeclaredTool,
+  ReadinessDiagnostic,
+  ReadinessOptions,
+  ReadinessReport,
+} from "./types.js";
 
 function diag(
   severity: ReadinessDiagnostic["severity"],
@@ -90,6 +95,62 @@ export async function checkReadiness(
           validCount === toolFiles.length ? "ok" : "warning",
           "tools.discovery",
           `${validCount}/${toolFiles.length} tool(s) valid`,
+        ),
+      );
+    }
+  }
+
+  // 2b. Approval metadata validation
+  {
+    const projectPaths = getProjectPaths(project.root);
+    const relativePaths = getProjectRelativePaths();
+    const toolFiles = await discoverToolFiles(project);
+    const DANGEROUS_KEYWORDS = ["delete", "destroy", "drop", "remove", "purge", "wipe"];
+
+    let approvedTools = 0;
+    let totalTools = 0;
+
+    for (const entry of toolFiles) {
+      const source = `${relativePaths.directories.tools}/${entry}`;
+      try {
+        const tool: DeclaredTool = await loadToolFile(
+          join(projectPaths.directories.tools, entry),
+          source,
+        );
+        totalTools++;
+
+        const hasDangerousCapability = tool.capabilities.some((cap) => {
+          const lower = cap.toLowerCase();
+          return DANGEROUS_KEYWORDS.some((kw) => lower.includes(kw));
+        });
+
+        if (hasDangerousCapability && !tool.approval.required) {
+          diagnostics.push(
+            diag(
+              "warning",
+              "approval.tools",
+              `Tool "${tool.name}" has destructive capabilities but approval is not required`,
+              source,
+            ),
+          );
+        } else {
+          approvedTools++;
+        }
+      } catch {
+        // Tool load errors are already reported by tools.discovery
+      }
+    }
+
+    if (totalTools > 0 && approvedTools === totalTools) {
+      diagnostics.push(
+        diag("ok", "approval.tools", `${totalTools} tool(s) have consistent approval metadata`),
+      );
+    } else if (totalTools > 0) {
+      diagnostics.push(
+        diag(
+          "warning",
+          "approval.tools",
+          `${approvedTools}/${totalTools} tool(s) have consistent approval metadata`,
         ),
       );
     }

@@ -1,11 +1,15 @@
 export { buildArtifactWorkspace } from "./artifacts.js";
+export { ToolRejectedError } from "./errors.js";
 export { runEvals } from "./evals.js";
 export { composeInstructions } from "./instructions.js";
+export { evaluatePolicy } from "./policy.js";
 export { checkReadiness } from "./readiness.js";
 export { runProject } from "./run.js";
 export { createSqliteEventStore } from "./sqlite-store.js";
 export { discoverTools } from "./tools.js";
 export type {
+  ApprovalPolicyConfig,
+  ApprovalPolicyRule,
   ApprovalRequest,
   ArtifactFile,
   ArtifactFileInput,
@@ -30,6 +34,9 @@ export type {
   PersistedRun,
   PlicoEvent,
   PlicoEventType,
+  PolicyContext,
+  PolicyDecision,
+  PolicyResult,
   ProviderMessage,
   ReadinessDiagnostic,
   ReadinessOptions,
@@ -40,6 +47,7 @@ export type {
   RunResult,
   RunStatus,
   RunSummary,
+  SideEffectCategory,
   Thread,
   ToolApprovalPolicy,
 } from "./types.js";

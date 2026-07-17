@@ -5,9 +5,11 @@ import {
   RunCancelledError,
   RuntimeDiagnosticError,
   runtimeErrorPayload,
+  ToolRejectedError,
 } from "./errors.js";
 import { InMemoryEventLog } from "./events.js";
 import { composeInstructions } from "./instructions.js";
+import { evaluatePolicy } from "./policy.js";
 import { validateJsonSchemaSubset } from "./schema.js";
 import { discoverTools } from "./tools.js";
 import type {
@@ -107,6 +109,7 @@ export async function runProject(
               runId,
               options.eventStore,
               options.signal,
+              validation.project.config,
             );
 
     if (options.signal?.aborted) {
@@ -323,11 +326,29 @@ async function runProviderBackedRun(
         });
       }
 
-      if (tool.approval.required) {
+      const policyResult = evaluatePolicy(tool, _project.config, {
+        runtimeMode: "provider_backed",
+      });
+      events.append("policy.decision", {
+        toolName: tool.name,
+        decision: policyResult.decision,
+        reason: policyResult.reason,
+        capabilities: tool.capabilities,
+        ...(tool.sideEffectCategory !== undefined
+          ? { sideEffectCategory: tool.sideEffectCategory }
+          : {}),
+      });
+
+      if (policyResult.decision === "reject") {
+        throw new ToolRejectedError(tool.name, policyResult.reason);
+      }
+
+      if (policyResult.decision === "require_approval") {
         events.append("approval.required", {
           toolName: tool.name,
           arguments: toolCall.arguments,
           approval: tool.approval,
+          policyReason: policyResult.reason,
         });
         events.append("run.blocked", {
           status: "blocked",
@@ -341,7 +362,7 @@ async function runProviderBackedRun(
             runId,
             toolName: tool.name,
             arguments: toolCall.arguments as Record<string, unknown>,
-            ...(tool.approval.reason !== undefined ? { reason: tool.approval.reason } : {}),
+            reason: policyResult.reason,
             status: "pending",
             createdAt: new Date().toISOString(),
           });
@@ -398,6 +419,7 @@ async function runScriptedDryRun(
   runId: string,
   eventStore?: EventStore,
   signal?: AbortSignal,
+  projectConfig?: { approvalPolicy?: import("./types.js").ApprovalPolicyConfig },
 ): Promise<string | undefined> {
   const toolsByName = new Map(tools.map((tool) => [tool.name, tool]));
   let output: string | undefined;
@@ -453,11 +475,27 @@ async function runScriptedDryRun(
       });
     }
 
-    if (tool.approval.required) {
+    const policyResult = evaluatePolicy(tool, projectConfig ?? {}, { runtimeMode: "dry_run" });
+    events.append("policy.decision", {
+      toolName: tool.name,
+      decision: policyResult.decision,
+      reason: policyResult.reason,
+      capabilities: tool.capabilities,
+      ...(tool.sideEffectCategory !== undefined
+        ? { sideEffectCategory: tool.sideEffectCategory }
+        : {}),
+    });
+
+    if (policyResult.decision === "reject") {
+      throw new ToolRejectedError(tool.name, policyResult.reason);
+    }
+
+    if (policyResult.decision === "require_approval") {
       events.append("approval.required", {
         toolName: tool.name,
         arguments: step.arguments,
         approval: tool.approval,
+        policyReason: policyResult.reason,
       });
       events.append("run.blocked", {
         status: "blocked",
@@ -471,7 +509,7 @@ async function runScriptedDryRun(
           runId,
           toolName: tool.name,
           arguments: step.arguments as Record<string, unknown>,
-          ...(tool.approval.reason !== undefined ? { reason: tool.approval.reason } : {}),
+          reason: policyResult.reason,
           status: "pending",
           createdAt: new Date().toISOString(),
         });

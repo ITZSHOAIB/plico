@@ -224,7 +224,7 @@ describe("createPlicoServer", () => {
     expect(events.body).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ sequence: 1, type: "run.started" }),
-        expect.objectContaining({ sequence: 7, type: "run.completed" }),
+        expect.objectContaining({ sequence: 8, type: "run.completed" }),
       ]),
     );
 
@@ -233,8 +233,9 @@ describe("createPlicoServer", () => {
     expect(replay.body).toEqual([
       expect.objectContaining({ sequence: 4, type: "assistant.output" }),
       expect.objectContaining({ sequence: 5, type: "tool.call" }),
-      expect.objectContaining({ sequence: 6, type: "tool.result" }),
-      expect.objectContaining({ sequence: 7, type: "run.completed" }),
+      expect.objectContaining({ sequence: 6, type: "policy.decision" }),
+      expect.objectContaining({ sequence: 7, type: "tool.result" }),
+      expect.objectContaining({ sequence: 8, type: "run.completed" }),
     ]);
 
     await new Promise<void>((resolve) => server.close(() => resolve()));
@@ -1449,6 +1450,121 @@ describe("Run cancellation", () => {
       body: "{}",
     });
     expect(cancelResponse.status).toBe(409);
+
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  });
+});
+
+describe("Centralized approval policy", () => {
+  it("includes policy.decision events in run event timeline", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-server-policy-"));
+    await writeValidProject(root);
+    await writeFile(
+      join(root, "tools", "safe.tool.ts"),
+      [
+        "export default {",
+        '  name: "safe_tool",',
+        '  description: "A safe tool.",',
+        "  inputSchema: {",
+        '    type: "object",',
+        "    properties: {},",
+        "    additionalProperties: false,",
+        "  },",
+        '  capabilities: ["ticket:read"],',
+        "  approval: { required: false },",
+        "  handler: async () => ({ ok: true }),",
+        "} as const;",
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+
+    const eventStore = createSqliteEventStore({
+      databasePath: join(root, ".plico", "plico.sqlite"),
+    });
+    const serverApi = await createPlicoServer({ projectRoot: root, eventStore });
+    const { baseUrl, server } = await startTestServer(serverApi.requestListener);
+
+    const runResponse = await jsonRequest(baseUrl, "/v1/runs/dry", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        script: [{ type: "tool.call", toolName: "safe_tool", arguments: {} }],
+      }),
+    });
+    const run = runResponse.body as { runId: string };
+
+    const eventsResponse = await jsonRequest(baseUrl, `/v1/runs/${run.runId}/events`);
+    expect(eventsResponse.status).toBe(200);
+    const events = eventsResponse.body as Array<{ type: string; payload: Record<string, unknown> }>;
+    const policyEvent = events.find((e) => e.type === "policy.decision");
+    expect(policyEvent).toBeDefined();
+    expect(policyEvent?.payload.decision).toBe("allow");
+
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  });
+
+  it("includes reject policy.decision in run events for rejected tools", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-server-policy-reject-"));
+    await writeValidProject(root);
+    await writeFile(
+      join(root, "tools", "drop-db.tool.ts"),
+      [
+        "export default {",
+        '  name: "drop_database",',
+        '  description: "Drop the database.",',
+        "  inputSchema: {",
+        '    type: "object",',
+        "    properties: {},",
+        "    additionalProperties: false,",
+        "  },",
+        '  capabilities: ["system:admin"],',
+        "  approval: { required: false },",
+        "  handler: async () => ({ ok: true }),",
+        "} as const;",
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+    await writeFile(
+      join(root, "plico.config.ts"),
+      [
+        "export default {",
+        "  schemaVersion: 1,",
+        '  name: "Reject Policy Agent",',
+        "  approvalPolicy: {",
+        "    rules: [",
+        '      { match: { capabilities: ["system:admin"] }, decision: "reject", reason: "Admin blocked" },',
+        "    ],",
+        "  },",
+        "} as const;",
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+
+    const eventStore = createSqliteEventStore({
+      databasePath: join(root, ".plico", "plico.sqlite"),
+    });
+    const serverApi = await createPlicoServer({ projectRoot: root, eventStore });
+    const { baseUrl, server } = await startTestServer(serverApi.requestListener);
+
+    const runResponse = await jsonRequest(baseUrl, "/v1/runs/dry", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        script: [{ type: "tool.call", toolName: "drop_database", arguments: {} }],
+      }),
+    });
+    const run = runResponse.body as { runId: string; status: string };
+    expect(run.status).toBe("failed");
+
+    const eventsResponse = await jsonRequest(baseUrl, `/v1/runs/${run.runId}/events`);
+    const events = eventsResponse.body as Array<{ type: string; payload: Record<string, unknown> }>;
+    const policyEvent = events.find((e) => e.type === "policy.decision");
+    expect(policyEvent).toBeDefined();
+    expect(policyEvent?.payload.decision).toBe("reject");
+    expect(policyEvent?.payload.reason).toBe("Admin blocked");
 
     await new Promise<void>((resolve) => server.close(() => resolve()));
   });

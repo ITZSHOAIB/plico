@@ -9,7 +9,7 @@ export interface LoadedProject {
   };
 }
 
-export type RunStatus = "completed" | "failed" | "blocked";
+export type RunStatus = "completed" | "failed" | "blocked" | "cancelled";
 
 export interface RunSummary {
   runId: string;

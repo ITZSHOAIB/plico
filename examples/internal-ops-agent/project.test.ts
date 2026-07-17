@@ -41,6 +41,7 @@ describe("internal-ops-agent example", () => {
       "tools.discovered",
       "assistant.output",
       "tool.call",
+      "policy.decision",
       "tool.result",
       "run.completed",
     ]);
@@ -68,8 +69,9 @@ describe("internal-ops-agent example", () => {
     expect(await eventStore.getEvents(result.runId, { afterSequence: 3 })).toEqual([
       expect.objectContaining({ sequence: 4, type: "assistant.output" }),
       expect.objectContaining({ sequence: 5, type: "tool.call" }),
-      expect.objectContaining({ sequence: 6, type: "tool.result" }),
-      expect.objectContaining({ sequence: 7, type: "run.completed" }),
+      expect.objectContaining({ sequence: 6, type: "policy.decision" }),
+      expect.objectContaining({ sequence: 7, type: "tool.result" }),
+      expect.objectContaining({ sequence: 8, type: "run.completed" }),
     ]);
   });
 
@@ -98,6 +100,7 @@ describe("internal-ops-agent example", () => {
       "tools.discovered",
       "assistant.output",
       "tool.call",
+      "policy.decision",
       "tool.result",
       "artifact.workspace.created",
       "artifact.file.written",

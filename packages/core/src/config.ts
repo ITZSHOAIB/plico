@@ -2,7 +2,12 @@ import { readFile, stat } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { configLoadMessage, missingFileMessage, ProjectConfigError } from "./errors.js";
 import { getProjectPaths, getProjectRelativePaths } from "./layout.js";
-import type { LoadedProject, ProjectConfig, ValidationIssue } from "./types.js";
+import type {
+  ApprovalPolicyConfig,
+  LoadedProject,
+  ProjectConfig,
+  ValidationIssue,
+} from "./types.js";
 
 export async function loadProject(root: string): Promise<LoadedProject> {
   const configPath = getProjectPaths(root).configFile;
@@ -108,6 +113,10 @@ function normalizeProjectConfig(value: unknown, configPath: string): ProjectConf
 
   if (config.provider !== undefined && isRecord(config.provider)) {
     normalized.provider = config.provider;
+  }
+
+  if (config.approvalPolicy !== undefined && isRecord(config.approvalPolicy)) {
+    normalized.approvalPolicy = config.approvalPolicy as ApprovalPolicyConfig;
   }
 
   return normalized;

@@ -6,6 +6,8 @@ export {
   REQUIRED_PROJECT_DIRECTORIES,
 } from "./layout.js";
 export type {
+  ApprovalPolicyConfig,
+  ApprovalPolicyRule,
   LoadedProject,
   ProjectConfig,
   ProjectDirectoryRole,
@@ -13,6 +15,7 @@ export type {
   ProjectLayoutDirectories,
   ProjectPaths,
   ProjectRelativePaths,
+  SideEffectCategory,
   ValidationIssue,
   ValidationResult,
   ValidationSeverity,

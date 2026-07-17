@@ -8,6 +8,15 @@ export class RunBlockedError extends Error {}
 
 export class RunCancelledError extends Error {}
 
+export class ToolRejectedError extends Error {
+  constructor(
+    readonly toolName: string,
+    readonly reason: string,
+  ) {
+    super(`Tool "${toolName}" rejected by policy: ${reason}`);
+  }
+}
+
 export function errorMessage(error: unknown): string {
   if (error instanceof Error && error.message) {
     return error.message;

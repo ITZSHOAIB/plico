@@ -1,6 +1,39 @@
-import type { ValidationIssue } from "@plico/core";
+import type { SideEffectCategory, ValidationIssue } from "@plico/core";
+
+export type { SideEffectCategory } from "@plico/core";
 
 export type RunStatus = "completed" | "failed" | "blocked" | "cancelled";
+
+export type PolicyDecision = "allow" | "require_approval" | "reject";
+
+export interface PolicyContext {
+  toolName: string;
+  capabilities: string[];
+  declaredApproval: ToolApprovalPolicy;
+  sideEffectCategory?: SideEffectCategory;
+  runtimeMode: "dry_run" | "provider_backed";
+}
+
+export interface PolicyResult {
+  decision: PolicyDecision;
+  reason: string;
+  timeout?: number;
+}
+
+export interface ApprovalPolicyRule {
+  match: {
+    capabilities?: string[];
+    sideEffectCategory?: SideEffectCategory;
+  };
+  decision: PolicyDecision;
+  reason?: string;
+  timeout?: number;
+}
+
+export interface ApprovalPolicyConfig {
+  defaultDecision?: PolicyDecision;
+  rules?: ApprovalPolicyRule[];
+}
 
 export type PlicoEventType =
   | "run.started"
@@ -22,7 +55,8 @@ export type PlicoEventType =
   | "run.error"
   | "thread.created"
   | "message.created"
-  | "run.cancelled";
+  | "run.cancelled"
+  | "policy.decision";
 
 export interface PlicoEvent {
   schemaVersion: 1;
@@ -283,6 +317,8 @@ export interface DeclaredTool {
   inputSchema: JsonSchemaSubset;
   capabilities: string[];
   approval: ToolApprovalPolicy;
+  sideEffectCategory?: SideEffectCategory;
+  timeout?: number;
   handler: (input: unknown) => unknown | Promise<unknown>;
 }
 

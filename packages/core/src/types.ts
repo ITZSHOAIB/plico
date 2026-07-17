@@ -34,12 +34,25 @@ export interface ValidationIssue {
   severity: ValidationSeverity;
 }
 
+export type SideEffectCategory = "none" | "read" | "write" | "destructive";
+
+export interface ApprovalPolicyConfig {
+  rules?: ApprovalPolicyRule[];
+}
+
+export interface ApprovalPolicyRule {
+  match: { tool?: string; subsystem?: string; sideEffectCategory?: SideEffectCategory };
+  decision: "allow" | "require_approval";
+  reason?: string;
+}
+
 export interface ProjectConfig {
   schemaVersion: number;
   name: string;
   description?: string;
   template?: string;
   provider?: Record<string, unknown>;
+  approvalPolicy?: ApprovalPolicyConfig;
 }
 
 export interface LoadedProject {

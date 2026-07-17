@@ -636,13 +636,20 @@ function ToolEventDetail({ event }: ToolEventDetailProps) {
   if (
     event.type === "tool.call" ||
     event.type === "tool.result" ||
-    event.type === "approval.required"
+    event.type === "approval.required" ||
+    event.type === "policy.decision"
   ) {
     const toolName = String(event.payload.toolName ?? "");
     const details: string[] = [];
     if (toolName) details.push(`tool: ${toolName}`);
     if (event.type === "approval.required") {
       details.push("requires approval");
+    }
+    if (event.type === "policy.decision") {
+      const decision = String(event.payload.decision ?? "");
+      const reason = String(event.payload.reason ?? "");
+      if (decision) details.push(`decision: ${decision}`);
+      if (reason) details.push(reason);
     }
     if (details.length > 0) {
       return <div style={{ marginBottom: "4px" }}>{details.join(" | ")}</div>;

@@ -7,11 +7,13 @@ import {
   buildArtifactWorkspace,
   checkReadiness,
   createSqliteEventStore,
+  type DeclaredTool,
   discoverTools,
   type ModelProvider,
   runEvals,
   runProject,
 } from "./index.js";
+import { evaluatePolicy } from "./policy.js";
 
 async function writeValidProject(root: string) {
   await mkdir(join(root, "skills"), { recursive: true });
@@ -262,6 +264,7 @@ describe("runProject", () => {
       "tools.discovered",
       "assistant.output",
       "tool.call",
+      "policy.decision",
       "tool.result",
       "run.completed",
     ]);
@@ -269,7 +272,7 @@ describe("runProject", () => {
       toolName: "create_ticket",
       arguments: { title: "VPN down" },
     });
-    expect(result.events[5]?.payload).toMatchObject({
+    expect(result.events[6]?.payload).toMatchObject({
       toolName: "create_ticket",
       result: { ticketId: "TCK-8" },
     });
@@ -357,10 +360,11 @@ describe("runProject", () => {
       "instructions.composed",
       "tools.discovered",
       "tool.call",
+      "policy.decision",
       "approval.required",
       "run.blocked",
     ]);
-    expect(result.events[4]?.payload).toMatchObject({
+    expect(result.events[5]?.payload).toMatchObject({
       toolName: "delete_ticket",
       arguments: { ticketId: "TCK-1" },
       approval: { required: true, reason: "Deletes support records." },
@@ -396,10 +400,11 @@ describe("runProject", () => {
       "instructions.composed",
       "tools.discovered",
       "tool.call",
+      "policy.decision",
       "run.error",
       "run.failed",
     ]);
-    expect(result.events[4]?.payload).toMatchObject({
+    expect(result.events[5]?.payload).toMatchObject({
       phase: "runtime",
       message: "ticket system unavailable",
     });
@@ -569,6 +574,7 @@ describe("runProject", () => {
       "instructions.composed",
       "tools.discovered",
       "tool.call",
+      "policy.decision",
       "approval.required",
       "run.blocked",
     ]);
@@ -581,10 +587,14 @@ describe("runProject", () => {
     expect(await reopenedStore.getEvents("run-test-003", { afterSequence: 4 })).toEqual([
       expect.objectContaining({
         sequence: 5,
-        type: "approval.required",
+        type: "policy.decision",
       }),
       expect.objectContaining({
         sequence: 6,
+        type: "approval.required",
+      }),
+      expect.objectContaining({
+        sequence: 7,
         type: "run.blocked",
       }),
     ]);
@@ -746,6 +756,7 @@ describe("runProject", () => {
       "model.request",
       "model.response",
       "tool.call",
+      "policy.decision",
       "tool.result",
       "model.request",
       "model.response",
@@ -756,7 +767,7 @@ describe("runProject", () => {
       toolName: "create_ticket",
       arguments: { title: "VPN down" },
     });
-    expect(result.events[7]?.payload).toMatchObject({
+    expect(result.events[8]?.payload).toMatchObject({
       toolName: "create_ticket",
       result: { ticketId: "TCK-8" },
     });
@@ -861,10 +872,11 @@ describe("runProject", () => {
       "model.request",
       "model.response",
       "tool.call",
+      "policy.decision",
       "run.error",
       "run.failed",
     ]);
-    expect(result.events[7]?.payload).toMatchObject({
+    expect(result.events[8]?.payload).toMatchObject({
       phase: "runtime",
       message: "tool crashed",
     });
@@ -918,6 +930,7 @@ describe("runProject", () => {
       "model.request",
       "model.response",
       "tool.call",
+      "policy.decision",
       "approval.required",
       "run.blocked",
     ]);
@@ -2168,5 +2181,543 @@ describe("run cancellation", () => {
 
     const events = await eventStore.getEvents("run-cancel-003");
     expect(events.some((e) => e.type === "run.cancelled")).toBe(true);
+  });
+});
+
+function createTool(overrides: Partial<DeclaredTool> = {}): DeclaredTool {
+  return {
+    source: "tools/test.tool.ts",
+    name: "test_tool",
+    description: "A test tool.",
+    inputSchema: { type: "object", properties: {}, additionalProperties: false },
+    capabilities: [],
+    approval: { required: false },
+    handler: async () => ({ ok: true }),
+    ...overrides,
+  };
+}
+
+const safeToolCode = [
+  "export default {",
+  '  name: "safe_tool",',
+  '  description: "A safe read-only tool.",',
+  "  inputSchema: {",
+  '    type: "object",',
+  "    properties: {},",
+  "    additionalProperties: false,",
+  "  },",
+  '  capabilities: ["ticket:read"],',
+  "  approval: { required: false },",
+  "  handler: async () => ({ ok: true }),",
+  "} as const;",
+  "",
+].join("\n");
+
+const approvalRequiredToolCode = [
+  "export default {",
+  '  name: "delete_ticket",',
+  '  description: "Delete a support ticket.",',
+  "  inputSchema: {",
+  '    type: "object",',
+  "    properties: {",
+  '      ticketId: { type: "string" },',
+  "    },",
+  '    required: ["ticketId"],',
+  "    additionalProperties: false,",
+  "  },",
+  '  capabilities: ["ticket:delete"],',
+  '  approval: { required: true, reason: "Deletes support records." },',
+  "  handler: async () => ({ ok: true }),",
+  "} as const;",
+  "",
+].join("\n");
+
+const rejectByPolicyToolCode = [
+  "export default {",
+  '  name: "drop_database",',
+  '  description: "Drop an entire database.",',
+  "  inputSchema: {",
+  '    type: "object",',
+  "    properties: {},",
+  "    additionalProperties: false,",
+  "  },",
+  '  capabilities: ["system:admin"],',
+  "  approval: { required: false },",
+  "  handler: async () => ({ ok: true }),",
+  "} as const;",
+  "",
+].join("\n");
+
+const writePolicyToolCode = [
+  "export default {",
+  '  name: "create_ticket",',
+  '  description: "Create a support ticket.",',
+  "  inputSchema: {",
+  '    type: "object",',
+  "    properties: {",
+  '      title: { type: "string" },',
+  "    },",
+  '    required: ["title"],',
+  "    additionalProperties: false,",
+  "  },",
+  '  capabilities: ["ticket:write"],',
+  "  approval: { required: false },",
+  "  handler: async () => ({ ticketId: 'TCK-1' }),",
+  "} as const;",
+  "",
+].join("\n");
+
+describe("centralized approval policy", () => {
+  describe("evaluatePolicy", () => {
+    it("returns allow for a safe tool with approval required false", () => {
+      const tool = createTool({ approval: { required: false } });
+      const result = evaluatePolicy(tool, {});
+      expect(result.decision).toBe("allow");
+      expect(result.reason).toBeDefined();
+    });
+
+    it("returns require_approval for a tool with approval required true", () => {
+      const tool = createTool({
+        approval: { required: true, reason: "Deletes records." },
+      });
+      const result = evaluatePolicy(tool, {});
+      expect(result.decision).toBe("require_approval");
+      expect(result.reason).toContain("Deletes records.");
+    });
+
+    it("returns allow for a tool with read side-effect category", () => {
+      const tool = createTool({
+        approval: { required: false },
+        sideEffectCategory: "read",
+      });
+      const result = evaluatePolicy(tool, {});
+      expect(result.decision).toBe("allow");
+    });
+
+    it("overrides tool-declared approval false for destructive side-effect category", () => {
+      const tool = createTool({
+        approval: { required: false },
+        sideEffectCategory: "destructive",
+      });
+      const result = evaluatePolicy(tool, {});
+      expect(result.decision).toBe("require_approval");
+      expect(result.reason).toContain("destructive");
+    });
+
+    it("applies project-level policy rules over tool declarations", () => {
+      const tool = createTool({
+        name: "create_ticket",
+        capabilities: ["ticket:write"],
+        approval: { required: false },
+      });
+      const result = evaluatePolicy(tool, {
+        approvalPolicy: {
+          rules: [
+            {
+              match: { capabilities: ["ticket:write"] },
+              decision: "require_approval",
+              reason: "Write ops need approval",
+            },
+          ],
+        },
+      });
+      expect(result.decision).toBe("require_approval");
+      expect(result.reason).toBe("Write ops need approval");
+    });
+
+    it("project-level reject rule prevents tool execution", () => {
+      const tool = createTool({
+        name: "admin_tool",
+        capabilities: ["system:admin"],
+        approval: { required: false },
+      });
+      const result = evaluatePolicy(tool, {
+        approvalPolicy: {
+          rules: [
+            {
+              match: { capabilities: ["system:admin"] },
+              decision: "reject",
+              reason: "Admin tools blocked in production",
+            },
+          ],
+        },
+      });
+      expect(result.decision).toBe("reject");
+      expect(result.reason).toBe("Admin tools blocked in production");
+    });
+
+    it("falls back to tool-declared approval when no project rules match", () => {
+      const tool = createTool({
+        capabilities: ["ticket:read"],
+        approval: { required: true, reason: "Tool needs approval" },
+      });
+      const result = evaluatePolicy(tool, {
+        approvalPolicy: {
+          rules: [
+            {
+              match: { capabilities: ["system:admin"] },
+              decision: "reject",
+            },
+          ],
+        },
+      });
+      expect(result.decision).toBe("require_approval");
+      expect(result.reason).toBe("Tool needs approval");
+    });
+
+    it("returns allow for tool with no sideEffectCategory declared", () => {
+      const tool = createTool({ approval: { required: false } });
+      const result = evaluatePolicy(tool, {});
+      expect(result.decision).toBe("allow");
+    });
+
+    it("first matching project rule wins when multiple rules match", () => {
+      const tool = createTool({
+        name: "ticket_tool",
+        capabilities: ["ticket:write", "ticket:delete"],
+        approval: { required: false },
+      });
+      const result = evaluatePolicy(tool, {
+        approvalPolicy: {
+          rules: [
+            {
+              match: { capabilities: ["ticket:delete"] },
+              decision: "reject",
+              reason: "Delete blocked",
+            },
+            {
+              match: { capabilities: ["ticket:write"] },
+              decision: "require_approval",
+              reason: "Write needs approval",
+            },
+          ],
+        },
+      });
+      expect(result.decision).toBe("reject");
+      expect(result.reason).toBe("Delete blocked");
+    });
+
+    it("returns default allow when no project rules and tool approval required false", () => {
+      const tool = createTool({ approval: { required: false } });
+      const result = evaluatePolicy(tool, { approvalPolicy: {} });
+      expect(result.decision).toBe("allow");
+    });
+
+    it("returns require_approval when no project rules and tool approval required true with no reason", () => {
+      const tool = createTool({ approval: { required: true } });
+      const result = evaluatePolicy(tool, {});
+      expect(result.decision).toBe("require_approval");
+      expect(result.reason).toBeDefined();
+    });
+  });
+
+  describe("runProject with centralized policy", () => {
+    it("emits policy.decision event for each tool call in a scripted run", async () => {
+      const root = await mkdtemp(join(tmpdir(), "plico-policy-"));
+      await writeValidProject(root);
+      await writeFile(join(root, "tools", "safe.tool.ts"), safeToolCode, "utf8");
+
+      const result = await runProject(root, {
+        script: [{ type: "tool.call", toolName: "safe_tool", arguments: {} }],
+      });
+
+      expect(result.status).toBe("completed");
+      const policyEvents = result.events.filter((e) => e.type === "policy.decision");
+      expect(policyEvents.length).toBeGreaterThanOrEqual(1);
+      expect(policyEvents[0]?.payload.decision).toBe("allow");
+    });
+
+    it("executes tool handler on allow policy decision", async () => {
+      const root = await mkdtemp(join(tmpdir(), "plico-policy-"));
+      await writeValidProject(root);
+      await writeFile(join(root, "tools", "safe.tool.ts"), safeToolCode, "utf8");
+
+      const result = await runProject(root, {
+        script: [{ type: "tool.call", toolName: "safe_tool", arguments: {} }],
+      });
+
+      expect(result.status).toBe("completed");
+      expect(result.events.some((e) => e.type === "tool.result")).toBe(true);
+    });
+
+    it("blocks run on require_approval policy decision", async () => {
+      const root = await mkdtemp(join(tmpdir(), "plico-policy-"));
+      await writeValidProject(root);
+      await writeFile(
+        join(root, "tools", "delete-ticket.tool.ts"),
+        approvalRequiredToolCode,
+        "utf8",
+      );
+
+      const databasePath = join(root, ".plico", "plico.sqlite");
+      const eventStore = createSqliteEventStore({ databasePath });
+
+      const result = await runProject(root, {
+        runId: "run-policy-001",
+        eventStore,
+        script: [
+          { type: "tool.call", toolName: "delete_ticket", arguments: { ticketId: "TCK-1" } },
+        ],
+      });
+
+      expect(result.status).toBe("blocked");
+      const policyEvents = result.events.filter((e) => e.type === "policy.decision");
+      expect(policyEvents.length).toBeGreaterThanOrEqual(1);
+      expect(policyEvents[0]?.payload.decision).toBe("require_approval");
+    });
+
+    it("fails run on reject policy decision", async () => {
+      const root = await mkdtemp(join(tmpdir(), "plico-policy-"));
+      await writeValidProject(root);
+      await writeFile(
+        join(root, "plico.config.ts"),
+        [
+          "export default {",
+          "  schemaVersion: 1,",
+          '  name: "Reject Policy Agent",',
+          "  approvalPolicy: {",
+          "    rules: [",
+          '      { match: { capabilities: ["system:admin"] }, decision: "reject", reason: "Admin tools blocked" },',
+          "    ],",
+          "  },",
+          "} as const;",
+          "",
+        ].join("\n"),
+        "utf8",
+      );
+      await writeFile(join(root, "tools", "drop-database.tool.ts"), rejectByPolicyToolCode, "utf8");
+
+      const result = await runProject(root, {
+        script: [{ type: "tool.call", toolName: "drop_database", arguments: {} }],
+      });
+
+      expect(result.status).toBe("failed");
+      const policyEvents = result.events.filter((e) => e.type === "policy.decision");
+      expect(policyEvents.length).toBeGreaterThanOrEqual(1);
+      expect(policyEvents[0]?.payload.decision).toBe("reject");
+    });
+
+    it("reject with project-level rule blocks a tool that tool declares as safe", async () => {
+      const root = await mkdtemp(join(tmpdir(), "plico-policy-"));
+      await writeValidProject(root);
+      await writeFile(
+        join(root, "plico.config.ts"),
+        [
+          "export default {",
+          "  schemaVersion: 1,",
+          '  name: "Policy Test Agent",',
+          "  approvalPolicy: {",
+          "    rules: [",
+          '      { match: { capabilities: ["system:admin"] }, decision: "reject", reason: "Admin tools blocked" },',
+          "    ],",
+          "  },",
+          "} as const;",
+          "",
+        ].join("\n"),
+        "utf8",
+      );
+      await writeFile(
+        join(root, "tools", "admin-tool.tool.ts"),
+        [
+          "export default {",
+          '  name: "admin_tool",',
+          '  description: "An admin tool.",',
+          "  inputSchema: {",
+          '    type: "object",',
+          "    properties: {},",
+          "    additionalProperties: false,",
+          "  },",
+          '  capabilities: ["system:admin"],',
+          "  approval: { required: false },",
+          "  handler: async () => ({ ok: true }),",
+          "} as const;",
+          "",
+        ].join("\n"),
+        "utf8",
+      );
+
+      const result = await runProject(root, {
+        script: [{ type: "tool.call", toolName: "admin_tool", arguments: {} }],
+      });
+
+      expect(result.status).toBe("failed");
+      const policyEvents = result.events.filter((e) => e.type === "policy.decision");
+      expect(policyEvents[0]?.payload.decision).toBe("reject");
+      expect(policyEvents[0]?.payload.reason).toBe("Admin tools blocked");
+    });
+
+    it("project require_approval rule overrides tool approval false", async () => {
+      const root = await mkdtemp(join(tmpdir(), "plico-policy-"));
+      await writeValidProject(root);
+      await writeFile(
+        join(root, "plico.config.ts"),
+        [
+          "export default {",
+          "  schemaVersion: 1,",
+          '  name: "Policy Test Agent",',
+          "  approvalPolicy: {",
+          "    rules: [",
+          '      { match: { capabilities: ["ticket:write"] }, decision: "require_approval", reason: "Write ops need approval" },',
+          "    ],",
+          "  },",
+          "} as const;",
+          "",
+        ].join("\n"),
+        "utf8",
+      );
+      await writeFile(join(root, "tools", "create-ticket.tool.ts"), writePolicyToolCode, "utf8");
+
+      const databasePath = join(root, ".plico", "plico.sqlite");
+      const eventStore = createSqliteEventStore({ databasePath });
+
+      const result = await runProject(root, {
+        runId: "run-policy-002",
+        eventStore,
+        script: [
+          {
+            type: "tool.call",
+            toolName: "create_ticket",
+            arguments: { title: "Test" },
+          },
+        ],
+      });
+
+      expect(result.status).toBe("blocked");
+      const policyEvents = result.events.filter((e) => e.type === "policy.decision");
+      expect(policyEvents[0]?.payload.decision).toBe("require_approval");
+      expect(policyEvents[0]?.payload.reason).toBe("Write ops need approval");
+    });
+
+    it("existing dry-run tests still pass through the centralized policy path", async () => {
+      const root = await mkdtemp(join(tmpdir(), "plico-policy-"));
+      await writeValidProject(root);
+
+      const result = await runProject(root);
+
+      expect(result.status).toBe("completed");
+      expect(result.output).toBe("Dry run complete for Internal Ops Agent.");
+    });
+  });
+
+  describe("checkReadiness approval metadata", () => {
+    it("reports warning for tool with delete capability but approval not required", async () => {
+      const root = await mkdtemp(join(tmpdir(), "plico-readiness-"));
+      await writeValidProject(root);
+      await writeFile(
+        join(root, "tools", "unsafe.tool.ts"),
+        [
+          "export default {",
+          '  name: "unsafe_tool",',
+          '  description: "Deletes without approval.",',
+          "  inputSchema: {",
+          '    type: "object",',
+          "    properties: {},",
+          "    additionalProperties: false,",
+          "  },",
+          '  capabilities: ["ticket:delete"],',
+          "  approval: { required: false },",
+          "  handler: async () => ({ ok: true }),",
+          "} as const;",
+          "",
+        ].join("\n"),
+        "utf8",
+      );
+
+      const report = await checkReadiness(root);
+      expect(
+        report.diagnostics.some(
+          (d) => d.subsystem === "approval.tools" && d.severity === "warning",
+        ),
+      ).toBe(true);
+    });
+
+    it("reports ok for tool with proper approval metadata", async () => {
+      const root = await mkdtemp(join(tmpdir(), "plico-readiness-"));
+      await writeValidProject(root);
+      await writeFile(
+        join(root, "tools", "proper.tool.ts"),
+        [
+          "export default {",
+          '  name: "proper_tool",',
+          '  description: "A properly configured tool.",',
+          "  inputSchema: {",
+          '    type: "object",',
+          "    properties: {},",
+          "    additionalProperties: false,",
+          "  },",
+          '  capabilities: ["ticket:read"],',
+          "  approval: { required: false },",
+          "  handler: async () => ({ ok: true }),",
+          "} as const;",
+          "",
+        ].join("\n"),
+        "utf8",
+      );
+
+      const report = await checkReadiness(root);
+      expect(
+        report.diagnostics.some((d) => d.subsystem === "approval.tools" && d.severity === "ok"),
+      ).toBe(true);
+    });
+
+    it("reports warning for tool with destructive capability but approval not required", async () => {
+      const root = await mkdtemp(join(tmpdir(), "plico-readiness-"));
+      await writeValidProject(root);
+      await writeFile(
+        join(root, "tools", "unsafe-destructive.tool.ts"),
+        [
+          "export default {",
+          '  name: "unsafe_destructive",',
+          '  description: "Destructive without approval.",',
+          "  inputSchema: {",
+          '    type: "object",',
+          "    properties: {},",
+          "    additionalProperties: false,",
+          "  },",
+          '  capabilities: ["system:destroy"],',
+          "  approval: { required: false },",
+          "  handler: async () => ({ ok: true }),",
+          "} as const;",
+          "",
+        ].join("\n"),
+        "utf8",
+      );
+
+      const report = await checkReadiness(root);
+      expect(
+        report.diagnostics.some(
+          (d) => d.subsystem === "approval.tools" && d.severity === "warning",
+        ),
+      ).toBe(true);
+    });
+
+    it("reports ok for tool with approval required true and reason", async () => {
+      const root = await mkdtemp(join(tmpdir(), "plico-readiness-"));
+      await writeValidProject(root);
+      await writeFile(
+        join(root, "tools", "approved.tool.ts"),
+        [
+          "export default {",
+          '  name: "approved_tool",',
+          '  description: "Requires approval.",',
+          "  inputSchema: {",
+          '    type: "object",',
+          "    properties: {},",
+          "    additionalProperties: false,",
+          "  },",
+          '  capabilities: ["ticket:delete"],',
+          '  approval: { required: true, reason: "Deletes records." },',
+          "  handler: async () => ({ ok: true }),",
+          "} as const;",
+          "",
+        ].join("\n"),
+        "utf8",
+      );
+
+      const report = await checkReadiness(root);
+      expect(
+        report.diagnostics.some((d) => d.subsystem === "approval.tools" && d.severity === "ok"),
+      ).toBe(true);
+    });
   });
 });
