@@ -84,6 +84,68 @@ export async function handleRequest(options: HandleRequestOptions): Promise<void
       return;
     }
 
+    if (options.request.method === "POST" && url.pathname === "/v1/runs") {
+      const body = await readJsonBody(options.request);
+      const threadId = typeof body.threadId === "string" ? body.threadId : undefined;
+      const message = typeof body.message === "string" ? body.message : undefined;
+
+      if (!threadId) {
+        sendError(
+          options.response,
+          400,
+          "run.invalid_body",
+          "A threadId is required to start a thread-backed run.",
+        );
+        return;
+      }
+
+      if (!message) {
+        sendError(
+          options.response,
+          400,
+          "run.invalid_body",
+          "A message is required to start a thread-backed run.",
+        );
+        return;
+      }
+
+      const thread = await options.eventStore.getThread(threadId);
+      if (!thread) {
+        sendError(options.response, 404, "thread.not_found", `Unknown thread ID: ${threadId}`);
+        return;
+      }
+
+      const userMessage = {
+        messageId: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        threadId,
+        role: "user" as const,
+        content: message,
+        createdAt: new Date().toISOString(),
+      };
+      await options.eventStore.addMessage(userMessage);
+
+      const provider = await resolveProvider(options.projectRoot, undefined);
+      const runId = `run-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const result = await runProject(options.projectRoot, {
+        runId,
+        message,
+        provider,
+        eventStore: options.eventStore,
+      });
+
+      const assistantMessage = {
+        messageId: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        threadId,
+        role: "assistant" as const,
+        content: result.output ?? "",
+        createdAt: new Date().toISOString(),
+      };
+      await options.eventStore.addMessage(assistantMessage);
+
+      sendJson(options.response, 200, result);
+      return;
+    }
+
     if (options.request.method === "POST" && url.pathname === "/v1/eval") {
       const summary = await runEvals(options.projectRoot, {
         eventStore: options.eventStore,

@@ -1008,3 +1008,124 @@ describe("Eval endpoint", () => {
     await new Promise<void>((resolve) => server.close(() => resolve()));
   });
 });
+
+describe("Provider thread runs", () => {
+  it("starts a provider-backed run from a thread message and persists events", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-provider-thread-"));
+    await writeValidProject(root);
+    const eventStore = createSqliteEventStore({
+      databasePath: join(root, ".plico", "plico.sqlite"),
+    });
+    const serverApi = await createPlicoServer({ projectRoot: root, eventStore });
+    const { baseUrl, server } = await startTestServer(serverApi.requestListener);
+
+    const threadResponse = await jsonRequest(baseUrl, "/v1/threads", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ title: "Provider Thread" }),
+    });
+    const thread = threadResponse.body as { threadId: string };
+
+    const runResponse = await jsonRequest(baseUrl, "/v1/runs", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ threadId: thread.threadId, message: "Hello, agent!" }),
+    });
+    expect(runResponse.status).toBe(200);
+    const run = runResponse.body as { runId: string; status: string; output?: string };
+    expect(run.runId).toBeDefined();
+    expect(run.status).toBe("completed");
+    expect(run.output).toBeDefined();
+
+    const events = await eventStore.getEvents(run.runId);
+    expect(events.length).toBeGreaterThan(0);
+    expect(events.some((e) => e.type === "run.started")).toBe(true);
+    expect(events.some((e) => e.type === "input.received")).toBe(true);
+    expect(events.some((e) => e.type === "model.request")).toBe(true);
+    expect(events.some((e) => e.type === "model.response")).toBe(true);
+    expect(events.some((e) => e.type === "assistant.output")).toBe(true);
+    expect(events.some((e) => e.type === "run.completed")).toBe(true);
+
+    const messages = await eventStore.getThreadMessages(thread.threadId);
+    expect(messages.length).toBe(2);
+    expect(messages[0]?.role).toBe("user");
+    expect(messages[0]?.content).toBe("Hello, agent!");
+    expect(messages[1]?.role).toBe("assistant");
+    expect(messages[1]?.content).toBeDefined();
+
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  });
+
+  it("streams provider-backed run events via SSE", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-provider-stream-"));
+    await writeValidProject(root);
+    const eventStore = createSqliteEventStore({
+      databasePath: join(root, ".plico", "plico.sqlite"),
+    });
+    const serverApi = await createPlicoServer({ projectRoot: root, eventStore });
+    const { baseUrl, server } = await startTestServer(serverApi.requestListener);
+
+    const threadResponse = await jsonRequest(baseUrl, "/v1/threads", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ title: "Stream Thread" }),
+    });
+    const thread = threadResponse.body as { threadId: string };
+
+    const runResponse = await jsonRequest(baseUrl, "/v1/runs", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ threadId: thread.threadId, message: "Stream this!" }),
+    });
+    const run = runResponse.body as { runId: string };
+
+    const streamResponse = await fetch(`${baseUrl}/v1/runs/${run.runId}/events/stream`);
+    expect(streamResponse.status).toBe(200);
+    expect(streamResponse.headers.get("content-type")).toBe("text/event-stream");
+
+    const text = await streamResponse.text();
+    expect(text).toContain("event: plico.event");
+    expect(text).toContain("run.started");
+    expect(text).toContain("run.completed");
+
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  });
+
+  it("returns 400 when threadId is missing", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-provider-no-thread-"));
+    await writeValidProject(root);
+    const eventStore = createSqliteEventStore({
+      databasePath: join(root, ".plico", "plico.sqlite"),
+    });
+    const serverApi = await createPlicoServer({ projectRoot: root, eventStore });
+    const { baseUrl, server } = await startTestServer(serverApi.requestListener);
+
+    const response = await jsonRequest(baseUrl, "/v1/runs", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ message: "Hello!" }),
+    });
+    expect(response.status).toBe(400);
+
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  });
+
+  it("returns 404 for unknown thread ID", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-provider-unknown-thread-"));
+    await writeValidProject(root);
+    const eventStore = createSqliteEventStore({
+      databasePath: join(root, ".plico", "plico.sqlite"),
+    });
+    const serverApi = await createPlicoServer({ projectRoot: root, eventStore });
+    const { baseUrl, server } = await startTestServer(serverApi.requestListener);
+
+    const response = await jsonRequest(baseUrl, "/v1/runs", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ threadId: "nonexistent", message: "Hello!" }),
+    });
+    expect(response.status).toBe(404);
+
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  });
+});
