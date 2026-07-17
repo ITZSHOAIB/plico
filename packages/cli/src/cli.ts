@@ -240,12 +240,38 @@ export async function main(argv: string[]): Promise<number> {
     }
   }
 
+  if (command === "conversations") {
+    try {
+      const { dbPath, json, target } = parseConversationsArgs(argv.slice(3));
+      const databasePath = resolveDatabasePath(target, dbPath);
+      await ensureDatabaseExists(databasePath);
+      const eventStore = createSqliteEventStore({ databasePath });
+      const conversations = await eventStore.listConversations();
+
+      if (json) {
+        console.log(JSON.stringify(conversations));
+      } else {
+        for (const conversation of conversations) {
+          console.log(
+            `${conversation.conversationId}\t${conversation.runCount} runs\t${conversation.lastActivity}`,
+          );
+        }
+      }
+
+      return 0;
+    } catch (error) {
+      console.error(errorMessage(error));
+      return 1;
+    }
+  }
+
   console.log("Usage: plico validate [path]");
   console.log(
     "Usage: plico run --dry [--persist] [--db <path>] [--json] [--script <file>] [--message <text>] [path]",
   );
   console.log("Usage: plico runs [--db <path>] [--json] [path]");
   console.log("Usage: plico events <runId> [--after <sequence>] [--db <path>] [--json] [path]");
+  console.log("Usage: plico conversations [--db <path>] [--json] [path]");
   console.log("Usage: plico eval [--json] [path]");
   console.log("Usage: plico readiness [--json] [path]");
   console.log("Usage: plico serve [--host <host>] [--port <port>] [--db <path>] [--studio] [path]");
@@ -861,6 +887,37 @@ function parseEvalArgs(args: string[]): { json: boolean; target: string } {
   }
 
   return { json, target };
+}
+
+function parseConversationsArgs(args: string[]): {
+  dbPath: string | undefined;
+  json: boolean;
+  target: string;
+} {
+  let dbPath: string | undefined;
+  let json = false;
+  let target = process.cwd();
+
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    if (arg === "--json") {
+      json = true;
+      continue;
+    }
+
+    if (arg === "--db") {
+      dbPath = args[++i];
+      continue;
+    }
+
+    if (arg?.startsWith("-")) {
+      throw new Error(`Unknown option: ${arg}`);
+    }
+
+    target = arg ?? process.cwd();
+  }
+
+  return { dbPath, json, target };
 }
 
 function formatEvalSummary(target: string, summary: EvalSummary): string[] {

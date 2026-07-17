@@ -862,4 +862,36 @@ describe("Eval endpoint", () => {
 
     await new Promise<void>((resolve) => server.close(() => resolve()));
   });
+
+  it("lists conversations and retrieves conversation events", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-server-conversations-"));
+    await writeValidProject(root);
+    const eventStore = createSqliteEventStore({
+      databasePath: join(root, ".plico", "plico.sqlite"),
+    });
+    const serverApi = await createPlicoServer({ projectRoot: root, eventStore });
+    const { baseUrl, server } = await startTestServer(serverApi.requestListener);
+
+    await jsonRequest(baseUrl, "/v1/runs/dry", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: "{}",
+    });
+
+    const listResponse = await jsonRequest(baseUrl, "/v1/conversations");
+    expect(listResponse.status).toBe(200);
+    const conversations = listResponse.body as Array<{ conversationId: string; runCount: number }>;
+    expect(conversations.length).toBe(1);
+    expect(conversations[0]?.conversationId).toBeDefined();
+
+    const eventsResponse = await jsonRequest(
+      baseUrl,
+      `/v1/conversations/${conversations[0]?.conversationId}`,
+    );
+    expect(eventsResponse.status).toBe(200);
+    const events = eventsResponse.body as Array<{ type: string }>;
+    expect(events.length).toBeGreaterThan(0);
+
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  });
 });

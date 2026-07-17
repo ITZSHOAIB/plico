@@ -49,6 +49,17 @@ export interface RunSummary {
   output?: string;
 }
 
+export interface RunMetadata {
+  runId: string;
+  conversationId: string;
+  projectRoot: string;
+  projectName: string;
+  status: RunStatus;
+  startedAt: string;
+  endedAt: string;
+  output?: string;
+}
+
 export interface PersistedRun extends RunSummary {
   events: PlicoEvent[];
 }
@@ -58,6 +69,11 @@ export interface EventStore {
   listRuns(): Promise<RunSummary[]>;
   getRun(runId: string): Promise<RunSummary | undefined>;
   getEvents(runId: string, options?: { afterSequence?: number }): Promise<PlicoEvent[]>;
+  getRunMetadata(runId: string): Promise<RunMetadata | undefined>;
+  eventsByConversation(conversationId: string): Promise<PlicoEvent[]>;
+  listConversations(): Promise<
+    Array<{ conversationId: string; runCount: number; lastActivity: string }>
+  >;
 }
 
 export interface EvalExpectation {

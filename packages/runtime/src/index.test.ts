@@ -1575,3 +1575,148 @@ describe("checkReadiness", () => {
     ).toBe(true);
   });
 });
+
+describe("conversation projections", () => {
+  it("returns run metadata with conversation ID after persisting a run", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-conversation-"));
+    await writeValidProject(root);
+    const databasePath = join(root, ".plico", "plico.sqlite");
+    const eventStore = createSqliteEventStore({ databasePath });
+
+    await runProject(root, {
+      runId: "run-conv-001",
+      eventStore,
+    });
+
+    const metadata = await eventStore.getRunMetadata("run-conv-001");
+    expect(metadata).toBeDefined();
+    expect(metadata?.runId).toBe("run-conv-001");
+    expect(metadata?.conversationId).toBe("run-conv-001");
+    expect(metadata?.projectRoot).toBe(root);
+    expect(metadata?.projectName).toBe("Internal Ops Agent");
+    expect(metadata?.status).toBe("completed");
+  });
+
+  it("filters events by conversation ID", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-conversation-"));
+    await writeValidProject(root);
+    const databasePath = join(root, ".plico", "plico.sqlite");
+    const eventStore = createSqliteEventStore({ databasePath });
+
+    await runProject(root, {
+      runId: "run-conv-002",
+      eventStore,
+    });
+
+    const events = await eventStore.eventsByConversation("run-conv-002");
+    expect(events.length).toBeGreaterThan(0);
+    expect(events.every((e) => e.runId === "run-conv-002")).toBe(true);
+  });
+
+  it("lists conversations with run counts and last activity", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-conversation-"));
+    await writeValidProject(root);
+    const databasePath = join(root, ".plico", "plico.sqlite");
+    const eventStore = createSqliteEventStore({ databasePath });
+
+    await runProject(root, { runId: "run-conv-003", eventStore });
+    await runProject(root, { runId: "run-conv-004", eventStore });
+
+    const conversations = await eventStore.listConversations();
+    expect(conversations.length).toBe(2);
+    expect(conversations.some((c) => c.conversationId === "run-conv-003")).toBe(true);
+    expect(conversations.some((c) => c.conversationId === "run-conv-004")).toBe(true);
+  });
+
+  it("opens a schema version 1 database and reads runs without data loss", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-compat-"));
+    await writeValidProject(root);
+    const databasePath = join(root, ".plico", "plico.sqlite");
+    await mkdir(join(root, ".plico"), { recursive: true });
+
+    const database = new (await import("node:sqlite")).DatabaseSync(databasePath);
+    database.exec(`
+      CREATE TABLE plico_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+      CREATE TABLE runs (
+        run_id TEXT PRIMARY KEY,
+        project_root TEXT NOT NULL,
+        project_name TEXT NOT NULL,
+        status TEXT NOT NULL,
+        started_at TEXT NOT NULL,
+        ended_at TEXT NOT NULL,
+        output TEXT
+      );
+      CREATE TABLE events (
+        run_id TEXT NOT NULL,
+        sequence INTEGER NOT NULL,
+        event_id TEXT NOT NULL,
+        schema_version INTEGER NOT NULL,
+        type TEXT NOT NULL,
+        timestamp TEXT NOT NULL,
+        payload_json TEXT NOT NULL,
+        PRIMARY KEY (run_id, sequence)
+      );
+      INSERT INTO plico_meta(key, value) VALUES ('schema_version', '1');
+      INSERT INTO runs (run_id, project_root, project_name, status, started_at, ended_at, output)
+      VALUES ('old-run-001', '${root}', 'Old Agent', 'completed', '2025-01-01T00:00:00Z', '2025-01-01T00:01:00Z', 'Old output');
+      INSERT INTO events (run_id, sequence, event_id, schema_version, type, timestamp, payload_json)
+      VALUES ('old-run-001', 1, 'evt-001', 1, 'run.started', '2025-01-01T00:00:00Z', '{}');
+    `);
+    database.close();
+
+    const eventStore = createSqliteEventStore({ databasePath });
+    const runs = await eventStore.listRuns();
+    expect(runs.length).toBe(1);
+    expect(runs[0]?.runId).toBe("old-run-001");
+
+    const events = await eventStore.getEvents("old-run-001");
+    expect(events.length).toBe(1);
+    expect(events[0]?.type).toBe("run.started");
+  });
+
+  it("migrates schema version 2 database to version 3 with conversation support", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-migration-"));
+    await writeValidProject(root);
+    const databasePath = join(root, ".plico", "plico.sqlite");
+    await mkdir(join(root, ".plico"), { recursive: true });
+
+    const database = new (await import("node:sqlite")).DatabaseSync(databasePath);
+    database.exec(`
+      CREATE TABLE plico_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+      CREATE TABLE runs (
+        run_id TEXT PRIMARY KEY,
+        project_root TEXT NOT NULL,
+        project_name TEXT NOT NULL,
+        status TEXT NOT NULL,
+        started_at TEXT NOT NULL,
+        ended_at TEXT NOT NULL,
+        output TEXT
+      );
+      CREATE TABLE events (
+        run_id TEXT NOT NULL,
+        sequence INTEGER NOT NULL,
+        event_id TEXT NOT NULL,
+        schema_version INTEGER NOT NULL,
+        type TEXT NOT NULL,
+        timestamp TEXT NOT NULL,
+        payload_json TEXT NOT NULL,
+        PRIMARY KEY (run_id, sequence)
+      );
+      INSERT INTO plico_meta(key, value) VALUES ('schema_version', '2');
+      INSERT INTO runs (run_id, project_root, project_name, status, started_at, ended_at, output)
+      VALUES ('schema2-run', '${root}', 'Schema 2 Agent', 'completed', '2025-01-01T00:00:00Z', '2025-01-01T00:01:00Z', 'Schema 2 output');
+      INSERT INTO events (run_id, sequence, event_id, schema_version, type, timestamp, payload_json)
+      VALUES ('schema2-run', 1, 'evt-001', 1, 'run.started', '2025-01-01T00:00:00Z', '{}');
+    `);
+    database.close();
+
+    const eventStore = createSqliteEventStore({ databasePath });
+    const runs = await eventStore.listRuns();
+    expect(runs.length).toBe(1);
+    expect(runs[0]?.runId).toBe("schema2-run");
+
+    const metadata = await eventStore.getRunMetadata("schema2-run");
+    expect(metadata).toBeDefined();
+    expect(metadata?.conversationId).toBe("schema2-run");
+  });
+});

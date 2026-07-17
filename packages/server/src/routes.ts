@@ -179,6 +179,20 @@ export async function handleRequest(options: HandleRequestOptions): Promise<void
       return;
     }
 
+    if (options.request.method === "GET" && url.pathname === "/v1/conversations") {
+      const conversations = await options.eventStore.listConversations();
+      sendJson(options.response, 200, conversations);
+      return;
+    }
+
+    const conversationMatch = url.pathname.match(/^\/v1\/conversations\/([^/]+)$/);
+    if (options.request.method === "GET" && conversationMatch) {
+      const conversationId = decodeURIComponent(conversationMatch[1] ?? "");
+      const events = await options.eventStore.eventsByConversation(conversationId);
+      sendJson(options.response, 200, events);
+      return;
+    }
+
     sendError(options.response, 404, "route.not_found", "Unknown route.");
   } catch (error) {
     if (error instanceof HttpError) {

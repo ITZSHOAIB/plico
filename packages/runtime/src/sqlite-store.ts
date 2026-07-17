@@ -6,6 +6,7 @@ import type {
   EventStore,
   PersistedRun,
   PlicoEvent,
+  RunMetadata,
   RunStatus,
   RunSummary,
 } from "./types.js";
@@ -32,6 +33,17 @@ export function createSqliteEventStore({
       options: { afterSequence?: number } = {},
     ): Promise<PlicoEvent[]> {
       return readEvents(database, runId, options.afterSequence);
+    },
+    async getRunMetadata(runId: string): Promise<RunMetadata | undefined> {
+      return readRunMetadata(database, runId);
+    },
+    async eventsByConversation(conversationId: string): Promise<PlicoEvent[]> {
+      return readEventsByConversation(database, conversationId);
+    },
+    async listConversations(): Promise<
+      Array<{ conversationId: string; runCount: number; lastActivity: string }>
+    > {
+      return readConversations(database);
     },
   };
 }
@@ -198,4 +210,66 @@ function rowToEvent(row: Record<string, unknown>): PlicoEvent {
     type: row.type as PlicoEvent["type"],
     payload: JSON.parse(String(row.payload_json)) as Record<string, unknown>,
   };
+}
+
+function readRunMetadata(database: DatabaseSync, runId: string): RunMetadata | undefined {
+  const row = database
+    .prepare(
+      `
+        SELECT run_id, run_id as conversation_id, project_root, project_name, status, started_at, ended_at, output
+        FROM runs
+        WHERE run_id = ?
+      `,
+    )
+    .get(runId) as Record<string, unknown> | undefined;
+
+  if (!row) return undefined;
+
+  return {
+    runId: String(row.run_id),
+    conversationId: String(row.conversation_id),
+    projectRoot: String(row.project_root),
+    projectName: String(row.project_name),
+    status: row.status as RunStatus,
+    startedAt: String(row.started_at),
+    endedAt: String(row.ended_at),
+    ...(row.output === null || row.output === undefined ? {} : { output: String(row.output) }),
+  };
+}
+
+function readEventsByConversation(database: DatabaseSync, conversationId: string): PlicoEvent[] {
+  const rows = database
+    .prepare(
+      `
+        SELECT e.run_id, e.sequence, e.event_id, e.schema_version, e.type, e.timestamp, e.payload_json
+        FROM events e
+        INNER JOIN runs r ON e.run_id = r.run_id
+        WHERE r.run_id = ?
+        ORDER BY e.sequence ASC
+      `,
+    )
+    .all(conversationId) as Array<Record<string, unknown>>;
+
+  return rows.map((row) => rowToEvent(row));
+}
+
+function readConversations(
+  database: DatabaseSync,
+): Array<{ conversationId: string; runCount: number; lastActivity: string }> {
+  const rows = database
+    .prepare(
+      `
+        SELECT run_id as conversation_id, COUNT(*) as run_count, MAX(ended_at) as last_activity
+        FROM runs
+        GROUP BY run_id
+        ORDER BY last_activity DESC
+      `,
+    )
+    .all() as Array<Record<string, unknown>>;
+
+  return rows.map((row) => ({
+    conversationId: String(row.conversation_id),
+    runCount: Number(row.run_count),
+    lastActivity: String(row.last_activity),
+  }));
 }
