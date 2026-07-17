@@ -4,11 +4,13 @@ import { DatabaseSync } from "node:sqlite";
 import type {
   CreateSqliteEventStoreOptions,
   EventStore,
+  Message,
   PersistedRun,
   PlicoEvent,
   RunMetadata,
   RunStatus,
   RunSummary,
+  Thread,
 } from "./types.js";
 
 export function createSqliteEventStore({
@@ -45,6 +47,21 @@ export function createSqliteEventStore({
     > {
       return readConversations(database);
     },
+    async createThread(thread: Thread): Promise<void> {
+      insertThread(database, thread);
+    },
+    async addMessage(message: Message): Promise<void> {
+      insertMessage(database, message);
+    },
+    async listThreads(): Promise<Thread[]> {
+      return readThreads(database);
+    },
+    async getThread(threadId: string): Promise<Thread | undefined> {
+      return readThread(database, threadId);
+    },
+    async getThreadMessages(threadId: string): Promise<Message[]> {
+      return readThreadMessages(database, threadId);
+    },
   };
 }
 
@@ -79,9 +96,24 @@ function initializeSchema(database: DatabaseSync): void {
     );
     CREATE INDEX IF NOT EXISTS events_run_sequence_index ON events(run_id, sequence);
     CREATE INDEX IF NOT EXISTS runs_started_at_index ON runs(started_at);
+    CREATE TABLE IF NOT EXISTS threads (
+      thread_id TEXT PRIMARY KEY,
+      title TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS threads_created_at_index ON threads(created_at);
+    CREATE TABLE IF NOT EXISTS messages (
+      message_id TEXT PRIMARY KEY,
+      thread_id TEXT NOT NULL,
+      role TEXT NOT NULL,
+      content TEXT NOT NULL,
+      created_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS messages_thread_id_index ON messages(thread_id);
   `);
   database
-    .prepare("INSERT OR REPLACE INTO plico_meta(key, value) VALUES ('schema_version', '1')")
+    .prepare("INSERT OR REPLACE INTO plico_meta(key, value) VALUES ('schema_version', '3')")
     .run();
 }
 
@@ -271,5 +303,82 @@ function readConversations(
     conversationId: String(row.conversation_id),
     runCount: Number(row.run_count),
     lastActivity: String(row.last_activity),
+  }));
+}
+
+function insertThread(database: DatabaseSync, thread: Thread): void {
+  const insert = database.prepare(`
+    INSERT INTO threads (thread_id, title, created_at, updated_at)
+    VALUES (?, ?, ?, ?)
+  `);
+  insert.run(thread.threadId, thread.title, thread.createdAt, thread.updatedAt);
+}
+
+function insertMessage(database: DatabaseSync, message: Message): void {
+  const insert = database.prepare(`
+    INSERT INTO messages (message_id, thread_id, role, content, created_at)
+    VALUES (?, ?, ?, ?, ?)
+  `);
+  insert.run(message.messageId, message.threadId, message.role, message.content, message.createdAt);
+}
+
+function readThreads(database: DatabaseSync): Thread[] {
+  const rows = database
+    .prepare(
+      `
+        SELECT thread_id, title, created_at, updated_at
+        FROM threads
+        ORDER BY created_at DESC
+      `,
+    )
+    .all() as Array<Record<string, unknown>>;
+
+  return rows.map((row) => ({
+    threadId: String(row.thread_id),
+    title: String(row.title),
+    createdAt: String(row.created_at),
+    updatedAt: String(row.updated_at),
+  }));
+}
+
+function readThread(database: DatabaseSync, threadId: string): Thread | undefined {
+  const row = database
+    .prepare(
+      `
+        SELECT thread_id, title, created_at, updated_at
+        FROM threads
+        WHERE thread_id = ?
+      `,
+    )
+    .get(threadId) as Record<string, unknown> | undefined;
+
+  if (!row) return undefined;
+
+  return {
+    threadId: String(row.thread_id),
+    title: String(row.title),
+    createdAt: String(row.created_at),
+    updatedAt: String(row.updated_at),
+  };
+}
+
+function readThreadMessages(database: DatabaseSync, threadId: string): Message[] {
+  const rows = database
+    .prepare(
+      `
+        SELECT message_id, thread_id, role, content, created_at
+        FROM messages
+        WHERE thread_id = ?
+        ORDER BY created_at ASC
+      `,
+    )
+    .all(threadId) as Array<Record<string, unknown>>;
+
+  return rows.map((row) => ({
+    messageId: String(row.message_id),
+    threadId: String(row.thread_id),
+    role: row.role as "user" | "assistant",
+    content: String(row.content),
+    createdAt: String(row.created_at),
   }));
 }

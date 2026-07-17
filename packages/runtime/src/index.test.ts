@@ -1720,3 +1720,134 @@ describe("conversation projections", () => {
     expect(metadata?.conversationId).toBe("schema2-run");
   });
 });
+
+describe("threads and messages", () => {
+  it("creates a thread and persists it", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-threads-"));
+    await writeValidProject(root);
+    const databasePath = join(root, ".plico", "plico.sqlite");
+    const eventStore = createSqliteEventStore({ databasePath });
+
+    const thread = {
+      threadId: "thread-001",
+      title: "Test Thread",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    await eventStore.createThread(thread);
+    const threads = await eventStore.listThreads();
+    expect(threads.length).toBe(1);
+    expect(threads[0]?.threadId).toBe("thread-001");
+    expect(threads[0]?.title).toBe("Test Thread");
+  });
+
+  it("persists threads and reads them back after reopening the store", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-threads-"));
+    await writeValidProject(root);
+    const databasePath = join(root, ".plico", "plico.sqlite");
+    const eventStore = createSqliteEventStore({ databasePath });
+
+    const thread = {
+      threadId: "thread-002",
+      title: "Persistent Thread",
+      createdAt: "2025-01-01T00:00:00Z",
+      updatedAt: "2025-01-01T00:00:00Z",
+    };
+
+    await eventStore.createThread(thread);
+    const reopenedStore = createSqliteEventStore({ databasePath });
+    const threads = await reopenedStore.listThreads();
+    expect(threads.length).toBe(1);
+    expect(threads[0]?.threadId).toBe("thread-002");
+  });
+
+  it("adds messages to a thread and persists them", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-threads-"));
+    await writeValidProject(root);
+    const databasePath = join(root, ".plico", "plico.sqlite");
+    const eventStore = createSqliteEventStore({ databasePath });
+
+    const thread = {
+      threadId: "thread-003",
+      title: "Message Thread",
+      createdAt: "2025-01-01T00:00:00Z",
+      updatedAt: "2025-01-01T00:00:00Z",
+    };
+    await eventStore.createThread(thread);
+
+    const message1 = {
+      messageId: "msg-001",
+      threadId: "thread-003",
+      role: "user" as const,
+      content: "Hello, world!",
+      createdAt: "2025-01-01T00:01:00Z",
+    };
+    const message2 = {
+      messageId: "msg-002",
+      threadId: "thread-003",
+      role: "assistant" as const,
+      content: "Hi there!",
+      createdAt: "2025-01-01T00:01:01Z",
+    };
+
+    await eventStore.addMessage(message1);
+    await eventStore.addMessage(message2);
+
+    const messages = await eventStore.getThreadMessages("thread-003");
+    expect(messages.length).toBe(2);
+    expect(messages[0]?.role).toBe("user");
+    expect(messages[0]?.content).toBe("Hello, world!");
+    expect(messages[1]?.role).toBe("assistant");
+    expect(messages[1]?.content).toBe("Hi there!");
+  });
+
+  it("persists messages and reads them back after reopening the store", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-threads-"));
+    await writeValidProject(root);
+    const databasePath = join(root, ".plico", "plico.sqlite");
+    const eventStore = createSqliteEventStore({ databasePath });
+
+    const thread = {
+      threadId: "thread-004",
+      title: "Persistent Messages",
+      createdAt: "2025-01-01T00:00:00Z",
+      updatedAt: "2025-01-01T00:00:00Z",
+    };
+    await eventStore.createThread(thread);
+
+    const message = {
+      messageId: "msg-003",
+      threadId: "thread-004",
+      role: "user" as const,
+      content: "Persist this!",
+      createdAt: "2025-01-01T00:01:00Z",
+    };
+    await eventStore.addMessage(message);
+
+    const reopenedStore = createSqliteEventStore({ databasePath });
+    const messages = await reopenedStore.getThreadMessages("thread-004");
+    expect(messages.length).toBe(1);
+    expect(messages[0]?.content).toBe("Persist this!");
+  });
+
+  it("returns undefined for unknown thread ID", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-threads-"));
+    await writeValidProject(root);
+    const databasePath = join(root, ".plico", "plico.sqlite");
+    const eventStore = createSqliteEventStore({ databasePath });
+
+    const thread = await eventStore.getThread("nonexistent");
+    expect(thread).toBeUndefined();
+  });
+
+  it("returns empty array for messages of unknown thread", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-threads-"));
+    await writeValidProject(root);
+    const databasePath = join(root, ".plico", "plico.sqlite");
+    const eventStore = createSqliteEventStore({ databasePath });
+
+    const messages = await eventStore.getThreadMessages("nonexistent");
+    expect(messages).toEqual([]);
+  });
+});

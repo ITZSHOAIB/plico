@@ -19,7 +19,9 @@ export type PlicoEventType =
   | "run.completed"
   | "run.blocked"
   | "run.failed"
-  | "run.error";
+  | "run.error"
+  | "thread.created"
+  | "message.created";
 
 export interface PlicoEvent {
   schemaVersion: 1;
@@ -60,6 +62,21 @@ export interface RunMetadata {
   output?: string;
 }
 
+export interface Thread {
+  threadId: string;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Message {
+  messageId: string;
+  threadId: string;
+  role: "user" | "assistant";
+  content: string;
+  createdAt: string;
+}
+
 export interface PersistedRun extends RunSummary {
   events: PlicoEvent[];
 }
@@ -74,6 +91,11 @@ export interface EventStore {
   listConversations(): Promise<
     Array<{ conversationId: string; runCount: number; lastActivity: string }>
   >;
+  createThread(thread: Thread): Promise<void>;
+  addMessage(message: Message): Promise<void>;
+  listThreads(): Promise<Thread[]>;
+  getThread(threadId: string): Promise<Thread | undefined>;
+  getThreadMessages(threadId: string): Promise<Message[]>;
 }
 
 export interface EvalExpectation {

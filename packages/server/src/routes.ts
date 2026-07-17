@@ -193,6 +193,100 @@ export async function handleRequest(options: HandleRequestOptions): Promise<void
       return;
     }
 
+    if (options.request.method === "GET" && url.pathname === "/v1/threads") {
+      const threads = await options.eventStore.listThreads();
+      sendJson(options.response, 200, threads);
+      return;
+    }
+
+    if (options.request.method === "POST" && url.pathname === "/v1/threads") {
+      const body = await readJsonBody(options.request);
+      const title = typeof body.title === "string" ? body.title : undefined;
+
+      if (!title || title.trim().length === 0) {
+        sendError(
+          options.response,
+          400,
+          "thread.invalid_body",
+          "A non-empty title is required for thread creation.",
+        );
+        return;
+      }
+
+      const thread = {
+        threadId: `thread-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        title,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      await options.eventStore.createThread(thread);
+      sendJson(options.response, 201, thread);
+      return;
+    }
+
+    const threadMatch = url.pathname.match(/^\/v1\/threads\/([^/]+)$/);
+    if (options.request.method === "GET" && threadMatch) {
+      const threadId = decodeURIComponent(threadMatch[1] ?? "");
+      const thread = await options.eventStore.getThread(threadId);
+      if (!thread) {
+        sendError(options.response, 404, "thread.not_found", `Unknown thread ID: ${threadId}`);
+        return;
+      }
+
+      sendJson(options.response, 200, thread);
+      return;
+    }
+
+    const threadMessagesMatch = url.pathname.match(/^\/v1\/threads\/([^/]+)\/messages$/);
+    if (options.request.method === "GET" && threadMessagesMatch) {
+      const threadId = decodeURIComponent(threadMessagesMatch[1] ?? "");
+      const thread = await options.eventStore.getThread(threadId);
+      if (!thread) {
+        sendError(options.response, 404, "thread.not_found", `Unknown thread ID: ${threadId}`);
+        return;
+      }
+
+      const messages = await options.eventStore.getThreadMessages(threadId);
+      sendJson(options.response, 200, messages);
+      return;
+    }
+
+    if (options.request.method === "POST" && threadMessagesMatch) {
+      const threadId = decodeURIComponent(threadMessagesMatch[1] ?? "");
+      const thread = await options.eventStore.getThread(threadId);
+      if (!thread) {
+        sendError(options.response, 404, "thread.not_found", `Unknown thread ID: ${threadId}`);
+        return;
+      }
+
+      const body = await readJsonBody(options.request);
+      const role = typeof body.role === "string" ? body.role : undefined;
+      const content = typeof body.content === "string" ? body.content : undefined;
+
+      if (!role || !content || !["user", "assistant"].includes(role)) {
+        sendError(
+          options.response,
+          400,
+          "message.invalid_body",
+          "A valid role (user/assistant) and non-empty content are required.",
+        );
+        return;
+      }
+
+      const message = {
+        messageId: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        threadId,
+        role: role as "user" | "assistant",
+        content,
+        createdAt: new Date().toISOString(),
+      };
+
+      await options.eventStore.addMessage(message);
+      sendJson(options.response, 201, message);
+      return;
+    }
+
     sendError(options.response, 404, "route.not_found", "Unknown route.");
   } catch (error) {
     if (error instanceof HttpError) {
