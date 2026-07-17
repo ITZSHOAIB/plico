@@ -2039,3 +2039,134 @@ describe("approval workflow", () => {
     );
   });
 });
+
+describe("run cancellation", () => {
+  it("cancels an active provider-backed run via AbortSignal", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-cancel-"));
+    await writeValidProject(root);
+
+    const databasePath = join(root, ".plico", "plico.sqlite");
+    const eventStore = createSqliteEventStore({ databasePath });
+
+    const controller = new AbortController();
+    let resolveProvider: (() => void) | undefined;
+    const providerPromise = new Promise<void>((resolve) => {
+      resolveProvider = resolve;
+    });
+
+    const slowProvider: ModelProvider = {
+      complete: async () => {
+        await providerPromise;
+        return { content: "Response", usage: { inputTokens: 10, outputTokens: 5 } };
+      },
+    };
+
+    const runPromise = runProject(root, {
+      runId: "run-cancel-001",
+      eventStore,
+      message: "Hello, agent!",
+      signal: controller.signal,
+      provider: slowProvider,
+    });
+
+    await new Promise((r) => setTimeout(r, 50));
+    controller.abort();
+    resolveProvider?.();
+
+    const result = await runPromise;
+
+    expect(result.status).toBe("cancelled");
+    expect(result.events.some((e) => e.type === "run.cancelled")).toBe(true);
+
+    const events = await eventStore.getEvents("run-cancel-001");
+    expect(events.some((e) => e.type === "run.cancelled")).toBe(true);
+  });
+
+  it("persists cancelled run and reads it back after reopening the store", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-cancel-"));
+    await writeValidProject(root);
+
+    const databasePath = join(root, ".plico", "plico.sqlite");
+    const eventStore = createSqliteEventStore({ databasePath });
+
+    const controller = new AbortController();
+    let resolveProvider: (() => void) | undefined;
+    const providerPromise = new Promise<void>((resolve) => {
+      resolveProvider = resolve;
+    });
+
+    const slowProvider: ModelProvider = {
+      complete: async () => {
+        await providerPromise;
+        return { content: "Response", usage: { inputTokens: 10, outputTokens: 5 } };
+      },
+    };
+
+    const runPromise = runProject(root, {
+      runId: "run-cancel-002",
+      eventStore,
+      message: "Hello, agent!",
+      signal: controller.signal,
+      provider: slowProvider,
+    });
+
+    await new Promise((r) => setTimeout(r, 50));
+    controller.abort();
+    resolveProvider?.();
+
+    await runPromise;
+
+    const reopenedStore = createSqliteEventStore({ databasePath });
+    const run = await reopenedStore.getRun("run-cancel-002");
+    expect(run?.status).toBe("cancelled");
+
+    const events = await reopenedStore.getEvents("run-cancel-002");
+    expect(events.some((e) => e.type === "run.cancelled")).toBe(true);
+  });
+
+  it("prefers cancellation over blocking when signal is already aborted", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-cancel-"));
+    await writeValidProject(root);
+    await writeFile(
+      join(root, "tools", "delete-ticket.tool.ts"),
+      [
+        "export default {",
+        '  name: "delete_ticket",',
+        '  description: "Delete an internal support ticket.",',
+        "  inputSchema: {",
+        '    type: "object",',
+        "    properties: {",
+        '      ticketId: { type: "string" },',
+        "    },",
+        '    required: ["ticketId"],',
+        "    additionalProperties: false,",
+        "  },",
+        '  capabilities: ["ticket:delete"],',
+        '  approval: { required: true, reason: "Deletes support records." },',
+        "  handler: async () => ({ ok: true }),",
+        "} as const;",
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+
+    const databasePath = join(root, ".plico", "plico.sqlite");
+    const eventStore = createSqliteEventStore({ databasePath });
+
+    const controller = new AbortController();
+    controller.abort();
+
+    const result = await runProject(root, {
+      runId: "run-cancel-003",
+      eventStore,
+      script: [{ type: "tool.call", toolName: "delete_ticket", arguments: { ticketId: "TCK-1" } }],
+      signal: controller.signal,
+    });
+
+    expect(result.status).toBe("cancelled");
+    expect(result.events.some((e) => e.type === "run.cancelled")).toBe(true);
+
+    const events = await eventStore.getEvents("run-cancel-003");
+    expect(events.some((e) => e.type === "run.cancelled")).toBe(true);
+  });
+});

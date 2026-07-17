@@ -6,6 +6,8 @@ export class RuntimeDiagnosticError extends Error {
 
 export class RunBlockedError extends Error {}
 
+export class RunCancelledError extends Error {}
+
 export function errorMessage(error: unknown): string {
   if (error instanceof Error && error.message) {
     return error.message;

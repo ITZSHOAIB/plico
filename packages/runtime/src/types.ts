@@ -1,6 +1,6 @@
 import type { ValidationIssue } from "@plico/core";
 
-export type RunStatus = "completed" | "failed" | "blocked";
+export type RunStatus = "completed" | "failed" | "blocked" | "cancelled";
 
 export type PlicoEventType =
   | "run.started"
@@ -21,7 +21,8 @@ export type PlicoEventType =
   | "run.failed"
   | "run.error"
   | "thread.created"
-  | "message.created";
+  | "message.created"
+  | "run.cancelled";
 
 export interface PlicoEvent {
   schemaVersion: 1;
@@ -259,6 +260,7 @@ export interface RunProjectOptions {
   runId?: string;
   provider?: ModelProvider;
   message?: string;
+  signal?: AbortSignal;
 }
 
 export interface JsonSchemaSubset {

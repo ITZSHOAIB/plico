@@ -1,6 +1,11 @@
 import { randomUUID } from "node:crypto";
 import { type LoadedProject, validateProject } from "@plico/core";
-import { RunBlockedError, RuntimeDiagnosticError, runtimeErrorPayload } from "./errors.js";
+import {
+  RunBlockedError,
+  RunCancelledError,
+  RuntimeDiagnosticError,
+  runtimeErrorPayload,
+} from "./errors.js";
 import { InMemoryEventLog } from "./events.js";
 import { composeInstructions } from "./instructions.js";
 import { validateJsonSchemaSubset } from "./schema.js";
@@ -91,10 +96,41 @@ export async function runProject(
             events,
             runId,
             options.eventStore,
+            options.signal,
           )
         : options.script === undefined
           ? await runDefaultDryRun(validation.project, events)
-          : await runScriptedDryRun(options.script, tools, events, runId, options.eventStore);
+          : await runScriptedDryRun(
+              options.script,
+              tools,
+              events,
+              runId,
+              options.eventStore,
+              options.signal,
+            );
+
+    if (options.signal?.aborted) {
+      events.append("run.cancelled", { status: "cancelled" });
+
+      const result: RunResult = {
+        runId,
+        status: "cancelled",
+        events: events.all(),
+      };
+
+      await persistRunIfRequested(options.eventStore, {
+        runId,
+        projectRoot: validation.project.root,
+        projectName: validation.project.config.name,
+        status: "cancelled",
+        startedAt,
+        endedAt: new Date().toISOString(),
+        events: result.events,
+      });
+
+      return result;
+    }
+
     events.append("run.completed", { status: "completed" });
 
     const result: RunResult = {
@@ -129,6 +165,28 @@ export async function runProject(
         projectRoot: validation.project.root,
         projectName: validation.project.config.name,
         status: "blocked",
+        startedAt,
+        endedAt: new Date().toISOString(),
+        events: result.events,
+      });
+
+      return result;
+    }
+
+    if (error instanceof RunCancelledError) {
+      events.append("run.cancelled", { status: "cancelled" });
+
+      const result: RunResult = {
+        runId,
+        status: "cancelled",
+        events: events.all(),
+      };
+
+      await persistRunIfRequested(options.eventStore, {
+        runId,
+        projectRoot: validation.project.root,
+        projectName: validation.project.config.name,
+        status: "cancelled",
         startedAt,
         endedAt: new Date().toISOString(),
         events: result.events,
@@ -172,6 +230,7 @@ async function runProviderBackedRun(
   events: InMemoryEventLog,
   runId: string,
   eventStore?: EventStore,
+  signal?: AbortSignal,
 ): Promise<string> {
   if (!message) {
     throw new RuntimeDiagnosticError({
@@ -199,6 +258,10 @@ async function runProviderBackedRun(
   let output: string | undefined;
 
   for (let step = 0; step < 10; step++) {
+    if (signal?.aborted) {
+      throw new RunCancelledError();
+    }
+
     const modelRequest: ModelRequest = {
       messages,
       maxSteps: 10,
@@ -211,7 +274,15 @@ async function runProviderBackedRun(
       tools: providerTools,
     });
 
-    const modelResponse = await provider.complete(modelRequest);
+    let modelResponse: Awaited<ReturnType<ModelProvider["complete"]>> | undefined;
+    try {
+      modelResponse = await provider.complete(modelRequest);
+    } catch (error) {
+      if (signal?.aborted && error instanceof Error && error.name === "AbortError") {
+        throw new RunCancelledError();
+      }
+      throw error;
+    }
 
     events.append("model.response", {
       content: modelResponse.content,
@@ -279,6 +350,10 @@ async function runProviderBackedRun(
         throw new RunBlockedError();
       }
 
+      if (signal?.aborted) {
+        throw new RunCancelledError();
+      }
+
       let result: unknown;
       try {
         result = await tool.handler(toolCall.arguments);
@@ -322,11 +397,16 @@ async function runScriptedDryRun(
   events: InMemoryEventLog,
   runId: string,
   eventStore?: EventStore,
+  signal?: AbortSignal,
 ): Promise<string | undefined> {
   const toolsByName = new Map(tools.map((tool) => [tool.name, tool]));
   let output: string | undefined;
 
   for (const step of script) {
+    if (signal?.aborted) {
+      throw new RunCancelledError();
+    }
+
     if (step.type === "assistant.output") {
       output = step.content;
       events.append("assistant.output", { content: step.content });

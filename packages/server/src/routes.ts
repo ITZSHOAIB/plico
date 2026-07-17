@@ -241,6 +241,47 @@ export async function handleRequest(options: HandleRequestOptions): Promise<void
       return;
     }
 
+    const cancelMatch = url.pathname.match(/^\/v1\/runs\/([^/]+)\/cancel$/);
+    if (options.request.method === "POST" && cancelMatch) {
+      const runId = decodeURIComponent(cancelMatch[1] ?? "");
+      const run = await options.eventStore.getRun(runId);
+      if (!run) {
+        sendError(options.response, 404, "run.not_found", `Unknown run ID: ${runId}`);
+        return;
+      }
+
+      if (run.status === "completed" || run.status === "failed" || run.status === "cancelled") {
+        sendError(
+          options.response,
+          409,
+          "run.already_terminal",
+          `Run ${runId} is already in terminal state: ${run.status}`,
+        );
+        return;
+      }
+
+      const events = await options.eventStore.getEvents(runId);
+      events.push({
+        schemaVersion: 1 as const,
+        runId,
+        id: `evt-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        type: "run.cancelled" as const,
+        timestamp: new Date().toISOString(),
+        sequence: events.length + 1,
+        payload: { status: "cancelled" },
+      });
+
+      await options.eventStore.persistRun({
+        ...run,
+        status: "cancelled",
+        endedAt: new Date().toISOString(),
+        events,
+      });
+
+      sendJson(options.response, 200, { runId, status: "cancelling" });
+      return;
+    }
+
     const approvalsMatch = url.pathname.match(/^\/v1\/runs\/([^/]+)\/approvals$/);
     if (options.request.method === "GET" && approvalsMatch) {
       const runId = decodeURIComponent(approvalsMatch[1] ?? "");

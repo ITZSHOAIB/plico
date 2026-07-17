@@ -8,9 +8,10 @@ const TERMINAL_EVENT_TYPES: readonly PlicoEventType[] = [
   "run.failed",
   "run.blocked",
   "run.error",
+  "run.cancelled",
 ];
 
-const TERMINAL_RUN_STATUSES: readonly RunStatus[] = ["completed", "failed", "blocked"];
+const TERMINAL_RUN_STATUSES: readonly RunStatus[] = ["completed", "failed", "blocked", "cancelled"];
 
 function isTerminalEventType(type: string): boolean {
   return (TERMINAL_EVENT_TYPES as readonly string[]).includes(type);

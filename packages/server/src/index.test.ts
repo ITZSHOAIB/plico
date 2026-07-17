@@ -1345,3 +1345,111 @@ describe("Approval workflow", () => {
     await new Promise<void>((resolve) => server.close(() => resolve()));
   });
 });
+
+describe("Run cancellation", () => {
+  it("cancels a blocked run and streams cancellation events", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-server-cancel-"));
+    await writeValidProject(root);
+    await writeFile(
+      join(root, "tools", "delete-ticket.tool.ts"),
+      [
+        "export default {",
+        '  name: "delete_ticket",',
+        '  description: "Delete a ticket.",',
+        "  inputSchema: {",
+        '    type: "object",',
+        "    properties: {",
+        '      ticketId: { type: "string" },',
+        "    },",
+        '    required: ["ticketId"],',
+        "    additionalProperties: false,",
+        "  },",
+        '  capabilities: ["ticket:delete"],',
+        '  approval: { required: true, reason: "Deletes records." },',
+        "  handler: async () => ({ ok: true }),",
+        "} as const;",
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+
+    const eventStore = createSqliteEventStore({
+      databasePath: join(root, ".plico", "plico.sqlite"),
+    });
+    const serverApi = await createPlicoServer({ projectRoot: root, eventStore });
+    const { baseUrl, server } = await startTestServer(serverApi.requestListener);
+
+    const runResponse = await jsonRequest(baseUrl, "/v1/runs/dry", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        script: [
+          { type: "tool.call", toolName: "delete_ticket", arguments: { ticketId: "TCK-1" } },
+        ],
+      }),
+    });
+    const run = runResponse.body as { runId: string; status: string };
+    expect(run.status).toBe("blocked");
+
+    const cancelResponse = await jsonRequest(baseUrl, `/v1/runs/${run.runId}/cancel`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: "{}",
+    });
+    expect(cancelResponse.status).toBe(200);
+    const cancelResult = cancelResponse.body as { runId: string; status: string };
+    expect(cancelResult.status).toBe("cancelling");
+
+    const eventsResponse = await jsonRequest(baseUrl, `/v1/runs/${run.runId}/events`);
+    expect(eventsResponse.status).toBe(200);
+    const events = eventsResponse.body as Array<{ type: string }>;
+    expect(events.some((e) => e.type === "run.cancelled")).toBe(true);
+
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  });
+
+  it("returns 404 for unknown run ID", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-server-cancel-404-"));
+    await writeValidProject(root);
+    const eventStore = createSqliteEventStore({
+      databasePath: join(root, ".plico", "plico.sqlite"),
+    });
+    const serverApi = await createPlicoServer({ projectRoot: root, eventStore });
+    const { baseUrl, server } = await startTestServer(serverApi.requestListener);
+
+    const response = await jsonRequest(baseUrl, "/v1/runs/nonexistent/cancel", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: "{}",
+    });
+    expect(response.status).toBe(404);
+
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  });
+
+  it("returns 409 for already completed run", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-server-cancel-409-"));
+    await writeValidProject(root);
+    const eventStore = createSqliteEventStore({
+      databasePath: join(root, ".plico", "plico.sqlite"),
+    });
+    const serverApi = await createPlicoServer({ projectRoot: root, eventStore });
+    const { baseUrl, server } = await startTestServer(serverApi.requestListener);
+
+    const runResponse = await jsonRequest(baseUrl, "/v1/runs/dry", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: "{}",
+    });
+    const run = runResponse.body as { runId: string };
+
+    const cancelResponse = await jsonRequest(baseUrl, `/v1/runs/${run.runId}/cancel`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: "{}",
+    });
+    expect(cancelResponse.status).toBe(409);
+
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  });
+});
