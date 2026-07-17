@@ -1,6 +1,7 @@
 import { access, constants, mkdir, readdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { getProjectPaths, getProjectRelativePaths, validateProject } from "@plico/core";
+import { checkMcpServers } from "./mcp.js";
 import { discoverToolFiles, loadToolFile } from "./tools.js";
 import type {
   DeclaredTool,
@@ -293,7 +294,32 @@ export async function checkReadiness(
     );
   }
 
-  // 7. Server/Studio config
+  // 7. MCP servers
+  {
+    const mcpServers = project.config.mcpServers;
+    if (!mcpServers || Object.keys(mcpServers).length === 0) {
+      diagnostics.push(diag("ok", "mcp.servers", "No MCP servers configured"));
+    } else {
+      const results = await checkMcpServers(mcpServers);
+      for (const result of results) {
+        if (result.ok) {
+          diagnostics.push(
+            diag("ok", "mcp.servers", `MCP server "${result.serverName}" is reachable`),
+          );
+        } else {
+          diagnostics.push(
+            diag(
+              "error",
+              "mcp.servers",
+              `MCP server "${result.serverName}" failed: ${result.error ?? "unknown error"}`,
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  // 8. Server/Studio config
   try {
     const { loadProject } = await import("@plico/core");
     await loadProject(projectRoot);

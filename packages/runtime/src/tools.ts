@@ -2,6 +2,7 @@ import { readdir, readFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { join } from "node:path";
 import { getProjectPaths, getProjectRelativePaths, type LoadedProject } from "@plico/core";
+import { discoverMcpTools } from "./mcp.js";
 import { isJsonSchemaSubset } from "./schema.js";
 import type { DeclaredTool } from "./types.js";
 
@@ -29,6 +30,11 @@ export async function discoverTools(project: LoadedProject): Promise<DeclaredToo
     const source = `${relativePaths.directories.tools}/${entry}`;
     const tool = await loadToolFile(join(projectPaths.directories.tools, entry), source);
     tools.push(tool);
+  }
+
+  if (project.config.mcpServers && Object.keys(project.config.mcpServers).length > 0) {
+    const mcpTools = await discoverMcpTools(project.config.mcpServers);
+    tools.push(...mcpTools);
   }
 
   return tools;

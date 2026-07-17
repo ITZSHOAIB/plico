@@ -46,6 +46,12 @@ export interface ApprovalPolicyRule {
   reason?: string;
 }
 
+export interface McpServerConfig {
+  command: string;
+  args?: string[];
+  env?: Record<string, string>;
+}
+
 export interface ProjectConfig {
   schemaVersion: number;
   name: string;
@@ -53,6 +59,7 @@ export interface ProjectConfig {
   template?: string;
   provider?: Record<string, unknown>;
   approvalPolicy?: ApprovalPolicyConfig;
+  mcpServers?: Record<string, McpServerConfig>;
 }
 
 export interface LoadedProject {

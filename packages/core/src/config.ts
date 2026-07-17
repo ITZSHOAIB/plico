@@ -5,6 +5,7 @@ import { getProjectPaths, getProjectRelativePaths } from "./layout.js";
 import type {
   ApprovalPolicyConfig,
   LoadedProject,
+  McpServerConfig,
   ProjectConfig,
   ValidationIssue,
 } from "./types.js";
@@ -117,6 +118,10 @@ function normalizeProjectConfig(value: unknown, configPath: string): ProjectConf
 
   if (config.approvalPolicy !== undefined && isRecord(config.approvalPolicy)) {
     normalized.approvalPolicy = config.approvalPolicy as ApprovalPolicyConfig;
+  }
+
+  if (config.mcpServers !== undefined && isRecord(config.mcpServers)) {
+    normalized.mcpServers = config.mcpServers as Record<string, McpServerConfig>;
   }
 
   return normalized;

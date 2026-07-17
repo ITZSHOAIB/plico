@@ -9,6 +9,7 @@ export type {
   ApprovalPolicyConfig,
   ApprovalPolicyRule,
   LoadedProject,
+  McpServerConfig,
   ProjectConfig,
   ProjectDirectoryRole,
   ProjectLayout,
