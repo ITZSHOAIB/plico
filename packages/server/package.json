@@ -15,6 +15,7 @@
   ],
   "dependencies": {
     "@plico/core": "workspace:*",
+    "@plico/provider": "workspace:*",
     "@plico/runtime": "workspace:*"
   },
   "scripts": {

@@ -198,8 +198,10 @@ export async function checkReadiness(
     const providerType = project.config.provider.type;
     if (providerType === "openai") {
       const hasApiKey =
-        typeof project.config.provider.apiKey === "string" ||
-        typeof process.env.PLICO_OPENAI_API_KEY === "string";
+        (typeof project.config.provider.apiKey === "string" &&
+          project.config.provider.apiKey.length > 0) ||
+        (typeof process.env.PLICO_OPENAI_API_KEY === "string" &&
+          process.env.PLICO_OPENAI_API_KEY.length > 0);
       diagnostics.push(
         diag(
           hasApiKey ? "ok" : "warning",

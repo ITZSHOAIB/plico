@@ -240,6 +240,80 @@ describe("createPlicoServer", () => {
     await new Promise<void>((resolve) => server.close(() => resolve()));
   });
 
+  it("persists a provider-backed run and replays model events", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-server-"));
+    await writeValidProject(root);
+    await writeFile(
+      join(root, "tools", "create-ticket.tool.ts"),
+      [
+        "export default {",
+        '  name: "create_ticket",',
+        '  description: "Create a ticket.",',
+        '  inputSchema: { type: "object", properties: { title: { type: "string" } }, required: ["title"], additionalProperties: false },',
+        '  capabilities: ["ticket:write"],',
+        "  approval: { required: false },",
+        '  handler: async (input) => ({ ticketId: "TCK-" + input.title.length }),',
+        "} as const;",
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+
+    const eventStore = createSqliteEventStore({
+      databasePath: join(root, ".plico", "plico.sqlite"),
+    });
+    const serverApi = await createPlicoServer({ projectRoot: root, eventStore });
+    const { baseUrl, server } = await startTestServer(serverApi.requestListener);
+
+    const run = await jsonRequest(baseUrl, "/v1/runs/run", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        message: "Create a ticket for VPN down",
+        provider: {
+          type: "fake",
+        },
+      }),
+    });
+
+    expect(run.status).toBe(200);
+    expect(run.body).toMatchObject({
+      status: "completed",
+      events: expect.arrayContaining([
+        expect.objectContaining({ type: "run.completed" }),
+        expect.objectContaining({ type: "model.request" }),
+        expect.objectContaining({ type: "model.response" }),
+      ]),
+    });
+
+    const runId = String((run.body as { runId: string }).runId);
+
+    const runs = await jsonRequest(baseUrl, "/v1/runs");
+    expect(runs.status).toBe(200);
+    expect(runs.body).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          runId,
+          projectRoot: root,
+          status: "completed",
+        }),
+      ]),
+    );
+
+    const events = await jsonRequest(baseUrl, `/v1/runs/${runId}/events`);
+    expect(events.status).toBe(200);
+    expect(events.body).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ type: "run.started" }),
+        expect.objectContaining({ type: "model.request" }),
+        expect.objectContaining({ type: "model.response" }),
+        expect.objectContaining({ type: "run.completed" }),
+      ]),
+    );
+
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  });
+
   it("returns consistent JSON errors for malformed JSON, unknown run IDs, invalid cursors, and unknown routes", async () => {
     const root = await mkdtemp(join(tmpdir(), "plico-server-"));
     await writeValidProject(root);

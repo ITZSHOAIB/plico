@@ -1507,6 +1507,44 @@ describe("checkReadiness", () => {
     vi.unstubAllEnvs();
   });
 
+  it("reports warning when provider is openai but no API key is available", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-readiness-"));
+    await mkdir(join(root, "skills"), { recursive: true });
+    await mkdir(join(root, "tools"), { recursive: true });
+    await mkdir(join(root, "evals"), { recursive: true });
+    await mkdir(join(root, "artifacts"), { recursive: true });
+    await mkdir(join(root, "memory"), { recursive: true });
+    vi.stubEnv("PLICO_OPENAI_API_KEY", "");
+    await writeFile(
+      join(root, "plico.config.ts"),
+      [
+        "export default {",
+        "  schemaVersion: 1,",
+        '  name: "No Key Agent",',
+        "  provider: {",
+        '    type: "openai",',
+        "  },",
+        "} as const;",
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+    await writeFile(join(root, "agent.md"), "# Agent\n\nInstructions.\n", "utf8");
+
+    const report = await checkReadiness(root);
+
+    expect(
+      report.diagnostics.some(
+        (d) =>
+          d.subsystem === "provider.config" &&
+          d.severity === "warning" &&
+          d.message.includes("no API key"),
+      ),
+    ).toBe(true);
+
+    vi.unstubAllEnvs();
+  });
+
   it("reports error when provider type is unsupported", async () => {
     const root = await mkdtemp(join(tmpdir(), "plico-readiness-"));
     await mkdir(join(root, "skills"), { recursive: true });

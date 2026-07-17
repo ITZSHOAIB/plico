@@ -5,6 +5,7 @@ import {
   checkReadiness,
   composeInstructions,
   type EventStore,
+  type ModelProvider,
   runEvals,
   runProject,
 } from "@plico/runtime";
@@ -49,6 +50,34 @@ export async function handleRequest(options: HandleRequestOptions): Promise<void
       const script = body.script === undefined ? undefined : normalizeScript(body.script);
       const result = await runProject(options.projectRoot, {
         ...(script === undefined ? {} : { script }),
+        eventStore: options.eventStore,
+      });
+      sendJson(options.response, 200, result);
+      return;
+    }
+
+    if (options.request.method === "POST" && url.pathname === "/v1/runs/run") {
+      const body = await readJsonBody(options.request);
+      const message = typeof body.message === "string" ? body.message : undefined;
+      const providerConfig =
+        body.provider && typeof body.provider === "object"
+          ? (body.provider as Record<string, unknown>)
+          : undefined;
+
+      if (!message) {
+        sendError(
+          options.response,
+          400,
+          "request.invalid_body",
+          "A message is required for provider-backed runs.",
+        );
+        return;
+      }
+
+      const provider = await resolveProvider(options.projectRoot, providerConfig);
+      const result = await runProject(options.projectRoot, {
+        message,
+        provider,
         eventStore: options.eventStore,
       });
       sendJson(options.response, 200, result);
@@ -159,4 +188,75 @@ export async function handleRequest(options: HandleRequestOptions): Promise<void
 
     sendError(options.response, 500, "server.error", errorMessage(error));
   }
+}
+
+async function resolveProvider(
+  projectRoot: string,
+  providerConfig?: Record<string, unknown>,
+): Promise<ModelProvider> {
+  const configType =
+    providerConfig && typeof providerConfig.type === "string" ? providerConfig.type : undefined;
+
+  if (configType === "openai" && providerConfig) {
+    try {
+      const { createOpenAIProvider } = await import("@plico/provider");
+      const apiKey = typeof providerConfig.apiKey === "string" ? providerConfig.apiKey : undefined;
+      const model = typeof providerConfig.model === "string" ? providerConfig.model : undefined;
+      const baseUrl =
+        typeof providerConfig.baseUrl === "string" ? providerConfig.baseUrl : undefined;
+      return createOpenAIProvider({
+        type: "openai",
+        ...(apiKey !== undefined ? { apiKey } : {}),
+        ...(model !== undefined ? { model } : {}),
+        ...(baseUrl !== undefined ? { baseUrl } : {}),
+      });
+    } catch {
+      // Fall through to fake provider
+    }
+  }
+
+  // Also check project config for provider settings
+  try {
+    const validation = await loadProject(projectRoot);
+    const projectProviderConfig = validation.config?.provider;
+    if (
+      projectProviderConfig &&
+      typeof projectProviderConfig === "object" &&
+      projectProviderConfig.type === "openai"
+    ) {
+      const { createOpenAIProvider } = await import("@plico/provider");
+      const config = projectProviderConfig as Record<string, unknown>;
+      const apiKey = typeof config.apiKey === "string" ? config.apiKey : undefined;
+      const model = typeof config.model === "string" ? config.model : undefined;
+      const baseUrl = typeof config.baseUrl === "string" ? config.baseUrl : undefined;
+      return createOpenAIProvider({
+        type: "openai",
+        ...(apiKey !== undefined ? { apiKey } : {}),
+        ...(model !== undefined ? { model } : {}),
+        ...(baseUrl !== undefined ? { baseUrl } : {}),
+      });
+    }
+  } catch {
+    // Fall through to fake provider
+  }
+
+  // Fake provider for testing
+  return {
+    complete: async (request) => {
+      const lastUserMessage = [...request.messages].reverse().find((m) => m.role === "user");
+      const lastToolMessage = [...request.messages].reverse().find((m) => m.role === "tool");
+      if (!lastToolMessage && request.tools && request.tools.length > 0) {
+        const tool = request.tools[0];
+        if (tool) {
+          return {
+            content: "",
+            usage: { inputTokens: 10, outputTokens: 1 },
+            toolCalls: [{ name: tool.name, arguments: { title: "Test ticket" } }],
+          };
+        }
+      }
+      const assistantContent = `Fake provider response to: ${lastUserMessage?.content ?? ""}`;
+      return { content: assistantContent, usage: { inputTokens: 10, outputTokens: 5 } };
+    },
+  };
 }
