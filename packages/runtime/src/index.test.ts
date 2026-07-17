@@ -1851,3 +1851,191 @@ describe("threads and messages", () => {
     expect(messages).toEqual([]);
   });
 });
+
+describe("approval workflow", () => {
+  it("persists an approval request when a tool requires approval", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-approval-"));
+    await writeValidProject(root);
+    await writeFile(
+      join(root, "tools", "delete-ticket.tool.ts"),
+      [
+        "export default {",
+        '  name: "delete_ticket",',
+        '  description: "Delete an internal support ticket.",',
+        "  inputSchema: {",
+        '    type: "object",',
+        "    properties: {",
+        '      ticketId: { type: "string" },',
+        "    },",
+        '    required: ["ticketId"],',
+        "    additionalProperties: false,",
+        "  },",
+        '  capabilities: ["ticket:delete"],',
+        '  approval: { required: true, reason: "Deletes support records." },',
+        "  handler: async () => ({ ok: true }),",
+        "} as const;",
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+
+    const databasePath = join(root, ".plico", "plico.sqlite");
+    const eventStore = createSqliteEventStore({ databasePath });
+
+    const result = await runProject(root, {
+      runId: "run-approval-001",
+      eventStore,
+      script: [{ type: "tool.call", toolName: "delete_ticket", arguments: { ticketId: "TCK-1" } }],
+    });
+
+    expect(result.status).toBe("blocked");
+
+    const approvalRequests = await eventStore.listPendingApprovals("run-approval-001");
+    expect(approvalRequests.length).toBe(1);
+    expect(approvalRequests[0]?.toolName).toBe("delete_ticket");
+    expect(approvalRequests[0]?.status).toBe("pending");
+  });
+
+  it("approves a pending approval and resumes the run", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-approval-"));
+    await writeValidProject(root);
+    await writeFile(
+      join(root, "tools", "delete-ticket.tool.ts"),
+      [
+        "export default {",
+        '  name: "delete_ticket",',
+        '  description: "Delete an internal support ticket.",',
+        "  inputSchema: {",
+        '    type: "object",',
+        "    properties: {",
+        '      ticketId: { type: "string" },',
+        "    },",
+        '    required: ["ticketId"],',
+        "    additionalProperties: false,",
+        "  },",
+        '  capabilities: ["ticket:delete"],',
+        '  approval: { required: true, reason: "Deletes support records." },',
+        "  handler: async () => ({ ok: true }),",
+        "} as const;",
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+
+    const databasePath = join(root, ".plico", "plico.sqlite");
+    const eventStore = createSqliteEventStore({ databasePath });
+
+    const blockedResult = await runProject(root, {
+      runId: "run-approval-002",
+      eventStore,
+      script: [{ type: "tool.call", toolName: "delete_ticket", arguments: { ticketId: "TCK-2" } }],
+    });
+
+    expect(blockedResult.status).toBe("blocked");
+
+    const approvalRequests = await eventStore.listPendingApprovals("run-approval-002");
+    expect(approvalRequests.length).toBe(1);
+    const requestId = approvalRequests[0]?.requestId;
+    expect(requestId).toBeDefined();
+
+    if (!requestId) throw new Error("Expected requestId to be defined");
+
+    await eventStore.approveToolCall(requestId, "Approved by admin");
+
+    const approvedRequest = await eventStore.getApprovalRequest(requestId);
+    expect(approvedRequest?.status).toBe("approved");
+  });
+
+  it("rejects a pending approval and does not execute the tool", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-approval-"));
+    await writeValidProject(root);
+    await writeFile(
+      join(root, "tools", "delete-ticket.tool.ts"),
+      [
+        "export default {",
+        '  name: "delete_ticket",',
+        '  description: "Delete an internal support ticket.",',
+        "  inputSchema: {",
+        '    type: "object",',
+        "    properties: {",
+        '      ticketId: { type: "string" },',
+        "    },",
+        '    required: ["ticketId"],',
+        "    additionalProperties: false,",
+        "  },",
+        '  capabilities: ["ticket:delete"],',
+        '  approval: { required: true, reason: "Deletes support records." },',
+        "  handler: async () => ({ ok: true }),",
+        "} as const;",
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+
+    const databasePath = join(root, ".plico", "plico.sqlite");
+    const eventStore = createSqliteEventStore({ databasePath });
+
+    const blockedResult = await runProject(root, {
+      runId: "run-approval-003",
+      eventStore,
+      script: [{ type: "tool.call", toolName: "delete_ticket", arguments: { ticketId: "TCK-3" } }],
+    });
+
+    expect(blockedResult.status).toBe("blocked");
+
+    const approvalRequests = await eventStore.listPendingApprovals("run-approval-003");
+    const requestId = approvalRequests[0]?.requestId;
+    if (!requestId) throw new Error("Expected requestId to be defined");
+
+    await eventStore.rejectToolCall(requestId, "Not approved");
+
+    const rejectedRequest = await eventStore.getApprovalRequest(requestId);
+    expect(rejectedRequest?.status).toBe("rejected");
+  });
+
+  it("returns 409 for duplicate approval decisions", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-approval-"));
+    await writeValidProject(root);
+    await writeFile(
+      join(root, "tools", "delete-ticket.tool.ts"),
+      [
+        "export default {",
+        '  name: "delete_ticket",',
+        '  description: "Delete an internal support ticket.",',
+        "  inputSchema: {",
+        '    type: "object",',
+        "    properties: {",
+        '      ticketId: { type: "string" },',
+        "    },",
+        '    required: ["ticketId"],',
+        "    additionalProperties: false,",
+        "  },",
+        '  capabilities: ["ticket:delete"],',
+        '  approval: { required: true, reason: "Deletes support records." },',
+        "  handler: async () => ({ ok: true }),",
+        "} as const;",
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+
+    const databasePath = join(root, ".plico", "plico.sqlite");
+    const eventStore = createSqliteEventStore({ databasePath });
+
+    await runProject(root, {
+      runId: "run-approval-004",
+      eventStore,
+      script: [{ type: "tool.call", toolName: "delete_ticket", arguments: { ticketId: "TCK-4" } }],
+    });
+
+    const approvalRequests = await eventStore.listPendingApprovals("run-approval-004");
+    const requestId = approvalRequests[0]?.requestId;
+    if (!requestId) throw new Error("Expected requestId to be defined");
+
+    await eventStore.approveToolCall(requestId, "First approval");
+
+    await expect(eventStore.approveToolCall(requestId, "Second approval")).rejects.toThrow(
+      "already",
+    );
+  });
+});

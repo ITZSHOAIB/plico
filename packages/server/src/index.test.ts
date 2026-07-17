@@ -1129,3 +1129,219 @@ describe("Provider thread runs", () => {
     await new Promise<void>((resolve) => server.close(() => resolve()));
   });
 });
+
+describe("Approval workflow", () => {
+  it("lists pending approvals and approves a tool call", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-server-approval-"));
+    await writeValidProject(root);
+    await writeFile(
+      join(root, "tools", "delete-ticket.tool.ts"),
+      [
+        "export default {",
+        '  name: "delete_ticket",',
+        '  description: "Delete an internal support ticket.",',
+        "  inputSchema: {",
+        '    type: "object",',
+        "    properties: {",
+        '      ticketId: { type: "string" },',
+        "    },",
+        '    required: ["ticketId"],',
+        "    additionalProperties: false,",
+        "  },",
+        '  capabilities: ["ticket:delete"],',
+        '  approval: { required: true, reason: "Deletes support records." },',
+        "  handler: async () => ({ ok: true }),",
+        "} as const;",
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+
+    const eventStore = createSqliteEventStore({
+      databasePath: join(root, ".plico", "plico.sqlite"),
+    });
+    const serverApi = await createPlicoServer({ projectRoot: root, eventStore });
+    const { baseUrl, server } = await startTestServer(serverApi.requestListener);
+
+    const runResponse = await jsonRequest(baseUrl, "/v1/runs/dry", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        script: [
+          { type: "tool.call", toolName: "delete_ticket", arguments: { ticketId: "TCK-1" } },
+        ],
+      }),
+    });
+    const run = runResponse.body as { runId: string; status: string };
+    expect(run.status).toBe("blocked");
+
+    const approvalsResponse = await jsonRequest(baseUrl, `/v1/runs/${run.runId}/approvals`);
+    expect(approvalsResponse.status).toBe(200);
+    const approvals = approvalsResponse.body as Array<{ requestId: string; status: string }>;
+    expect(approvals.length).toBe(1);
+    expect(approvals[0]?.status).toBe("pending");
+
+    const approveResponse = await jsonRequest(
+      baseUrl,
+      `/v1/runs/${run.runId}/approvals/${approvals[0]?.requestId}`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ decision: "approve", reason: "Approved by admin" }),
+      },
+    );
+    expect(approveResponse.status).toBe(200);
+    const decision = approveResponse.body as { status: string };
+    expect(decision.status).toBe("approved");
+
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  });
+
+  it("rejects a tool call", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-server-reject-"));
+    await writeValidProject(root);
+    await writeFile(
+      join(root, "tools", "delete-ticket.tool.ts"),
+      [
+        "export default {",
+        '  name: "delete_ticket",',
+        '  description: "Delete an internal support ticket.",',
+        "  inputSchema: {",
+        '    type: "object",',
+        "    properties: {",
+        '      ticketId: { type: "string" },',
+        "    },",
+        '    required: ["ticketId"],',
+        "    additionalProperties: false,",
+        "  },",
+        '  capabilities: ["ticket:delete"],',
+        '  approval: { required: true, reason: "Deletes support records." },',
+        "  handler: async () => ({ ok: true }),",
+        "} as const;",
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+
+    const eventStore = createSqliteEventStore({
+      databasePath: join(root, ".plico", "plico.sqlite"),
+    });
+    const serverApi = await createPlicoServer({ projectRoot: root, eventStore });
+    const { baseUrl, server } = await startTestServer(serverApi.requestListener);
+
+    const runResponse = await jsonRequest(baseUrl, "/v1/runs/dry", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        script: [
+          { type: "tool.call", toolName: "delete_ticket", arguments: { ticketId: "TCK-2" } },
+        ],
+      }),
+    });
+    const run = runResponse.body as { runId: string; status: string };
+    expect(run.status).toBe("blocked");
+
+    const approvalsResponse = await jsonRequest(baseUrl, `/v1/runs/${run.runId}/approvals`);
+    const approvals = approvalsResponse.body as Array<{ requestId: string }>;
+
+    const rejectResponse = await jsonRequest(
+      baseUrl,
+      `/v1/runs/${run.runId}/approvals/${approvals[0]?.requestId}`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ decision: "reject", reason: "Not approved" }),
+      },
+    );
+    expect(rejectResponse.status).toBe(200);
+    const decision = rejectResponse.body as { status: string };
+    expect(decision.status).toBe("rejected");
+
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  });
+
+  it("returns 409 for duplicate approval decisions", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-server-duplicate-"));
+    await writeValidProject(root);
+    await writeFile(
+      join(root, "tools", "delete-ticket.tool.ts"),
+      [
+        "export default {",
+        '  name: "delete_ticket",',
+        '  description: "Delete an internal support ticket.",',
+        "  inputSchema: {",
+        '    type: "object",',
+        "    properties: {",
+        '      ticketId: { type: "string" },',
+        "    },",
+        '    required: ["ticketId"],',
+        "    additionalProperties: false,",
+        "  },",
+        '  capabilities: ["ticket:delete"],',
+        '  approval: { required: true, reason: "Deletes support records." },',
+        "  handler: async () => ({ ok: true }),",
+        "} as const;",
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+
+    const eventStore = createSqliteEventStore({
+      databasePath: join(root, ".plico", "plico.sqlite"),
+    });
+    const serverApi = await createPlicoServer({ projectRoot: root, eventStore });
+    const { baseUrl, server } = await startTestServer(serverApi.requestListener);
+
+    const runResponse = await jsonRequest(baseUrl, "/v1/runs/dry", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        script: [
+          { type: "tool.call", toolName: "delete_ticket", arguments: { ticketId: "TCK-3" } },
+        ],
+      }),
+    });
+    const run = runResponse.body as { runId: string };
+
+    const approvalsResponse = await jsonRequest(baseUrl, `/v1/runs/${run.runId}/approvals`);
+    const approvals = approvalsResponse.body as Array<{ requestId: string }>;
+
+    await jsonRequest(baseUrl, `/v1/runs/${run.runId}/approvals/${approvals[0]?.requestId}`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ decision: "approve", reason: "First approval" }),
+    });
+
+    const duplicateResponse = await jsonRequest(
+      baseUrl,
+      `/v1/runs/${run.runId}/approvals/${approvals[0]?.requestId}`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ decision: "approve", reason: "Second approval" }),
+      },
+    );
+    expect(duplicateResponse.status).toBe(409);
+
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  });
+
+  it("returns 404 for unknown approval request", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-server-unknown-approval-"));
+    await writeValidProject(root);
+    const eventStore = createSqliteEventStore({
+      databasePath: join(root, ".plico", "plico.sqlite"),
+    });
+    const serverApi = await createPlicoServer({ projectRoot: root, eventStore });
+    const { baseUrl, server } = await startTestServer(serverApi.requestListener);
+
+    const response = await jsonRequest(baseUrl, "/v1/runs/nonexistent/approvals/nonexistent", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ decision: "approve", reason: "Test" }),
+    });
+    expect(response.status).toBe(404);
+
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  });
+});

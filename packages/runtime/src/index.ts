@@ -6,6 +6,7 @@ export { runProject } from "./run.js";
 export { createSqliteEventStore } from "./sqlite-store.js";
 export { discoverTools } from "./tools.js";
 export type {
+  ApprovalRequest,
   ArtifactFile,
   ArtifactFileInput,
   ArtifactSnapshot,

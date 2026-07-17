@@ -2,6 +2,7 @@ import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import type {
+  ApprovalRequest,
   CreateSqliteEventStoreOptions,
   EventStore,
   Message,
@@ -62,6 +63,21 @@ export function createSqliteEventStore({
     async getThreadMessages(threadId: string): Promise<Message[]> {
       return readThreadMessages(database, threadId);
     },
+    async createApprovalRequest(request: ApprovalRequest): Promise<void> {
+      insertApprovalRequest(database, request);
+    },
+    async getApprovalRequest(requestId: string): Promise<ApprovalRequest | undefined> {
+      return readApprovalRequest(database, requestId);
+    },
+    async listPendingApprovals(runId: string): Promise<ApprovalRequest[]> {
+      return readPendingApprovals(database, runId);
+    },
+    async approveToolCall(requestId: string, reason?: string): Promise<void> {
+      updateApprovalStatus(database, requestId, "approved", reason);
+    },
+    async rejectToolCall(requestId: string, reason?: string): Promise<void> {
+      updateApprovalStatus(database, requestId, "rejected", reason);
+    },
   };
 }
 
@@ -111,6 +127,19 @@ function initializeSchema(database: DatabaseSync): void {
       created_at TEXT NOT NULL
     );
     CREATE INDEX IF NOT EXISTS messages_thread_id_index ON messages(thread_id);
+    CREATE TABLE IF NOT EXISTS approvals (
+      request_id TEXT PRIMARY KEY,
+      run_id TEXT NOT NULL,
+      tool_name TEXT NOT NULL,
+      arguments_json TEXT NOT NULL,
+      reason TEXT,
+      status TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      decided_at TEXT,
+      decision_reason TEXT
+    );
+    CREATE INDEX IF NOT EXISTS approvals_run_id_index ON approvals(run_id);
+    CREATE INDEX IF NOT EXISTS approvals_status_index ON approvals(status);
   `);
   database
     .prepare("INSERT OR REPLACE INTO plico_meta(key, value) VALUES ('schema_version', '3')")
@@ -381,4 +410,100 @@ function readThreadMessages(database: DatabaseSync, threadId: string): Message[]
     content: String(row.content),
     createdAt: String(row.created_at),
   }));
+}
+
+function insertApprovalRequest(database: DatabaseSync, request: ApprovalRequest): void {
+  const insert = database.prepare(`
+    INSERT INTO approvals (request_id, run_id, tool_name, arguments_json, reason, status, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `);
+  insert.run(
+    request.requestId,
+    request.runId,
+    request.toolName,
+    JSON.stringify(request.arguments),
+    request.reason ?? null,
+    request.status,
+    request.createdAt,
+  );
+}
+
+function readApprovalRequest(
+  database: DatabaseSync,
+  requestId: string,
+): ApprovalRequest | undefined {
+  const row = database
+    .prepare(
+      `
+        SELECT request_id, run_id, tool_name, arguments_json, reason, status, created_at, decided_at, decision_reason
+        FROM approvals
+        WHERE request_id = ?
+      `,
+    )
+    .get(requestId) as Record<string, unknown> | undefined;
+
+  if (!row) return undefined;
+
+  return {
+    requestId: String(row.request_id),
+    runId: String(row.run_id),
+    toolName: String(row.tool_name),
+    arguments: JSON.parse(String(row.arguments_json)) as Record<string, unknown>,
+    ...(row.reason !== null ? { reason: String(row.reason) } : {}),
+    status: row.status as "pending" | "approved" | "rejected",
+    createdAt: String(row.created_at),
+    ...(row.decided_at !== null ? { decidedAt: String(row.decided_at) } : {}),
+    ...(row.decision_reason !== null ? { decisionReason: String(row.decision_reason) } : {}),
+  };
+}
+
+function readPendingApprovals(database: DatabaseSync, runId: string): ApprovalRequest[] {
+  const rows = database
+    .prepare(
+      `
+        SELECT request_id, run_id, tool_name, arguments_json, reason, status, created_at, decided_at, decision_reason
+        FROM approvals
+        WHERE run_id = ? AND status = 'pending'
+        ORDER BY created_at ASC
+      `,
+    )
+    .all(runId) as Array<Record<string, unknown>>;
+
+  return rows.map((row) => ({
+    requestId: String(row.request_id),
+    runId: String(row.run_id),
+    toolName: String(row.tool_name),
+    arguments: JSON.parse(String(row.arguments_json)) as Record<string, unknown>,
+    ...(row.reason !== null ? { reason: String(row.reason) } : {}),
+    status: row.status as "pending" | "approved" | "rejected",
+    createdAt: String(row.created_at),
+    ...(row.decided_at !== null ? { decidedAt: String(row.decided_at) } : {}),
+    ...(row.decision_reason !== null ? { decisionReason: String(row.decision_reason) } : {}),
+  }));
+}
+
+function updateApprovalStatus(
+  database: DatabaseSync,
+  requestId: string,
+  status: "approved" | "rejected",
+  reason?: string,
+): void {
+  const existing = database
+    .prepare("SELECT status FROM approvals WHERE request_id = ?")
+    .get(requestId) as Record<string, unknown> | undefined;
+
+  if (!existing) {
+    throw new Error(`Approval request not found: ${requestId}`);
+  }
+
+  if (existing.status !== "pending") {
+    throw new Error(`Approval request already decided: ${requestId}`);
+  }
+
+  const update = database.prepare(`
+    UPDATE approvals
+    SET status = ?, decided_at = ?, decision_reason = ?
+    WHERE request_id = ?
+  `);
+  update.run(status, new Date().toISOString(), reason ?? null, requestId);
 }

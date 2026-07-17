@@ -89,10 +89,12 @@ export async function runProject(
             instructions.content,
             tools,
             events,
+            runId,
+            options.eventStore,
           )
         : options.script === undefined
           ? await runDefaultDryRun(validation.project, events)
-          : await runScriptedDryRun(options.script, tools, events);
+          : await runScriptedDryRun(options.script, tools, events, runId, options.eventStore);
     events.append("run.completed", { status: "completed" });
 
     const result: RunResult = {
@@ -168,6 +170,8 @@ async function runProviderBackedRun(
   instructions: string,
   tools: DeclaredTool[],
   events: InMemoryEventLog,
+  runId: string,
+  eventStore?: EventStore,
 ): Promise<string> {
   if (!message) {
     throw new RuntimeDiagnosticError({
@@ -258,6 +262,20 @@ async function runProviderBackedRun(
           status: "blocked",
           toolName: tool.name,
         });
+
+        if (eventStore) {
+          const requestId = `approval-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+          await eventStore.createApprovalRequest({
+            requestId,
+            runId,
+            toolName: tool.name,
+            arguments: toolCall.arguments as Record<string, unknown>,
+            ...(tool.approval.reason !== undefined ? { reason: tool.approval.reason } : {}),
+            status: "pending",
+            createdAt: new Date().toISOString(),
+          });
+        }
+
         throw new RunBlockedError();
       }
 
@@ -302,6 +320,8 @@ async function runScriptedDryRun(
   script: DryRunScriptStep[],
   tools: DeclaredTool[],
   events: InMemoryEventLog,
+  runId: string,
+  eventStore?: EventStore,
 ): Promise<string | undefined> {
   const toolsByName = new Map(tools.map((tool) => [tool.name, tool]));
   let output: string | undefined;
@@ -363,6 +383,20 @@ async function runScriptedDryRun(
         status: "blocked",
         toolName: tool.name,
       });
+
+      if (eventStore) {
+        const requestId = `approval-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        await eventStore.createApprovalRequest({
+          requestId,
+          runId,
+          toolName: tool.name,
+          arguments: step.arguments as Record<string, unknown>,
+          ...(tool.approval.reason !== undefined ? { reason: tool.approval.reason } : {}),
+          status: "pending",
+          createdAt: new Date().toISOString(),
+        });
+      }
+
       throw new RunBlockedError();
     }
 

@@ -241,6 +241,77 @@ export async function handleRequest(options: HandleRequestOptions): Promise<void
       return;
     }
 
+    const approvalsMatch = url.pathname.match(/^\/v1\/runs\/([^/]+)\/approvals$/);
+    if (options.request.method === "GET" && approvalsMatch) {
+      const runId = decodeURIComponent(approvalsMatch[1] ?? "");
+      const run = await options.eventStore.getRun(runId);
+      if (!run) {
+        sendError(options.response, 404, "run.not_found", `Unknown run ID: ${runId}`);
+        return;
+      }
+
+      const approvals = await options.eventStore.listPendingApprovals(runId);
+      sendJson(options.response, 200, approvals);
+      return;
+    }
+
+    const approvalDecisionMatch = url.pathname.match(/^\/v1\/runs\/([^/]+)\/approvals\/([^/]+)$/);
+    if (options.request.method === "POST" && approvalDecisionMatch) {
+      const runId = decodeURIComponent(approvalDecisionMatch[1] ?? "");
+      const requestId = decodeURIComponent(approvalDecisionMatch[2] ?? "");
+
+      const run = await options.eventStore.getRun(runId);
+      if (!run) {
+        sendError(options.response, 404, "run.not_found", `Unknown run ID: ${runId}`);
+        return;
+      }
+
+      const existingRequest = await options.eventStore.getApprovalRequest(requestId);
+      if (!existingRequest) {
+        sendError(
+          options.response,
+          404,
+          "approval.not_found",
+          `Unknown approval request: ${requestId}`,
+        );
+        return;
+      }
+
+      if (existingRequest.status !== "pending") {
+        sendError(
+          options.response,
+          409,
+          "approval.already_decided",
+          `Approval request already decided: ${existingRequest.status}`,
+        );
+        return;
+      }
+
+      const body = await readJsonBody(options.request);
+      const decision = typeof body.decision === "string" ? body.decision : undefined;
+      const reason = typeof body.reason === "string" ? body.reason : undefined;
+
+      if (!decision || !["approve", "reject"].includes(decision)) {
+        sendError(
+          options.response,
+          400,
+          "approval.invalid_body",
+          "A valid decision (approve/reject) is required.",
+        );
+        return;
+      }
+
+      if (decision === "approve") {
+        await options.eventStore.approveToolCall(requestId, reason);
+      } else {
+        await options.eventStore.rejectToolCall(requestId, reason);
+      }
+
+      const updatedRequest = await options.eventStore.getApprovalRequest(requestId);
+      sendJson(options.response, 200, updatedRequest);
+      return;
+    }
+
     if (options.request.method === "GET" && url.pathname === "/v1/conversations") {
       const conversations = await options.eventStore.listConversations();
       sendJson(options.response, 200, conversations);

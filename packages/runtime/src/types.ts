@@ -77,6 +77,18 @@ export interface Message {
   createdAt: string;
 }
 
+export interface ApprovalRequest {
+  requestId: string;
+  runId: string;
+  toolName: string;
+  arguments: Record<string, unknown>;
+  reason?: string;
+  status: "pending" | "approved" | "rejected";
+  createdAt: string;
+  decidedAt?: string;
+  decisionReason?: string;
+}
+
 export interface PersistedRun extends RunSummary {
   events: PlicoEvent[];
 }
@@ -96,6 +108,11 @@ export interface EventStore {
   listThreads(): Promise<Thread[]>;
   getThread(threadId: string): Promise<Thread | undefined>;
   getThreadMessages(threadId: string): Promise<Message[]>;
+  createApprovalRequest(request: ApprovalRequest): Promise<void>;
+  getApprovalRequest(requestId: string): Promise<ApprovalRequest | undefined>;
+  listPendingApprovals(runId: string): Promise<ApprovalRequest[]>;
+  approveToolCall(requestId: string, reason?: string): Promise<void>;
+  rejectToolCall(requestId: string, reason?: string): Promise<void>;
 }
 
 export interface EvalExpectation {
