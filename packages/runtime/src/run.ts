@@ -164,7 +164,7 @@ export async function runProject(
 async function runProviderBackedRun(
   provider: ModelProvider,
   message: string | undefined,
-  project: LoadedProject,
+  _project: LoadedProject,
   instructions: string,
   tools: DeclaredTool[],
   events: InMemoryEventLog,

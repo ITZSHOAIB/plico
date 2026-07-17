@@ -24,7 +24,7 @@ describe("createOpenAIProvider", () => {
     });
     vi.stubGlobal("fetch", fetch);
 
-    const provider = createOpenAIProvider({ apiKey: "sk-test", model: "gpt-4o" });
+    const provider = createOpenAIProvider({ type: "openai", apiKey: "sk-test", model: "gpt-4o" });
     const response = await provider.complete({
       messages: [
         { role: "system", content: "You are a helpful assistant." },
@@ -72,7 +72,7 @@ describe("createOpenAIProvider", () => {
     });
     vi.stubGlobal("fetch", fetch);
 
-    const provider = createOpenAIProvider({ apiKey: "sk-test" });
+    const provider = createOpenAIProvider({ type: "openai", apiKey: "sk-test" });
     const response = await provider.complete({
       messages: [{ role: "user", content: "Create ticket" }],
       maxSteps: 10,
@@ -117,7 +117,7 @@ describe("createOpenAIProvider", () => {
     );
     vi.stubGlobal("fetch", fetch);
 
-    const provider = createOpenAIProvider({ apiKey: "sk-wrong" });
+    const provider = createOpenAIProvider({ type: "openai", apiKey: "sk-wrong" });
 
     await expect(
       provider.complete({
@@ -143,7 +143,7 @@ describe("createOpenAIProvider", () => {
     });
     vi.stubGlobal("fetch", fetch);
 
-    const provider = createOpenAIProvider({ apiKey: "sk-test" });
+    const provider = createOpenAIProvider({ type: "openai", apiKey: "sk-test" });
     const response = await provider.complete({
       messages: [{ role: "user", content: "Hi" }],
       maxSteps: 10,
@@ -193,6 +193,7 @@ describe("createOpenAIProvider", () => {
     vi.stubGlobal("fetch", fetch);
 
     const provider = createOpenAIProvider({
+      type: "openai",
       apiKey: "sk-test",
       baseUrl: "https://my-gateway.example.com/v1",
     });

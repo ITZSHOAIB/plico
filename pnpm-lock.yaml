@@ -38,6 +38,9 @@ importers:
       '@plico/core':
         specifier: workspace:*
         version: link:../core
+      '@plico/provider':
+        specifier: workspace:*
+        version: link:../provider
       '@plico/runtime':
         specifier: workspace:*
         version: link:../runtime
@@ -61,6 +64,8 @@ importers:
       '@plico/runtime':
         specifier: workspace:*
         version: link:../runtime
+
+  packages/provider: {}
 
   packages/runtime:
     dependencies:

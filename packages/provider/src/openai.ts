@@ -35,8 +35,6 @@ interface ModelProvider {
   complete(request: ModelRequest): Promise<ModelResponse>;
 }
 
-type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
-
 function resolveApiKey(config: OpenAIProviderConfig): string {
   if (config.apiKey) return config.apiKey;
   const envKey = process.env.PLICO_OPENAI_API_KEY;
@@ -88,9 +86,9 @@ function parseOpenAIResponse(data: Record<string, unknown>): ModelResponse {
   }
 
   const choice = choices[0];
-  const message = choice.message as Record<string, unknown> | undefined;
+  const message = (choice?.message as Record<string, unknown>) ?? {};
 
-  const content = typeof message?.content === "string" ? message.content : "";
+  const content = typeof message.content === "string" ? message.content : "";
 
   const usageRaw = data.usage as Record<string, unknown> | undefined;
   let usage: ModelResponse["usage"];
@@ -103,8 +101,8 @@ function parseOpenAIResponse(data: Record<string, unknown>): ModelResponse {
     usage = { inputTokens: 0, outputTokens: 0 };
   }
 
-  const toolCallsRaw = message?.tool_calls as Array<Record<string, unknown>> | undefined;
-  let toolCalls: ModelToolCall[] | undefined;
+  const toolCallsRaw = message.tool_calls as Array<Record<string, unknown>> | undefined;
+  let toolCalls: ModelToolCall[] = [];
   if (toolCallsRaw && toolCallsRaw.length > 0) {
     toolCalls = toolCallsRaw.map((tc) => {
       const func = tc.function as Record<string, unknown> | undefined;
