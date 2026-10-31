@@ -28,13 +28,18 @@ export async function handleRequest(options: HandleRequestOptions): Promise<void
   const url = new URL(request.url ?? "/", "http://127.0.0.1");
 
   try {
-    for (const route of routes) {
-      if (route.method !== request.method) continue;
+    const pathMatches = routes.filter((route) => route.pattern.test(url.pathname));
+    const route = pathMatches.find((candidate) => candidate.method === request.method);
+    if (route) {
       const match = route.pattern.exec(url.pathname);
-      if (!match) continue;
-
-      const params = match.slice(1).map((value) => decodeURIComponent(value));
+      const params = (match?.slice(1) ?? []).map(decodeParam);
       await route.handler({ projectRoot, eventStore, request, response, url, params });
+      return;
+    }
+
+    if (pathMatches.length > 0) {
+      response.setHeader("allow", [...new Set(pathMatches.map((r) => r.method))].join(", "));
+      sendError(response, 405, "method.not_allowed", "Method not allowed.");
       return;
     }
 
@@ -45,6 +50,15 @@ export async function handleRequest(options: HandleRequestOptions): Promise<void
       return;
     }
 
-    sendError(response, 500, "server.error", errorMessage(error));
+    console.error(`plico server error: ${errorMessage(error)}`);
+    sendError(response, 500, "server.error", "Internal server error.");
+  }
+}
+
+function decodeParam(value: string): string {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    throw new HttpError(400, "request.invalid_path", "Malformed percent-encoding in path.");
   }
 }

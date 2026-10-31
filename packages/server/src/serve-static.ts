@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 import type { ServerResponse } from "node:http";
-import { join, normalize } from "node:path";
+import { isAbsolute, join, normalize, relative, resolve } from "node:path";
 
 const MIME_TYPES: Record<string, string> = {
   ".html": "text/html; charset=utf-8",
@@ -18,8 +18,16 @@ export async function serveStaticFile(
   pathname: string,
   response: ServerResponse,
 ): Promise<boolean> {
-  const safePath = normalize(join(root, pathname === "/" ? "index.html" : pathname));
-  if (!safePath.startsWith(root)) {
+  let decoded: string;
+  try {
+    decoded = decodeURIComponent(pathname);
+  } catch {
+    return false;
+  }
+
+  const safePath = normalize(join(resolve(root), decoded === "/" ? "index.html" : decoded));
+  const fromRoot = relative(resolve(root), safePath);
+  if (fromRoot.startsWith("..") || isAbsolute(fromRoot)) {
     return false;
   }
 
