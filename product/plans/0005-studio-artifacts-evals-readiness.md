@@ -2,7 +2,7 @@
 
 ## Status
 
-Complete. Live following of active runs is not part of this slice: events persist at run end, and streaming during execution belongs to the runtime work tracked in #69. Artifact diffs and export remain deferred (#73).
+Complete except for live following of active runs. Events persist at run end, so the stream replays stored events only; following during execution moves to the runtime work in #69. Artifact diffs and export remain deferred (#73).
 
 ## Summary
 
@@ -50,7 +50,7 @@ The artifact workspace should remain deliberately small, but it must be a real c
 Extend `@plico/server` with native streaming and Studio/read-model endpoints:
 
 - Add `GET /v1/runs/:runId/events/stream?after=<sequence>` for native Plico SSE.
-- Replay stored events after the requested cursor before following live events when a run is active.
+- Replay stored events after the requested cursor before following live events when a run is active. (Replay shipped here; live following moved to #69.)
 - Include heartbeat SSE events so browser clients can detect a live connection.
 - Close naturally after terminal run states for completed, failed, or blocked runs.
 - Preserve existing persisted event endpoints for replay and refresh.
