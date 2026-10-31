@@ -68,3 +68,9 @@ Method: install + `pnpm lint/test/build`, `pnpm audit`, per-package `tsc`, and a
 4. **Release readiness:** remaining F-23 items.
 
 Items that touch only `core`, `create-plico`, `website`, CI, or config (F-01 declaring `typescript`, F-15, F-17 config part, F-19) can go in step 1 if you want them sooner; they do not overlap the stack's changed files.
+
+## Status after `refactor/modularize-and-audit-fixes`
+
+Fixed: F-02 (declared dependency), F-03, F-04, F-05, F-09 (WAL + busy timeout), F-11, F-14, F-17 (duplicate names, directories), F-18, F-23 (engines, devDependency), F-27, F-28 (server side), plus the typecheck gate, cross-platform CI and the modularization in audit 0002.
+
+Deferred (not in this PR): F-01 (esbuild-bundled loader for relative/bare imports), F-06, F-07 (website dependency upgrades), F-08 and F-22 (belong to the Plan 0006 stack), F-10 (SSE resume), F-13, F-15, F-19, F-20, F-26, explicit EventStore `close()`, CLI `eval --persist`, unifying CLI/server script normalization, splitting the large test files, and replacing the remaining inline Studio styles. LICENSE is the owner's call.
