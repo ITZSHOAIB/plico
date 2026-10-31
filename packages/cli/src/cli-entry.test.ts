@@ -55,4 +55,13 @@ describe("main entry", () => {
     expect(exitCode).toBe(1);
     expect(err.join("\n")).toContain("--allow-remote");
   });
+
+  it("does not treat a 127.-prefixed DNS name as loopback", async () => {
+    const { err } = capture();
+
+    const exitCode = await main(["node", "plico", "serve", "--host", "127.evil.com", "."]);
+
+    expect(exitCode).toBe(1);
+    expect(err.join("\n")).toContain("--allow-remote");
+  });
 });

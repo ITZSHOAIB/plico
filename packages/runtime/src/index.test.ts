@@ -420,6 +420,28 @@ describe("runProject", () => {
     });
   });
 
+  it("marks the run failed when persisting the completed run rejects", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-runtime-"));
+    await writeValidProject(root);
+    const inner = createSqliteEventStore({ databasePath: join(root, ".plico", "plico.sqlite") });
+    let calls = 0;
+    const eventStore = {
+      ...inner,
+      persistRun: async (run: Parameters<typeof inner.persistRun>[0]) => {
+        calls += 1;
+        if (calls === 1) {
+          throw new Error("disk full");
+        }
+        return inner.persistRun(run);
+      },
+    };
+
+    const result = await runProject(root, { runId: "run-persist-fail", eventStore });
+
+    expect(result.status).toBe("failed");
+    expect((await inner.getRun("run-persist-fail"))?.status).toBe("failed");
+  });
+
   it("persists a completed dry run and reads it back after reopening the SQLite store", async () => {
     const root = await mkdtemp(join(tmpdir(), "plico-runtime-"));
     await writeValidProject(root);

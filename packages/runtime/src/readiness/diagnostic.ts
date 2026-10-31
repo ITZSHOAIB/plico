@@ -1,6 +1,6 @@
 import type { ReadinessDiagnostic } from "../types/index.js";
 
-export function diag(
+export function makeDiagnostic(
   severity: ReadinessDiagnostic["severity"],
   subsystem: string,
   message: string,

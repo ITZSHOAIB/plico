@@ -1,7 +1,7 @@
 import { access, constants } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import type { ReadinessDiagnostic } from "../../types/index.js";
-import { diag } from "../diagnostic.js";
+import { makeDiagnostic } from "../diagnostic.js";
 
 export async function checkPersistence(
   projectRoot: string,
@@ -9,19 +9,19 @@ export async function checkPersistence(
   hasEventStore = false,
 ): Promise<ReadinessDiagnostic[]> {
   if (hasEventStore) {
-    return [diag("ok", "persistence.storage", "Event store is attached")];
+    return [makeDiagnostic("ok", "persistence.storage", "Event store is attached")];
   }
 
   const dbPath = databasePath ?? join(projectRoot, ".plico", "plico.sqlite");
   if (await exists(dbPath, constants.F_OK)) {
-    return [diag("ok", "persistence.storage", "Database is readable", dbPath)];
+    return [makeDiagnostic("ok", "persistence.storage", "Database is readable", dbPath)];
   }
 
   // Read-only probe: the database can be created later if the nearest existing
   // ancestor directory is writable. Readiness must never touch the filesystem.
   if (await isCreatable(dbPath)) {
     return [
-      diag(
+      makeDiagnostic(
         "warning",
         "persistence.storage",
         "Database file does not exist yet but its location is writable. Run plico run --dry --persist to initialize.",
@@ -30,7 +30,9 @@ export async function checkPersistence(
     ];
   }
 
-  return [diag("error", "persistence.storage", "Persistence path is not writable", dbPath)];
+  return [
+    makeDiagnostic("error", "persistence.storage", "Persistence path is not writable", dbPath),
+  ];
 }
 
 async function isCreatable(path: string): Promise<boolean> {

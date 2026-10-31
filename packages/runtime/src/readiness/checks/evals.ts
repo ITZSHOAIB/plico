@@ -1,7 +1,7 @@
 import { readdir } from "node:fs/promises";
 import { join } from "node:path";
 import type { EventStore, ReadinessDiagnostic } from "../../types/index.js";
-import { diag } from "../diagnostic.js";
+import { makeDiagnostic } from "../diagnostic.js";
 
 export async function checkEvals(
   projectRoot: string,
@@ -15,14 +15,16 @@ export async function checkEvals(
     const scriptFiles = entries.filter((e) => e.endsWith(".script.json"));
     if (scriptFiles.length === 0) {
       diagnostics.push(
-        diag(
+        makeDiagnostic(
           "warning",
           "evals.fixtures",
           "No .script.json eval fixtures found. Add evals to track behavior.",
         ),
       );
     } else {
-      diagnostics.push(diag("ok", "evals.fixtures", `${scriptFiles.length} eval fixture(s) found`));
+      diagnostics.push(
+        makeDiagnostic("ok", "evals.fixtures", `${scriptFiles.length} eval fixture(s) found`),
+      );
     }
 
     if (eventStore) {
@@ -30,7 +32,7 @@ export async function checkEvals(
     }
   } catch {
     diagnostics.push(
-      diag(
+      makeDiagnostic(
         "warning",
         "evals.fixtures",
         "evals/ directory not found. Create evals/ to add eval fixtures.",
@@ -45,7 +47,7 @@ async function describeEvalRuns(eventStore: EventStore): Promise<ReadinessDiagno
   const runs = await eventStore.listRuns();
   const evalRuns = runs.filter((r) => r.runId.startsWith("eval-"));
   if (evalRuns.length === 0) {
-    return diag(
+    return makeDiagnostic(
       "warning",
       "evals.results",
       "No eval runs have been executed. Run plico eval to see results.",
@@ -57,7 +59,7 @@ async function describeEvalRuns(eventStore: EventStore): Promise<ReadinessDiagno
   );
   const lastEval = sorted[0];
   const passed = evalRuns.filter((r) => r.status === "completed").length;
-  return diag(
+  return makeDiagnostic(
     "ok",
     "evals.results",
     `${evalRuns.length} eval run(s), ${passed} passed (last: ${lastEval?.runId ?? "none"})`,

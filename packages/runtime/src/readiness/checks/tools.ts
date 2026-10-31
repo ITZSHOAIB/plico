@@ -2,7 +2,7 @@ import { join } from "node:path";
 import { getProjectPaths, getProjectRelativePaths, type LoadedProject } from "@plico/core";
 import { discoverToolFiles, loadToolFile } from "../../tools/index.js";
 import type { ReadinessDiagnostic } from "../../types/index.js";
-import { diag } from "../diagnostic.js";
+import { makeDiagnostic } from "../diagnostic.js";
 
 export async function checkTools(project: LoadedProject): Promise<ReadinessDiagnostic[]> {
   const diagnostics: ReadinessDiagnostic[] = [];
@@ -14,7 +14,7 @@ export async function checkTools(project: LoadedProject): Promise<ReadinessDiagn
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
     return [
-      diag(
+      makeDiagnostic(
         "error",
         "tools.discovery",
         "tools/ directory not found. Create tools/ to declare tools.",
@@ -25,7 +25,7 @@ export async function checkTools(project: LoadedProject): Promise<ReadinessDiagn
 
   if (toolFiles.length === 0) {
     diagnostics.push(
-      diag(
+      makeDiagnostic(
         "warning",
         "tools.discovery",
         "No tools declared. Add a .tool.ts module to get started.",
@@ -42,7 +42,7 @@ export async function checkTools(project: LoadedProject): Promise<ReadinessDiagn
       validCount++;
     } catch (error) {
       diagnostics.push(
-        diag(
+        makeDiagnostic(
           "error",
           "tools.discovery",
           `Schema validation failed for ${entry}: ${String(error)}`,
@@ -52,7 +52,7 @@ export async function checkTools(project: LoadedProject): Promise<ReadinessDiagn
     }
   }
   diagnostics.push(
-    diag(
+    makeDiagnostic(
       validCount === toolFiles.length ? "ok" : "warning",
       "tools.discovery",
       `${validCount}/${toolFiles.length} tool(s) valid`,

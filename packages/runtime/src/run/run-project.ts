@@ -83,7 +83,7 @@ export async function runProject(
           : await runScriptedDryRun(options.script, tools, events);
     events.append("run.completed", { status: "completed" });
 
-    return finalizeRun({ ...summary, status: "completed", output, events: events.all() });
+    return await finalizeRun({ ...summary, status: "completed", output, events: events.all() });
   } catch (error) {
     if (error instanceof RunBlockedError) {
       return finalizeRun({ ...summary, status: "blocked", events: events.all() });

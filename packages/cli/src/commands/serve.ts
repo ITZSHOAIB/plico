@@ -1,4 +1,5 @@
 import { createRequire } from "node:module";
+import { isIPv4 } from "node:net";
 import { dirname, join } from "node:path";
 import {
   lastPositional,
@@ -68,5 +69,5 @@ function resolveStudioPath(): string {
 }
 
 function isLoopbackHost(host: string): boolean {
-  return host === "localhost" || host === "::1" || host === "127.0.0.1" || host.startsWith("127.");
+  return host === "localhost" || host === "::1" || (isIPv4(host) && host.startsWith("127."));
 }
