@@ -20,7 +20,11 @@ export async function checkReadiness(
   diagnostics.push(
     ...(await checkTools(projectCheck.project)),
     ...(await checkEvals(projectRoot, options.eventStore)),
-    ...(await checkPersistence(projectRoot, options.databasePath)),
+    ...(await checkPersistence(
+      projectRoot,
+      options.databasePath,
+      options.eventStore !== undefined,
+    )),
     ...(await checkArtifacts(projectRoot)),
     ...(await checkServerConfig(projectRoot)),
   );

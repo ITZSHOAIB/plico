@@ -8,7 +8,20 @@ export async function checkTools(project: LoadedProject): Promise<ReadinessDiagn
   const diagnostics: ReadinessDiagnostic[] = [];
   const projectPaths = getProjectPaths(project.root);
   const relativePaths = getProjectRelativePaths();
-  const toolFiles = await discoverToolFiles(project);
+  let toolFiles: string[];
+  try {
+    toolFiles = await discoverToolFiles(project);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+    return [
+      diag(
+        "error",
+        "tools.discovery",
+        "tools/ directory not found. Create tools/ to declare tools.",
+        relativePaths.directories.tools,
+      ),
+    ];
+  }
 
   if (toolFiles.length === 0) {
     diagnostics.push(
