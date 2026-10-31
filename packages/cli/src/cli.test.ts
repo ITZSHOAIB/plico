@@ -513,6 +513,62 @@ describe("main", () => {
     errorSpy.mockRestore();
   });
 
+  it("runs a provider-backed run with --message and prints model response events", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-cli-"));
+    await writeValidProject(root);
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    const exitCode = await main([
+      "node",
+      "plico",
+      "run",
+      "--dry",
+      "--message",
+      "Hello from CLI",
+      root,
+    ]);
+
+    expect(exitCode).toBe(0);
+    expect(errorSpy).not.toHaveBeenCalled();
+    const output = logSpy.mock.calls.map(([line]) => String(line));
+    expect(output.some((l) => l.includes("model.request"))).toBe(true);
+    expect(output.some((l) => l.includes("model.response"))).toBe(true);
+    expect(output.some((l) => l.includes("assistant.output"))).toBe(true);
+
+    logSpy.mockRestore();
+    errorSpy.mockRestore();
+  });
+
+  it("emits JSON for provider-backed run with --message --json", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-cli-"));
+    await writeValidProject(root);
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    const exitCode = await main([
+      "node",
+      "plico",
+      "run",
+      "--dry",
+      "--message",
+      "Hello",
+      "--json",
+      root,
+    ]);
+
+    expect(exitCode).toBe(0);
+    expect(errorSpy).not.toHaveBeenCalled();
+    const parsed = JSON.parse(String(logSpy.mock.calls[0]?.[0]));
+    expect(parsed.status).toBe("completed");
+    expect(parsed.events.some((e: { type: string }) => e.type === "model.request")).toBe(true);
+    expect(parsed.events.some((e: { type: string }) => e.type === "model.response")).toBe(true);
+    expect(parsed.events.some((e: { type: string }) => e.type === "assistant.output")).toBe(true);
+
+    logSpy.mockRestore();
+    errorSpy.mockRestore();
+  });
+
   it("reports missing databases, malformed cursors, and unknown run IDs", async () => {
     const root = await mkdtemp(join(tmpdir(), "plico-cli-"));
     await writeValidProject(root);

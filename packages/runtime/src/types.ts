@@ -6,6 +6,9 @@ export type PlicoEventType =
   | "run.started"
   | "instructions.composed"
   | "tools.discovered"
+  | "input.received"
+  | "model.request"
+  | "model.response"
   | "assistant.output"
   | "tool.call"
   | "tool.result"
@@ -160,10 +163,34 @@ export type DryRunScriptStep =
       files: ArtifactFileInput[];
     };
 
+export interface ProviderMessage {
+  role: "system" | "user" | "assistant";
+  content: string;
+}
+
+export interface ModelRequest {
+  messages: ProviderMessage[];
+  maxSteps: number;
+}
+
+export interface ModelResponse {
+  content: string;
+  usage: {
+    inputTokens: number;
+    outputTokens: number;
+  };
+}
+
+export interface ModelProvider {
+  complete(request: ModelRequest): Promise<ModelResponse>;
+}
+
 export interface RunProjectOptions {
   script?: DryRunScriptStep[];
   eventStore?: EventStore;
   runId?: string;
+  provider?: ModelProvider;
+  message?: string;
 }
 
 export interface JsonSchemaSubset {
