@@ -30,5 +30,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "build": "tsc -p tsconfig.build.json",
     "test": "vitest run"
+  },
+  "engines": {
+    "node": ">=22.13.0"
   }
 }

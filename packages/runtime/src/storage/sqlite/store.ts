@@ -11,6 +11,7 @@ export function createSqliteEventStore({
 }: CreateSqliteEventStoreOptions): EventStore {
   mkdirSyncParent(databasePath);
   const database = new DatabaseSync(databasePath);
+  database.exec("PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 5000;");
   initializeSchema(database);
 
   return {
