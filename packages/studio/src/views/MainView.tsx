@@ -3,7 +3,7 @@ import type {
   ArtifactWorkspace,
   ComposedInstructions,
   EvalCaseResult,
-  EvalSummary,
+  EvalReport,
   LoadedProject,
   PlicoEvent,
   ReadinessReport,
@@ -13,11 +13,13 @@ import type { View } from "../view";
 import { ArtifactsView } from "./ArtifactsView";
 import { EvalsView } from "./EvalsView";
 import { InstructionsView } from "./InstructionsView";
+import { OverviewView } from "./OverviewView";
 import { ReadinessView } from "./ReadinessView";
 import { RunView } from "./RunView";
 
 interface MainViewProps {
   project: LoadedProject | null;
+  runs: RunSummary[];
   view: View;
   selectedRun: RunSummary | null;
   events: PlicoEvent[];
@@ -25,9 +27,12 @@ interface MainViewProps {
   workspace: ArtifactWorkspace | null;
   previewFile: ArtifactFile | null;
   onPreviewFile: (file: ArtifactFile | null) => void;
-  evalSummary: EvalSummary | null;
+  evalReport: EvalReport | null;
   selectedEvalResult: EvalCaseResult | null;
-  onSelectEvalRun: (result: EvalCaseResult) => void;
+  onSelectEvalResult: (result: EvalCaseResult | null) => void;
+  onRunEvals: () => void;
+  onOpenRun: (runId: string) => void;
+  runningEvals: boolean;
   readinessReport: ReadinessReport | null;
   error: string | null;
 }
@@ -37,6 +42,18 @@ export function MainView(props: MainViewProps) {
     return <div style={{ padding: "16px", color: "#c00" }}>{props.error}</div>;
   }
 
+  if (props.view === "overview") {
+    return (
+      <OverviewView
+        project={props.project}
+        runs={props.runs}
+        instructions={props.instructions}
+        evalReport={props.evalReport}
+        readinessReport={props.readinessReport}
+      />
+    );
+  }
+
   if (props.view === "instructions" && props.instructions) {
     return <InstructionsView instructions={props.instructions} />;
   }
@@ -44,9 +61,12 @@ export function MainView(props: MainViewProps) {
   if (props.view === "evals") {
     return (
       <EvalsView
-        summary={props.evalSummary}
+        report={props.evalReport}
         selected={props.selectedEvalResult}
-        onSelect={props.onSelectEvalRun}
+        running={props.runningEvals}
+        onSelect={props.onSelectEvalResult}
+        onRun={props.onRunEvals}
+        onOpenRun={props.onOpenRun}
       />
     );
   }
@@ -66,5 +86,5 @@ export function MainView(props: MainViewProps) {
     );
   }
 
-  return <RunView project={props.project} selectedRun={props.selectedRun} events={props.events} />;
+  return <RunView selectedRun={props.selectedRun} events={props.events} />;
 }

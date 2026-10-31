@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   fetchArtifactWorkspace,
-  fetchEvalResults,
   fetchEvents,
   fetchInstructions,
+  fetchLatestEvalReport,
   fetchProject,
   fetchReadiness,
   fetchRuns,
+  runEvals,
 } from "./api";
 import { Sidebar } from "./components/Sidebar";
 import type {
@@ -14,7 +15,7 @@ import type {
   ArtifactWorkspace,
   ComposedInstructions,
   EvalCaseResult,
-  EvalSummary,
+  EvalReport,
   LoadedProject,
   PlicoEvent,
   ReadinessReport,
@@ -31,43 +32,69 @@ export function App() {
   const [instructions, setInstructions] = useState<ComposedInstructions | null>(null);
   const [workspace, setWorkspace] = useState<ArtifactWorkspace | null>(null);
   const [previewFile, setPreviewFile] = useState<ArtifactFile | null>(null);
-  const [evalSummary, setEvalSummary] = useState<EvalSummary | null>(null);
+  const [evalReport, setEvalReport] = useState<EvalReport | null>(null);
   const [selectedEvalResult, setSelectedEvalResult] = useState<EvalCaseResult | null>(null);
+  const [runningEvals, setRunningEvals] = useState(false);
   const [readinessReport, setReadinessReport] = useState<ReadinessReport | null>(null);
-  const [view, setView] = useState<View>("runs");
+  const [view, setView] = useState<View>("overview");
   const [error, setError] = useState<string | null>(null);
+
+  const loadRuns = useCallback(async () => {
+    await fetchRuns()
+      .then(setRuns)
+      .catch(() => {});
+  }, []);
+
+  const loadReadiness = useCallback(async () => {
+    await fetchReadiness()
+      .then(setReadinessReport)
+      .catch(() => setReadinessReport(null));
+  }, []);
+
+  const loadEvalReport = useCallback(async () => {
+    await fetchLatestEvalReport()
+      .then(setEvalReport)
+      .catch(() => setEvalReport(null));
+  }, []);
 
   useEffect(() => {
     fetchProject()
       .then(setProject)
       .catch(() => setError("Failed to load project"));
-    fetchRuns()
-      .then(setRuns)
-      .catch(() => {});
     fetchInstructions()
       .then(setInstructions)
       .catch(() => {});
-  }, []);
+    void loadRuns();
+    void loadReadiness();
+    void loadEvalReport();
+  }, [loadRuns, loadReadiness, loadEvalReport]);
 
   const selectRun = useCallback(async (run: RunSummary) => {
     setSelectedRun(run);
     setView("runs");
     setPreviewFile(null);
+    setSelectedEvalResult(null);
     try {
-      const evts = await fetchEvents(run.runId);
-      setEvents(evts);
+      setEvents(await fetchEvents(run.runId));
     } catch {
       setEvents([]);
     }
   }, []);
+
+  const openRun = useCallback(
+    (runId: string) => {
+      const run = runs.find((candidate) => candidate.runId === runId);
+      if (run) void selectRun(run);
+    },
+    [runs, selectRun],
+  );
 
   const showArtifacts = useCallback(async () => {
     if (!selectedRun) return;
     setView("artifacts");
     setPreviewFile(null);
     try {
-      const ws = await fetchArtifactWorkspace(selectedRun.runId);
-      setWorkspace(ws);
+      setWorkspace(await fetchArtifactWorkspace(selectedRun.runId));
     } catch {
       setWorkspace(null);
     }
@@ -76,37 +103,29 @@ export function App() {
   const showEvals = useCallback(async () => {
     setView("evals");
     setSelectedEvalResult(null);
-    try {
-      const summary = await fetchEvalResults();
-      setEvalSummary(summary);
-    } catch {
-      setEvalSummary(null);
-    }
-  }, []);
+    await loadEvalReport();
+  }, [loadEvalReport]);
 
-  const selectEvalRun = useCallback(async (result: EvalCaseResult) => {
-    setSelectedEvalResult(result);
-    setView("evals");
-  }, []);
+  const startEvals = useCallback(async () => {
+    setRunningEvals(true);
+    setSelectedEvalResult(null);
+    try {
+      await runEvals();
+      await Promise.all([loadEvalReport(), loadRuns(), loadReadiness()]);
+    } catch {
+      setEvalReport(null);
+    } finally {
+      setRunningEvals(false);
+    }
+  }, [loadEvalReport, loadRuns, loadReadiness]);
 
   const showReadiness = useCallback(async () => {
     setView("readiness");
-    try {
-      const report = await fetchReadiness();
-      setReadinessReport(report);
-    } catch {
-      setReadinessReport(null);
-    }
-  }, []);
+    await loadReadiness();
+  }, [loadReadiness]);
 
-  const showRunsOverview = useCallback(() => {
-    setView("runs");
-    setSelectedRun(null);
-    setPreviewFile(null);
-  }, []);
-
-  const showInstructions = useCallback(() => {
-    setView("instructions");
+  const showTopLevelView = useCallback((next: View) => {
+    setView(next);
     setSelectedRun(null);
     setPreviewFile(null);
   }, []);
@@ -126,14 +145,16 @@ export function App() {
         selectedRun={selectedRun}
         view={view}
         onSelectRun={selectRun}
-        onShowInstructions={showInstructions}
-        onShowRuns={showRunsOverview}
+        onShowOverview={() => showTopLevelView("overview")}
+        onShowInstructions={() => showTopLevelView("instructions")}
+        onShowRuns={() => showTopLevelView("runs")}
         onShowArtifacts={showArtifacts}
         onShowEvals={showEvals}
         onShowReadiness={showReadiness}
       />
       <MainView
         project={project}
+        runs={runs}
         view={view}
         selectedRun={selectedRun}
         events={events}
@@ -141,9 +162,12 @@ export function App() {
         workspace={workspace}
         previewFile={previewFile}
         onPreviewFile={setPreviewFile}
-        evalSummary={evalSummary}
+        evalReport={evalReport}
         selectedEvalResult={selectedEvalResult}
-        onSelectEvalRun={selectEvalRun}
+        onSelectEvalResult={setSelectedEvalResult}
+        onRunEvals={startEvals}
+        onOpenRun={openRun}
+        runningEvals={runningEvals}
         readinessReport={readinessReport}
         error={error}
       />

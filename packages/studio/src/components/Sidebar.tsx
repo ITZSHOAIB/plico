@@ -8,6 +8,7 @@ interface SidebarProps {
   selectedRun: RunSummary | null;
   view: View;
   onSelectRun: (run: RunSummary) => void;
+  onShowOverview: () => void;
   onShowInstructions: () => void;
   onShowRuns: () => void;
   onShowArtifacts: () => void;
@@ -21,6 +22,7 @@ export function Sidebar({
   selectedRun,
   view,
   onSelectRun,
+  onShowOverview,
   onShowInstructions,
   onShowRuns,
   onShowArtifacts,
@@ -55,6 +57,9 @@ export function Sidebar({
         </div>
       )}
       <div style={{ marginBottom: "8px" }}>
+        <button type="button" onClick={onShowOverview} style={toolbarButton(view === "overview")}>
+          Overview
+        </button>
         <button type="button" onClick={onShowRuns} style={toolbarButton(view === "runs")}>
           Runs ({runs.length})
         </button>

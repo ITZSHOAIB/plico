@@ -13,6 +13,7 @@ export function EventList({ events }: { events: PlicoEvent[] }) {
 
 function EventRow({ event }: { event: PlicoEvent }) {
   const [expanded, setExpanded] = useState(false);
+  const summary = eventSummary(event);
 
   return (
     <div style={{ marginBottom: "4px", border: "1px solid #eee", borderRadius: "3px" }}>
@@ -35,11 +36,13 @@ function EventRow({ event }: { event: PlicoEvent }) {
       >
         <span style={{ color: "#999", minWidth: "24px" }}>{event.sequence}</span>
         <span style={{ fontWeight: 500, minWidth: "140px" }}>{event.type}</span>
-        <span style={{ color: "#999", fontSize: "11px" }}>{event.timestamp}</span>
+        {summary && <span>{summary}</span>}
+        <span style={{ color: "#999", fontSize: "11px", marginLeft: "auto" }}>
+          {event.timestamp}
+        </span>
       </button>
       {expanded && (
         <div style={{ padding: "4px 8px 8px", fontSize: "12px" }}>
-          <ToolEventDetail event={event} />
           <pre
             style={{
               whiteSpace: "pre-wrap",
@@ -58,21 +61,10 @@ function EventRow({ event }: { event: PlicoEvent }) {
   );
 }
 
-function ToolEventDetail({ event }: { event: PlicoEvent }) {
-  if (
-    event.type === "tool.call" ||
-    event.type === "tool.result" ||
-    event.type === "approval.required"
-  ) {
-    const toolName = String(event.payload.toolName ?? "");
-    const details: string[] = [];
-    if (toolName) details.push(`tool: ${toolName}`);
-    if (event.type === "approval.required") {
-      details.push("requires approval");
-    }
-    if (details.length > 0) {
-      return <div style={{ marginBottom: "4px" }}>{details.join(" | ")}</div>;
-    }
-  }
-  return null;
+function eventSummary(event: PlicoEvent): string | undefined {
+  const toolName = event.payload.toolName;
+  if (typeof toolName !== "string") return undefined;
+  if (event.type === "approval.required") return `${toolName} requires approval`;
+  if (event.type === "tool.call" || event.type === "tool.result") return toolName;
+  return undefined;
 }

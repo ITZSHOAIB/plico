@@ -1,6 +1,7 @@
 import type {
   ArtifactWorkspace,
   ComposedInstructions,
+  EvalReport,
   EvalSummary,
   LoadedProject,
   PlicoEvent,
@@ -8,45 +9,54 @@ import type {
   RunSummary,
 } from "./types";
 
+async function getJson<T>(url: string, init?: RequestInit): Promise<T> {
+  const response = await (init === undefined ? fetch(url) : fetch(url, init));
+  if (!response.ok) {
+    throw new Error(`Request failed: ${url} (${response.status})`);
+  }
+
+  return (await response.json()) as T;
+}
+
+async function getJsonOrNull<T>(url: string): Promise<T | null> {
+  const response = await fetch(url);
+  if (response.status === 404) return null;
+  if (!response.ok) {
+    throw new Error(`Request failed: ${url} (${response.status})`);
+  }
+
+  return (await response.json()) as T;
+}
+
 export async function fetchProject(): Promise<LoadedProject> {
-  const response = await fetch("/v1/project");
-  const body = (await response.json()) as { project: LoadedProject };
+  const body = await getJson<{ project: LoadedProject }>("/v1/project");
   return body.project;
 }
 
-export async function fetchRuns(): Promise<RunSummary[]> {
-  const response = await fetch("/v1/runs");
-  return (await response.json()) as RunSummary[];
+export function fetchRuns(): Promise<RunSummary[]> {
+  return getJson("/v1/runs");
 }
 
-export async function fetchRun(runId: string): Promise<RunSummary> {
-  const response = await fetch(`/v1/runs/${encodeURIComponent(runId)}`);
-  return (await response.json()) as RunSummary;
+export function fetchEvents(runId: string): Promise<PlicoEvent[]> {
+  return getJson(`/v1/runs/${encodeURIComponent(runId)}/events`);
 }
 
-export async function fetchEvents(runId: string, after?: number): Promise<PlicoEvent[]> {
-  const params = after === undefined ? "" : `?after=${after}`;
-  const response = await fetch(`/v1/runs/${encodeURIComponent(runId)}/events${params}`);
-  return (await response.json()) as PlicoEvent[];
+export function fetchInstructions(): Promise<ComposedInstructions> {
+  return getJson("/v1/instructions");
 }
 
-export async function fetchInstructions(): Promise<ComposedInstructions> {
-  const response = await fetch("/v1/instructions");
-  return (await response.json()) as ComposedInstructions;
+export function fetchArtifactWorkspace(runId: string): Promise<ArtifactWorkspace | null> {
+  return getJsonOrNull(`/v1/runs/${encodeURIComponent(runId)}/workspace`);
 }
 
-export async function fetchArtifactWorkspace(runId: string): Promise<ArtifactWorkspace | null> {
-  const response = await fetch(`/v1/runs/${encodeURIComponent(runId)}/workspace`);
-  if (!response.ok) return null;
-  return (await response.json()) as ArtifactWorkspace;
+export function fetchLatestEvalReport(): Promise<EvalReport | null> {
+  return getJsonOrNull("/v1/eval");
 }
 
-export async function fetchEvalResults(): Promise<EvalSummary> {
-  const response = await fetch("/v1/eval", { method: "POST" });
-  return (await response.json()) as EvalSummary;
+export function runEvals(): Promise<EvalSummary> {
+  return getJson("/v1/eval", { method: "POST" });
 }
 
-export async function fetchReadiness(): Promise<ReadinessReport> {
-  const response = await fetch("/v1/readiness");
-  return (await response.json()) as ReadinessReport;
+export function fetchReadiness(): Promise<ReadinessReport> {
+  return getJson("/v1/readiness");
 }
