@@ -730,7 +730,7 @@ describe("runProject", () => {
 
     let callCount = 0;
     const fakeProvider: ModelProvider = {
-      complete: async (request) => {
+      complete: async (_request) => {
         callCount++;
         if (callCount === 1) {
           return {

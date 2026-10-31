@@ -17,5 +17,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "build": "tsc -p tsconfig.build.json",
     "test": "vitest run"
+  },
+  "dependencies": {
+    "@plico/contracts": "workspace:*"
   }
 }

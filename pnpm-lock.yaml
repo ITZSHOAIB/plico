@@ -48,7 +48,13 @@ importers:
         specifier: workspace:*
         version: link:../studio
 
-  packages/core: {}
+  packages/contracts: {}
+
+  packages/core:
+    dependencies:
+      '@plico/contracts':
+        specifier: workspace:*
+        version: link:../contracts
 
   packages/create-plico:
     dependencies:
@@ -64,12 +70,18 @@ importers:
 
   packages/runtime:
     dependencies:
+      '@plico/contracts':
+        specifier: workspace:*
+        version: link:../contracts
       '@plico/core':
         specifier: workspace:*
         version: link:../core
 
   packages/server:
     dependencies:
+      '@plico/contracts':
+        specifier: workspace:*
+        version: link:../contracts
       '@plico/core':
         specifier: workspace:*
         version: link:../core
@@ -86,6 +98,9 @@ importers:
         specifier: ^19.1.0
         version: 19.2.7(react@19.2.7)
     devDependencies:
+      '@plico/contracts':
+        specifier: workspace:*
+        version: link:../contracts
       '@types/react':
         specifier: ^19.1.2
         version: 19.2.17
