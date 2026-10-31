@@ -1,79 +1,8 @@
-import { mkdirSync } from "node:fs";
-import { dirname } from "node:path";
-import { DatabaseSync } from "node:sqlite";
-import type {
-  CreateSqliteEventStoreOptions,
-  EventStore,
-  PersistedRun,
-  PlicoEvent,
-  RunStatus,
-  RunSummary,
-} from "./types.js";
+import type { DatabaseSync } from "node:sqlite";
+import type { PlicoEvent, RunStatus, RunSummary } from "@plico/contracts";
+import type { PersistedRun } from "../../types/index.js";
 
-export function createSqliteEventStore({
-  databasePath,
-}: CreateSqliteEventStoreOptions): EventStore {
-  mkdirSyncParent(databasePath);
-  const database = new DatabaseSync(databasePath);
-  initializeSchema(database);
-
-  return {
-    async persistRun(run: PersistedRun): Promise<void> {
-      persistRunRecord(database, run);
-    },
-    async listRuns(): Promise<RunSummary[]> {
-      return readRunSummaries(database);
-    },
-    async getRun(runId: string): Promise<RunSummary | undefined> {
-      return readRunSummary(database, runId);
-    },
-    async getEvents(
-      runId: string,
-      options: { afterSequence?: number } = {},
-    ): Promise<PlicoEvent[]> {
-      return readEvents(database, runId, options.afterSequence);
-    },
-  };
-}
-
-function mkdirSyncParent(databasePath: string): void {
-  mkdirSync(dirname(databasePath), { recursive: true });
-}
-
-function initializeSchema(database: DatabaseSync): void {
-  database.exec(`
-    CREATE TABLE IF NOT EXISTS plico_meta (
-      key TEXT PRIMARY KEY,
-      value TEXT NOT NULL
-    );
-    CREATE TABLE IF NOT EXISTS runs (
-      run_id TEXT PRIMARY KEY,
-      project_root TEXT NOT NULL,
-      project_name TEXT NOT NULL,
-      status TEXT NOT NULL,
-      started_at TEXT NOT NULL,
-      ended_at TEXT NOT NULL,
-      output TEXT
-    );
-    CREATE TABLE IF NOT EXISTS events (
-      run_id TEXT NOT NULL,
-      sequence INTEGER NOT NULL,
-      event_id TEXT NOT NULL,
-      schema_version INTEGER NOT NULL,
-      type TEXT NOT NULL,
-      timestamp TEXT NOT NULL,
-      payload_json TEXT NOT NULL,
-      PRIMARY KEY (run_id, sequence)
-    );
-    CREATE INDEX IF NOT EXISTS events_run_sequence_index ON events(run_id, sequence);
-    CREATE INDEX IF NOT EXISTS runs_started_at_index ON runs(started_at);
-  `);
-  database
-    .prepare("INSERT OR REPLACE INTO plico_meta(key, value) VALUES ('schema_version', '1')")
-    .run();
-}
-
-function persistRunRecord(database: DatabaseSync, run: PersistedRun): void {
+export function persistRunRecord(database: DatabaseSync, run: PersistedRun): void {
   const insertRun = database.prepare(`
     INSERT INTO runs (run_id, project_root, project_name, status, started_at, ended_at, output)
     VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -129,7 +58,7 @@ function persistRunRecord(database: DatabaseSync, run: PersistedRun): void {
   }
 }
 
-function readRunSummaries(database: DatabaseSync): RunSummary[] {
+export function readRunSummaries(database: DatabaseSync): RunSummary[] {
   const rows = database
     .prepare(
       `
@@ -143,7 +72,7 @@ function readRunSummaries(database: DatabaseSync): RunSummary[] {
   return rows.map((row) => rowToRunSummary(row));
 }
 
-function readRunSummary(database: DatabaseSync, runId: string): RunSummary | undefined {
+export function readRunSummary(database: DatabaseSync, runId: string): RunSummary | undefined {
   const row = database
     .prepare(
       `
@@ -157,7 +86,7 @@ function readRunSummary(database: DatabaseSync, runId: string): RunSummary | und
   return row ? rowToRunSummary(row) : undefined;
 }
 
-function readEvents(
+export function readEvents(
   database: DatabaseSync,
   runId: string,
   afterSequence: number | undefined,

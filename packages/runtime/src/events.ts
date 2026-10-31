@@ -1,4 +1,4 @@
-import type { PlicoEvent, PlicoEventType } from "./types.js";
+import type { PlicoEvent, PlicoEventType } from "./types/index.js";
 
 export class InMemoryEventLog {
   readonly #events: PlicoEvent[] = [];
