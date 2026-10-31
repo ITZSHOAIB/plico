@@ -1,18 +1,10 @@
+import type { ProjectData } from "../hooks/useProjectData";
 import { emptyPanel, heading, meta, metaLoose, panel } from "../styles";
-import type {
-  ComposedInstructions,
-  EvalReport,
-  LoadedProject,
-  ReadinessReport,
-  RunSummary,
-} from "../types";
+import type { EvalReport, RunSummary } from "../types";
 
 interface OverviewViewProps {
-  project: LoadedProject | null;
-  runs: RunSummary[];
-  instructions: ComposedInstructions | null;
+  data: ProjectData;
   evalReport: EvalReport | null;
-  readinessReport: ReadinessReport | null;
 }
 
 function latestRunLabel(runs: RunSummary[]): string {
@@ -21,13 +13,8 @@ function latestRunLabel(runs: RunSummary[]): string {
   return `${runs.length} run(s), latest ${latest.status} at ${latest.endedAt}`;
 }
 
-export function OverviewView({
-  project,
-  runs,
-  instructions,
-  evalReport,
-  readinessReport,
-}: OverviewViewProps) {
+export function OverviewView({ data, evalReport }: OverviewViewProps) {
+  const { project, runs, instructions, readiness } = data;
   if (!project) {
     return <div style={emptyPanel}>Loading project…</div>;
   }
@@ -48,8 +35,8 @@ export function OverviewView({
       <Fact
         label="Readiness"
         value={
-          readinessReport
-            ? `${readinessReport.summary.ok} ok, ${readinessReport.summary.warning} warning(s), ${readinessReport.summary.error} error(s)`
+          readiness
+            ? `${readiness.summary.ok} ok, ${readiness.summary.warning} warning(s), ${readiness.summary.error} error(s)`
             : "Loading…"
         }
       />

@@ -9,8 +9,7 @@ import type {
   RunSummary,
 } from "./types";
 
-async function getJson<T>(url: string, init?: RequestInit): Promise<T> {
-  const response = await (init === undefined ? fetch(url) : fetch(url, init));
+async function parseJson<T>(url: string, response: Response): Promise<T> {
   if (!response.ok) {
     throw new Error(`Request failed: ${url} (${response.status})`);
   }
@@ -18,14 +17,13 @@ async function getJson<T>(url: string, init?: RequestInit): Promise<T> {
   return (await response.json()) as T;
 }
 
+async function getJson<T>(url: string, init?: RequestInit): Promise<T> {
+  return parseJson(url, await fetch(url, init));
+}
+
 async function getJsonOrNull<T>(url: string): Promise<T | null> {
   const response = await fetch(url);
-  if (response.status === 404) return null;
-  if (!response.ok) {
-    throw new Error(`Request failed: ${url} (${response.status})`);
-  }
-
-  return (await response.json()) as T;
+  return response.status === 404 ? null : parseJson(url, response);
 }
 
 export async function fetchProject(): Promise<LoadedProject> {
@@ -35,6 +33,10 @@ export async function fetchProject(): Promise<LoadedProject> {
 
 export function fetchRuns(): Promise<RunSummary[]> {
   return getJson("/v1/runs");
+}
+
+export function fetchRun(runId: string): Promise<RunSummary> {
+  return getJson(`/v1/runs/${encodeURIComponent(runId)}`);
 }
 
 export function fetchEvents(runId: string): Promise<PlicoEvent[]> {

@@ -1,14 +1,6 @@
-import type {
-  ArtifactFile,
-  ArtifactWorkspace,
-  ComposedInstructions,
-  EvalCaseResult,
-  EvalReport,
-  LoadedProject,
-  PlicoEvent,
-  ReadinessReport,
-  RunSummary,
-} from "../types";
+import type { EvalsState } from "../hooks/useEvals";
+import type { ProjectData } from "../hooks/useProjectData";
+import type { RunInspector } from "../hooks/useRunInspector";
 import type { View } from "../view";
 import { ArtifactsView } from "./ArtifactsView";
 import { EvalsView } from "./EvalsView";
@@ -18,73 +10,37 @@ import { ReadinessView } from "./ReadinessView";
 import { RunView } from "./RunView";
 
 interface MainViewProps {
-  project: LoadedProject | null;
-  runs: RunSummary[];
   view: View;
-  selectedRun: RunSummary | null;
-  events: PlicoEvent[];
-  instructions: ComposedInstructions | null;
-  workspace: ArtifactWorkspace | null;
-  previewFile: ArtifactFile | null;
-  onPreviewFile: (file: ArtifactFile | null) => void;
-  evalReport: EvalReport | null;
-  selectedEvalResult: EvalCaseResult | null;
-  onSelectEvalResult: (result: EvalCaseResult | null) => void;
-  onRunEvals: () => void;
+  data: ProjectData;
+  inspector: RunInspector;
+  evals: EvalsState;
   onOpenRun: (runId: string) => void;
-  runningEvals: boolean;
-  readinessReport: ReadinessReport | null;
-  error: string | null;
 }
 
-export function MainView(props: MainViewProps) {
-  if (props.error) {
-    return <div style={{ padding: "16px", color: "#c00" }}>{props.error}</div>;
+export function MainView({ view, data, inspector, evals, onOpenRun }: MainViewProps) {
+  if (data.error) {
+    return <div style={{ padding: "16px", color: "#c00" }}>{data.error}</div>;
   }
 
-  if (props.view === "overview") {
-    return (
-      <OverviewView
-        project={props.project}
-        runs={props.runs}
-        instructions={props.instructions}
-        evalReport={props.evalReport}
-        readinessReport={props.readinessReport}
-      />
-    );
+  if (view === "overview") {
+    return <OverviewView data={data} evalReport={evals.report} />;
   }
 
-  if (props.view === "instructions" && props.instructions) {
-    return <InstructionsView instructions={props.instructions} />;
+  if (view === "instructions" && data.instructions) {
+    return <InstructionsView instructions={data.instructions} />;
   }
 
-  if (props.view === "evals") {
-    return (
-      <EvalsView
-        report={props.evalReport}
-        selected={props.selectedEvalResult}
-        running={props.runningEvals}
-        onSelect={props.onSelectEvalResult}
-        onRun={props.onRunEvals}
-        onOpenRun={props.onOpenRun}
-      />
-    );
+  if (view === "evals") {
+    return <EvalsView evals={evals} onOpenRun={onOpenRun} />;
   }
 
-  if (props.view === "readiness") {
-    return <ReadinessView report={props.readinessReport} />;
+  if (view === "readiness") {
+    return <ReadinessView report={data.readiness} />;
   }
 
-  if (props.view === "artifacts") {
-    return (
-      <ArtifactsView
-        selectedRun={props.selectedRun}
-        workspace={props.workspace}
-        previewFile={props.previewFile}
-        onPreviewFile={props.onPreviewFile}
-      />
-    );
+  if (view === "artifacts") {
+    return <ArtifactsView {...inspector} onPreviewFile={inspector.setPreviewFile} />;
   }
 
-  return <RunView selectedRun={props.selectedRun} events={props.events} />;
+  return <RunView selectedRun={inspector.selectedRun} events={inspector.events} />;
 }

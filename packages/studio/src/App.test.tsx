@@ -64,6 +64,7 @@ const evalReport: EvalReport = {
   passed: 1,
   failed: 1,
   evaluatedAt: "2026-10-31T09:00:00.000Z",
+  fixturesDigest: "digest",
   results: [
     { name: "smoke", status: "pass", runId: run.runId, runStatus: "completed", output: "Hello" },
     {
@@ -102,6 +103,7 @@ function stubApi(state: StubState = { report: evalReport }) {
     if (path === "/v1/runs") return json([run]);
     if (path === "/v1/instructions") return json(instructions);
     if (path === "/v1/readiness") return json(readiness);
+    if (path === `/v1/runs/${run.runId}`) return json(run);
     if (path === `/v1/runs/${run.runId}/events`) return json(events);
     if (path === `/v1/runs/${run.runId}/workspace`) return json(workspace);
     if (path === "/v1/eval" && method === "POST") {
@@ -291,6 +293,53 @@ describe("evals", () => {
     click("View run");
 
     expect(await screen.findByText("tool.call")).toBeTruthy();
+  });
+});
+
+describe("eval runs from outside Studio", () => {
+  it("opens a run that appeared after Studio loaded its run list", async () => {
+    const fetchMock = stubApi();
+    const stubbed = fetchMock.getMockImplementation() as typeof fetchMock;
+    fetchMock.mockImplementation(async (input, init) =>
+      input === "/v1/runs" ? json([]) : stubbed(input, init),
+    );
+    render(<App />);
+    await screen.findByRole("region", { name: "Project overview" });
+    click("Evals");
+    fireEvent.click(await screen.findByRole("button", { name: /smoke/ }));
+
+    click("View run");
+
+    expect(await screen.findByText("tool.call")).toBeTruthy();
+  });
+
+  it("says when the run behind a result cannot be opened", async () => {
+    stubApi();
+    render(<App />);
+    await screen.findByRole("region", { name: "Project overview" });
+    click("Evals");
+    fireEvent.click(await screen.findByRole("button", { name: /tone/ }));
+
+    click("View run");
+
+    expect(await screen.findByText("Failed to open run eval-tone")).toBeTruthy();
+  });
+
+  it("keeps the latest results when running evals fails", async () => {
+    const fetchMock = stubApi();
+    const stubbed = fetchMock.getMockImplementation() as typeof fetchMock;
+    fetchMock.mockImplementation(async (input, init) =>
+      init?.method === "POST" ? json({ error: { message: "boom" } }, 500) : stubbed(input, init),
+    );
+    render(<App />);
+    await screen.findByRole("region", { name: "Project overview" });
+    click("Evals");
+    await screen.findByRole("button", { name: /smoke/ });
+
+    click("Run evals");
+
+    expect(await screen.findByText("Failed to run evals")).toBeTruthy();
+    expect(screen.getByRole("button", { name: /smoke/ })).toBeTruthy();
   });
 });
 
