@@ -70,6 +70,17 @@ export async function main(argv: string[]): Promise<number> {
         provider = {
           complete: async (request) => {
             const lastUserMessage = [...request.messages].reverse().find((m) => m.role === "user");
+            const lastToolMessage = [...request.messages].reverse().find((m) => m.role === "tool");
+            if (!lastToolMessage && request.tools && request.tools.length > 0) {
+              const tool = request.tools[0];
+              if (tool) {
+                return {
+                  content: "",
+                  usage: { inputTokens: 10, outputTokens: 1 },
+                  toolCalls: [{ name: tool.name, arguments: { title: "Test ticket" } }],
+                };
+              }
+            }
             const assistantContent = `Fake provider response to: ${lastUserMessage?.content ?? ""}`;
             return { content: assistantContent, usage: { inputTokens: 10, outputTokens: 5 } };
           },

@@ -164,13 +164,25 @@ export type DryRunScriptStep =
     };
 
 export interface ProviderMessage {
-  role: "system" | "user" | "assistant";
+  role: "system" | "user" | "assistant" | "tool";
   content: string;
+  toolCallId?: string;
+  toolName?: string;
+}
+
+export interface ModelToolCall {
+  name: string;
+  arguments: unknown;
 }
 
 export interface ModelRequest {
   messages: ProviderMessage[];
   maxSteps: number;
+  tools?: Array<{
+    name: string;
+    description: string;
+    inputSchema: JsonSchemaSubset;
+  }>;
 }
 
 export interface ModelResponse {
@@ -179,6 +191,7 @@ export interface ModelResponse {
     inputTokens: number;
     outputTokens: number;
   };
+  toolCalls?: ModelToolCall[];
 }
 
 export interface ModelProvider {
