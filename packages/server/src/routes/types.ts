@@ -4,6 +4,7 @@ import type { EventStore } from "@plico/runtime";
 export interface RouteContext {
   projectRoot: string;
   eventStore: EventStore;
+  studioPath: string | undefined;
   request: IncomingMessage;
   response: ServerResponse;
   url: URL;

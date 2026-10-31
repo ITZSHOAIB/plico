@@ -6,8 +6,12 @@ export const readinessRoutes: Route[] = [
   {
     method: "GET",
     pattern: /^\/v1\/readiness$/,
-    handler: async ({ projectRoot, eventStore, response }) => {
-      sendJson(response, 200, await checkReadiness(projectRoot, { eventStore }));
+    handler: async ({ projectRoot, eventStore, studioPath, response }) => {
+      const report = await checkReadiness(projectRoot, {
+        eventStore,
+        ...(studioPath === undefined ? {} : { studioPath }),
+      });
+      sendJson(response, 200, report);
     },
   },
 ];

@@ -1,4 +1,4 @@
-import { buildArtifactWorkspace, runProject } from "@plico/runtime";
+import { runProject } from "@plico/runtime";
 import { readJsonBody } from "../body.js";
 import { sendError } from "../errors.js";
 import { sendJson } from "../responses.js";
@@ -83,32 +83,6 @@ export const runRoutes: Route[] = [
         afterSequence === undefined ? {} : { afterSequence },
       );
       sendJson(context.response, 200, events);
-    },
-  },
-  {
-    method: "GET",
-    pattern: /^\/v1\/runs\/([^/]+)\/workspace$/,
-    handler: async (context) => {
-      const runId = context.params[0] ?? "";
-      const run = await context.eventStore.getRun(runId);
-      if (!run) {
-        runNotFound(context, runId);
-        return;
-      }
-
-      const events = await context.eventStore.getEvents(runId);
-      const workspace = buildArtifactWorkspace(runId, events);
-      if (!workspace) {
-        sendError(
-          context.response,
-          404,
-          "workspace.not_found",
-          `No artifact workspace for run: ${runId}`,
-        );
-        return;
-      }
-
-      sendJson(context.response, 200, workspace);
     },
   },
 ];

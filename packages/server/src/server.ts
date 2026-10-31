@@ -15,7 +15,7 @@ export async function createPlicoServer(options: CreatePlicoServerOptions): Prom
       const isApiPath = url.pathname === "/health" || url.pathname.startsWith("/v1/");
 
       if (isApiPath) {
-        await handleRequest({ projectRoot, eventStore, request, response });
+        await handleRequest({ projectRoot, eventStore, studioPath, request, response });
         return;
       }
 
@@ -27,7 +27,7 @@ export async function createPlicoServer(options: CreatePlicoServerOptions): Prom
         return;
       }
 
-      await handleRequest({ projectRoot, eventStore, request, response });
+      await handleRequest({ projectRoot, eventStore, studioPath, request, response });
     },
   };
 }
