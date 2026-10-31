@@ -2,13 +2,15 @@
 
 Plico is a TypeScript-first agent app kit built around local Markdown instructions, skills, tools, evals, memory, and artifacts.
 
-This repo is intentionally narrow in phase one:
+Today this repo can:
 
 - scaffold valid Plico projects
 - validate projects with `@plico/core`
 - expose validation and dry runs through `@plico/cli`
 - expose persisted runs, replay, and the native HTTP API through `@plico/server`
 - generate the internal-ops starter with `create-plico`
+
+Real provider runs, threads, and approvals are not built yet. See the milestones in GitHub Issues.
 
 ## Repo Layout
 

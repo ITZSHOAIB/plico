@@ -6,7 +6,7 @@ Keep the public mental model file-first and local-first. Do not let LangGraph, M
 
 ## Current Scope
 
-Phase one is deliberately narrow: scaffold and validate Plico projects.
+The project contract, runtime spine, durable event log, native HTTP API, bundled Studio, scripted evals, and readiness checks exist. Delivery follows the epics in GitHub Issues, grouped by milestone. The plans in `product/plans/` are reference; where order differs, the epics win.
 
 - Build on `pnpm`, ESM-only TypeScript, `tsc`, and Vitest.
 - Keep `plico.config.ts` as the project anchor.
@@ -17,13 +17,13 @@ Phase one is deliberately narrow: scaffold and validate Plico projects.
 - `@plico/server` owns the thin native HTTP API over the runtime and event store.
 - `create-plico` creates the internal-ops pilot scaffold.
 
-Do not add runtime execution, Studio, server APIs, persistence, AG-UI, React UI, provider calls, approvals, or artifact semantics unless the work explicitly enters that phase.
+Build only what the current epic covers. Do not add real provider calls, threads, approvals, cancel, artifact semantics, MCP, memory, AG-UI, or React UI unless the work belongs to that feature's epic.
 
 ## Product Direction
 
-Future Plico should own the project model, linear v1 runtime, canonical event log, Studio, API adapters, AG-UI mapping, React kit, persistence, approvals, artifacts, evals, and readiness checks.
+Plico should own the project model, linear v1 runtime, canonical event log, Studio, API adapters, AG-UI mapping, React kit, persistence, approvals, artifacts, evals, and readiness checks.
 
-Treat these as direction, not current implementation license. Add public contracts slowly and version them explicitly.
+Treat these as direction, not implementation license beyond the current epic. Add public contracts slowly and version them explicitly.
 
 ## TDD Rule
 
@@ -57,3 +57,17 @@ Run the narrowest useful check first:
 - `pnpm check` runs lint, build, typecheck, and test (the CI gate). Build before typecheck: packages resolve each other through `dist`.
 - `pnpm test` or root build only when cross-package behavior changed.
 - Before raising a PR, all relevant tests must pass.
+
+## Agent skills
+
+### Issue tracker
+
+Issues live in GitHub Issues for ITZSHOAIB/plico, via the `gh` CLI. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default five-role vocabulary: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: one root `GLOSSARY.md`, with ADRs in `product/adrs/`. See `docs/agents/domain.md`.
