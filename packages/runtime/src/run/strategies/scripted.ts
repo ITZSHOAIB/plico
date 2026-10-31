@@ -11,6 +11,8 @@ export async function runScriptedDryRun(
 ): Promise<string | undefined> {
   const toolsByName = new Map(tools.map((tool) => [tool.name, tool]));
   let output: string | undefined;
+  let workspaceId: string | undefined;
+  const artifactPaths = new Set<string>();
 
   for (const step of script) {
     if (step.type === "assistant.output") {
@@ -20,10 +22,13 @@ export async function runScriptedDryRun(
     }
 
     if (step.type === "artifact.write") {
-      const workspaceId = randomUUID();
-      events.append("artifact.workspace.created", { workspaceId });
+      if (workspaceId === undefined) {
+        workspaceId = randomUUID();
+        events.append("artifact.workspace.created", { workspaceId });
+      }
 
       for (const file of step.files) {
+        artifactPaths.add(file.path);
         events.append("artifact.file.written", {
           path: file.path,
           content: file.content,
@@ -34,7 +39,7 @@ export async function runScriptedDryRun(
       const snapshotId = randomUUID();
       events.append("artifact.snapshot.created", {
         snapshotId,
-        fileCount: step.files.length,
+        fileCount: artifactPaths.size,
       });
 
       output = `Artifact workspace ${workspaceId} created with ${step.files.length} files`;

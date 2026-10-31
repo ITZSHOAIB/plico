@@ -1,1 +1,1 @@
-export type View = "runs" | "instructions" | "artifacts" | "evals" | "readiness";
+export type View = "overview" | "runs" | "instructions" | "artifacts" | "evals" | "readiness";

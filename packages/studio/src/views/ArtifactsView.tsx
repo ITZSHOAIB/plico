@@ -38,7 +38,9 @@ export function ArtifactsView({
           ← Back to files
         </button>
         <h3 style={headingTight}>{previewFile.path}</h3>
-        <div style={meta}>{previewFile.mimeType}</div>
+        <div style={meta}>
+          {previewFile.mimeType} &middot; v{previewFile.version}
+        </div>
         <FilePreview file={previewFile} />
       </div>
     );
@@ -58,8 +60,15 @@ export function ArtifactsView({
           style={{ ...listItemButton, background: "#fafafa", border: "1px solid #eee" }}
         >
           {file.path}
-          <span style={{ color: "#999", marginLeft: "8px" }}>{file.mimeType}</span>
+          <span style={{ color: "#999", marginLeft: "8px" }}>
+            {file.mimeType} v{file.version}
+          </span>
         </button>
+      ))}
+      {workspace.snapshots.map((snapshot) => (
+        <div key={snapshot.snapshotId} style={{ ...meta, marginTop: "8px", marginBottom: 0 }}>
+          {snapshot.snapshotId} &middot; {snapshot.fileCount} file(s) &middot; {snapshot.createdAt}
+        </div>
       ))}
     </div>
   );

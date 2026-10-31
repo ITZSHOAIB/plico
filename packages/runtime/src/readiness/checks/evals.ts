@@ -1,52 +1,68 @@
-import { readdir } from "node:fs/promises";
+import { access } from "node:fs/promises";
 import { join } from "node:path";
-import type { EventStore, ReadinessDiagnostic } from "../../types/index.js";
+import { digestEvalFixtures, discoverEvalCases } from "../../evals/discover.js";
+import type { EvalCase, EvalReport, EventStore, ReadinessDiagnostic } from "../../types/index.js";
 import { makeDiagnostic } from "../diagnostic.js";
 
 export async function checkEvals(
   projectRoot: string,
   eventStore: EventStore | undefined,
 ): Promise<ReadinessDiagnostic[]> {
-  const diagnostics: ReadinessDiagnostic[] = [];
   const evalsDir = join(projectRoot, "evals");
 
   try {
-    const entries = await readdir(evalsDir);
-    const scriptFiles = entries.filter((e) => e.endsWith(".script.json"));
-    if (scriptFiles.length === 0) {
-      diagnostics.push(
-        makeDiagnostic(
-          "warning",
-          "evals.fixtures",
-          "No .script.json eval fixtures found. Add evals to track behavior.",
-        ),
-      );
-    } else {
-      diagnostics.push(
-        makeDiagnostic("ok", "evals.fixtures", `${scriptFiles.length} eval fixture(s) found`),
-      );
-    }
-
-    if (eventStore) {
-      diagnostics.push(await describeEvalRuns(eventStore));
-    }
+    await access(evalsDir);
   } catch {
-    diagnostics.push(
+    return [
       makeDiagnostic(
         "warning",
         "evals.fixtures",
         "evals/ directory not found. Create evals/ to add eval fixtures.",
       ),
-    );
+    ];
   }
 
-  return diagnostics;
+  let cases: EvalCase[];
+  try {
+    cases = await discoverEvalCases(evalsDir);
+  } catch (error) {
+    return [makeDiagnostic("error", "evals.fixtures", (error as Error).message)];
+  }
+
+  const fixtures =
+    cases.length === 0
+      ? makeDiagnostic(
+          "warning",
+          "evals.fixtures",
+          "No .script.json eval fixtures found. Add evals to track behavior.",
+        )
+      : makeDiagnostic("ok", "evals.fixtures", `${cases.length} eval fixture(s) found`);
+
+  return eventStore
+    ? [fixtures, await readEvalResults(eventStore, await digestEvalFixtures(evalsDir))]
+    : [fixtures];
 }
 
-async function describeEvalRuns(eventStore: EventStore): Promise<ReadinessDiagnostic> {
-  const runs = await eventStore.listRuns();
-  const evalRuns = runs.filter((r) => r.runId.startsWith("eval-"));
-  if (evalRuns.length === 0) {
+async function readEvalResults(
+  eventStore: EventStore,
+  fixturesDigest: string,
+): Promise<ReadinessDiagnostic> {
+  try {
+    return describeEvalResults(await eventStore.getLatestEvalReport(), fixturesDigest);
+  } catch (error) {
+    return makeDiagnostic(
+      "error",
+      "evals.results",
+      `Could not read eval results: ${(error as Error).message}`,
+    );
+  }
+}
+
+function describeEvalResults(
+  report: EvalReport | undefined,
+  fixturesDigest: string,
+): ReadinessDiagnostic {
+  if (!report) {
     return makeDiagnostic(
       "warning",
       "evals.results",
@@ -54,14 +70,30 @@ async function describeEvalRuns(eventStore: EventStore): Promise<ReadinessDiagno
     );
   }
 
-  const sorted = [...evalRuns].sort(
-    (a, b) => new Date(b.endedAt).getTime() - new Date(a.endedAt).getTime(),
-  );
-  const lastEval = sorted[0];
-  const passed = evalRuns.filter((r) => r.status === "completed").length;
+  if (report.fixturesDigest !== fixturesDigest) {
+    return makeDiagnostic(
+      "warning",
+      "evals.results",
+      "Eval fixtures changed since the latest run. Run plico eval to refresh results.",
+    );
+  }
+
+  if (report.total === 0) {
+    return makeDiagnostic("warning", "evals.results", "The latest eval run found no fixtures.");
+  }
+
+  if (report.failed > 0) {
+    const names = report.results.filter((r) => r.status === "fail").map((r) => r.name);
+    return makeDiagnostic(
+      "error",
+      "evals.results",
+      `${report.failed}/${report.total} eval(s) failed in the latest run: ${names.join(", ")}`,
+    );
+  }
+
   return makeDiagnostic(
     "ok",
     "evals.results",
-    `${evalRuns.length} eval run(s), ${passed} passed (last: ${lastEval?.runId ?? "none"})`,
+    `${report.passed}/${report.total} eval(s) passed (${report.evaluatedAt})`,
   );
 }

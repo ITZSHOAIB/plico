@@ -1,20 +1,25 @@
+import { useState } from "react";
 import { EventList } from "../components/EventList";
-import { emptyPanel, headingTight, metaLoose, panel } from "../styles";
-import type { LoadedProject, PlicoEvent, RunSummary } from "../types";
+import {
+  codeBlockScroll,
+  emptyPanel,
+  headingTight,
+  metaLoose,
+  panel,
+  toolbarButton,
+} from "../styles";
+import type { PlicoEvent, RunSummary } from "../types";
 
 interface RunViewProps {
-  project: LoadedProject | null;
   selectedRun: RunSummary | null;
   events: PlicoEvent[];
 }
 
-export function RunView({ project, selectedRun, events }: RunViewProps) {
+export function RunView({ selectedRun, events }: RunViewProps) {
+  const [mode, setMode] = useState<"timeline" | "raw">("timeline");
+
   if (!selectedRun) {
-    return (
-      <div style={emptyPanel}>
-        {project ? `Project: ${project.config.name}. Select a run to inspect.` : "Loading project…"}
-      </div>
-    );
+    return <div style={emptyPanel}>Select a run to inspect.</div>;
   }
 
   return (
@@ -24,7 +29,25 @@ export function RunView({ project, selectedRun, events }: RunViewProps) {
         Status: {selectedRun.status} | Started: {selectedRun.startedAt} | Ended:{" "}
         {selectedRun.endedAt}
       </div>
-      <EventList events={events} />
+      <div style={{ marginBottom: "8px" }}>
+        <button
+          type="button"
+          onClick={() => setMode("timeline")}
+          style={toolbarButton(mode === "timeline")}
+        >
+          Timeline
+        </button>
+        <button type="button" onClick={() => setMode("raw")} style={toolbarButton(mode === "raw")}>
+          Raw events
+        </button>
+      </div>
+      {mode === "timeline" ? (
+        <EventList events={events} />
+      ) : (
+        <section aria-label="Raw events">
+          <pre style={codeBlockScroll("75vh")}>{JSON.stringify(events, null, 2)}</pre>
+        </section>
+      )}
     </div>
   );
 }

@@ -13,7 +13,7 @@ Phase one is deliberately narrow: scaffold and validate Plico projects.
 - Required project files/directories are `agent.md`, `skills/`, `tools/`, `evals/`, `artifacts/`, and `memory/`.
 - Current packages are `@plico/contracts` (types only), `@plico/core`, `@plico/runtime`, `@plico/server`, `@plico/cli`, `@plico/studio`, and `create-plico`. Dependency direction: contracts <- core <- runtime <- server <- cli; studio depends on contracts only.
 - `@plico/core` owns `loadProject(root)` and `validateProject(root)`.
-- `@plico/cli` currently exposes `plico validate [path]`, `plico run --dry`, `plico runs`, `plico events`, and `plico serve`.
+- `@plico/cli` currently exposes `plico validate [path]`, `plico run --dry`, `plico runs`, `plico events`, `plico eval`, `plico readiness`, and `plico serve`.
 - `@plico/server` owns the thin native HTTP API over the runtime and event store.
 - `create-plico` creates the internal-ops pilot scaffold.
 
@@ -44,6 +44,7 @@ Use small vertical slices:
 - Prefer simple public interfaces over broad framework abstractions.
 - Keep source files focused: one responsibility per module, roughly under 250 lines. Add commands, routes, readiness checks, and views as new modules and register them; do not grow dispatchers or `App.tsx`.
 - Shared wire types live in `@plico/contracts`; never redefine them in a consumer.
+- Wire changes follow `product/adrs/0006-wire-contract-versioning.md`. Update the snapshot in `packages/server/src/contract.test.ts` deliberately, never to silence a failure.
 - Add dependencies only when they improve developer workflow or remove real maintenance cost.
 - Keep generated projects valid through `validateProject`.
 

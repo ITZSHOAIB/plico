@@ -1,115 +1,44 @@
-import { useCallback, useEffect, useState } from "react";
-import {
-  fetchArtifactWorkspace,
-  fetchEvalResults,
-  fetchEvents,
-  fetchInstructions,
-  fetchProject,
-  fetchReadiness,
-  fetchRuns,
-} from "./api";
+import { useCallback, useState } from "react";
+import { fetchRun } from "./api";
 import { Sidebar } from "./components/Sidebar";
-import type {
-  ArtifactFile,
-  ArtifactWorkspace,
-  ComposedInstructions,
-  EvalCaseResult,
-  EvalSummary,
-  LoadedProject,
-  PlicoEvent,
-  ReadinessReport,
-  RunSummary,
-} from "./types";
+import { useEvals } from "./hooks/useEvals";
+import { useProjectData } from "./hooks/useProjectData";
+import { useRunInspector } from "./hooks/useRunInspector";
+import type { RunSummary } from "./types";
 import type { View } from "./view";
 import { MainView } from "./views/MainView";
 
 export function App() {
-  const [project, setProject] = useState<LoadedProject | null>(null);
-  const [runs, setRuns] = useState<RunSummary[]>([]);
-  const [selectedRun, setSelectedRun] = useState<RunSummary | null>(null);
-  const [events, setEvents] = useState<PlicoEvent[]>([]);
-  const [instructions, setInstructions] = useState<ComposedInstructions | null>(null);
-  const [workspace, setWorkspace] = useState<ArtifactWorkspace | null>(null);
-  const [previewFile, setPreviewFile] = useState<ArtifactFile | null>(null);
-  const [evalSummary, setEvalSummary] = useState<EvalSummary | null>(null);
-  const [selectedEvalResult, setSelectedEvalResult] = useState<EvalCaseResult | null>(null);
-  const [readinessReport, setReadinessReport] = useState<ReadinessReport | null>(null);
-  const [view, setView] = useState<View>("runs");
-  const [error, setError] = useState<string | null>(null);
+  const data = useProjectData();
+  const { loadRuns, loadReadiness } = data;
+  const onEvalsFinished = useCallback(
+    async () => void (await Promise.all([loadRuns(), loadReadiness()])),
+    [loadRuns, loadReadiness],
+  );
+  const evals = useEvals(onEvalsFinished);
+  const inspector = useRunInspector();
+  const [view, setView] = useState<View>("overview");
 
-  useEffect(() => {
-    fetchProject()
-      .then(setProject)
-      .catch(() => setError("Failed to load project"));
-    fetchRuns()
-      .then(setRuns)
-      .catch(() => {});
-    fetchInstructions()
-      .then(setInstructions)
-      .catch(() => {});
-  }, []);
-
-  const selectRun = useCallback(async (run: RunSummary) => {
-    setSelectedRun(run);
+  const selectRun = (run: RunSummary) => {
     setView("runs");
-    setPreviewFile(null);
+    evals.select(null);
+    return inspector.selectRun(run);
+  };
+
+  // The run may be newer than the sidebar list, for example after a terminal plico eval.
+  const openRun = async (runId: string) => {
     try {
-      const evts = await fetchEvents(run.runId);
-      setEvents(evts);
+      await selectRun(await fetchRun(runId));
+      await loadRuns();
     } catch {
-      setEvents([]);
+      evals.setError(`Failed to open run ${runId}`);
     }
-  }, []);
+  };
 
-  const showArtifacts = useCallback(async () => {
-    if (!selectedRun) return;
-    setView("artifacts");
-    setPreviewFile(null);
-    try {
-      const ws = await fetchArtifactWorkspace(selectedRun.runId);
-      setWorkspace(ws);
-    } catch {
-      setWorkspace(null);
-    }
-  }, [selectedRun]);
-
-  const showEvals = useCallback(async () => {
-    setView("evals");
-    setSelectedEvalResult(null);
-    try {
-      const summary = await fetchEvalResults();
-      setEvalSummary(summary);
-    } catch {
-      setEvalSummary(null);
-    }
-  }, []);
-
-  const selectEvalRun = useCallback(async (result: EvalCaseResult) => {
-    setSelectedEvalResult(result);
-    setView("evals");
-  }, []);
-
-  const showReadiness = useCallback(async () => {
-    setView("readiness");
-    try {
-      const report = await fetchReadiness();
-      setReadinessReport(report);
-    } catch {
-      setReadinessReport(null);
-    }
-  }, []);
-
-  const showRunsOverview = useCallback(() => {
-    setView("runs");
-    setSelectedRun(null);
-    setPreviewFile(null);
-  }, []);
-
-  const showInstructions = useCallback(() => {
-    setView("instructions");
-    setSelectedRun(null);
-    setPreviewFile(null);
-  }, []);
+  const showTopLevelView = (next: View) => {
+    setView(next);
+    inspector.clear();
+  };
 
   return (
     <div
@@ -121,32 +50,32 @@ export function App() {
       }}
     >
       <Sidebar
-        project={project}
-        runs={runs}
-        selectedRun={selectedRun}
+        project={data.project}
+        runs={data.runs}
+        selectedRun={inspector.selectedRun}
         view={view}
         onSelectRun={selectRun}
-        onShowInstructions={showInstructions}
-        onShowRuns={showRunsOverview}
-        onShowArtifacts={showArtifacts}
-        onShowEvals={showEvals}
-        onShowReadiness={showReadiness}
+        onShowOverview={() => showTopLevelView("overview")}
+        onShowInstructions={() => showTopLevelView("instructions")}
+        onShowRuns={() => showTopLevelView("runs")}
+        onShowArtifacts={() => {
+          if (!inspector.selectedRun) return;
+          setView("artifacts");
+          void inspector.loadWorkspace(inspector.selectedRun.runId);
+        }}
+        onShowEvals={() => {
+          setView("evals");
+          evals.select(null);
+          evals.setError(null);
+          void evals.refresh();
+          void loadRuns();
+        }}
+        onShowReadiness={() => {
+          setView("readiness");
+          void loadReadiness();
+        }}
       />
-      <MainView
-        project={project}
-        view={view}
-        selectedRun={selectedRun}
-        events={events}
-        instructions={instructions}
-        workspace={workspace}
-        previewFile={previewFile}
-        onPreviewFile={setPreviewFile}
-        evalSummary={evalSummary}
-        selectedEvalResult={selectedEvalResult}
-        onSelectEvalRun={selectEvalRun}
-        readinessReport={readinessReport}
-        error={error}
-      />
+      <MainView view={view} data={data} inspector={inspector} evals={evals} onOpenRun={openRun} />
     </div>
   );
 }

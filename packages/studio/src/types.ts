@@ -4,6 +4,7 @@ export type {
   ArtifactWorkspace,
   ComposedInstructions,
   EvalCaseResult,
+  EvalReport,
   EvalSummary,
   LoadedProject,
   PlicoEvent,
