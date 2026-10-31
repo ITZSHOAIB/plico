@@ -60,6 +60,7 @@ const workspace: ArtifactWorkspace = {
 };
 
 const evalReport: EvalReport = {
+  schemaVersion: 1,
   total: 2,
   passed: 1,
   failed: 1,

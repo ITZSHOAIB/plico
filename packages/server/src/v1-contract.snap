@@ -1,0 +1,206 @@
+{
+  "POST /v1/runs/dry": {
+    "events": [
+      {
+        "id": "string",
+        "payload": {
+          "content": "string",
+          "fileCount": "number",
+          "length": "number",
+          "mimeType": "string",
+          "path": "string",
+          "projectName": "string",
+          "projectRoot": "string",
+          "snapshotId": "string",
+          "sources": [
+            "string"
+          ],
+          "status": "string",
+          "tools": [],
+          "workspaceId": "string"
+        },
+        "runId": "string",
+        "schemaVersion": "number",
+        "sequence": "number",
+        "timestamp": "string",
+        "type": "string"
+      }
+    ],
+    "output": "string",
+    "runId": "string",
+    "status": "string"
+  },
+  "GET /v1/project": {
+    "project": {
+      "config": {
+        "name": "string",
+        "schemaVersion": "number"
+      },
+      "configPath": "string",
+      "root": "string"
+    }
+  },
+  "GET /v1/instructions": {
+    "content": "string",
+    "sources": [
+      "string"
+    ]
+  },
+  "GET /v1/runs": [
+    {
+      "endedAt": "string",
+      "output": "string",
+      "projectName": "string",
+      "projectRoot": "string",
+      "runId": "string",
+      "startedAt": "string",
+      "status": "string"
+    }
+  ],
+  "GET /v1/runs/:id": {
+    "endedAt": "string",
+    "output": "string",
+    "projectName": "string",
+    "projectRoot": "string",
+    "runId": "string",
+    "startedAt": "string",
+    "status": "string"
+  },
+  "GET /v1/runs/:id/events": [
+    {
+      "id": "string",
+      "payload": {
+        "content": "string",
+        "fileCount": "number",
+        "length": "number",
+        "mimeType": "string",
+        "path": "string",
+        "projectName": "string",
+        "projectRoot": "string",
+        "snapshotId": "string",
+        "sources": [
+          "string"
+        ],
+        "status": "string",
+        "tools": [],
+        "workspaceId": "string"
+      },
+      "runId": "string",
+      "schemaVersion": "number",
+      "sequence": "number",
+      "timestamp": "string",
+      "type": "string"
+    }
+  ],
+  "GET /v1/runs/:id/workspace": {
+    "createdAt": "string",
+    "files": [
+      {
+        "content": "string",
+        "mimeType": "string",
+        "path": "string",
+        "version": "number"
+      }
+    ],
+    "runId": "string",
+    "snapshots": [
+      {
+        "createdAt": "string",
+        "fileCount": "number",
+        "snapshotId": "string"
+      }
+    ],
+    "workspaceId": "string"
+  },
+  "GET /v1/runs/:id/workspace/files/:path": {
+    "content": "string",
+    "mimeType": "string",
+    "path": "string",
+    "version": "number"
+  },
+  "GET /v1/runs/:id/workspace/snapshots/:id": {
+    "createdAt": "string",
+    "fileCount": "number",
+    "files": [
+      {
+        "content": "string",
+        "mimeType": "string",
+        "path": "string",
+        "version": "number"
+      }
+    ],
+    "snapshotId": "string"
+  },
+  "POST /v1/eval": {
+    "failed": "number",
+    "passed": "number",
+    "results": [
+      {
+        "description": "string",
+        "diagnostics": [
+          "string"
+        ],
+        "name": "string",
+        "output": "string",
+        "runId": "string",
+        "runStatus": "string",
+        "status": "string"
+      }
+    ],
+    "total": "number"
+  },
+  "GET /v1/eval": {
+    "evaluatedAt": "string",
+    "failed": "number",
+    "fixturesDigest": "string",
+    "passed": "number",
+    "results": [
+      {
+        "description": "string",
+        "diagnostics": [
+          "string"
+        ],
+        "name": "string",
+        "output": "string",
+        "runId": "string",
+        "runStatus": "string",
+        "status": "string"
+      }
+    ],
+    "schemaVersion": "number",
+    "total": "number"
+  },
+  "GET /v1/eval/:name": {
+    "diagnostics": [
+      "string"
+    ],
+    "name": "string",
+    "output": "string",
+    "runId": "string",
+    "runStatus": "string",
+    "status": "string"
+  },
+  "GET /v1/readiness": {
+    "diagnostics": [
+      {
+        "message": "string",
+        "path": "string",
+        "severity": "string",
+        "subsystem": "string"
+      }
+    ],
+    "projectRoot": "string",
+    "summary": {
+      "error": "number",
+      "ok": "number",
+      "warning": "number"
+    },
+    "timestamp": "string"
+  },
+  "error": {
+    "error": {
+      "code": "string",
+      "message": "string"
+    }
+  }
+}

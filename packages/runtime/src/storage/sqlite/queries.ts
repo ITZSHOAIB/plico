@@ -121,7 +121,11 @@ export function readLatestEvalReport(database: DatabaseSync): EvalReport | undef
   const row = database
     .prepare("SELECT report_json FROM eval_reports ORDER BY id DESC LIMIT 1")
     .get() as { report_json: string } | undefined;
-  return row ? (JSON.parse(row.report_json) as EvalReport) : undefined;
+  if (!row) return undefined;
+
+  // A report from another version is not readable here; the next eval run replaces it.
+  const report = JSON.parse(row.report_json) as EvalReport;
+  return report.schemaVersion === 1 ? report : undefined;
 }
 
 function rowToRunSummary(row: Record<string, unknown>): RunSummary {

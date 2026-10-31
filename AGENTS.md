@@ -44,6 +44,7 @@ Use small vertical slices:
 - Prefer simple public interfaces over broad framework abstractions.
 - Keep source files focused: one responsibility per module, roughly under 250 lines. Add commands, routes, readiness checks, and views as new modules and register them; do not grow dispatchers or `App.tsx`.
 - Shared wire types live in `@plico/contracts`; never redefine them in a consumer.
+- Wire changes follow `product/adrs/0006-wire-contract-versioning.md`. Update the snapshot in `packages/server/src/contract.test.ts` deliberately, never to silence a failure.
 - Add dependencies only when they improve developer workflow or remove real maintenance cost.
 - Keep generated projects valid through `validateProject`.
 

@@ -18,6 +18,7 @@ export interface EvalSummary {
 }
 
 export interface EvalReport extends EvalSummary {
+  schemaVersion: 1;
   evaluatedAt: string;
   /** Identifies the fixtures this report ran, so readers can detect stale results. */
   fixturesDigest: string;

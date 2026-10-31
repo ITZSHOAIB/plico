@@ -183,6 +183,30 @@ describe("artifact readiness", () => {
   });
 });
 
+describe("stored eval report versions", () => {
+  const report = { total: 0, passed: 0, failed: 0, results: [], evaluatedAt: "now" };
+
+  it("stamps new reports with a schema version", async () => {
+    const root = await scaffold({ good: passing });
+    const eventStore = store(root);
+    await runEvals(root, { eventStore });
+
+    expect((await eventStore.getLatestEvalReport())?.schemaVersion).toBe(1);
+  });
+
+  it("reads a report with an unknown schema version as absent", async () => {
+    const root = await scaffold({});
+    const eventStore = store(root);
+    await eventStore.persistEvalReport({
+      ...report,
+      schemaVersion: 2 as 1,
+      fixturesDigest: "digest",
+    });
+
+    expect(await eventStore.getLatestEvalReport()).toBeUndefined();
+  });
+});
+
 describe("read-only event store", () => {
   it("leaves no sidecar files next to a cleanly closed WAL database", async () => {
     const root = await mkdtemp(join(tmpdir(), "plico-readonly-"));

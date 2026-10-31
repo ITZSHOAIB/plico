@@ -68,6 +68,7 @@ export async function runEvals(
 
   const summary: EvalSummary = { total: results.length, passed, failed, results };
   await options.eventStore?.persistEvalReport({
+    schemaVersion: 1,
     ...summary,
     evaluatedAt: new Date().toISOString(),
     fixturesDigest,
