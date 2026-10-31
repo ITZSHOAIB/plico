@@ -1,4 +1,4 @@
-export { buildArtifactWorkspace } from "./artifacts.js";
+export { buildArtifactWorkspace, readArtifactSnapshot } from "./artifacts.js";
 export { runEvals } from "./evals/index.js";
 export { composeInstructions } from "./instructions.js";
 export { checkReadiness } from "./readiness/index.js";
@@ -9,6 +9,7 @@ export type {
   ArtifactFile,
   ArtifactFileInput,
   ArtifactSnapshot,
+  ArtifactSnapshotDetail,
   ArtifactWorkspace,
   ComposedInstructions,
   CreateSqliteEventStoreOptions,
@@ -18,6 +19,7 @@ export type {
   EvalCase,
   EvalCaseResult,
   EvalExpectation,
+  EvalReport,
   EvalSummary,
   EventStore,
   JsonSchemaSubset,

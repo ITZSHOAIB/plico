@@ -16,3 +16,7 @@ export interface EvalSummary {
   failed: number;
   results: EvalCaseResult[];
 }
+
+export interface EvalReport extends EvalSummary {
+  evaluatedAt: string;
+}

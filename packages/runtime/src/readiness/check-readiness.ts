@@ -4,6 +4,7 @@ import { checkEvals } from "./checks/evals.js";
 import { checkPersistence } from "./checks/persistence.js";
 import { checkProject } from "./checks/project.js";
 import { checkServerConfig } from "./checks/server-config.js";
+import { checkStudio } from "./checks/studio.js";
 import { checkTools } from "./checks/tools.js";
 
 export async function checkReadiness(
@@ -27,6 +28,7 @@ export async function checkReadiness(
     )),
     ...(await checkArtifacts(projectRoot)),
     ...(await checkServerConfig(projectRoot)),
+    ...(await checkStudio(options.studioPath)),
   );
 
   return summarize(projectRoot, diagnostics);

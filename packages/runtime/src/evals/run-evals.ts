@@ -60,10 +60,10 @@ export async function runEvals(
   const passed = results.filter((r) => r.status === "pass").length;
   const failed = results.filter((r) => r.status === "fail").length;
 
-  return {
-    total: results.length,
-    passed,
-    failed,
-    results,
-  };
+  const summary: EvalSummary = { total: results.length, passed, failed, results };
+  await options.eventStore?.persistEvalReport({
+    ...summary,
+    evaluatedAt: new Date().toISOString(),
+  });
+  return summary;
 }

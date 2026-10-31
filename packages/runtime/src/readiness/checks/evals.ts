@@ -28,7 +28,7 @@ export async function checkEvals(
     }
 
     if (eventStore) {
-      diagnostics.push(await describeEvalRuns(eventStore));
+      diagnostics.push(await describeEvalResults(eventStore));
     }
   } catch {
     diagnostics.push(
@@ -43,10 +43,9 @@ export async function checkEvals(
   return diagnostics;
 }
 
-async function describeEvalRuns(eventStore: EventStore): Promise<ReadinessDiagnostic> {
-  const runs = await eventStore.listRuns();
-  const evalRuns = runs.filter((r) => r.runId.startsWith("eval-"));
-  if (evalRuns.length === 0) {
+async function describeEvalResults(eventStore: EventStore): Promise<ReadinessDiagnostic> {
+  const report = await eventStore.getLatestEvalReport();
+  if (!report || report.total === 0) {
     return makeDiagnostic(
       "warning",
       "evals.results",
@@ -54,14 +53,18 @@ async function describeEvalRuns(eventStore: EventStore): Promise<ReadinessDiagno
     );
   }
 
-  const sorted = [...evalRuns].sort(
-    (a, b) => new Date(b.endedAt).getTime() - new Date(a.endedAt).getTime(),
-  );
-  const lastEval = sorted[0];
-  const passed = evalRuns.filter((r) => r.status === "completed").length;
+  if (report.failed > 0) {
+    const names = report.results.filter((r) => r.status === "fail").map((r) => r.name);
+    return makeDiagnostic(
+      "error",
+      "evals.results",
+      `${report.failed}/${report.total} eval(s) failed in the latest run: ${names.join(", ")}`,
+    );
+  }
+
   return makeDiagnostic(
     "ok",
     "evals.results",
-    `${evalRuns.length} eval run(s), ${passed} passed (last: ${lastEval?.runId ?? "none"})`,
+    `${report.passed}/${report.total} eval(s) passed (${report.evaluatedAt})`,
   );
 }

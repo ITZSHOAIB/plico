@@ -1,5 +1,5 @@
 import type { DatabaseSync } from "node:sqlite";
-import type { PlicoEvent, RunStatus, RunSummary } from "@plico/contracts";
+import type { EvalReport, PlicoEvent, RunStatus, RunSummary } from "@plico/contracts";
 import type { PersistedRun } from "../../types/index.js";
 
 export function persistRunRecord(database: DatabaseSync, run: PersistedRun): void {
@@ -103,6 +103,25 @@ export function readEvents(
     .all(runId, afterSequence ?? 0) as Array<Record<string, unknown>>;
 
   return rows.map((row) => rowToEvent(row));
+}
+
+export function persistEvalReportRecord(database: DatabaseSync, report: EvalReport): void {
+  database
+    .prepare("INSERT INTO eval_reports (evaluated_at, report_json) VALUES (?, ?)")
+    .run(report.evaluatedAt, JSON.stringify(report));
+}
+
+export function readLatestEvalReport(database: DatabaseSync): EvalReport | undefined {
+  // Read-only stores skip schema setup, so older databases may lack this table.
+  const hasTable = database
+    .prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'eval_reports'")
+    .get();
+  if (!hasTable) return undefined;
+
+  const row = database
+    .prepare("SELECT report_json FROM eval_reports ORDER BY id DESC LIMIT 1")
+    .get() as { report_json: string } | undefined;
+  return row ? (JSON.parse(row.report_json) as EvalReport) : undefined;
 }
 
 function rowToRunSummary(row: Record<string, unknown>): RunSummary {

@@ -1,5 +1,10 @@
-export type { ArtifactFile, ArtifactSnapshot, ArtifactWorkspace } from "./artifacts.js";
-export type { EvalCaseResult, EvalSummary } from "./evals.js";
+export type {
+  ArtifactFile,
+  ArtifactSnapshot,
+  ArtifactSnapshotDetail,
+  ArtifactWorkspace,
+} from "./artifacts.js";
+export type { EvalCaseResult, EvalReport, EvalSummary } from "./evals.js";
 export type { PlicoEvent, PlicoEventType } from "./events.js";
 export type { ComposedInstructions } from "./instructions.js";
 export type {

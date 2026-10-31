@@ -25,6 +25,11 @@ export function initializeSchema(database: DatabaseSync): void {
       payload_json TEXT NOT NULL,
       PRIMARY KEY (run_id, sequence)
     );
+    CREATE TABLE IF NOT EXISTS eval_reports (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      evaluated_at TEXT NOT NULL,
+      report_json TEXT NOT NULL
+    );
     CREATE INDEX IF NOT EXISTS events_run_sequence_index ON events(run_id, sequence);
     CREATE INDEX IF NOT EXISTS runs_started_at_index ON runs(started_at);
   `);
