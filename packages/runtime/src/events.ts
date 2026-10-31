@@ -9,6 +9,8 @@ export class InMemoryEventLog {
     const sequence = this.#events.length + 1;
     const event: PlicoEvent = {
       schemaVersion: 1,
+      streamType: "run",
+      streamId: this.runId,
       runId: this.runId,
       id: `evt-${String(sequence).padStart(4, "0")}`,
       sequence,

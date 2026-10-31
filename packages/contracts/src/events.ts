@@ -19,6 +19,8 @@ export type PlicoEventType =
 
 export interface PlicoEvent {
   schemaVersion: 1;
+  streamType: "run";
+  streamId: string;
   runId: string;
   id: string;
   sequence: number;

@@ -14,10 +14,13 @@ export function persistRunRecord(database: DatabaseSync, run: PersistedRun): voi
       ended_at = excluded.ended_at,
       output = excluded.output
   `);
-  const deleteEvents = database.prepare("DELETE FROM events WHERE run_id = ?");
+  const deleteEvents = database.prepare(
+    "DELETE FROM events WHERE stream_type = 'run' AND stream_id = ?",
+  );
   const insertEvent = database.prepare(`
     INSERT INTO events (
-      run_id,
+      stream_type,
+      stream_id,
       sequence,
       event_id,
       schema_version,
@@ -25,7 +28,7 @@ export function persistRunRecord(database: DatabaseSync, run: PersistedRun): voi
       timestamp,
       payload_json
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
   database.exec("BEGIN");
@@ -42,7 +45,8 @@ export function persistRunRecord(database: DatabaseSync, run: PersistedRun): voi
     deleteEvents.run(run.runId);
     for (const event of run.events) {
       insertEvent.run(
-        event.runId,
+        event.streamType,
+        event.streamId,
         event.sequence,
         event.id,
         event.schemaVersion,
@@ -94,9 +98,9 @@ export function readEvents(
   const rows = database
     .prepare(
       `
-        SELECT run_id, sequence, event_id, schema_version, type, timestamp, payload_json
+        SELECT stream_id, sequence, event_id, schema_version, type, timestamp, payload_json
         FROM events
-        WHERE run_id = ? AND sequence > ?
+        WHERE stream_type = 'run' AND stream_id = ? AND sequence > ?
         ORDER BY sequence ASC
       `,
     )
@@ -143,7 +147,9 @@ function rowToRunSummary(row: Record<string, unknown>): RunSummary {
 function rowToEvent(row: Record<string, unknown>): PlicoEvent {
   return {
     schemaVersion: 1,
-    runId: String(row.run_id),
+    streamType: "run",
+    streamId: String(row.stream_id),
+    runId: String(row.stream_id),
     id: String(row.event_id),
     sequence: Number(row.sequence),
     timestamp: String(row.timestamp),
