@@ -1,5 +1,17 @@
 # Plan 0006: Provider Runtime, App API, AG-UI, React, MCP/Memory, and Node Deployment
 
+## Execution Status (2026-10-31)
+
+Delivery now follows epics, not the phases and suggested issues below. Each GitHub issue is one epic, and each slice is one PR. The phase scope below remains reference; where order differs, the epics win.
+
+| Milestone | Epics |
+| --- | --- |
+| M1: First public release | #69 Run lifecycle, #70 Provider, #71 Threads, #72 Approvals and cancel, #73 Artifacts, #74 Studio, #75 Quickstart, #76 Release |
+| M2: Ecosystem | #77 Tools and MCP, #78 Memory, #79 AG-UI and client, #80 React kit |
+| M3: Production | #81 Node deployment and auth, #82 Production storage |
+
+See `product/audits/0003-issues-and-plan-audit.md` for the reasoning.
+
 ## Summary
 
 Plan 0006 is the first multi-phase Plico plan. Each phase should be treated as roughly one previous plan's capacity: independently testable, demoable, and shippable before the next phase starts.
