@@ -1,9 +1,19 @@
 import { constants as fsConstants } from "node:fs";
 import { access } from "node:fs/promises";
-import { join } from "node:path";
+import { createRequire } from "node:module";
+import { dirname, join } from "node:path";
 
 export function resolveDatabasePath(target: string, dbPath: string | undefined): string {
   return dbPath ?? join(target, ".plico", "plico.sqlite");
+}
+
+export function findStudioPath(): string | undefined {
+  try {
+    const require = createRequire(import.meta.url);
+    return join(dirname(require.resolve("@plico/studio/package.json")), "dist");
+  } catch {
+    return undefined;
+  }
 }
 
 export async function ensureDatabaseExists(databasePath: string): Promise<void> {

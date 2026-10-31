@@ -1,6 +1,4 @@
-import { createRequire } from "node:module";
 import { isIPv4 } from "node:net";
-import { dirname, join } from "node:path";
 import {
   lastPositional,
   parseArgs,
@@ -9,7 +7,7 @@ import {
   readStringOption,
 } from "../args.js";
 import { errorMessage } from "../errors.js";
-import { normalizeDisplayHost, resolveDatabasePath } from "../paths.js";
+import { findStudioPath, normalizeDisplayHost, resolveDatabasePath } from "../paths.js";
 
 export async function serveCommand(args: string[]): Promise<number> {
   try {
@@ -57,15 +55,14 @@ export async function serveCommand(args: string[]): Promise<number> {
 }
 
 function resolveStudioPath(): string {
-  try {
-    const require = createRequire(import.meta.url);
-    const pkgPath = require.resolve("@plico/studio/package.json");
-    return join(dirname(pkgPath), "dist");
-  } catch {
+  const studioPath = findStudioPath();
+  if (studioPath === undefined) {
     throw new Error(
       "Cannot resolve @plico/studio. Build it first with: pnpm --filter @plico/studio build",
     );
   }
+
+  return studioPath;
 }
 
 function isLoopbackHost(host: string): boolean {

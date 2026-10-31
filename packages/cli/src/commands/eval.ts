@@ -1,13 +1,20 @@
-import { runEvals } from "@plico/runtime";
-import { lastPositional, parseArgs } from "../args.js";
+import { createSqliteEventStore, runEvals } from "@plico/runtime";
+import { lastPositional, parseArgs, readStringOption } from "../args.js";
 import { errorMessage } from "../errors.js";
 import { formatEvalSummary } from "../format/eval.js";
+import { resolveDatabasePath } from "../paths.js";
 
 export async function evalCommand(args: string[]): Promise<number> {
   try {
-    const parsed = parseArgs(args, { flags: ["--json"], values: {}, rejectUnknown: true });
+    const parsed = parseArgs(args, {
+      flags: ["--json"],
+      values: { "--db": { missing: "Missing database path after --db" } },
+      rejectUnknown: true,
+    });
     const target = lastPositional(parsed, process.cwd());
-    const summary = await runEvals(target);
+    const databasePath = resolveDatabasePath(target, readStringOption(parsed, "--db"));
+    const eventStore = createSqliteEventStore({ databasePath });
+    const summary = await runEvals(target, { eventStore });
 
     if (parsed.flags.has("--json")) {
       console.log(JSON.stringify(summary));
