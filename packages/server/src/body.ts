@@ -16,7 +16,7 @@ export async function readJsonBody(request: IncomingMessage): Promise<Record<str
   }
 }
 
-export const MAX_BODY_BYTES = 1024 * 1024;
+export const MAX_BODY_BYTES: number = 1024 * 1024;
 
 async function readBody(request: IncomingMessage): Promise<string> {
   const chunks: Buffer[] = [];

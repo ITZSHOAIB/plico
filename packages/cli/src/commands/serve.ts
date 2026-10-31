@@ -13,7 +13,7 @@ import { normalizeDisplayHost, resolveDatabasePath } from "../paths.js";
 export async function serveCommand(args: string[]): Promise<number> {
   try {
     const parsed = parseArgs(args, {
-      flags: ["--studio"],
+      flags: ["--studio", "--allow-remote"],
       values: {
         "--host": { missing: "Missing host after --host" },
         "--port": { missing: "Missing port after --port", parse: parsePort },
@@ -24,6 +24,11 @@ export async function serveCommand(args: string[]): Promise<number> {
     const target = lastPositional(parsed, process.cwd());
     const host = readStringOption(parsed, "--host");
     const port = readNumberOption(parsed, "--port");
+    if (host !== undefined && !isLoopbackHost(host) && !parsed.flags.has("--allow-remote")) {
+      throw new Error(
+        `Refusing to listen on ${host}: Plico has no authentication. Pass --allow-remote to expose it.`,
+      );
+    }
     const databasePath = resolveDatabasePath(target, readStringOption(parsed, "--db"));
     const studioPath = parsed.flags.has("--studio") ? resolveStudioPath() : undefined;
 
@@ -60,4 +65,8 @@ function resolveStudioPath(): string {
       "Cannot resolve @plico/studio. Build it first with: pnpm --filter @plico/studio build",
     );
   }
+}
+
+function isLoopbackHost(host: string): boolean {
+  return host === "localhost" || host === "::1" || host === "127.0.0.1" || host.startsWith("127.");
 }

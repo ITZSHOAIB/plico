@@ -5,12 +5,13 @@ const USAGE_LINES: readonly string[] = [
   "Usage: plico events <runId> [--after <sequence>] [--db <path>] [--json] [path]",
   "Usage: plico eval [--json] [path]",
   "Usage: plico readiness [--json] [path]",
-  "Usage: plico serve [--host <host>] [--port <port>] [--db <path>] [--studio] [path]",
+  "Usage: plico serve [--host <host>] [--port <port>] [--db <path>] [--studio] [--allow-remote] [path]",
 ];
 
-export function usageCommand(): number {
+export function usageCommand(stream: "stdout" | "stderr" = "stdout"): number {
+  const write = stream === "stdout" ? console.log : console.error;
   for (const line of USAGE_LINES) {
-    console.log(line);
+    write(line);
   }
   return 0;
 }

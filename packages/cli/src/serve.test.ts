@@ -67,6 +67,7 @@ describe("serve", () => {
       "node",
       "plico",
       "serve",
+      "--allow-remote",
       "--host",
       "0.0.0.0",
       "--port",
