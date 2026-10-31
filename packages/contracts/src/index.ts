@@ -5,7 +5,7 @@ export type {
   ArtifactWorkspace,
 } from "./artifacts.js";
 export type { EvalCaseResult, EvalReport, EvalSummary } from "./evals.js";
-export type { PlicoEvent, PlicoEventType } from "./events.js";
+export type { EventStreamType, PlicoEvent, PlicoEventType } from "./events.js";
 export type { ComposedInstructions } from "./instructions.js";
 export type {
   LoadedProject,

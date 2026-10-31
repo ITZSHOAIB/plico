@@ -1,8 +1,21 @@
 import type { DatabaseSync } from "node:sqlite";
 import type { EvalReport, PlicoEvent, RunStatus, RunSummary } from "@plico/contracts";
+import { runStreamType } from "../../events.js";
 import type { PersistedRun } from "../../types/index.js";
 
+function assertRunStream(run: PersistedRun): void {
+  const misfiled = run.events.find(
+    (event) => event.streamType !== runStreamType || event.streamId !== run.runId,
+  );
+  if (misfiled) {
+    throw new Error(
+      `Event ${misfiled.id} is filed under ${misfiled.streamType} stream ${misfiled.streamId}, not run ${run.runId}.`,
+    );
+  }
+}
+
 export function persistRunRecord(database: DatabaseSync, run: PersistedRun): void {
+  assertRunStream(run);
   const insertRun = database.prepare(`
     INSERT INTO runs (run_id, project_root, project_name, status, started_at, ended_at, output)
     VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -15,7 +28,7 @@ export function persistRunRecord(database: DatabaseSync, run: PersistedRun): voi
       output = excluded.output
   `);
   const deleteEvents = database.prepare(
-    "DELETE FROM events WHERE stream_type = 'run' AND stream_id = ?",
+    "DELETE FROM events WHERE stream_type = ? AND stream_id = ?",
   );
   const insertEvent = database.prepare(`
     INSERT INTO events (
@@ -42,7 +55,7 @@ export function persistRunRecord(database: DatabaseSync, run: PersistedRun): voi
       run.endedAt,
       run.output ?? null,
     );
-    deleteEvents.run(run.runId);
+    deleteEvents.run(runStreamType, run.runId);
     for (const event of run.events) {
       insertEvent.run(
         event.streamType,
@@ -100,11 +113,11 @@ export function readEvents(
       `
         SELECT stream_id, sequence, event_id, schema_version, type, timestamp, payload_json
         FROM events
-        WHERE stream_type = 'run' AND stream_id = ? AND sequence > ?
+        WHERE stream_type = ? AND stream_id = ? AND sequence > ?
         ORDER BY sequence ASC
       `,
     )
-    .all(runId, afterSequence ?? 0) as Array<Record<string, unknown>>;
+    .all(runStreamType, runId, afterSequence ?? 0) as Array<Record<string, unknown>>;
 
   return rows.map((row) => rowToEvent(row));
 }
@@ -147,7 +160,7 @@ function rowToRunSummary(row: Record<string, unknown>): RunSummary {
 function rowToEvent(row: Record<string, unknown>): PlicoEvent {
   return {
     schemaVersion: 1,
-    streamType: "run",
+    streamType: runStreamType,
     streamId: String(row.stream_id),
     runId: String(row.stream_id),
     id: String(row.event_id),

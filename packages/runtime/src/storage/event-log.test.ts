@@ -2,6 +2,7 @@ import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
+import type { RunSummary } from "@plico/contracts";
 import { describe, expect, it } from "vitest";
 import { createSqliteEventStore, runProject } from "../index.js";
 
@@ -37,20 +38,31 @@ describe("event log streams", () => {
     }
   });
 
-  it("keeps sequence per stream and a log-wide position across streams", async () => {
+  it("counts sequence separately for each stream", async () => {
     const root = await scaffold();
-    const databasePath = join(root, "state.sqlite");
-    const eventStore = createSqliteEventStore({ databasePath });
+    const eventStore = createSqliteEventStore({ databasePath: join(root, "state.sqlite") });
     const first = await runProject(root, { script, eventStore });
     const second = await runProject(root, { script, eventStore });
 
+    expect((await eventStore.getEvents(first.runId))[0]?.sequence).toBe(1);
     expect((await eventStore.getEvents(second.runId))[0]?.sequence).toBe(1);
+  });
 
-    const rows = new DatabaseSync(databasePath, { readOnly: true })
-      .prepare("SELECT stream_id FROM events ORDER BY position ASC")
-      .all() as Array<{ stream_id: string }>;
-    const streams = rows.map((row) => row.stream_id);
-    expect(streams.lastIndexOf(first.runId)).toBeLessThan(streams.indexOf(second.runId));
+  it("refuses events filed under another stream and stores nothing", async () => {
+    const root = await scaffold();
+    const eventStore = createSqliteEventStore({ databasePath: join(root, "state.sqlite") });
+    const { runId } = await runProject(root, { script, eventStore });
+    const run = await eventStore.getRun(runId);
+    const events = await eventStore.getEvents(runId);
+    const misfiled = events.map((event) => ({ ...event, streamId: "run-other" }));
+
+    await expect(
+      eventStore.persistRun({ ...(run as RunSummary), status: "failed", events: misfiled }),
+    ).rejects.toThrow("run-other");
+
+    expect(await eventStore.getEvents("run-other")).toEqual([]);
+    expect(await eventStore.getEvents(runId)).toEqual(events);
+    expect((await eventStore.getRun(runId))?.status).toBe(run?.status);
   });
 });
 

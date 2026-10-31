@@ -1,4 +1,7 @@
+import type { EventStreamType } from "@plico/contracts";
 import type { PlicoEvent, PlicoEventType } from "./types/index.js";
+
+export const runStreamType: EventStreamType = "run";
 
 export class InMemoryEventLog {
   readonly #events: PlicoEvent[] = [];
@@ -9,7 +12,7 @@ export class InMemoryEventLog {
     const sequence = this.#events.length + 1;
     const event: PlicoEvent = {
       schemaVersion: 1,
-      streamType: "run",
+      streamType: runStreamType,
       streamId: this.runId,
       runId: this.runId,
       id: `evt-${String(sequence).padStart(4, "0")}`,

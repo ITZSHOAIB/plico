@@ -1,14 +1,14 @@
 import type { DatabaseSync } from "node:sqlite";
 
-const schemaVersion = "2";
+const sqliteSchemaVersion = "2";
 
 function assertCurrentSchema(database: DatabaseSync): void {
   const row = database.prepare("SELECT value FROM plico_meta WHERE key = 'schema_version'").get() as
     | { value: string }
     | undefined;
-  if (row && row.value !== schemaVersion) {
+  if (row && row.value !== sqliteSchemaVersion) {
     throw new Error(
-      `Database uses an older schema (${row.value}, expected ${schemaVersion}). Delete it or choose another path with --db.`,
+      `Database uses an older schema (${row.value}, expected ${sqliteSchemaVersion}). Delete it or choose another path with --db.`,
     );
   }
 }
@@ -21,6 +21,8 @@ export function initializeSchema(database: DatabaseSync): void {
     );
   `);
   assertCurrentSchema(database);
+  // `position` is the log-wide order from ADR 0007. Nothing reads it yet; it exists now so that
+  // thread streams need no second migration. It stays internal: public cursors are per stream.
   database.exec(`
     CREATE TABLE IF NOT EXISTS runs (
       run_id TEXT PRIMARY KEY,
@@ -52,5 +54,5 @@ export function initializeSchema(database: DatabaseSync): void {
   `);
   database
     .prepare("INSERT OR REPLACE INTO plico_meta(key, value) VALUES ('schema_version', ?)")
-    .run(schemaVersion);
+    .run(sqliteSchemaVersion);
 }
