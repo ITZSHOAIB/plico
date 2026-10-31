@@ -1,3 +1,4 @@
+import { join } from "node:path";
 import type { ReadinessDiagnostic, ReadinessOptions, ReadinessReport } from "../types/index.js";
 import { checkArtifacts } from "./checks/artifacts.js";
 import { checkEvals } from "./checks/evals.js";
@@ -6,6 +7,7 @@ import { checkProject } from "./checks/project.js";
 import { checkServerConfig } from "./checks/server-config.js";
 import { checkStudio } from "./checks/studio.js";
 import { checkTools } from "./checks/tools.js";
+import { openDatabase } from "./open-database.js";
 
 export async function checkReadiness(
   projectRoot: string,
@@ -18,14 +20,13 @@ export async function checkReadiness(
     return summarize(projectRoot, diagnostics);
   }
 
+  const databasePath = options.databasePath ?? join(projectRoot, ".plico", "plico.sqlite");
+  const database = openDatabase(databasePath, options.eventStore);
+
   diagnostics.push(
     ...(await checkTools(projectCheck.project)),
-    ...(await checkEvals(projectRoot, options.eventStore)),
-    ...(await checkPersistence(
-      projectRoot,
-      options.databasePath,
-      options.eventStore !== undefined,
-    )),
+    ...(await checkEvals(projectRoot, database.eventStore)),
+    ...(await checkPersistence(databasePath, database)),
     ...(await checkArtifacts(projectRoot)),
     ...(await checkServerConfig(projectRoot)),
     ...(await checkStudio(options.studioPath)),

@@ -1,56 +1,85 @@
-import { readdir } from "node:fs/promises";
+import { access } from "node:fs/promises";
 import { join } from "node:path";
-import type { EventStore, ReadinessDiagnostic } from "../../types/index.js";
+import { digestEvalFixtures, discoverEvalCases } from "../../evals/discover.js";
+import type { EvalCase, EvalReport, EventStore, ReadinessDiagnostic } from "../../types/index.js";
 import { makeDiagnostic } from "../diagnostic.js";
 
 export async function checkEvals(
   projectRoot: string,
   eventStore: EventStore | undefined,
 ): Promise<ReadinessDiagnostic[]> {
-  const diagnostics: ReadinessDiagnostic[] = [];
   const evalsDir = join(projectRoot, "evals");
 
   try {
-    const entries = await readdir(evalsDir);
-    const scriptFiles = entries.filter((e) => e.endsWith(".script.json"));
-    if (scriptFiles.length === 0) {
-      diagnostics.push(
-        makeDiagnostic(
-          "warning",
-          "evals.fixtures",
-          "No .script.json eval fixtures found. Add evals to track behavior.",
-        ),
-      );
-    } else {
-      diagnostics.push(
-        makeDiagnostic("ok", "evals.fixtures", `${scriptFiles.length} eval fixture(s) found`),
-      );
-    }
-
-    if (eventStore) {
-      diagnostics.push(await describeEvalResults(eventStore));
-    }
+    await access(evalsDir);
   } catch {
-    diagnostics.push(
+    return [
       makeDiagnostic(
         "warning",
         "evals.fixtures",
         "evals/ directory not found. Create evals/ to add eval fixtures.",
       ),
-    );
+    ];
   }
 
-  return diagnostics;
+  let cases: EvalCase[];
+  try {
+    cases = await discoverEvalCases(evalsDir);
+  } catch (error) {
+    return [makeDiagnostic("error", "evals.fixtures", (error as Error).message)];
+  }
+
+  const fixtures =
+    cases.length === 0
+      ? makeDiagnostic(
+          "warning",
+          "evals.fixtures",
+          "No .script.json eval fixtures found. Add evals to track behavior.",
+        )
+      : makeDiagnostic("ok", "evals.fixtures", `${cases.length} eval fixture(s) found`);
+
+  return eventStore
+    ? [fixtures, await readEvalResults(eventStore, await digestEvalFixtures(evalsDir))]
+    : [fixtures];
 }
 
-async function describeEvalResults(eventStore: EventStore): Promise<ReadinessDiagnostic> {
-  const report = await eventStore.getLatestEvalReport();
-  if (!report || report.total === 0) {
+async function readEvalResults(
+  eventStore: EventStore,
+  fixturesDigest: string,
+): Promise<ReadinessDiagnostic> {
+  try {
+    return describeEvalResults(await eventStore.getLatestEvalReport(), fixturesDigest);
+  } catch (error) {
+    return makeDiagnostic(
+      "error",
+      "evals.results",
+      `Could not read eval results: ${(error as Error).message}`,
+    );
+  }
+}
+
+function describeEvalResults(
+  report: EvalReport | undefined,
+  fixturesDigest: string,
+): ReadinessDiagnostic {
+  if (!report) {
     return makeDiagnostic(
       "warning",
       "evals.results",
       "No eval runs have been executed. Run plico eval to see results.",
     );
+  }
+
+  if (report.fixturesDigest !== fixturesDigest) {
+    return makeDiagnostic(
+      "warning",
+      "evals.results",
+      "Eval fixtures changed since the latest run. Run plico eval to refresh results.",
+    );
+  }
+
+  if (report.total === 0) {
+    return makeDiagnostic("warning", "evals.results", "The latest eval run found no fixtures.");
   }
 
   if (report.failed > 0) {

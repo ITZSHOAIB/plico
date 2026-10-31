@@ -15,6 +15,6 @@ export interface EventStore {
 
 export interface CreateSqliteEventStoreOptions {
   databasePath: string;
-  /** Open an existing database without creating or changing anything. */
+  /** Open an existing database without changing it. Adds no files unless it has a pending WAL. */
   readOnly?: boolean;
 }

@@ -1,5 +1,4 @@
-import { existsSync } from "node:fs";
-import { checkReadiness, createSqliteEventStore } from "@plico/runtime";
+import { checkReadiness } from "@plico/runtime";
 import { lastPositional, parseArgs, readStringOption } from "../args.js";
 import { errorMessage } from "../errors.js";
 import { formatReadinessReport } from "../format/readiness.js";
@@ -14,14 +13,7 @@ export async function readinessCommand(args: string[]): Promise<number> {
     });
     const target = lastPositional(parsed, process.cwd());
     const databasePath = resolveDatabasePath(target, readStringOption(parsed, "--db"));
-    const studioPath = findStudioPath();
-    const report = await checkReadiness(target, {
-      databasePath,
-      ...(existsSync(databasePath)
-        ? { eventStore: createSqliteEventStore({ databasePath, readOnly: true }) }
-        : {}),
-      ...(studioPath === undefined ? {} : { studioPath }),
-    });
+    const report = await checkReadiness(target, { databasePath, studioPath: findStudioPath() });
 
     if (parsed.flags.has("--json")) {
       console.log(JSON.stringify(report));

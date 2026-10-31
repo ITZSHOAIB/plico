@@ -107,6 +107,20 @@ describe("artifact reads", () => {
     expect(run.status).toBe(404);
     expect(run.body).toMatchObject({ error: { code: "run.not_found" } });
   });
+
+  it("reports a missing workspace the same way on every workspace route", async () => {
+    const baseUrl = await startProject();
+    const { body } = await getJson(`${baseUrl}/v1/runs/dry`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ script: [{ type: "assistant.output", content: "Hi" }] }),
+    });
+    const base = `${baseUrl}/v1/runs/${String(body.runId)}/workspace`;
+
+    for (const url of [base, `${base}/files/a.md`, `${base}/snapshots/one`]) {
+      expect((await getJson(url)).body).toMatchObject({ error: { code: "workspace.not_found" } });
+    }
+  });
 });
 
 describe("eval reads", () => {

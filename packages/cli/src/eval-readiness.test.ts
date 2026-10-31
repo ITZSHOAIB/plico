@@ -105,6 +105,32 @@ describe("plico readiness with eval results", () => {
     );
   });
 
+  it("reports a corrupt database as a persistence error", async () => {
+    const root = await project(passing);
+    const databasePath = join(root, "broken.sqlite");
+    await writeFile(databasePath, "x".repeat(4096));
+
+    const { exitCode, report } = await readinessJson("--db", databasePath, root);
+
+    expect(exitCode).toBe(1);
+    expect(report.diagnostics.find((d) => d.subsystem === "persistence.storage")).toMatchObject({
+      severity: "error",
+    });
+  });
+
+  it("emits JSON when the database path is a directory", async () => {
+    const root = await project(passing);
+    const databasePath = join(root, "directory.sqlite");
+    await mkdir(databasePath);
+
+    const { exitCode, report } = await readinessJson("--db", databasePath, root);
+
+    expect(exitCode).toBe(1);
+    expect(report.diagnostics.find((d) => d.subsystem === "persistence.storage")).toMatchObject({
+      severity: "error",
+    });
+  });
+
   it("does not create a database", async () => {
     const root = await project(passing);
 

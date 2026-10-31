@@ -6,7 +6,7 @@ import type {
   PlicoEvent,
 } from "./types/index.js";
 
-function writeFile(files: Map<string, ArtifactFile>, event: PlicoEvent): void {
+function applyFileWritten(files: Map<string, ArtifactFile>, event: PlicoEvent): void {
   const path = event.payload.path as string;
   files.set(path, {
     path,
@@ -34,7 +34,7 @@ export function buildArtifactWorkspace(
   const files = new Map<string, ArtifactFile>();
   const snapshots: ArtifactSnapshot[] = [];
   for (const event of events) {
-    if (event.type === "artifact.file.written") writeFile(files, event);
+    if (event.type === "artifact.file.written") applyFileWritten(files, event);
     if (event.type === "artifact.snapshot.created") snapshots.push(toSnapshot(event));
   }
 
@@ -51,13 +51,13 @@ export function readArtifactSnapshot(
   events: PlicoEvent[],
   snapshotId: string,
 ): ArtifactSnapshotDetail | undefined {
-  const files = new Map<string, ArtifactFile>();
-  for (const event of events) {
-    if (event.type === "artifact.file.written") writeFile(files, event);
-    if (event.type === "artifact.snapshot.created" && event.payload.snapshotId === snapshotId) {
-      return { ...toSnapshot(event), files: [...files.values()] };
-    }
-  }
+  const index = events.findIndex(
+    (event) =>
+      event.type === "artifact.snapshot.created" && event.payload.snapshotId === snapshotId,
+  );
+  const snapshot = events[index];
+  if (!snapshot) return undefined;
 
-  return undefined;
+  const workspace = buildArtifactWorkspace(snapshot.runId, events.slice(0, index + 1));
+  return { ...toSnapshot(snapshot), files: workspace?.files ?? [] };
 }

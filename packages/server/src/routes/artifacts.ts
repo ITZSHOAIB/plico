@@ -1,4 +1,4 @@
-import { buildArtifactWorkspace, readArtifactSnapshot } from "@plico/runtime";
+import { buildArtifactWorkspace, type PlicoEvent, readArtifactSnapshot } from "@plico/runtime";
 import { HttpError } from "../errors.js";
 import { sendJson } from "../responses.js";
 import type { Route, RouteContext } from "./types.js";
@@ -12,14 +12,17 @@ async function readRunEvents({ eventStore }: RouteContext, runId: string) {
   return eventStore.getEvents(runId);
 }
 
-async function readWorkspace(context: RouteContext, runId: string) {
-  const events = await readRunEvents(context, runId);
+function requireWorkspace(runId: string, events: PlicoEvent[]) {
   const workspace = buildArtifactWorkspace(runId, events);
   if (!workspace) {
     throw new HttpError(404, "workspace.not_found", `No artifact workspace for run: ${runId}`);
   }
 
   return workspace;
+}
+
+async function readWorkspace(context: RouteContext, runId: string) {
+  return requireWorkspace(runId, await readRunEvents(context, runId));
 }
 
 export const artifactRoutes: Route[] = [
@@ -49,7 +52,9 @@ export const artifactRoutes: Route[] = [
     pattern: /^\/v1\/runs\/([^/]+)\/workspace\/snapshots\/([^/]+)$/,
     handler: async (context) => {
       const [runId = "", snapshotId = ""] = context.params;
-      const snapshot = readArtifactSnapshot(await readRunEvents(context, runId), snapshotId);
+      const events = await readRunEvents(context, runId);
+      requireWorkspace(runId, events);
+      const snapshot = readArtifactSnapshot(events, snapshotId);
       if (!snapshot) {
         throw new HttpError(404, "artifact.not_found", `Unknown artifact snapshot: ${snapshotId}`);
       }

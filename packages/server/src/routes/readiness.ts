@@ -7,10 +7,7 @@ export const readinessRoutes: Route[] = [
     method: "GET",
     pattern: /^\/v1\/readiness$/,
     handler: async ({ projectRoot, eventStore, studioPath, response }) => {
-      const report = await checkReadiness(projectRoot, {
-        eventStore,
-        ...(studioPath === undefined ? {} : { studioPath }),
-      });
+      const report = await checkReadiness(projectRoot, { eventStore, studioPath });
       sendJson(response, 200, report);
     },
   },

@@ -1,6 +1,7 @@
-import { mkdirSync } from "node:fs";
+import { existsSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { DatabaseSync } from "node:sqlite";
+import { pathToFileURL } from "node:url";
 import type { EvalReport, PlicoEvent, RunSummary } from "@plico/contracts";
 import type { CreateSqliteEventStoreOptions, EventStore, PersistedRun } from "../../types/index.js";
 import {
@@ -18,7 +19,9 @@ export function createSqliteEventStore({
   readOnly = false,
 }: CreateSqliteEventStoreOptions): EventStore {
   if (!readOnly) mkdirSyncParent(databasePath);
-  const database = new DatabaseSync(databasePath, { readOnly });
+  const database = new DatabaseSync(readOnly ? readOnlySource(databasePath) : databasePath, {
+    readOnly,
+  });
   database.exec("PRAGMA busy_timeout = 5000;");
   if (!readOnly) {
     database.exec("PRAGMA journal_mode = WAL;");
@@ -48,6 +51,16 @@ export function createSqliteEventStore({
       return readLatestEvalReport(database);
     },
   };
+}
+
+// A plain read-only open of a WAL database creates -shm and -wal files. Immutable mode
+// avoids them but ignores WAL content, so it is only safe when no -wal file exists.
+function readOnlySource(databasePath: string): string | URL {
+  if (existsSync(`${databasePath}-wal`)) return databasePath;
+
+  const url = pathToFileURL(databasePath);
+  url.searchParams.set("immutable", "1");
+  return url;
 }
 
 function mkdirSyncParent(databasePath: string): void {

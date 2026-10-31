@@ -1,7 +1,7 @@
 import { join } from "node:path";
 import { runProject } from "../run/index.js";
 import type { EvalCaseResult, EvalSummary, RunEvalsOptions } from "../types/index.js";
-import { discoverEvalCases } from "./discover.js";
+import { digestEvalFixtures, discoverEvalCases } from "./discover.js";
 
 export async function runEvals(
   projectRoot: string,
@@ -9,6 +9,7 @@ export async function runEvals(
 ): Promise<EvalSummary> {
   const evalsDir = join(projectRoot, "evals");
   const cases = await discoverEvalCases(evalsDir);
+  const fixturesDigest = await digestEvalFixtures(evalsDir);
 
   const results: EvalCaseResult[] = [];
 
@@ -27,6 +28,11 @@ export async function runEvals(
     if (evalCase.expect?.status && result.status !== evalCase.expect.status) {
       passed = false;
       diagnostics.push(`Expected status "${evalCase.expect.status}" but got "${result.status}"`);
+    }
+
+    if (!evalCase.expect?.status && result.status === "failed") {
+      passed = false;
+      diagnostics.push('Run ended with status "failed"');
     }
 
     if (evalCase.expect?.outputContains) {
@@ -64,6 +70,7 @@ export async function runEvals(
   await options.eventStore?.persistEvalReport({
     ...summary,
     evaluatedAt: new Date().toISOString(),
+    fixturesDigest,
   });
   return summary;
 }

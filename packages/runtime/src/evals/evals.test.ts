@@ -118,6 +118,7 @@ describe("read-only event store", () => {
         failed: 0,
         results: [],
         evaluatedAt: "now",
+        fixturesDigest: "digest",
       }),
     ).rejects.toThrow();
   });
