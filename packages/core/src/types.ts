@@ -1,3 +1,11 @@
+export type {
+  LoadedProject,
+  ProjectConfig,
+  ValidationIssue,
+  ValidationResult,
+  ValidationSeverity,
+} from "@plico/contracts";
+
 export type ProjectDirectoryRole = keyof ProjectLayoutDirectories;
 
 export interface ProjectLayoutDirectories {
@@ -24,33 +32,4 @@ export interface ProjectPaths {
   configFile: string;
   agentFile: string;
   directories: Record<ProjectDirectoryRole, string>;
-}
-
-export type ValidationSeverity = "error" | "warning";
-
-export interface ValidationIssue {
-  path: string;
-  message: string;
-  severity: ValidationSeverity;
-}
-
-export interface ProjectConfig {
-  schemaVersion: number;
-  name: string;
-  description?: string;
-  template?: string;
-}
-
-export interface LoadedProject {
-  root: string;
-  configPath: string;
-  config: ProjectConfig;
-}
-
-export interface ValidationResult {
-  ok: boolean;
-  issues: ValidationIssue[];
-  errors: ValidationIssue[];
-  warnings: ValidationIssue[];
-  project?: LoadedProject;
 }

@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
     "build": "vite build",
     "dev": "vite"
   },
@@ -12,6 +13,7 @@
     "react-dom": "^19.1.0"
   },
   "devDependencies": {
+    "@plico/contracts": "workspace:*",
     "@types/react": "^19.1.2",
     "@types/react-dom": "^19.1.2",
     "@vitejs/plugin-react": "^4.4.1",

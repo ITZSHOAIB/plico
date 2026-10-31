@@ -10,6 +10,7 @@ export default defineConfig({
       "@plico/core": resolve(rootDir, "packages/core/src/index.ts"),
       "@plico/cli": resolve(rootDir, "packages/cli/src/index.ts"),
       "@plico/runtime": resolve(rootDir, "packages/runtime/src/index.ts"),
+      "@plico/server": resolve(rootDir, "packages/server/src/index.ts"),
     },
   },
   test: {

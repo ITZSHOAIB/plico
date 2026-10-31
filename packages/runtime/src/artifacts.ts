@@ -1,4 +1,4 @@
-import type { ArtifactWorkspace, PlicoEvent } from "./types.js";
+import type { ArtifactWorkspace, PlicoEvent } from "./types/index.js";
 
 export function buildArtifactWorkspace(
   _runId: string,

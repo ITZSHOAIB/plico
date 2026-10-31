@@ -1,4 +1,5 @@
-import type { JsonSchemaSubset } from "./types.js";
+import { isRecord } from "../guards.js";
+import type { JsonSchemaSubset } from "../types/index.js";
 
 export function validateJsonSchemaSubset(
   value: unknown,
@@ -108,8 +109,4 @@ function validateArray(value: unknown, schema: JsonSchemaSubset): string | undef
   }
 
   return undefined;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
 }

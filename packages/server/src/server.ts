@@ -1,6 +1,6 @@
 import { createServer, type Server } from "node:http";
 import { createSqliteEventStore } from "@plico/runtime";
-import { handleRequest } from "./routes.js";
+import { handleRequest } from "./routes/index.js";
 import { serveStaticFile } from "./serve-static.js";
 import type { CreatePlicoServerOptions, PlicoServer, ServePlicoOptions } from "./types.js";
 

@@ -1,10 +1,10 @@
 export { buildArtifactWorkspace } from "./artifacts.js";
-export { runEvals } from "./evals.js";
+export { runEvals } from "./evals/index.js";
 export { composeInstructions } from "./instructions.js";
-export { checkReadiness } from "./readiness.js";
-export { runProject } from "./run.js";
-export { createSqliteEventStore } from "./sqlite-store.js";
-export { discoverTools } from "./tools.js";
+export { checkReadiness } from "./readiness/index.js";
+export { runProject } from "./run/index.js";
+export { createSqliteEventStore } from "./storage/index.js";
+export { discoverTools } from "./tools/index.js";
 export type {
   ArtifactFile,
   ArtifactFileInput,
@@ -38,4 +38,4 @@ export type {
   RunStatus,
   RunSummary,
   ToolApprovalPolicy,
-} from "./types.js";
+} from "./types/index.js";

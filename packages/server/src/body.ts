@@ -16,10 +16,18 @@ export async function readJsonBody(request: IncomingMessage): Promise<Record<str
   }
 }
 
+export const MAX_BODY_BYTES: number = 1024 * 1024;
+
 async function readBody(request: IncomingMessage): Promise<string> {
   const chunks: Buffer[] = [];
+  let size = 0;
   for await (const chunk of request) {
-    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+    size += buffer.length;
+    if (size > MAX_BODY_BYTES) {
+      throw new HttpError(413, "request.too_large", "Request body is too large.");
+    }
+    chunks.push(buffer);
   }
 
   return Buffer.concat(chunks).toString("utf8");

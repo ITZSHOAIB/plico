@@ -1,0 +1,24 @@
+{
+  "name": "@plico/contracts",
+  "version": "0.0.0",
+  "description": "Types-only shared contracts (events, runs, artifacts, evals, readiness) for Plico packages",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "build": "tsc -p tsconfig.build.json"
+  },
+  "engines": {
+    "node": ">=22.13.0"
+  }
+}

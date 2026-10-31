@@ -22,11 +22,17 @@
   ],
   "dependencies": {
     "@clack/prompts": "^1.6.0",
-    "@plico/core": "workspace:*",
-    "@plico/runtime": "workspace:*"
+    "@plico/core": "workspace:*"
   },
   "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
     "build": "tsc -p tsconfig.build.json",
     "test": "vitest run"
+  },
+  "devDependencies": {
+    "@plico/runtime": "workspace:*"
+  },
+  "engines": {
+    "node": ">=22.13.0"
   }
 }

@@ -14,10 +14,16 @@
     "dist"
   ],
   "dependencies": {
-    "@plico/core": "workspace:*"
+    "@plico/contracts": "workspace:*",
+    "@plico/core": "workspace:*",
+    "typescript": "^6.0.3"
   },
   "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
     "build": "tsc -p tsconfig.build.json",
     "test": "vitest run"
+  },
+  "engines": {
+    "node": ">=22.13.0"
   }
 }

@@ -11,7 +11,7 @@ Phase one is deliberately narrow: scaffold and validate Plico projects.
 - Build on `pnpm`, ESM-only TypeScript, `tsc`, and Vitest.
 - Keep `plico.config.ts` as the project anchor.
 - Required project files/directories are `agent.md`, `skills/`, `tools/`, `evals/`, `artifacts/`, and `memory/`.
-- Current packages are `@plico/core`, `@plico/cli`, `@plico/server`, and `create-plico`.
+- Current packages are `@plico/contracts` (types only), `@plico/core`, `@plico/runtime`, `@plico/server`, `@plico/cli`, `@plico/studio`, and `create-plico`. Dependency direction: contracts <- core <- runtime <- server <- cli; studio depends on contracts only.
 - `@plico/core` owns `loadProject(root)` and `validateProject(root)`.
 - `@plico/cli` currently exposes `plico validate [path]`, `plico run --dry`, `plico runs`, `plico events`, and `plico serve`.
 - `@plico/server` owns the thin native HTTP API over the runtime and event store.
@@ -42,6 +42,8 @@ Use small vertical slices:
 - Preserve noninteractive CLI paths for scripts; interactive prompts are a fallback or enhancement.
 - Keep package boundaries clear: core has contracts, CLI has command behavior, create package writes scaffolds.
 - Prefer simple public interfaces over broad framework abstractions.
+- Keep source files focused: one responsibility per module, roughly under 250 lines. Add commands, routes, readiness checks, and views as new modules and register them; do not grow dispatchers or `App.tsx`.
+- Shared wire types live in `@plico/contracts`; never redefine them in a consumer.
 - Add dependencies only when they improve developer workflow or remove real maintenance cost.
 - Keep generated projects valid through `validateProject`.
 
@@ -51,5 +53,6 @@ Run the narrowest useful check first:
 
 - `pnpm exec vitest run <test files>` for focused behavior.
 - `pnpm --filter <package> build` for changed packages.
+- `pnpm check` runs lint, build, typecheck, and test (the CI gate). Build before typecheck: packages resolve each other through `dist`.
 - `pnpm test` or root build only when cross-package behavior changed.
 - Before raising a PR, all relevant tests must pass.

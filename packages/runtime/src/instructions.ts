@@ -1,7 +1,7 @@
 import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { getProjectPaths, getProjectRelativePaths, type LoadedProject } from "@plico/core";
-import type { ComposedInstructions } from "./types.js";
+import type { ComposedInstructions } from "./types/index.js";
 
 export async function composeInstructions(project: LoadedProject): Promise<ComposedInstructions> {
   const relativePaths = getProjectRelativePaths();
