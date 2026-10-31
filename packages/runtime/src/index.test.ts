@@ -45,6 +45,21 @@ async function writeValidProject(root: string) {
   return loadProject(root);
 }
 
+async function symlinkOrSkip(
+  context: { skip: () => void },
+  target: string,
+  path: string,
+): Promise<void> {
+  try {
+    await symlink(target, path);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "EPERM") {
+      context.skip();
+    }
+    throw error;
+  }
+}
+
 describe("runProject", () => {
   it("completes a deterministic provider-free dry run for a valid project", async () => {
     const root = await mkdtemp(join(tmpdir(), "plico-runtime-"));
@@ -118,10 +133,10 @@ describe("runProject", () => {
     });
   });
 
-  it("records runtime failures as error and terminal failed events", async () => {
+  it("records runtime failures as error and terminal failed events", async (context) => {
     const root = await mkdtemp(join(tmpdir(), "plico-runtime-"));
     await writeValidProject(root);
-    await symlink(join(root, "missing.md"), join(root, "skills", "broken.md"));
+    await symlinkOrSkip(context, join(root, "missing.md"), join(root, "skills", "broken.md"));
 
     const result = await runProject(root);
 
@@ -483,10 +498,10 @@ describe("runProject", () => {
     expect(first.runId).not.toBe(second.runId);
   });
 
-  it("persists a failed dry run and reads back its terminal events after reopening", async () => {
+  it("persists a failed dry run and reads back its terminal events after reopening", async (context) => {
     const root = await mkdtemp(join(tmpdir(), "plico-runtime-"));
     await writeValidProject(root);
-    await symlink(join(root, "missing.md"), join(root, "skills", "broken.md"));
+    await symlinkOrSkip(context, join(root, "missing.md"), join(root, "skills", "broken.md"));
 
     const databasePath = join(root, ".plico", "plico.sqlite");
     const eventStore = createSqliteEventStore({ databasePath });
@@ -1036,10 +1051,7 @@ describe("runProject", () => {
     const root = await mkdtemp(join(tmpdir(), "plico-runtime-"));
     await writeValidProject(root);
 
-    const result = await runProject(root, {
-      // @ts-expect-error - intentionally testing missing provider config
-      provider: undefined,
-    });
+    const result = await runProject(root, { ...({ provider: undefined } as object) });
 
     expect(result.status).toBe("completed");
     expect(result.output).toBe("Dry run complete for Internal Ops Agent.");
@@ -1202,7 +1214,7 @@ describe("runEvals", () => {
       runStatus: "completed",
       output: "Hello from eval",
     });
-    expect(summary.results[0].runId).toContain("eval-passing-eval-");
+    expect(summary.results[0]?.runId).toContain("eval-passing-eval-");
   });
 
   it("reports failure when expect.status does not match", async () => {
@@ -1231,8 +1243,8 @@ describe("runEvals", () => {
       status: "fail",
       runStatus: "completed",
     });
-    expect(summary.results[0].diagnostics).toBeDefined();
-    expect(summary.results[0].diagnostics?.[0]).toContain('Expected status "failed"');
+    expect(summary.results[0]?.diagnostics).toBeDefined();
+    expect(summary.results[0]?.diagnostics?.[0]).toContain('Expected status "failed"');
   });
 
   it("reports failure when expect.outputContains does not match", async () => {
@@ -1255,7 +1267,7 @@ describe("runEvals", () => {
     expect(summary.total).toBe(1);
     expect(summary.passed).toBe(0);
     expect(summary.failed).toBe(1);
-    expect(summary.results[0].diagnostics?.[0]).toContain('Expected output to contain "Goodbye"');
+    expect(summary.results[0]?.diagnostics?.[0]).toContain('Expected output to contain "Goodbye"');
   });
 
   it("returns empty summary when evals directory has no .script.json files", async () => {
@@ -1293,8 +1305,8 @@ describe("runEvals", () => {
 
     const runs = await eventStore.listRuns();
     expect(runs).toHaveLength(1);
-    expect(runs[0].runId).toContain("eval-persisted-eval-");
-    expect(runs[0].status).toBe("completed");
+    expect(runs[0]?.runId).toContain("eval-persisted-eval-");
+    expect(runs[0]?.status).toBe("completed");
   });
 
   it("runs multiple eval cases in deterministic sorted order", async () => {
@@ -1322,8 +1334,8 @@ describe("runEvals", () => {
     const summary = await runEvals(root);
 
     expect(summary.total).toBe(2);
-    expect(summary.results[0].name).toBe("first-eval");
-    expect(summary.results[1].name).toBe("second-eval");
+    expect(summary.results[0]?.name).toBe("first-eval");
+    expect(summary.results[1]?.name).toBe("second-eval");
   });
 });
 

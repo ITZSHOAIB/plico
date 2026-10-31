@@ -17,6 +17,7 @@
     "@plico/core": "workspace:*"
   },
   "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
     "build": "tsc -p tsconfig.build.json",
     "test": "vitest run"
   }
