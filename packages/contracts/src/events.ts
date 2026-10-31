@@ -17,8 +17,14 @@ export type PlicoEventType =
   | "run.failed"
   | "run.error";
 
+export type EventStreamType = "run";
+
 export interface PlicoEvent {
   schemaVersion: 1;
+  streamType: EventStreamType;
+  /** Canonical location in the log. */
+  streamId: string;
+  /** Always equals `streamId` on run streams; kept so run consumers need no stream handling. */
   runId: string;
   id: string;
   sequence: number;

@@ -26,6 +26,8 @@ const run: RunSummary = {
 function event(sequence: number, type: PlicoEvent["type"], payload = {}): PlicoEvent {
   return {
     schemaVersion: 1,
+    streamType: "run",
+    streamId: run.runId,
     runId: run.runId,
     id: `event-${sequence}`,
     sequence,

@@ -22,6 +22,8 @@
         "runId": "string",
         "schemaVersion": "number",
         "sequence": "number",
+        "streamId": "string",
+        "streamType": "string",
         "timestamp": "string",
         "type": "string"
       }
@@ -88,6 +90,8 @@
       "runId": "string",
       "schemaVersion": "number",
       "sequence": "number",
+      "streamId": "string",
+      "streamType": "string",
       "timestamp": "string",
       "type": "string"
     }
