@@ -23,7 +23,7 @@ Short path forms used below:
 
 ## 1. Key facts
 
-1. Only two sources name approval events: the code (`approval.required`) and Plan 0006 (`approval.requested`, `approval.approved`, `approval.rejected`). The approvals epic #72 names no events. The PRD and ADRs name no approval events.
+1. Only two sources originate approval event names: the code (`approval.required`) and Plan 0006 (`approval.requested`, `approval.approved`, `approval.rejected`). #69 and `audit-0003:103` only repeat the first two. The approvals epic #72 names no events. The PRD and ADRs name no approval events.
 2. The rename is the smallest disagreement. The larger ones are the waiting status name, whether `blocked` survives beside it, and what event marks entering or leaving a pause. No source names that event.
 3. "Resume" has two meanings. In the PRD and ADRs it always means stream resume, a client reconnecting to a stream. Only Plan 0006, #72, closed #41 and audit 0003 use it for resuming a run.
 4. The sources say blocked is terminal for Plans 0003 to 0005 and the code. Plan 0006 and #72 want a resumable pause. Plan 0006 also keeps dry-run blocking, so two approval outcomes may coexist. The PRD does not address it.
@@ -89,7 +89,7 @@ The PRD and ADRs 0002, 0003 and 0006 name no individual event types. They set ru
 
 - `prd:134` and `adr-0002:5`: the native event model is a versioned public contract.
 - `prd:136` and `prd:190`: Plico has "terminal events", not enumerated.
-- `prd:180`: minor changes should be additive.
+- `prd:180`: minor changes should be additive, and "migrations should be provided for breaking storage/project changes".
 - `adr-0002:16`: approval records are projections of the log, not separate histories.
 - `adr-0003:5` and `prd:175`: a runtime policy engine decides approvals.
 - `adr-0006:16`: "Removing or renaming a field, or changing its type or meaning, is breaking".
@@ -186,7 +186,7 @@ These stay unless the owner wants the wording changed:
 | SSE has no waiting behaviour | Only listed statuses end the stream (`stream.ts:13,72`). An unlisted `waiting` status keeps it open and polling |
 | `run.error` closes SSE early | `stream.ts:10`, test `server/index.test.ts:554`, noted in #86 |
 | `RunStatus` values are read from storage unchecked | `queries.ts:153`. Event types too `queries.ts:169` |
-| Stored rows keep the old name | Nothing rewrites rows. `rowToEvent` casts the type (`queries.ts:169`). SQLite schema is `"2"` and a mismatch throws "Delete it or choose another path" (`schema.ts:3,9-12`). Events carry `schemaVersion: 1` (`contracts/events.ts:23`). #69 excludes old-database migration, and #86 prefers the migrator first |
+| Stored rows keep the old name | Nothing rewrites rows. `rowToEvent` casts the type (`queries.ts:169`). SQLite schema is `"2"` and a mismatch throws "Delete it or choose another path" (`schema.ts:3,9-12`). Events carry `schemaVersion: 1` (`contracts/events.ts:23`). `prd:180` asks for migrations on breaking storage changes, while #69 excludes old-database migration. #86 prefers the migrator first |
 | Rejected outcome has no status | `plan-0006:160` asks for "a clear terminal result". No source says which status or terminal event |
 | Max steps has no outcome | `plan-0006:101` stops on max steps, but `provider.ts:133` returns "Maximum steps reached" and the run ends `run.completed` |
 
@@ -238,7 +238,7 @@ Durability differs too. #72 and closed #41 require surviving a restart. Plan 000
 | 5 | Is `run.error` terminal | Yes: `stream.ts:10` | Error then terminal failed: `plan-0003:76` |
 | 6 | Terminal set size | Four events: `stream.ts:6-11` | Three statuses: `contracts/runs.ts:4`, `plan-0005:55` |
 | 7 | Memory reads as events | Writes only: `plan-0006:235`, closed #45 | Reads and writes: #78 |
-| 8 | Rename vs additive rule | Additive unless unavoidable: `plan-0006:104`, `prd:180` | Rename requested: #69. Free before publish: `adr-0006:5`, #86 |
+| 8 | Rename vs additive rule | Additive unless a version bump is unavoidable: `plan-0006:104`. Additive minor changes, with migrations for breaking storage changes: `prd:180` | Rename requested and old-database migration out of scope: #69. Free before publish: `adr-0006:5`, #86 |
 | 9 | Approval records | Projections of the log: `adr-0002:16` | Separate `approvals` table: stale branch, section 6 |
 
 ## 6. Design-reference branches (not on `main`)
