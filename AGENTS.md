@@ -13,7 +13,7 @@ Phase one is deliberately narrow: scaffold and validate Plico projects.
 - Required project files/directories are `agent.md`, `skills/`, `tools/`, `evals/`, `artifacts/`, and `memory/`.
 - Current packages are `@plico/contracts` (types only), `@plico/core`, `@plico/runtime`, `@plico/server`, `@plico/cli`, `@plico/studio`, and `create-plico`. Dependency direction: contracts <- core <- runtime <- server <- cli; studio depends on contracts only.
 - `@plico/core` owns `loadProject(root)` and `validateProject(root)`.
-- `@plico/cli` currently exposes `plico validate [path]`, `plico run --dry`, `plico runs`, `plico events`, and `plico serve`.
+- `@plico/cli` currently exposes `plico validate [path]`, `plico run --dry`, `plico runs`, `plico events`, `plico eval`, `plico readiness`, and `plico serve`.
 - `@plico/server` owns the thin native HTTP API over the runtime and event store.
 - `create-plico` creates the internal-ops pilot scaffold.
 

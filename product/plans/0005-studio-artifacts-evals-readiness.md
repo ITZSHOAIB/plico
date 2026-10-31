@@ -1,5 +1,9 @@
 # Plan 0005: Studio Workbench, Artifacts, Native Streams, Trace Evals, and Readiness
 
+## Status
+
+Complete. Live following of active runs is not part of this slice: events persist at run end, and streaming during execution belongs to the runtime work tracked in #69. Artifact diffs and export remain deferred (#73).
+
 ## Summary
 
 Plan 0005 builds the first visible local workbench slice on top of the runtime, durable event log, and native HTTP API completed in Plan 0004.
@@ -69,7 +73,7 @@ Extend `@plico/cli`:
 
 - `plico serve [--studio] [--host <host>] [--port <port>] [--db <file>] [path]`
 - `plico eval [--json] [--db <file>] [path]`
-- `plico readiness [--json] [path]`
+- `plico readiness [--json] [--db <file>] [path]`
 
 `plico serve --studio` should serve the bundled Studio and API together. If `--studio` is omitted, existing API serving behavior should remain usable.
 
