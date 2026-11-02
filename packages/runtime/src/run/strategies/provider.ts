@@ -1,8 +1,9 @@
 import type { RunContext } from "../../engine/index.js";
-import { RuntimeDiagnosticError, RunWaitingError } from "../../errors.js";
+import { RuntimeDiagnosticError } from "../../errors.js";
 import type { InMemoryEventLog } from "../../events.js";
 import { validateJsonSchemaSubset } from "../../tools/schema.js";
 import type { DeclaredTool, ModelProvider, ModelRequest } from "../../types/index.js";
+import { awaitApproval } from "./approval.js";
 
 export async function runProviderBackedRun(
   ctx: RunContext,
@@ -104,7 +105,7 @@ export async function runProviderBackedRun(
           toolName: tool.name,
           ...(output === undefined ? {} : { output }),
         });
-        throw new RunWaitingError(output);
+        await awaitApproval(ctx, requestId, tool.name, output);
       }
 
       let result: unknown;

@@ -37,6 +37,20 @@ const migrations: ReadonlyArray<{ from: number; to: number; sql: string }> = [
     );
   `,
   },
+  {
+    from: 5,
+    to: 6,
+    sql: `
+    CREATE TABLE engine_waits (
+      run_id TEXT NOT NULL, name TEXT NOT NULL, deadline INTEGER, outcome_json TEXT,
+      PRIMARY KEY (run_id, name)
+    );
+    CREATE TABLE engine_signals (
+      run_id TEXT NOT NULL, name TEXT NOT NULL, value_json TEXT NOT NULL,
+      PRIMARY KEY (run_id, name)
+    );
+  `,
+  },
 ];
 
 function readSchemaVersion(

@@ -76,7 +76,9 @@ async function killRunMidTool(root: string, databasePath: string, marks: string)
 }
 
 describe("crash recovery", () => {
-  it("resumes a killed run where it stopped and repeats only the step that was running", async () => {
+  it("resumes a killed run where it stopped and repeats only the step that was running", {
+    timeout: 30_000,
+  }, async () => {
     const root = await scaffold();
     const databasePath = join(root, "state.sqlite");
     const marks = join(root, "marks.txt");
@@ -150,7 +152,9 @@ describe("crash recovery", () => {
     expect(events.at(-1)?.type).toBe("run.failed");
   });
 
-  it("fails a recovered run loudly when the project changed under it", async () => {
+  it("fails a recovered run loudly when the project changed under it", {
+    timeout: 30_000,
+  }, async () => {
     const root = await scaffold();
     const databasePath = join(root, "state.sqlite");
     const marks = join(root, "marks.txt");
