@@ -366,14 +366,14 @@ describe("runProject", () => {
       script: [{ type: "tool.call", toolName: "delete_ticket", arguments: { ticketId: "TCK-1" } }],
     });
 
-    expect(result.status).toBe("blocked");
+    expect(result.status).toBe("waiting");
     expect(result.events.map((event) => event.type)).toEqual([
       "run.started",
       "instructions.composed",
       "tools.discovered",
       "tool.call",
-      "approval.required",
-      "run.blocked",
+      "approval.requested",
+      "run.waiting",
     ]);
     expect(result.events[4]?.payload).toMatchObject({
       toolName: "delete_ticket",
@@ -565,7 +565,7 @@ describe("runProject", () => {
     ]);
   });
 
-  it("persists a blocked dry run and replays the approval sequence after reopening", async () => {
+  it("persists a waiting dry run and replays the approval sequence after reopening", async () => {
     const root = await mkdtemp(join(tmpdir(), "plico-runtime-"));
     await writeValidProject(root);
     await writeFile(
@@ -600,29 +600,29 @@ describe("runProject", () => {
       script: [{ type: "tool.call", toolName: "delete_ticket", arguments: { ticketId: "TCK-1" } }],
     });
 
-    expect(result.status).toBe("blocked");
+    expect(result.status).toBe("waiting");
     expect(result.events.map((event) => event.type)).toEqual([
       "run.started",
       "instructions.composed",
       "tools.discovered",
       "tool.call",
-      "approval.required",
-      "run.blocked",
+      "approval.requested",
+      "run.waiting",
     ]);
 
     const reopenedStore = createSqliteEventStore({ databasePath });
     expect(await reopenedStore.getRun("run-test-003")).toMatchObject({
       runId: "run-test-003",
-      status: "blocked",
+      status: "waiting",
     });
     expect(await reopenedStore.getEvents("run-test-003", { afterSequence: 4 })).toEqual([
       expect.objectContaining({
         sequence: 5,
-        type: "approval.required",
+        type: "approval.requested",
       }),
       expect.objectContaining({
         sequence: 6,
-        type: "run.blocked",
+        type: "run.waiting",
       }),
     ]);
   });
@@ -946,7 +946,7 @@ describe("runProject", () => {
       message: "Delete ticket",
     });
 
-    expect(result.status).toBe("blocked");
+    expect(result.status).toBe("waiting");
     expect(result.events.map((event) => event.type)).toEqual([
       "run.started",
       "instructions.composed",
@@ -955,8 +955,8 @@ describe("runProject", () => {
       "model.request",
       "model.response",
       "tool.call",
-      "approval.required",
-      "run.blocked",
+      "approval.requested",
+      "run.waiting",
     ]);
   });
 
@@ -1210,6 +1210,36 @@ describe("discoverTools", () => {
 });
 
 describe("runEvals", () => {
+  it("fails waiting runs by default but accepts an explicit waiting expectation", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-evals-"));
+    await writeValidProject(root);
+    await writeFile(
+      join(root, "tools", "gated.tool.ts"),
+      `export default {
+      name: "gated", description: "Needs approval",
+      inputSchema: { type: "object", properties: {}, additionalProperties: false },
+      capabilities: [], approval: { required: true }, handler: async () => ({})
+    };`,
+    );
+    const script = [{ type: "tool.call", toolName: "gated", arguments: {} }];
+    await writeFile(
+      join(root, "evals", "default.script.json"),
+      JSON.stringify({ name: "default", script }),
+    );
+    await writeFile(
+      join(root, "evals", "expected.script.json"),
+      JSON.stringify({ name: "expected", script, expect: { status: "waiting" } }),
+    );
+
+    const result = await runEvals(root);
+    expect(result.results).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: "default", status: "fail", runStatus: "waiting" }),
+        expect.objectContaining({ name: "expected", status: "pass", runStatus: "waiting" }),
+      ]),
+    );
+  });
+
   it("discovers and runs .script.json eval cases, returning pass/fail summaries", async () => {
     const root = await mkdtemp(join(tmpdir(), "plico-evals-"));
     await writeValidProject(root);

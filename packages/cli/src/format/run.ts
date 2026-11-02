@@ -46,13 +46,13 @@ export function formatRunResult(target: string, result: RunResult): string[] {
       continue;
     }
 
-    if (event.type === "approval.required") {
-      lines.push(`approval.required: ${readString(event.payload.toolName) ?? "unknown tool"}`);
+    if (event.type === "approval.requested") {
+      lines.push(`approval.requested: ${readString(event.payload.toolName) ?? "unknown tool"}`);
       continue;
     }
 
-    if (event.type === "run.blocked") {
-      lines.push("run.blocked: approval required");
+    if (event.type === "run.waiting") {
+      lines.push("run.waiting: approval required");
       continue;
     }
 
@@ -71,8 +71,8 @@ export function formatRunResult(target: string, result: RunResult): string[] {
     }
   }
 
-  if (result.status === "blocked") {
-    lines.push("Dry run blocked.");
+  if (result.status === "waiting") {
+    lines.push("Dry run waiting for approval.");
   } else if (result.status === "failed") {
     lines.push("Dry run failed.");
   }

@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { RunBlockedError, RuntimeDiagnosticError } from "../../errors.js";
+import { RuntimeDiagnosticError, RunWaitingError } from "../../errors.js";
 import type { InMemoryEventLog } from "../../events.js";
 import { validateJsonSchemaSubset } from "../../tools/schema.js";
 import type { DeclaredTool, DryRunScriptStep } from "../../types/index.js";
@@ -65,16 +65,16 @@ export async function runScriptedDryRun(
     }
 
     if (tool.approval.required) {
-      events.append("approval.required", {
+      events.append("approval.requested", {
         toolName: tool.name,
         arguments: step.arguments,
         approval: tool.approval,
       });
-      events.append("run.blocked", {
-        status: "blocked",
+      events.append("run.waiting", {
+        status: "waiting",
         toolName: tool.name,
       });
-      throw new RunBlockedError();
+      throw new RunWaitingError();
     }
 
     const result = await tool.handler(step.arguments);

@@ -2,7 +2,7 @@ import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { createServer, type RequestListener } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createSqliteEventStore } from "@plico/runtime";
+import { createSqliteEventStore, runProject } from "@plico/runtime";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createPlicoServer, servePlico } from "./index.js";
 
@@ -551,10 +551,57 @@ describe("SSE stream", () => {
     const lastEventData = eventMessages[eventMessages.length - 1]?.data;
     expect(lastEventData).toBeDefined();
     expect(JSON.parse(lastEventData as string)).toMatchObject({
-      type: expect.stringMatching(/^run\.(completed|failed|blocked|error)$/),
+      type: expect.stringMatching(/^run\.(completed|failed)$/),
     });
 
     await new Promise<void>((resolve) => server.close(() => resolve()));
+  });
+
+  it("keeps the event stream open for a waiting run", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-sse-"));
+    await writeValidProject(root);
+    await writeFile(
+      join(root, "tools", "gated.tool.ts"),
+      `export default {
+      name: "gated", description: "Needs approval",
+      inputSchema: { type: "object", properties: {}, additionalProperties: false },
+      capabilities: [], approval: { required: true }, handler: async () => ({})
+    };`,
+    );
+    const eventStore = createSqliteEventStore({
+      databasePath: join(root, ".plico", "plico.sqlite"),
+    });
+    const run = await runProject(root, {
+      eventStore,
+      script: [{ type: "tool.call", toolName: "gated", arguments: {} }],
+    });
+    const serverApi = await createPlicoServer({ projectRoot: root, eventStore });
+    const { baseUrl, server } = await startTestServer(serverApi.requestListener);
+    const controller = new AbortController();
+    try {
+      const response = await fetch(`${baseUrl}/v1/runs/${run.runId}/events/stream`, {
+        signal: controller.signal,
+      });
+      const reader = response.body?.getReader();
+      expect(reader).toBeDefined();
+      let data = "";
+      while (!data.includes("run.waiting")) {
+        const chunk = await reader?.read();
+        expect(chunk?.done).toBe(false);
+        data += new TextDecoder().decode(chunk?.value);
+      }
+      const next = reader?.read();
+      const state = await Promise.race([
+        next?.then(({ done }) => (done ? "closed" : "data")),
+        new Promise<string>((resolve) => setTimeout(() => resolve("open"), 100)),
+      ]);
+      expect(state).toBe("open");
+      controller.abort();
+      await next?.catch(() => undefined);
+    } finally {
+      controller.abort();
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
   });
 
   it("preserves existing non-stream event endpoints", async () => {

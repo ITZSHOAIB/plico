@@ -8,12 +8,12 @@ export type PlicoEventType =
   | "assistant.output"
   | "tool.call"
   | "tool.result"
-  | "approval.required"
+  | "approval.requested"
   | "artifact.workspace.created"
   | "artifact.file.written"
   | "artifact.snapshot.created"
   | "run.completed"
-  | "run.blocked"
+  | "run.waiting"
   | "run.failed"
   | "run.error";
 

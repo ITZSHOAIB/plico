@@ -442,7 +442,7 @@ describe("main", () => {
     errorSpy.mockRestore();
   });
 
-  it("reports approval-blocked dry runs as failures", async () => {
+  it("reports approval-gated dry runs as waiting", async () => {
     const root = await mkdtemp(join(tmpdir(), "plico-cli-"));
     await writeValidProject(root);
     await writeFile(
@@ -460,7 +460,7 @@ describe("main", () => {
       ].join("\n"),
       "utf8",
     );
-    const scriptPath = join(root, "blocked.script.json");
+    const scriptPath = join(root, "waiting.script.json");
     await writeFile(
       scriptPath,
       JSON.stringify(
@@ -476,16 +476,16 @@ describe("main", () => {
 
     const exitCode = await main(["node", "plico", "run", "--dry", "--script", scriptPath, root]);
 
-    expect(exitCode).toBe(1);
+    expect(exitCode).toBe(2);
     expect(errorSpy.mock.calls.map(([line]) => String(line))).toEqual([
       `Running dry runtime for ${root}`,
       "run.started: Internal Ops Agent",
       "instructions.composed: 1 source(s)",
       "tools.discovered: 1 tool(s)",
       "tool.call: delete_ticket",
-      "approval.required: delete_ticket",
-      "run.blocked: approval required",
-      "Dry run blocked.",
+      "approval.requested: delete_ticket",
+      "run.waiting: approval required",
+      "Dry run waiting for approval.",
     ]);
     expect(logSpy).not.toHaveBeenCalledWith(expect.stringContaining("run.completed"));
 
