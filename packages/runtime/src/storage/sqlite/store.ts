@@ -25,6 +25,7 @@ export function createSqliteEventStore({
   try {
     database.exec("PRAGMA busy_timeout = 5000;");
     if (!readOnly) {
+      // WAL setup is outside the schema transaction; concurrent first opens use busy_timeout.
       database.exec("PRAGMA journal_mode = WAL;");
       initializeSchema(database);
     }

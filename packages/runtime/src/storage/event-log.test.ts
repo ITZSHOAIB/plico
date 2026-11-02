@@ -6,8 +6,9 @@ import { DatabaseSync } from "node:sqlite";
 import { pathToFileURL } from "node:url";
 import { promisify } from "node:util";
 import type { RunSummary } from "@plico/contracts";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { createSqliteEventStore, runProject } from "../index.js";
+import * as schema from "./sqlite/schema.js";
 
 const script = [{ type: "assistant.output" as const, content: "Hi" }];
 const execFileAsync = promisify(execFile);
@@ -50,6 +51,7 @@ describe("event log streams", () => {
       run.runId,
     );
   });
+
   it("files run events under the run's stream, surviving a store reopen", async () => {
     const root = await scaffold();
     const databasePath = join(root, "state.sqlite");
@@ -91,6 +93,114 @@ describe("event log streams", () => {
     expect(await eventStore.getEvents("run-other")).toEqual([]);
     expect(await eventStore.getEvents(runId)).toEqual(events);
     expect((await eventStore.getRun(runId))?.status).toBe(run?.status);
+  });
+});
+
+describe("schema migrations", () => {
+  function inject(steps: Array<{ from: number; to: number; sql: string }>) {
+    const initialize = schema.initializeSchema;
+    return vi.spyOn(schema, "initializeSchema").mockImplementation((database) => {
+      initialize(database, steps);
+    });
+  }
+
+  it("upgrades a baseline database and preserves the migration effect", async () => {
+    const root = await scaffold();
+    const databasePath = join(root, "state.sqlite");
+    createSqliteEventStore({ databasePath });
+    const migration = [{ from: 2, to: 3, sql: "CREATE TABLE migration_example (value TEXT);" }];
+    const spy = inject(migration);
+    try {
+      createSqliteEventStore({ databasePath });
+      const database = new DatabaseSync(databasePath, { readOnly: true });
+      expect(
+        database.prepare("SELECT value FROM plico_meta WHERE key = 'schema_version'").get(),
+      ).toMatchObject({ value: "3" });
+      expect(
+        database.prepare("SELECT name FROM sqlite_master WHERE name = 'migration_example'").get(),
+      ).toMatchObject({ name: "migration_example" });
+      database.close();
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it("does not repeat a migration when the store reopens", async () => {
+    const databasePath = join(await scaffold(), "state.sqlite");
+    createSqliteEventStore({ databasePath });
+    const spy = inject([
+      {
+        from: 2,
+        to: 3,
+        sql: "CREATE TABLE migration_example (value TEXT); INSERT INTO migration_example VALUES ('once');",
+      },
+    ]);
+    try {
+      createSqliteEventStore({ databasePath });
+      createSqliteEventStore({ databasePath });
+      const database = new DatabaseSync(databasePath, { readOnly: true });
+      expect(
+        database.prepare("SELECT value FROM plico_meta WHERE key = 'schema_version'").get(),
+      ).toMatchObject({ value: "3" });
+      expect(database.prepare("SELECT value FROM migration_example").all()).toEqual([
+        { value: "once" },
+      ]);
+      database.close();
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it("rolls back a failed migration and leaves its version unchanged", async () => {
+    const databasePath = join(await scaffold(), "state.sqlite");
+    createSqliteEventStore({ databasePath });
+    const spy = inject([
+      {
+        from: 2,
+        to: 3,
+        sql: "CREATE TABLE migration_example (value TEXT); INSERT INTO missing_table VALUES (1);",
+      },
+    ]);
+    try {
+      expect(() => createSqliteEventStore({ databasePath })).toThrow();
+      const database = new DatabaseSync(databasePath, { readOnly: true });
+      expect(
+        database.prepare("SELECT value FROM plico_meta WHERE key = 'schema_version'").get(),
+      ).toMatchObject({ value: "2" });
+      expect(
+        database.prepare("SELECT name FROM sqlite_master WHERE name = 'migration_example'").get(),
+      ).toBeUndefined();
+      database.close();
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it("applies migrations in version order even when listed out of order", async () => {
+    const databasePath = join(await scaffold(), "state.sqlite");
+    createSqliteEventStore({ databasePath });
+    const spy = inject([
+      { from: 3, to: 4, sql: "INSERT INTO migration_example VALUES ('second');" },
+      {
+        from: 2,
+        to: 3,
+        sql: "CREATE TABLE migration_example (value TEXT); INSERT INTO migration_example VALUES ('first');",
+      },
+    ]);
+    try {
+      createSqliteEventStore({ databasePath });
+      const database = new DatabaseSync(databasePath, { readOnly: true });
+      expect(
+        database.prepare("SELECT value FROM plico_meta WHERE key = 'schema_version'").get(),
+      ).toMatchObject({ value: "4" });
+      expect(database.prepare("SELECT value FROM migration_example ORDER BY rowid").all()).toEqual([
+        { value: "first" },
+        { value: "second" },
+      ]);
+      database.close();
+    } finally {
+      spy.mockRestore();
+    }
   });
 });
 
