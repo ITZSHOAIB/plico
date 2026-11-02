@@ -18,6 +18,27 @@ function runNotFound({ response }: RouteContext, runId: string): void {
 export const runRoutes: Route[] = [
   {
     method: "POST",
+    pattern: /^\/v1\/runs$/,
+    handler: async ({ projectRoot, eventStore, request, response }) => {
+      const body = await readJsonBody(request);
+      const script = body.script === undefined ? undefined : normalizeScript(body.script);
+      let resolveStarted!: (runId: string) => void;
+      let rejectStarted!: (error: unknown) => void;
+      const started = new Promise<string>((resolve, reject) => {
+        resolveStarted = resolve;
+        rejectStarted = reject;
+      });
+      void runProject(projectRoot, {
+        eventStore,
+        ...(script === undefined ? {} : { script }),
+        onStarted: resolveStarted,
+      }).catch(rejectStarted);
+      const runId = await started;
+      sendJson(response, 202, { runId });
+    },
+  },
+  {
+    method: "POST",
     pattern: /^\/v1\/runs\/dry$/,
     handler: async ({ projectRoot, eventStore, request, response }) => {
       const body = await readJsonBody(request);

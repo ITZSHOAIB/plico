@@ -1,7 +1,22 @@
 import type { DatabaseSync } from "node:sqlite";
 
 const baselineVersion = 2;
-const migrations: ReadonlyArray<{ from: number; to: number; sql: string }> = [];
+const migrations: ReadonlyArray<{ from: number; to: number; sql: string }> = [
+  {
+    from: 2,
+    to: 3,
+    sql: `
+    CREATE TABLE runs_new (
+      run_id TEXT PRIMARY KEY, project_root TEXT NOT NULL, project_name TEXT NOT NULL,
+      status TEXT NOT NULL, started_at TEXT NOT NULL, ended_at TEXT, output TEXT
+    );
+    INSERT INTO runs_new SELECT run_id, project_root, project_name, status, started_at, ended_at, output FROM runs;
+    DROP TABLE runs;
+    ALTER TABLE runs_new RENAME TO runs;
+    CREATE INDEX runs_started_at_index ON runs(started_at);
+  `,
+  },
+];
 
 function readSchemaVersion(
   database: DatabaseSync,

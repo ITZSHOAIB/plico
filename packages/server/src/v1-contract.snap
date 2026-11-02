@@ -8,6 +8,7 @@
           "fileCount": "number",
           "length": "number",
           "mimeType": "string",
+          "output": "string",
           "path": "string",
           "projectName": "string",
           "projectRoot": "string",
@@ -76,6 +77,7 @@
         "fileCount": "number",
         "length": "number",
         "mimeType": "string",
+        "output": "string",
         "path": "string",
         "projectName": "string",
         "projectRoot": "string",
@@ -200,6 +202,9 @@
       "warning": "number"
     },
     "timestamp": "string"
+  },
+  "POST /v1/runs": {
+    "runId": "string"
   },
   "error": {
     "error": {

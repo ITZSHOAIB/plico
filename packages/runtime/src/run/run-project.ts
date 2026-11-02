@@ -17,11 +17,16 @@ export async function runProject(
   const validation = await validateProject(root);
   const runId = options.runId ?? `run-${randomUUID()}`;
   const startedAt = new Date().toISOString();
-  const events = new InMemoryEventLog(runId);
+  const events = new InMemoryEventLog(runId, options.eventStore);
+  await events.append("run.started", {
+    projectRoot: validation.project?.root ?? root,
+    projectName: validation.project?.config.name ?? "",
+  });
+  options.onStarted?.(runId);
 
   if (!validation.ok || !validation.project) {
-    events.append("run.error", { phase: "validation", issues: validation.errors });
-    events.append("run.failed", { phase: "validation", status: "failed" });
+    await events.append("run.error", { phase: "validation", issues: validation.errors });
+    await events.append("run.failed", { phase: "validation", status: "failed" });
 
     return finalizeRun({
       runId,
@@ -44,21 +49,16 @@ export async function runProject(
     eventStore: options.eventStore,
   };
 
-  events.append("run.started", {
-    projectRoot: project.root,
-    projectName: project.config.name,
-  });
-
   try {
     const instructions = await composeInstructions(project);
-    events.append("instructions.composed", {
+    await events.append("instructions.composed", {
       length: instructions.content.length,
       sources: instructions.sources,
       content: instructions.content,
     });
 
     const tools = await discoverTools(project);
-    events.append("tools.discovered", {
+    await events.append("tools.discovered", {
       tools: tools.map((tool) => ({
         source: tool.source,
         name: tool.name,
@@ -81,7 +81,10 @@ export async function runProject(
         : options.script === undefined
           ? await runDefaultDryRun(project, events)
           : await runScriptedDryRun(options.script, tools, events);
-    events.append("run.completed", { status: "completed" });
+    await events.append("run.completed", {
+      status: "completed",
+      ...(output === undefined ? {} : { output }),
+    });
 
     return await finalizeRun({ ...summary, status: "completed", output, events: events.all() });
   } catch (error) {
@@ -89,8 +92,8 @@ export async function runProject(
       return finalizeRun({ ...summary, status: "waiting", events: events.all() });
     }
 
-    events.append("run.error", runtimeErrorPayload(error));
-    events.append("run.failed", { phase: "runtime", status: "failed" });
+    await events.append("run.error", runtimeErrorPayload(error));
+    await events.append("run.failed", { phase: "runtime", status: "failed" });
 
     return finalizeRun({ ...summary, status: "failed", events: events.all() });
   }

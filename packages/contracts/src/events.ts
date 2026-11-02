@@ -15,6 +15,7 @@ export type PlicoEventType =
   | "run.completed"
   | "run.waiting"
   | "run.failed"
+  | "run.cancelled"
   | "run.error";
 
 export type EventStreamType = "run";

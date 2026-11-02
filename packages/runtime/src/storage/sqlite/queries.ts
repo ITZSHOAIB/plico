@@ -1,79 +1,6 @@
 import type { DatabaseSync } from "node:sqlite";
 import type { EvalReport, PlicoEvent, RunStatus, RunSummary } from "@plico/contracts";
 import { runStreamType } from "../../events.js";
-import type { PersistedRun } from "../../types/index.js";
-
-function assertRunStream(run: PersistedRun): void {
-  const misfiled = run.events.find(
-    (event) => event.streamType !== runStreamType || event.streamId !== run.runId,
-  );
-  if (misfiled) {
-    throw new Error(
-      `Event ${misfiled.id} is filed under ${misfiled.streamType} stream ${misfiled.streamId}, not run ${run.runId}.`,
-    );
-  }
-}
-
-export function persistRunRecord(database: DatabaseSync, run: PersistedRun): void {
-  assertRunStream(run);
-  const insertRun = database.prepare(`
-    INSERT INTO runs (run_id, project_root, project_name, status, started_at, ended_at, output)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-    ON CONFLICT(run_id) DO UPDATE SET
-      project_root = excluded.project_root,
-      project_name = excluded.project_name,
-      status = excluded.status,
-      started_at = excluded.started_at,
-      ended_at = excluded.ended_at,
-      output = excluded.output
-  `);
-  const deleteEvents = database.prepare(
-    "DELETE FROM events WHERE stream_type = ? AND stream_id = ?",
-  );
-  const insertEvent = database.prepare(`
-    INSERT INTO events (
-      stream_type,
-      stream_id,
-      sequence,
-      event_id,
-      schema_version,
-      type,
-      timestamp,
-      payload_json
-    )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-  `);
-
-  database.exec("BEGIN");
-  try {
-    insertRun.run(
-      run.runId,
-      run.projectRoot,
-      run.projectName,
-      run.status,
-      run.startedAt,
-      run.endedAt,
-      run.output ?? null,
-    );
-    deleteEvents.run(runStreamType, run.runId);
-    for (const event of run.events) {
-      insertEvent.run(
-        event.streamType,
-        event.streamId,
-        event.sequence,
-        event.id,
-        event.schemaVersion,
-        event.type,
-        event.timestamp,
-        JSON.stringify(event.payload),
-      );
-    }
-    database.exec("COMMIT");
-  } catch (error) {
-    database.exec("ROLLBACK");
-    throw error;
-  }
-}
 
 export function readRunSummaries(database: DatabaseSync): RunSummary[] {
   const rows = database
@@ -152,7 +79,7 @@ function rowToRunSummary(row: Record<string, unknown>): RunSummary {
     projectName: String(row.project_name),
     status: row.status as RunStatus,
     startedAt: String(row.started_at),
-    endedAt: String(row.ended_at),
+    endedAt: row.ended_at === null ? null : String(row.ended_at),
     ...(row.output === null || row.output === undefined ? {} : { output: String(row.output) }),
   };
 }
