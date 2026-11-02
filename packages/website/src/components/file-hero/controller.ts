@@ -1,16 +1,18 @@
+import { codeEditor } from "./code-editor";
 import { connectFiles } from "./connections";
 import { mobileView } from "./mobile-view";
-import { beats, sources } from "./story";
+import { beats } from "./story";
 
 export function mountFileHero(root: HTMLElement) {
   const buttons = [...root.querySelectorAll<HTMLButtonElement>("[data-beat]")];
   const fileButtons = [...root.querySelectorAll<HTMLButtonElement>("[data-file]")];
-  const codePanels = [...root.querySelectorAll<HTMLElement>("[data-code]")];
   const title = root.querySelector<HTMLElement>("[data-beat-title]");
   const detail = root.querySelector<HTMLElement>("[data-beat-detail]");
   const number = root.querySelector<HTMLElement>("[data-beat-number]");
   const play = root.querySelector<HTMLButtonElement>("[data-play]");
-  const playIcon = root.querySelector<HTMLElement>("[data-play-icon]");
+  const controlIcons = [...root.querySelectorAll<HTMLElement>("[data-control-icon]")];
+  const replay = root.querySelector<HTMLButtonElement>("[data-replay]");
+  const selectSource = codeEditor(root);
   const answer = root.querySelector<HTMLElement>("[data-answer]");
   const event = root.querySelector<HTMLElement>("[data-event]");
   const count = root.querySelector<HTMLElement>("[data-event-count]");
@@ -19,44 +21,35 @@ export function mountFileHero(root: HTMLElement) {
   const disconnect = connectFiles(root);
   const fullAnswer = answer?.textContent ?? "";
   let phase = 0,
-    source = 0,
     elapsed = 0,
     last = 0,
     frame = 0;
   let playing = !reduced.matches,
     visible = false,
     disposed = false;
+  let finished = false;
   const selectView = mobileView(root, () => {
     playing = false;
     syncPlay();
   });
 
-  function selectSource(next: number, typeProgress = 1) {
-    source = next;
-    root.dataset.source = String(next);
-    fileButtons.forEach((button, index) => {
-      button.setAttribute("aria-pressed", String(index === next));
-    });
-    codePanels.forEach((panel, index) => {
-      panel.hidden = index !== next;
-    });
-    const lines = sources[next]?.lines ?? [];
-    let remaining = Math.floor(lines.join("").length * Math.min(1, typeProgress));
-    codePanels[next]?.querySelectorAll<HTMLElement>("[data-line]").forEach((line, index) => {
-      const text = lines[index] ?? "";
-      const partial = text.slice(0, Math.max(0, remaining));
-      remaining -= text.length;
-      if (line.textContent !== (partial || " ")) line.textContent = partial || " ";
-    });
-  }
   function syncPlay() {
     root.dataset.playing = String(playing);
     play?.setAttribute("aria-pressed", String(playing));
     play?.setAttribute(
       "aria-label",
-      playing ? "Pause animation" : reduced.matches ? "Next animation step" : "Replay animation",
+      reduced.matches
+        ? "Next animation step"
+        : finished
+          ? "Replay animation"
+          : playing
+            ? "Pause animation"
+            : "Resume animation",
     );
-    if (playIcon) playIcon.textContent = playing ? "Ⅱ" : "↻";
+    const icon = reduced.matches ? "next" : finished ? "replay" : playing ? "pause" : "play";
+    controlIcons.forEach((element) => {
+      element.hidden = element.dataset.controlIcon !== icon;
+    });
   }
   function draw(progress: number) {
     root.style.setProperty("--fh-progress", String(progress));
@@ -65,13 +58,14 @@ export function mountFileHero(root: HTMLElement) {
       if (track)
         track.style.transform = `scaleX(${index < phase ? 1 : index === phase ? progress : 0})`;
     });
-    if (phase === 0) selectSource(0, playing ? Math.min(1, progress * 1.6 + 0.05) : 1);
+    if (phase === 0) selectSource(0, Math.min(1, progress * 1.6 + 0.05), playing);
     if (phase === 1 && playing)
       selectSource(
         progress < 0.48 ? 1 : 2,
         Math.min(1, (progress < 0.48 ? progress : progress - 0.48) * 3.5 + 0.1),
+        playing,
       );
-    if (phase === 2) selectSource(source, 1);
+    if (phase === 2) selectSource(Number(root.dataset.source ?? 2), 1);
     const runStep =
       phase !== 3
         ? 0
@@ -140,12 +134,14 @@ export function mountFileHero(root: HTMLElement) {
   }
   function setPhase(next: number, manual = false) {
     phase = next;
+    finished = false;
     elapsed = 0;
     root.dataset.phase = String(phase);
     selectView(phase);
     const beat = beats[phase];
     if (!beat) return;
     if (manual) {
+      elapsed = beat.duration;
       playing = false;
       syncPlay();
     }
@@ -166,7 +162,12 @@ export function mountFileHero(root: HTMLElement) {
     if (playing && visible && !document.hidden && !reduced.matches) {
       elapsed += dt;
       const duration = beats[phase]?.duration ?? 5000;
-      if (elapsed > duration) setPhase((phase + 1) % beats.length);
+      if (elapsed > duration && phase === beats.length - 1) {
+        draw(1);
+        finished = true;
+        playing = false;
+        syncPlay();
+      } else if (elapsed > duration) setPhase(phase + 1);
       else draw(elapsed / duration);
       run();
     }
@@ -184,16 +185,22 @@ export function mountFileHero(root: HTMLElement) {
       selectSource(index);
     });
   });
+  function replayFromStart() {
+    playing = !reduced.matches;
+    setPhase(0);
+    syncPlay();
+    last = 0;
+    run();
+  }
+  replay?.addEventListener("click", replayFromStart);
   play?.addEventListener("click", () => {
-    playing = !playing;
-    if (playing && reduced.matches) {
+    if (reduced.matches) {
       setPhase((phase + 1) % beats.length, true);
       return;
     }
-    if (playing) {
-      setPhase(0);
-      last = 0;
-    }
+    if (finished) return replayFromStart();
+    playing = !playing;
+    last = 0;
     syncPlay();
     run();
   });

@@ -1,5 +1,7 @@
 ---
 const capabilities = ["Agent loop", "Tool execution", "Event log", "Studio + API"];
+
+import Icon from "./Icon.astro";
 ---
 <div class="fh-runtime">
   <div class="fh-column-label"><span>02 / PLICO HANDLES</span><span>The harness.</span></div>
@@ -11,8 +13,8 @@ const capabilities = ["Agent loop", "Tool execution", "Event log", "Studio + API
       <div class="fh-conversation">
         <div class="fh-placeholder"><span></span><span></span><span></span><p>Your files become its behaviour.</p></div>
         <div class="fh-request"><span>YOU</span><p>The team can’t connect to the VPN. Can you open a ticket?</p></div>
-        <div class="fh-tool"><span class="fh-tool-symbol" aria-hidden="true">↳</span><div><span>create_ticket</span><code>"Team VPN connection issue"</code></div><span class="fh-tool-check">✓</span></div>
-        <div class="fh-answer"><span>AGENT</span><p data-answer>Created ticket TCK-104 for the VPN issue, with the details your team needs.</p></div>
+        <div class="fh-tool"><span class="fh-tool-symbol"><Icon name="tool" /></span><div><span>create_ticket</span><code>"Team VPN connection issue"</code></div><span class="fh-tool-check"><Icon name="check" /></span></div>
+        <div class="fh-answer"><span>AGENT</span><p><span class="fh-code-reserve" aria-hidden="true">Created ticket TCK-104 for the VPN issue, with the details your team needs.</span><span data-answer>Created ticket TCK-104 for the VPN issue, with the details your team needs.</span></p></div>
       </div>
       <div class="fh-event"><span class="fh-event-light"></span><code data-event>Waiting for your files</code><span data-event-count>—</span></div>
     </div>

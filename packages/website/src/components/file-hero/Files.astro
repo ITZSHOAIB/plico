@@ -1,22 +1,22 @@
 ---
+import Icon from "./Icon.astro";
 import { sources } from "./story";
 ---
 <div class="fh-files">
   <div class="fh-column-label"><span>01 / YOU WRITE</span><span>A few files.</span></div>
   <div class="fh-editor">
-    <div class="fh-editor-bar"><span class="fh-folder-icon" aria-hidden="true"></span><span>support-agent</span><span class="fh-local">local project</span></div>
+    <div class="fh-editor-bar"><span class="fh-folder-icon"><Icon name="folder" /></span><span>support-agent</span><span class="fh-local">local project</span></div>
     <div class="fh-file-tabs" role="group" aria-label="Explore the agent files">
-      {sources.map((file, index) => <button type="button" data-file={index} aria-pressed={index === 0}><span class:list={["fh-file-icon", file.type]}>{file.type === "ts" ? "TS" : "M↓"}</span><span>{index === 2 ? "create-ticket.tool.ts" : file.path}</span><i></i></button>)}
+      {sources.map((file, index) => <button type="button" data-file={index} aria-pressed={index === 0}><span class:list={["fh-file-icon", file.type]}><Icon name={file.type === "ts" ? "code" : "markdown"} /></span><span>{index === 2 ? "create-ticket.tool.ts" : file.path}</span><i></i></button>)}
     </div>
     <div class="fh-code-stack">
       {sources.map((file, index) => <div class="fh-code" data-code={index} hidden={index !== 0}>
         <div class="fh-code-heading"><span>{file.label}</span><span>{file.type === "md" ? "MARKDOWN" : "TOOL EXCERPT"}</span></div>
-        <pre aria-label={file.path}><code>{file.lines.map((line, lineIndex) => <span class:list={["fh-code-line", { heading: line.startsWith("#"), keyword: line.includes("export"), blank: line === "" }]}><span class="fh-line-number" aria-hidden="true">{lineIndex + 1}</span><span data-line={lineIndex}>{line || " "}</span></span>)}</code></pre>
-        <span class="fh-editor-cursor" aria-hidden="true"></span>
+        <pre aria-label={file.path}><code>{file.lines.map((line, lineIndex) => <span class:list={["fh-code-line", { heading: line.startsWith("#"), keyword: line.includes("export"), blank: line === "" }]}><span class="fh-line-number" aria-hidden="true">{lineIndex + 1}</span><span class="fh-code-text"><span class="fh-code-reserve" aria-hidden="true">{line || "\u00a0"}</span><span class="fh-code-ink" data-line={lineIndex}><span data-typed>{line}</span></span></span></span>)}</code></pre>
       </div>)}
     </div>
     <div class="fh-project-rest"><span>plico.config.ts</span><span>evals/</span><span>memory/</span><span>artifacts/</span></div>
     <div class="fh-editor-status"><span><i></i> Your logic lives here</span><span>Markdown + TypeScript</span></div>
   </div>
-  <div class="fh-file-footnote"><span class="fh-git" aria-hidden="true">⑂</span> Just files. Keep them in Git.</div>
+  <div class="fh-file-footnote"><span class="fh-git"><Icon name="branch" /></span> Just files. Keep them in Git.</div>
 </div>

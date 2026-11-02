@@ -12,7 +12,7 @@
   min-height: 44px;
   padding-top: 10px;
 }
-.fh-caption > div {
+.fh-caption-copy {
   min-width: 0;
 }
 .fh-event code {
@@ -284,7 +284,7 @@
   .fh-beat-number {
     grid-column: 1;
   }
-  .fh-caption > div {
+  .fh-caption-copy {
     grid-column: 1;
     grid-row: 2;
   }
