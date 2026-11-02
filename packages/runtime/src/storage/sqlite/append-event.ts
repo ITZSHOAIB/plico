@@ -1,5 +1,6 @@
 import type { DatabaseSync } from "node:sqlite";
 import type { PlicoEvent } from "@plico/contracts";
+import { acquireOwner } from "./owner-lock.js";
 
 export function appendEventRecord(database: DatabaseSync, event: PlicoEvent): void {
   if (event.streamType !== "run" || event.streamId !== event.runId) {
@@ -29,11 +30,14 @@ export function appendEventRecord(database: DatabaseSync, event: PlicoEvent): vo
       | undefined;
     const last = database
       .prepare(
-        "SELECT MAX(sequence) AS sequence FROM events WHERE stream_type = ? AND stream_id = ?",
+        "SELECT sequence, type FROM events WHERE stream_type = ? AND stream_id = ? ORDER BY sequence DESC LIMIT 1",
       )
-      .get(event.streamType, event.streamId) as { sequence: number | null };
-    if (event.sequence !== (last.sequence ?? 0) + 1)
+      .get(event.streamType, event.streamId) as { sequence: number; type: string } | undefined;
+    if (event.sequence !== (last?.sequence ?? 0) + 1)
       throw new Error("Events must be appended in sequence.");
+    if (last?.type === "run.error" && event.type !== "run.failed") {
+      throw new Error("run.error must be followed by run.failed.");
+    }
     if (!row) {
       if (event.type !== "run.started" || event.sequence !== 1)
         throw new Error("The first event must be run.started.");
@@ -47,6 +51,12 @@ export function appendEventRecord(database: DatabaseSync, event: PlicoEvent): vo
           String(event.payload.projectName ?? ""),
           event.timestamp,
         );
+      const owner = acquireOwner();
+      database
+        .prepare(
+          "INSERT INTO run_owners (run_id, process_id, owner_token, owner_path) VALUES (?, ?, ?, ?)",
+        )
+        .run(event.runId, process.pid, owner.token, owner.path);
     } else {
       if (row.status !== "running")
         throw new Error(`Cannot append to run with status ${row.status}.`);
@@ -64,12 +74,15 @@ export function appendEventRecord(database: DatabaseSync, event: PlicoEvent): vo
       if (status) {
         const endedAt = status === "waiting" ? null : event.timestamp;
         const output =
-          event.type === "run.completed" && typeof event.payload.output === "string"
+          (event.type === "run.completed" || event.type === "run.waiting") &&
+          typeof event.payload.output === "string"
             ? event.payload.output
             : null;
         database
           .prepare("UPDATE runs SET status = ?, ended_at = ?, output = ? WHERE run_id = ?")
           .run(status, endedAt, output, event.runId);
+        // Drop the owner once the run leaves running, including waiting; recovery only inspects running runs.
+        database.prepare("DELETE FROM run_owners WHERE run_id = ?").run(event.runId);
       }
     }
     database

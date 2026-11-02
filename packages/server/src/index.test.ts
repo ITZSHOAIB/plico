@@ -481,6 +481,66 @@ describe("Instructions", () => {
 });
 
 describe("SSE stream", () => {
+  it("sends events committed between the stream's event and status reads", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-sse-race-"));
+    await writeValidProject(root);
+    const inner = createSqliteEventStore({ databasePath: join(root, "state.sqlite") });
+    const base = {
+      schemaVersion: 1 as const,
+      streamType: "run" as const,
+      streamId: "race",
+      runId: "race",
+      timestamp: "2026-01-01T00:00:00.000Z",
+    };
+    await inner.appendEvent({
+      ...base,
+      id: "evt-0001",
+      sequence: 1,
+      type: "run.started",
+      payload: { projectRoot: root, projectName: "Demo" },
+    });
+    let injected = false;
+    const eventStore = {
+      ...inner,
+      async getEvents(runId: string, options?: { afterSequence?: number }) {
+        const events = await inner.getEvents(runId, options);
+        if (!injected) {
+          injected = true;
+          await inner.appendEvent({
+            ...base,
+            id: "evt-0002",
+            sequence: 2,
+            type: "assistant.output",
+            payload: { content: "between reads" },
+          });
+          await inner.appendEvent({
+            ...base,
+            id: "evt-0003",
+            sequence: 3,
+            type: "run.completed",
+            payload: { output: "between reads" },
+          });
+        }
+        return events;
+      },
+    };
+    const api = await createPlicoServer({ projectRoot: root, eventStore });
+    const { baseUrl, server } = await startTestServer(api.requestListener);
+    try {
+      const messages = await readSSEStream(
+        baseUrl,
+        "/v1/runs/race/events/stream",
+        AbortSignal.timeout(5000),
+      );
+      const types = messages
+        .filter((message) => message.event === "plico.event")
+        .map((message) => JSON.parse(message.data ?? "{}").type);
+      expect(types).toEqual(["run.started", "assistant.output", "run.completed"]);
+    } finally {
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
+  });
+
   async function persistDryRun(baseUrl: string): Promise<string> {
     const run = await jsonRequest(baseUrl, "/v1/runs/dry", {
       method: "POST",

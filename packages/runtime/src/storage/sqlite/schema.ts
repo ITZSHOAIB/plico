@@ -16,6 +16,11 @@ const migrations: ReadonlyArray<{ from: number; to: number; sql: string }> = [
     CREATE INDEX runs_started_at_index ON runs(started_at);
   `,
   },
+  {
+    from: 3,
+    to: 4,
+    sql: `CREATE TABLE run_owners (run_id TEXT PRIMARY KEY, process_id INTEGER NOT NULL, owner_token TEXT NOT NULL, owner_path TEXT NOT NULL);`,
+  },
 ];
 
 function readSchemaVersion(

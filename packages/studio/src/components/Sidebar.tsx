@@ -108,7 +108,7 @@ export function Sidebar({
           >
             <div style={{ fontWeight: 500 }}>{run.runId.substring(0, 12)}…</div>
             <div style={{ color: "#666" }}>
-              {run.status} &middot; {run.endedAt}
+              {run.status} &middot; {run.endedAt ?? "Not ended"}
             </div>
           </button>
         ))}

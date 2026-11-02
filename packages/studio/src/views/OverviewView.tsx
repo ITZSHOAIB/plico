@@ -10,7 +10,7 @@ interface OverviewViewProps {
 function latestRunLabel(runs: RunSummary[]): string {
   const [latest] = runs;
   if (!latest) return "0 run(s)";
-  return `${runs.length} run(s), latest ${latest.status} at ${latest.endedAt}`;
+  return `${runs.length} run(s), latest ${latest.status}${latest.endedAt ? ` at ${latest.endedAt}` : " (not ended)"}`;
 }
 
 export function OverviewView({ data, evalReport }: OverviewViewProps) {

@@ -101,8 +101,9 @@ export async function runProviderBackedRun(
         await events.append("run.waiting", {
           requestId,
           toolName: tool.name,
+          ...(output === undefined ? {} : { output }),
         });
-        throw new RunWaitingError();
+        throw new RunWaitingError(output);
       }
 
       let result: unknown;

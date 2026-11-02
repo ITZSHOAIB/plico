@@ -14,7 +14,7 @@ export interface FinalizeRunInput {
   eventStore?: EventStore | undefined;
 }
 
-/** Builds the terminal RunResult and persists the run when an event store is configured. */
+/** Builds the result after the run has stopped or finished. */
 export async function finalizeRun(input: FinalizeRunInput): Promise<RunResult> {
   const result: RunResult = {
     runId: input.runId,

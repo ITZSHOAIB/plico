@@ -20,7 +20,7 @@ const run: RunSummary = {
   projectName: "Internal Ops",
   status: "waiting",
   startedAt: "2026-10-31T10:00:00.000Z",
-  endedAt: "2026-10-31T10:00:01.000Z",
+  endedAt: null,
 };
 
 function event<T extends PlicoEvent["type"]>(
@@ -197,6 +197,7 @@ describe("run inspection", () => {
     expect(screen.getByText("tool.result")).toBeTruthy();
     expect(screen.getAllByText("create-ticket")).toHaveLength(2);
     expect(screen.getByText("delete-ticket requires approval")).toBeTruthy();
+    expect(screen.getByText(/Status: waiting/).textContent).toContain("Not ended");
   });
 
   it("replays raw events", async () => {
