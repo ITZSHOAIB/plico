@@ -118,6 +118,7 @@ it("keeps the /v1 response shapes stable", async () => {
     "GET /v1/eval": await shape("/v1/eval"),
     "GET /v1/eval/:name": await shape("/v1/eval/fail"),
     "GET /v1/readiness": await shape("/v1/readiness"),
+    "POST /v1/runs": await shape("/v1/runs", post({})),
     error: await shape("/v1/runs/missing"),
   };
 

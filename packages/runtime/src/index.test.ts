@@ -61,6 +61,40 @@ async function symlinkOrSkip(
 }
 
 describe("runProject", () => {
+  it("persists running status and events before the provider completes", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-live-"));
+    await writeValidProject(root);
+    const eventStore = createSqliteEventStore({ databasePath: join(root, "state.sqlite") });
+    let release!: () => void;
+    let entered!: () => void;
+    const waiting = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const started = new Promise<void>((resolve) => {
+      entered = resolve;
+    });
+    const provider: ModelProvider = {
+      complete: async () => {
+        entered();
+        await waiting;
+        return { content: "done", usage: { inputTokens: 1, outputTokens: 1 } };
+      },
+    };
+    const run = runProject(root, { runId: "live-run", eventStore, provider, message: "hello" });
+    await started;
+    try {
+      expect(await eventStore.getRun("live-run")).toMatchObject({
+        status: "running",
+        endedAt: null,
+      });
+      expect((await eventStore.getEvents("live-run")).map((event) => event.type)).toContain(
+        "model.request",
+      );
+    } finally {
+      release();
+      await run;
+    }
+  });
   it("completes a deterministic provider-free dry run for a valid project", async () => {
     const root = await mkdtemp(join(tmpdir(), "plico-runtime-"));
     await writeValidProject(root);
@@ -120,8 +154,12 @@ describe("runProject", () => {
         severity: "error",
       }),
     ]);
-    expect(result.events.map((event) => event.type)).toEqual(["run.error", "run.failed"]);
-    expect(result.events[0]?.payload).toMatchObject({
+    expect(result.events.map((event) => event.type)).toEqual([
+      "run.started",
+      "run.error",
+      "run.failed",
+    ]);
+    expect(result.events[1]?.payload).toMatchObject({
       phase: "validation",
       issues: [
         expect.objectContaining({
@@ -424,15 +462,13 @@ describe("runProject", () => {
     const root = await mkdtemp(join(tmpdir(), "plico-runtime-"));
     await writeValidProject(root);
     const inner = createSqliteEventStore({ databasePath: join(root, ".plico", "plico.sqlite") });
-    let calls = 0;
     const eventStore = {
       ...inner,
-      persistRun: async (run: Parameters<typeof inner.persistRun>[0]) => {
-        calls += 1;
-        if (calls === 1) {
+      appendEvent: async (event: Parameters<typeof inner.appendEvent>[0]) => {
+        if (event.type === "run.completed") {
           throw new Error("disk full");
         }
-        return inner.persistRun(run);
+        return inner.appendEvent(event);
       },
     };
 

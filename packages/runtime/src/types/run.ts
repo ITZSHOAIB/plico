@@ -8,4 +8,5 @@ export interface RunProjectOptions {
   runId?: string;
   provider?: ModelProvider;
   message?: string;
+  onStarted?: (runId: string) => void;
 }

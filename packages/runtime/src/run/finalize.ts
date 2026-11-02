@@ -24,16 +24,5 @@ export async function finalizeRun(input: FinalizeRunInput): Promise<RunResult> {
     ...(input.errors === undefined ? {} : { errors: input.errors }),
   };
 
-  await input.eventStore?.persistRun({
-    runId: input.runId,
-    projectRoot: input.projectRoot,
-    projectName: input.projectName,
-    status: input.status,
-    startedAt: input.startedAt,
-    endedAt: new Date().toISOString(),
-    ...(input.output === undefined ? {} : { output: input.output }),
-    events: input.events,
-  });
-
   return result;
 }

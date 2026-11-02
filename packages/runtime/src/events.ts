@@ -1,14 +1,17 @@
 import type { EventStreamType } from "@plico/contracts";
-import type { PlicoEvent, PlicoEventType } from "./types/index.js";
+import type { EventStore, PlicoEvent, PlicoEventType } from "./types/index.js";
 
 export const runStreamType: EventStreamType = "run";
 
 export class InMemoryEventLog {
   readonly #events: PlicoEvent[] = [];
 
-  constructor(private readonly runId: string) {}
+  constructor(
+    private readonly runId: string,
+    private readonly store: EventStore | undefined = undefined,
+  ) {}
 
-  append(type: PlicoEventType, payload: Record<string, unknown>): PlicoEvent {
+  async append(type: PlicoEventType, payload: Record<string, unknown>): Promise<PlicoEvent> {
     const sequence = this.#events.length + 1;
     const event: PlicoEvent = {
       schemaVersion: 1,
@@ -22,6 +25,7 @@ export class InMemoryEventLog {
       payload,
     };
 
+    await this.store?.appendEvent(event);
     this.#events.push(event);
     return event;
   }

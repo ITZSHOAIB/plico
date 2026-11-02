@@ -3,10 +3,10 @@ import { dirname } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { pathToFileURL } from "node:url";
 import type { EvalReport, PlicoEvent, RunSummary } from "@plico/contracts";
-import type { CreateSqliteEventStoreOptions, EventStore, PersistedRun } from "../../types/index.js";
+import type { CreateSqliteEventStoreOptions, EventStore } from "../../types/index.js";
+import { appendEventRecord } from "./append-event.js";
 import {
   persistEvalReportRecord,
-  persistRunRecord,
   readEvents,
   readLatestEvalReport,
   readRunSummaries,
@@ -35,8 +35,8 @@ export function createSqliteEventStore({
   }
 
   return {
-    async persistRun(run: PersistedRun): Promise<void> {
-      persistRunRecord(database, run);
+    async appendEvent(event: PlicoEvent): Promise<void> {
+      appendEventRecord(database, event);
     },
     async listRuns(): Promise<RunSummary[]> {
       return readRunSummaries(database);

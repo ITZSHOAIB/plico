@@ -5,7 +5,6 @@ import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { pathToFileURL } from "node:url";
 import { promisify } from "node:util";
-import type { RunSummary } from "@plico/contracts";
 import { describe, expect, it, vi } from "vitest";
 import { createSqliteEventStore, runProject } from "../index.js";
 import * as schema from "./sqlite/schema.js";
@@ -27,6 +26,34 @@ async function scaffold(): Promise<string> {
 }
 
 describe("event log streams", () => {
+  it("replays identical appends without changing the log and rejects conflicting or terminal appends", async () => {
+    const root = await scaffold();
+    const store = createSqliteEventStore({ databasePath: join(root, "state.sqlite") });
+    const run = await runProject(root, { script, eventStore: store });
+    const events = await store.getEvents(run.runId);
+    const last = events.at(-1);
+    if (!last) throw new Error("Expected terminal event");
+    await store.appendEvent(last);
+    expect(await store.getEvents(run.runId)).toEqual(events);
+    await expect(store.appendEvent({ ...last, payload: { changed: true } })).rejects.toThrow(
+      "Conflicting",
+    );
+    await expect(store.appendEvent({ ...last, sequence: last.sequence + 1 })).rejects.toThrow(
+      "status completed",
+    );
+    expect(await store.getEvents(run.runId)).toEqual(events);
+  });
+
+  it("rejects an illegal event sequence without creating a run", async () => {
+    const root = await scaffold();
+    const store = createSqliteEventStore({ databasePath: join(root, "state.sqlite") });
+    const source = await runProject(root, { script });
+    const event = source.events.find((item) => item.type === "run.completed");
+    if (!event) throw new Error("Expected completed event");
+    await expect(store.appendEvent({ ...event, sequence: 1 })).rejects.toThrow("first event");
+    expect(await store.getRun(source.runId)).toBeUndefined();
+    expect(await store.getEvents(source.runId)).toEqual([]);
+  });
   it("initializes safely when multiple processes open the same new store", async () => {
     const root = await scaffold();
     const databasePath = join(root, "state.sqlite");
@@ -84,11 +111,11 @@ describe("event log streams", () => {
     const { runId } = await runProject(root, { script, eventStore });
     const run = await eventStore.getRun(runId);
     const events = await eventStore.getEvents(runId);
-    const misfiled = events.map((event) => ({ ...event, streamId: "run-other" }));
-
-    await expect(
-      eventStore.persistRun({ ...(run as RunSummary), status: "failed", events: misfiled }),
-    ).rejects.toThrow("run-other");
+    const first = events[0];
+    if (!first) throw new Error("Expected an event");
+    await expect(eventStore.appendEvent({ ...first, streamId: "run-other" })).rejects.toThrow(
+      "run stream",
+    );
 
     expect(await eventStore.getEvents("run-other")).toEqual([]);
     expect(await eventStore.getEvents(runId)).toEqual(events);
@@ -104,10 +131,38 @@ describe("schema migrations", () => {
     });
   }
 
+  function createBaseline(databasePath: string) {
+    const spy = inject([]);
+    try {
+      createSqliteEventStore({ databasePath });
+    } finally {
+      spy.mockRestore();
+    }
+  }
+
+  it("preserves existing runs when upgrading to nullable end times", async () => {
+    const root = await scaffold();
+    const databasePath = join(root, "state.sqlite");
+    createBaseline(databasePath);
+    const database = new DatabaseSync(databasePath);
+    database
+      .prepare(
+        "INSERT INTO runs (run_id, project_root, project_name, status, started_at, ended_at, output) VALUES (?, ?, ?, ?, ?, ?, ?)",
+      )
+      .run("old-run", root, "Demo", "completed", "start", "end", "saved");
+    database.close();
+    const store = createSqliteEventStore({ databasePath });
+    expect(await store.getRun("old-run")).toMatchObject({
+      status: "completed",
+      endedAt: "end",
+      output: "saved",
+    });
+  });
+
   it("upgrades a baseline database and preserves the migration effect", async () => {
     const root = await scaffold();
     const databasePath = join(root, "state.sqlite");
-    createSqliteEventStore({ databasePath });
+    createBaseline(databasePath);
     const migration = [{ from: 2, to: 3, sql: "CREATE TABLE migration_example (value TEXT);" }];
     const spy = inject(migration);
     try {
@@ -127,7 +182,7 @@ describe("schema migrations", () => {
 
   it("does not repeat a migration when the store reopens", async () => {
     const databasePath = join(await scaffold(), "state.sqlite");
-    createSqliteEventStore({ databasePath });
+    createBaseline(databasePath);
     const spy = inject([
       {
         from: 2,
@@ -153,7 +208,7 @@ describe("schema migrations", () => {
 
   it("rolls back a failed migration and leaves its version unchanged", async () => {
     const databasePath = join(await scaffold(), "state.sqlite");
-    createSqliteEventStore({ databasePath });
+    createBaseline(databasePath);
     const spy = inject([
       {
         from: 2,
@@ -178,7 +233,7 @@ describe("schema migrations", () => {
 
   it("applies migrations in version order even when listed out of order", async () => {
     const databasePath = join(await scaffold(), "state.sqlite");
-    createSqliteEventStore({ databasePath });
+    createBaseline(databasePath);
     const spy = inject([
       { from: 3, to: 4, sql: "INSERT INTO migration_example VALUES ('second');" },
       {

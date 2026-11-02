@@ -17,19 +17,19 @@ export async function runScriptedDryRun(
   for (const step of script) {
     if (step.type === "assistant.output") {
       output = step.content;
-      events.append("assistant.output", { content: step.content });
+      await events.append("assistant.output", { content: step.content });
       continue;
     }
 
     if (step.type === "artifact.write") {
       if (workspaceId === undefined) {
         workspaceId = randomUUID();
-        events.append("artifact.workspace.created", { workspaceId });
+        await events.append("artifact.workspace.created", { workspaceId });
       }
 
       for (const file of step.files) {
         artifactPaths.add(file.path);
-        events.append("artifact.file.written", {
+        await events.append("artifact.file.written", {
           path: file.path,
           content: file.content,
           mimeType: file.mimeType ?? "text/plain",
@@ -37,7 +37,7 @@ export async function runScriptedDryRun(
       }
 
       const snapshotId = randomUUID();
-      events.append("artifact.snapshot.created", {
+      await events.append("artifact.snapshot.created", {
         snapshotId,
         fileCount: artifactPaths.size,
       });
@@ -51,7 +51,7 @@ export async function runScriptedDryRun(
       throw new Error(`Unknown tool: ${step.toolName}`);
     }
 
-    events.append("tool.call", {
+    await events.append("tool.call", {
       toolName: tool.name,
       arguments: step.arguments,
     });
@@ -65,12 +65,12 @@ export async function runScriptedDryRun(
     }
 
     if (tool.approval.required) {
-      events.append("approval.requested", {
+      await events.append("approval.requested", {
         toolName: tool.name,
         arguments: step.arguments,
         approval: tool.approval,
       });
-      events.append("run.waiting", {
+      await events.append("run.waiting", {
         status: "waiting",
         toolName: tool.name,
       });
@@ -78,7 +78,7 @@ export async function runScriptedDryRun(
     }
 
     const result = await tool.handler(step.arguments);
-    events.append("tool.result", {
+    await events.append("tool.result", {
       toolName: tool.name,
       result,
     });

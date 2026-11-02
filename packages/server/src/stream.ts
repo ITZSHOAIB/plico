@@ -5,9 +5,13 @@ import { initSSEStream, sendSSEEvent, sendSSEHeartbeat } from "./sse.js";
 
 // Waiting is not terminal: the stream stays open for approval (#69). run.error is followed by
 // run.failed, which closes the stream.
-const TERMINAL_EVENT_TYPES: readonly PlicoEventType[] = ["run.completed", "run.failed"];
+const TERMINAL_EVENT_TYPES: readonly PlicoEventType[] = [
+  "run.completed",
+  "run.failed",
+  "run.cancelled",
+];
 
-const TERMINAL_RUN_STATUSES: readonly RunStatus[] = ["completed", "failed"];
+const TERMINAL_RUN_STATUSES: readonly RunStatus[] = ["completed", "failed", "cancelled"];
 
 function isTerminalEventType(type: string): boolean {
   return (TERMINAL_EVENT_TYPES as readonly string[]).includes(type);
@@ -67,6 +71,11 @@ export async function handleEventStream(options: HandleEventStreamOptions): Prom
 
     const currentRun = await eventStore.getRun(runId);
     if (currentRun && isTerminalRunStatus(currentRun.status)) {
+      const remaining = await eventStore.getEvents(runId, { afterSequence: currentSequence });
+      for (const event of remaining) {
+        sendSSEEvent(response, "plico.event", event, String(event.sequence));
+        currentSequence = event.sequence;
+      }
       break;
     }
 

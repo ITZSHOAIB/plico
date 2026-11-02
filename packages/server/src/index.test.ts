@@ -125,6 +125,69 @@ async function jsonRequest(
 }
 
 describe("createPlicoServer", () => {
+  it("returns a running run immediately and exposes events while a tool executes", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-live-api-"));
+    await writeValidProject(root);
+    await writeFile(
+      join(root, "tools", "slow.tool.ts"),
+      `export default {
+      name: "slow", description: "Waits", inputSchema: { type: "object", properties: {}, additionalProperties: false },
+      capabilities: [], approval: { required: false },
+      handler: async () => { await globalThis.__plicoLiveGate; return {}; }
+    };`,
+    );
+    const eventStore = createSqliteEventStore({ databasePath: join(root, "state.sqlite") });
+    const serverApi = await createPlicoServer({ projectRoot: root, eventStore });
+    const { baseUrl, server } = await startTestServer(serverApi.requestListener);
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    Object.assign(globalThis, { __plicoLiveGate: gate });
+    try {
+      const response = await jsonRequest(baseUrl, "/v1/runs", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ script: [{ type: "tool.call", toolName: "slow", arguments: {} }] }),
+      });
+      expect(response.status).toBe(202);
+      const { runId } = response.body as { runId: string };
+      expect(await jsonRequest(baseUrl, `/v1/runs/${runId}`)).toMatchObject({
+        status: 200,
+        body: { status: "running", endedAt: null },
+      });
+      const events = await jsonRequest(baseUrl, `/v1/runs/${runId}/events`);
+      expect(events.body).toEqual(
+        expect.arrayContaining([expect.objectContaining({ type: "run.started" })]),
+      );
+      const responseStream = await fetch(`${baseUrl}/v1/runs/${runId}/events/stream`);
+      const reader = responseStream.body?.getReader();
+      if (!reader) throw new Error("Expected an event stream");
+      let streamed = "";
+      while (!streamed.includes("tool.call")) {
+        const chunk = await reader.read();
+        if (chunk.done) throw new Error("Stream ended before the tool call");
+        streamed += new TextDecoder().decode(chunk.value);
+      }
+      release();
+      while (true) {
+        const chunk = await reader.read();
+        if (chunk.done) break;
+        streamed += new TextDecoder().decode(chunk.value);
+      }
+      expect(streamed).toContain("run.completed");
+      await vi.waitFor(async () => {
+        expect(await jsonRequest(baseUrl, `/v1/runs/${runId}`)).toMatchObject({
+          body: { status: "completed", endedAt: expect.any(String) },
+        });
+      });
+    } finally {
+      release();
+      Reflect.deleteProperty(globalThis, "__plicoLiveGate");
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
+  }, 15000);
+
   it("serves health and project metadata", async () => {
     const root = await mkdtemp(join(tmpdir(), "plico-server-"));
     await writeValidProject(root);

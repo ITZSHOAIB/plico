@@ -18,7 +18,7 @@ export async function runProviderBackedRun(
     });
   }
 
-  events.append("input.received", { content: message });
+  await events.append("input.received", { content: message });
 
   const toolsByName = new Map(tools.map((tool) => [tool.name, tool]));
 
@@ -42,7 +42,7 @@ export async function runProviderBackedRun(
       tools: providerTools,
     };
 
-    events.append("model.request", {
+    await events.append("model.request", {
       messages: modelRequest.messages,
       maxSteps: modelRequest.maxSteps,
       tools: providerTools,
@@ -50,7 +50,7 @@ export async function runProviderBackedRun(
 
     const modelResponse = await provider.complete(modelRequest);
 
-    events.append("model.response", {
+    await events.append("model.response", {
       content: modelResponse.content,
       usage: modelResponse.usage,
       toolCalls: modelResponse.toolCalls,
@@ -59,7 +59,7 @@ export async function runProviderBackedRun(
     if (modelResponse.toolCalls === undefined || modelResponse.toolCalls.length === 0) {
       const finalContent = modelResponse.content;
       if (finalContent) {
-        events.append("assistant.output", { content: finalContent });
+        await events.append("assistant.output", { content: finalContent });
         output = finalContent;
       }
       return output ?? finalContent;
@@ -75,7 +75,7 @@ export async function runProviderBackedRun(
         });
       }
 
-      events.append("tool.call", {
+      await events.append("tool.call", {
         toolName: tool.name,
         arguments: toolCall.arguments,
       });
@@ -90,12 +90,12 @@ export async function runProviderBackedRun(
       }
 
       if (tool.approval.required) {
-        events.append("approval.requested", {
+        await events.append("approval.requested", {
           toolName: tool.name,
           arguments: toolCall.arguments,
           approval: tool.approval,
         });
-        events.append("run.waiting", {
+        await events.append("run.waiting", {
           status: "waiting",
           toolName: tool.name,
         });
@@ -113,7 +113,7 @@ export async function runProviderBackedRun(
         });
       }
 
-      events.append("tool.result", {
+      await events.append("tool.result", {
         toolName: tool.name,
         result,
       });

@@ -6,6 +6,6 @@ export async function runDefaultDryRun(
   events: InMemoryEventLog,
 ): Promise<string> {
   const output = `Dry run complete for ${project.config.name}.`;
-  events.append("assistant.output", { content: output });
+  await events.append("assistant.output", { content: output });
   return output;
 }
