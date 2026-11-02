@@ -30,9 +30,9 @@ export async function runEvals(
       diagnostics.push(`Expected status "${evalCase.expect.status}" but got "${result.status}"`);
     }
 
-    if (!evalCase.expect?.status && result.status === "failed") {
+    if (!evalCase.expect?.status && result.status !== "completed") {
       passed = false;
-      diagnostics.push('Run ended with status "failed"');
+      diagnostics.push(`Run ended with status "${result.status}"`);
     }
 
     if (evalCase.expect?.outputContains) {

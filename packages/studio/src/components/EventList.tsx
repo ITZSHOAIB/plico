@@ -64,7 +64,7 @@ function EventRow({ event }: { event: PlicoEvent }) {
 function eventSummary(event: PlicoEvent): string | undefined {
   const toolName = event.payload.toolName;
   if (typeof toolName !== "string") return undefined;
-  if (event.type === "approval.required") return `${toolName} requires approval`;
+  if (event.type === "approval.requested") return `${toolName} requires approval`;
   if (event.type === "tool.call" || event.type === "tool.result") return toolName;
   return undefined;
 }

@@ -18,7 +18,7 @@ const run: RunSummary = {
   runId: "run-1234567890ab",
   projectRoot: "/demo",
   projectName: "Internal Ops",
-  status: "blocked",
+  status: "waiting",
   startedAt: "2026-10-31T10:00:00.000Z",
   endedAt: "2026-10-31T10:00:01.000Z",
 };
@@ -41,7 +41,7 @@ const events = [
   event(1, "run.started"),
   event(2, "tool.call", { toolName: "create-ticket", arguments: { title: "Fix VPN" } }),
   event(3, "tool.result", { toolName: "create-ticket", result: { id: 7 } }),
-  event(4, "approval.required", { toolName: "delete-ticket" }),
+  event(4, "approval.requested", { toolName: "delete-ticket" }),
 ];
 
 const instructions: ComposedInstructions = {

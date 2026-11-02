@@ -1,7 +1,7 @@
 import type { PlicoEvent } from "./events.js";
 import type { ValidationIssue } from "./project.js";
 
-export type RunStatus = "completed" | "failed" | "blocked";
+export type RunStatus = "completed" | "failed" | "waiting";
 
 export interface RunSummary {
   runId: string;

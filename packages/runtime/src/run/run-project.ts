@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { validateProject } from "@plico/core";
-import { RunBlockedError, runtimeErrorPayload } from "../errors.js";
+import { RunWaitingError, runtimeErrorPayload } from "../errors.js";
 import { InMemoryEventLog } from "../events.js";
 import { composeInstructions } from "../instructions.js";
 import { discoverTools } from "../tools/index.js";
@@ -85,8 +85,8 @@ export async function runProject(
 
     return await finalizeRun({ ...summary, status: "completed", output, events: events.all() });
   } catch (error) {
-    if (error instanceof RunBlockedError) {
-      return finalizeRun({ ...summary, status: "blocked", events: events.all() });
+    if (error instanceof RunWaitingError) {
+      return finalizeRun({ ...summary, status: "waiting", events: events.all() });
     }
 
     events.append("run.error", runtimeErrorPayload(error));
