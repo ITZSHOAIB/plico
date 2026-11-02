@@ -26,7 +26,7 @@ export async function runProject(
 
   if (!validation.ok || !validation.project) {
     await events.append("run.error", { phase: "validation", issues: validation.errors });
-    await events.append("run.failed", { phase: "validation", status: "failed" });
+    await events.append("run.failed", { phase: "validation" });
 
     return finalizeRun({
       runId,
@@ -82,7 +82,6 @@ export async function runProject(
           ? await runDefaultDryRun(project, events)
           : await runScriptedDryRun(options.script, tools, events);
     await events.append("run.completed", {
-      status: "completed",
       ...(output === undefined ? {} : { output }),
     });
 
@@ -93,7 +92,7 @@ export async function runProject(
     }
 
     await events.append("run.error", runtimeErrorPayload(error));
-    await events.append("run.failed", { phase: "runtime", status: "failed" });
+    await events.append("run.failed", { phase: "runtime" });
 
     return finalizeRun({ ...summary, status: "failed", events: events.all() });
   }

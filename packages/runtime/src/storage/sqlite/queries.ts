@@ -94,6 +94,6 @@ function rowToEvent(row: Record<string, unknown>): PlicoEvent {
     sequence: Number(row.sequence),
     timestamp: String(row.timestamp),
     type: row.type as PlicoEvent["type"],
-    payload: JSON.parse(String(row.payload_json)) as Record<string, unknown>,
-  };
+    payload: JSON.parse(String(row.payload_json)),
+  } as PlicoEvent;
 }

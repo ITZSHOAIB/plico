@@ -171,10 +171,10 @@ describe("runProject", () => {
     });
   });
 
-  it("records runtime failures as error and terminal failed events", async (context) => {
+  it("records runtime failures as error and terminal failed events", async () => {
     const root = await mkdtemp(join(tmpdir(), "plico-runtime-"));
     await writeValidProject(root);
-    await symlinkOrSkip(context, join(root, "missing.md"), join(root, "skills", "broken.md"));
+    await mkdir(join(root, "skills", "broken.md"));
 
     const result = await runProject(root);
 
@@ -186,12 +186,12 @@ describe("runProject", () => {
     ]);
     expect(result.events[1]?.payload).toMatchObject({
       phase: "runtime",
-      message: expect.stringContaining("ENOENT"),
+      message: expect.any(String),
     });
     expect(result.events[2]?.payload).toMatchObject({
       phase: "runtime",
-      status: "failed",
     });
+    expect(result.events[2]?.payload).not.toHaveProperty("status");
   });
 
   it("returns versioned ordered events with unique identifiers", async () => {
@@ -418,6 +418,11 @@ describe("runProject", () => {
       arguments: { ticketId: "TCK-1" },
       approval: { required: true, reason: "Deletes support records." },
     });
+    const request = result.events.find((event) => event.type === "approval.requested");
+    const waiting = result.events.find((event) => event.type === "run.waiting");
+    expect(request?.payload.requestId).toEqual(expect.any(String));
+    expect(waiting?.payload.requestId).toBe(request?.payload.requestId);
+    expect(waiting?.payload).not.toHaveProperty("status");
   });
 
   it("records tool handler errors as native error and terminal failed events", async () => {
@@ -661,6 +666,12 @@ describe("runProject", () => {
         type: "run.waiting",
       }),
     ]);
+    const replayed = await reopenedStore.getEvents("run-test-003");
+    const request = replayed.find((event) => event.type === "approval.requested");
+    const waiting = replayed.find((event) => event.type === "run.waiting");
+    expect(request?.payload.requestId).toEqual(expect.any(String));
+    expect(waiting?.payload.requestId).toBe(request?.payload.requestId);
+    expect(waiting?.payload).not.toHaveProperty("status");
   });
 
   it("runs a valid project through a fake provider with a user message, emitting provider-neutral events", async () => {

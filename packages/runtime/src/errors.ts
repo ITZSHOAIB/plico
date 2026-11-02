@@ -1,5 +1,7 @@
+import type { PlicoEventPayloads } from "@plico/contracts";
+
 export class RuntimeDiagnosticError extends Error {
-  constructor(readonly payload: Record<string, unknown>) {
+  constructor(readonly payload: PlicoEventPayloads["run.error"]) {
     super(typeof payload.message === "string" ? payload.message : "Runtime diagnostic error");
   }
 }
@@ -14,7 +16,7 @@ export function errorMessage(error: unknown): string {
   return "Unknown runtime error";
 }
 
-export function runtimeErrorPayload(error: unknown): Record<string, unknown> {
+export function runtimeErrorPayload(error: unknown): PlicoEventPayloads["run.error"] {
   if (error instanceof RuntimeDiagnosticError) {
     return error.payload;
   }

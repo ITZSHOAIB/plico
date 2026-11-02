@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { RuntimeDiagnosticError, RunWaitingError } from "../../errors.js";
 import type { InMemoryEventLog } from "../../events.js";
 import { validateJsonSchemaSubset } from "../../tools/schema.js";
@@ -90,13 +91,15 @@ export async function runProviderBackedRun(
       }
 
       if (tool.approval.required) {
+        const requestId = randomUUID();
         await events.append("approval.requested", {
+          requestId,
           toolName: tool.name,
           arguments: toolCall.arguments,
           approval: tool.approval,
         });
         await events.append("run.waiting", {
-          status: "waiting",
+          requestId,
           toolName: tool.name,
         });
         throw new RunWaitingError();
