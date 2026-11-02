@@ -1,5 +1,5 @@
 import { createServer, type Server } from "node:http";
-import { createSqliteEventStore } from "@plico/runtime";
+import { createSqliteEngine, createSqliteEventStore, recoverRuns } from "@plico/runtime";
 import { handleRequest } from "./routes/index.js";
 import { serveStaticFile } from "./serve-static.js";
 import type { CreatePlicoServerOptions, PlicoServer, ServePlicoOptions } from "./types.js";
@@ -8,6 +8,7 @@ export async function createPlicoServer(options: CreatePlicoServerOptions): Prom
   const projectRoot = options.projectRoot;
   const eventStore = options.eventStore;
   const studioPath = options.studioPath;
+  const engine = options.engine;
 
   return {
     requestListener: async (request, response) => {
@@ -15,7 +16,7 @@ export async function createPlicoServer(options: CreatePlicoServerOptions): Prom
       const isApiPath = url.pathname === "/health" || url.pathname.startsWith("/v1/");
 
       if (isApiPath) {
-        await handleRequest({ projectRoot, eventStore, studioPath, request, response });
+        await handleRequest({ projectRoot, eventStore, engine, studioPath, request, response });
         return;
       }
 
@@ -27,18 +28,22 @@ export async function createPlicoServer(options: CreatePlicoServerOptions): Prom
         return;
       }
 
-      await handleRequest({ projectRoot, eventStore, studioPath, request, response });
+      await handleRequest({ projectRoot, eventStore, engine, studioPath, request, response });
     },
   };
 }
 
 export async function servePlico(options: ServePlicoOptions): Promise<Server> {
   const eventStore = createSqliteEventStore({ databasePath: options.databasePath });
+  const engine = createSqliteEngine({ databasePath: options.databasePath });
+  // Runs a dead process left behind continue in the background; they appear in the log as they go.
+  void recoverRuns({ engine, eventStore }).catch(() => undefined);
   const server = createServer(
     (
       await createPlicoServer({
         projectRoot: options.projectRoot,
         eventStore,
+        engine,
         ...(options.studioPath === undefined ? {} : { studioPath: options.studioPath }),
       })
     ).requestListener,

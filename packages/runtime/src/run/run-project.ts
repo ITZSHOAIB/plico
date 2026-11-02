@@ -1,15 +1,28 @@
 import { randomUUID } from "node:crypto";
 import { validateProject } from "@plico/core";
-import { createEngine, createMemoryJournal, type RunContext } from "../engine/index.js";
+import {
+  createEngine,
+  createMemoryJournal,
+  type Engine,
+  type RecoveredRun,
+  type RunContext,
+} from "../engine/index.js";
 import { RunWaitingError, runtimeErrorPayload } from "../errors.js";
 import { InMemoryEventLog } from "../events.js";
 import { composeInstructions } from "../instructions.js";
 import { discoverTools } from "../tools/index.js";
-import type { RunProjectOptions, RunResult } from "../types/index.js";
+import type { DryRunScriptStep, RunProjectOptions, RunResult } from "../types/index.js";
 import { finalizeRun } from "./finalize.js";
 import { runDefaultDryRun } from "./strategies/default-dry.js";
 import { runProviderBackedRun } from "./strategies/provider.js";
 import { runScriptedDryRun } from "./strategies/scripted.js";
+
+interface RunInput {
+  root: string;
+  startedAt: string;
+  message?: string;
+  script?: DryRunScriptStep[];
+}
 
 export async function runProject(
   root: string,
@@ -17,20 +30,40 @@ export async function runProject(
 ): Promise<RunResult> {
   const engine = options.engine ?? createEngine({ journal: createMemoryJournal() });
   const runId = options.runId ?? `run-${randomUUID()}`;
-  const startedAt = new Date().toISOString();
+  const input: RunInput = {
+    root,
+    startedAt: new Date().toISOString(),
+    ...(options.message === undefined ? {} : { message: options.message }),
+    ...(options.script === undefined ? {} : { script: options.script }),
+  };
 
-  return engine.run(runId, (ctx) => runLoop(ctx, root, startedAt, options), {});
+  return engine.run(runId, (ctx, journaled: RunInput) => runLoop(ctx, journaled, options), input);
+}
+
+/**
+ * Continues runs a dead process left running. The provider and event store come from this process;
+ * the project path, message and script come from the journal.
+ */
+export async function recoverRuns(
+  options: RunProjectOptions & { engine: Engine },
+): Promise<RecoveredRun[]> {
+  return options.engine.recover<RunInput, RunResult>((_runId, input) =>
+    // A message means a provider-backed run; without a provider here it stays down for one that has it.
+    input.message !== undefined && options.provider === undefined
+      ? undefined
+      : (ctx, journaled) => runLoop(ctx, journaled, options),
+  );
 }
 
 async function runLoop(
   ctx: RunContext,
-  root: string,
-  startedAt: string,
+  input: RunInput,
   options: RunProjectOptions,
 ): Promise<RunResult> {
   const { runId } = ctx;
+  const { root, startedAt } = input;
   const validation = await validateProject(root);
-  const events = new InMemoryEventLog(runId, options.eventStore);
+  const events = await InMemoryEventLog.open(runId, options.eventStore);
   await events.append("run.started", {
     projectRoot: validation.project?.root ?? root,
     projectName: validation.project?.config.name ?? "",
@@ -87,14 +120,14 @@ async function runLoop(
         ? await runProviderBackedRun(
             ctx,
             options.provider,
-            options.message,
+            input.message,
             instructions.content,
             tools,
             events,
           )
-        : options.script === undefined
+        : input.script === undefined
           ? await runDefaultDryRun(project, events)
-          : await runScriptedDryRun(ctx, options.script, tools, events);
+          : await runScriptedDryRun(ctx, input.script, tools, events);
     await events.append("run.completed", {
       ...(output === undefined ? {} : { output }),
     });

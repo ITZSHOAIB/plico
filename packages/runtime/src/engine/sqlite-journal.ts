@@ -1,0 +1,99 @@
+import type { DatabaseSync } from "node:sqlite";
+import { openDatabase } from "../storage/sqlite/open.js";
+import { acquireOwner, ownerIsAlive } from "../storage/sqlite/owner-lock.js";
+import type { Journal, JournalRun, Lease } from "./journal.js";
+import type { ExecutionState } from "./types.js";
+
+interface RunRow {
+  run_id: string;
+  state: ExecutionState;
+  input_json: string;
+  worker_id: string;
+  lease_until: number;
+  owner_token: string;
+  owner_path: string;
+}
+
+function leaseOf(row: RunRow): Lease {
+  return { workerId: row.worker_id, until: row.lease_until };
+}
+
+/** Keeps the journal in the project's SQLite file, in tables private to the engine. */
+export function createSqliteJournal({ databasePath }: { databasePath: string }): Journal {
+  const database: DatabaseSync = openDatabase(databasePath);
+
+  function readRun(runId: string): RunRow | undefined {
+    return database.prepare("SELECT * FROM engine_runs WHERE run_id = ?").get(runId) as
+      | RunRow
+      | undefined;
+  }
+
+  return {
+    async begin(runId, inputJson, lease) {
+      const owner = acquireOwner();
+      const result = database
+        .prepare(
+          "INSERT OR IGNORE INTO engine_runs (run_id, state, input_json, worker_id, lease_until, owner_token, owner_path) VALUES (?, 'running', ?, ?, ?, ?, ?)",
+        )
+        .run(runId, inputJson, lease.workerId, lease.until, owner.token, owner.path);
+      return result.changes === 1;
+    },
+    async getRun(runId): Promise<JournalRun | undefined> {
+      const row = readRun(runId);
+      return row && { runId, state: row.state, inputJson: row.input_json };
+    },
+    async setState(runId, state) {
+      database.prepare("UPDATE engine_runs SET state = ? WHERE run_id = ?").run(state, runId);
+    },
+    async renew(runId, lease) {
+      database
+        .prepare("UPDATE engine_runs SET lease_until = ? WHERE run_id = ? AND worker_id = ?")
+        .run(lease.until, runId, lease.workerId);
+    },
+    async claim(runId, lease, expected) {
+      const owner = acquireOwner();
+      const result = expected
+        ? database
+            .prepare(
+              "UPDATE engine_runs SET state = 'running', worker_id = ?, lease_until = ?, owner_token = ?, owner_path = ? WHERE run_id = ? AND worker_id = ? AND lease_until = ?",
+            )
+            .run(
+              lease.workerId,
+              lease.until,
+              owner.token,
+              owner.path,
+              runId,
+              expected.workerId,
+              expected.until,
+            )
+        : database
+            .prepare(
+              "UPDATE engine_runs SET state = 'running', worker_id = ?, lease_until = ?, owner_token = ?, owner_path = ? WHERE run_id = ?",
+            )
+            .run(lease.workerId, lease.until, owner.token, owner.path, runId);
+      return result.changes === 1;
+    },
+    async listStale(workerId, now) {
+      const rows = database
+        .prepare("SELECT * FROM engine_runs WHERE state = 'running' AND worker_id != ?")
+        .all(workerId) as unknown as RunRow[];
+      // A dead process is recovered at the next start; a live one only after its lease runs out.
+      return rows
+        .filter((row) => row.lease_until < now || !ownerIsAlive(row.owner_token, row.owner_path))
+        .map((row) => ({ runId: row.run_id, held: leaseOf(row) }));
+    },
+    async getStep(runId, index) {
+      const row = database
+        .prepare("SELECT name, result_json FROM engine_steps WHERE run_id = ? AND step_index = ?")
+        .get(runId, index) as { name: string; result_json: string } | undefined;
+      return row && { name: row.name, resultJson: row.result_json };
+    },
+    async putStep(runId, index, step) {
+      database
+        .prepare(
+          "INSERT OR IGNORE INTO engine_steps (run_id, step_index, name, result_json) VALUES (?, ?, ?, ?)",
+        )
+        .run(runId, index, step.name, step.resultJson);
+    },
+  };
+}

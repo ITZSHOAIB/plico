@@ -1,10 +1,7 @@
-import { existsSync, mkdirSync } from "node:fs";
-import { dirname } from "node:path";
-import { DatabaseSync } from "node:sqlite";
-import { pathToFileURL } from "node:url";
 import type { EvalReport, PlicoEvent, RunSummary } from "@plico/contracts";
 import type { CreateSqliteEventStoreOptions, EventStore } from "../../types/index.js";
 import { appendEventRecord } from "./append-event.js";
+import { openDatabase } from "./open.js";
 import {
   persistEvalReportRecord,
   readEvents,
@@ -13,26 +10,19 @@ import {
   readRunSummary,
 } from "./queries.js";
 import { recoverInterruptedRuns } from "./recover-interrupted.js";
-import { initializeSchema } from "./schema.js";
 
 export function createSqliteEventStore({
   databasePath,
   readOnly = false,
 }: CreateSqliteEventStoreOptions): EventStore {
-  if (!readOnly) mkdirSyncParent(databasePath);
-  const database = new DatabaseSync(readOnly ? readOnlySource(databasePath) : databasePath, {
-    readOnly,
-  });
-  try {
-    database.exec("PRAGMA busy_timeout = 5000;");
-    if (!readOnly) {
-      setWalMode(database);
-      initializeSchema(database);
+  const database = openDatabase(databasePath, readOnly);
+  if (!readOnly) {
+    try {
       recoverInterruptedRuns(database);
+    } catch (error) {
+      database.close();
+      throw error;
     }
-  } catch (error) {
-    database.close();
-    throw error;
   }
 
   return {
@@ -58,34 +48,4 @@ export function createSqliteEventStore({
       return readLatestEvalReport(database);
     },
   };
-}
-
-function setWalMode(database: DatabaseSync): void {
-  // Changing journal mode may return SQLITE_BUSY immediately even with busy_timeout set.
-  const deadline = Date.now() + 5000;
-  const pause = new Int32Array(new SharedArrayBuffer(4));
-  while (true) {
-    try {
-      database.exec("PRAGMA journal_mode = WAL;");
-      return;
-    } catch (error) {
-      const code = (error as { errcode?: number }).errcode;
-      if (code === undefined || (code & 0xff) !== 5 || Date.now() >= deadline) throw error;
-      Atomics.wait(pause, 0, 0, Math.min(25, deadline - Date.now()));
-    }
-  }
-}
-
-// A plain read-only open of a WAL database creates -shm and -wal files. Immutable mode
-// avoids them but ignores WAL content, so it is only safe when no -wal file exists.
-function readOnlySource(databasePath: string): string | URL {
-  if (existsSync(`${databasePath}-wal`)) return databasePath;
-
-  const url = pathToFileURL(databasePath);
-  url.searchParams.set("immutable", "1");
-  return url;
-}
-
-function mkdirSyncParent(databasePath: string): void {
-  mkdirSync(dirname(databasePath), { recursive: true });
 }

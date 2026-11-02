@@ -21,6 +21,22 @@ const migrations: ReadonlyArray<{ from: number; to: number; sql: string }> = [
     to: 4,
     sql: `CREATE TABLE run_owners (run_id TEXT PRIMARY KEY, process_id INTEGER NOT NULL, owner_token TEXT NOT NULL, owner_path TEXT NOT NULL);`,
   },
+  {
+    // The execution engine's journal. These tables are private to the engine.
+    from: 4,
+    to: 5,
+    sql: `
+    CREATE TABLE engine_runs (
+      run_id TEXT PRIMARY KEY, state TEXT NOT NULL, input_json TEXT NOT NULL,
+      worker_id TEXT NOT NULL, lease_until INTEGER NOT NULL,
+      owner_token TEXT NOT NULL, owner_path TEXT NOT NULL
+    );
+    CREATE TABLE engine_steps (
+      run_id TEXT NOT NULL, step_index INTEGER NOT NULL, name TEXT NOT NULL, result_json TEXT NOT NULL,
+      PRIMARY KEY (run_id, step_index)
+    );
+  `,
+  },
 ];
 
 function readSchemaVersion(

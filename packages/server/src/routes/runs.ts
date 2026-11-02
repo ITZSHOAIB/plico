@@ -19,7 +19,7 @@ export const runRoutes: Route[] = [
   {
     method: "POST",
     pattern: /^\/v1\/runs$/,
-    handler: async ({ projectRoot, eventStore, request, response }) => {
+    handler: async ({ projectRoot, eventStore, engine, request, response }) => {
       const body = await readJsonBody(request);
       const script = body.script === undefined ? undefined : normalizeScript(body.script);
       let resolveStarted!: (runId: string) => void;
@@ -30,6 +30,7 @@ export const runRoutes: Route[] = [
       });
       void runProject(projectRoot, {
         eventStore,
+        ...(engine === undefined ? {} : { engine }),
         ...(script === undefined ? {} : { script }),
         onStarted: resolveStarted,
       }).catch(rejectStarted);
@@ -40,12 +41,13 @@ export const runRoutes: Route[] = [
   {
     method: "POST",
     pattern: /^\/v1\/runs\/dry$/,
-    handler: async ({ projectRoot, eventStore, request, response }) => {
+    handler: async ({ projectRoot, eventStore, engine, request, response }) => {
       const body = await readJsonBody(request);
       const script = body.script === undefined ? undefined : normalizeScript(body.script);
       const result = await runProject(projectRoot, {
         ...(script === undefined ? {} : { script }),
         eventStore,
+        ...(engine === undefined ? {} : { engine }),
       });
       sendJson(response, 200, result);
     },
