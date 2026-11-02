@@ -13,4 +13,4 @@ Plico's native event model will be a versioned public contract and the source of
 
 ## Consequences
 
-Threads, transcripts, run timelines, tool views, approval records, artifact views, and eval views are projections from the same log rather than separate histories. Storage adapters must preserve event ordering and IDs, while artifact storage adapters must preserve workspace versions instead of only storing final files.
+Threads, transcripts, run timelines, tool views, approval records, artifact views, and eval views are projections from the same log rather than separate histories. The log records what happened. Where a crashed run resumes is the engine's job, not the log's (ADR 0008). Storage adapters must preserve event ordering and IDs, while artifact storage adapters must preserve workspace versions instead of only storing final files.

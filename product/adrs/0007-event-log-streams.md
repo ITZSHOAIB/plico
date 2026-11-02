@@ -25,4 +25,4 @@ Memory events stay inside run streams. Manual edits to `memory/` are not events,
 
 The log has its final shape: `streamType`, `streamId`, per-stream `sequence` and `position` are in place, but `run` is the only stream type. Thread streams, `message.created`, `threadId` on `run.started` and copied assistant replies arrive with #71.
 
-Persisting a run replaces its events, so re-persisting one would move them to the end of `position`. No code does this today: run ids are unique and each run is persisted once, and nothing reads `position` yet.
+Persisting a run replaces its events, so re-persisting one would move them to the end of `position`. No code does this today: run ids are unique and each run is persisted once, and nothing reads `position` yet. This must change before the engine lands (ADR 0008): a step can run again after a crash, so appends are idempotent by `(stream, sequence)` and nothing replaces a run's events.

@@ -22,10 +22,15 @@ export function createSqliteEventStore({
   const database = new DatabaseSync(readOnly ? readOnlySource(databasePath) : databasePath, {
     readOnly,
   });
-  database.exec("PRAGMA busy_timeout = 5000;");
-  if (!readOnly) {
-    database.exec("PRAGMA journal_mode = WAL;");
-    initializeSchema(database);
+  try {
+    database.exec("PRAGMA busy_timeout = 5000;");
+    if (!readOnly) {
+      database.exec("PRAGMA journal_mode = WAL;");
+      initializeSchema(database);
+    }
+  } catch (error) {
+    database.close();
+    throw error;
   }
 
   return {

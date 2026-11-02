@@ -1,29 +1,38 @@
 import type { DatabaseSync } from "node:sqlite";
 
-const sqliteSchemaVersion = "2";
+const baselineVersion = 2;
+const migrations: ReadonlyArray<{ from: number; to: number; sql: string }> = [];
+const sqliteSchemaVersion = migrations.at(-1)?.to ?? baselineVersion;
 
-function assertCurrentSchema(database: DatabaseSync): void {
+function readSchemaVersion(database: DatabaseSync): number | undefined {
   const row = database.prepare("SELECT value FROM plico_meta WHERE key = 'schema_version'").get() as
     | { value: string }
     | undefined;
-  if (row && row.value !== sqliteSchemaVersion) {
-    throw new Error(
-      `Database uses an older schema (${row.value}, expected ${sqliteSchemaVersion}). Delete it or choose another path with --db.`,
-    );
+  if (!row) return undefined;
+  const version = Number(row.value);
+  if (!Number.isSafeInteger(version) || version < 1 || String(version) !== row.value) {
+    throw new Error(`Database has an invalid schema version (${row.value}).`);
   }
+  if (version > sqliteSchemaVersion) {
+    throw new Error(`Database uses a newer schema (${version}, supported ${sqliteSchemaVersion}).`);
+  }
+  return version;
 }
 
 export function initializeSchema(database: DatabaseSync): void {
-  database.exec(`
+  database.exec("BEGIN IMMEDIATE");
+  try {
+    database.exec(`
     CREATE TABLE IF NOT EXISTS plico_meta (
       key TEXT PRIMARY KEY,
       value TEXT NOT NULL
     );
   `);
-  assertCurrentSchema(database);
-  // `position` is the log-wide order from ADR 0007. Nothing reads it yet; it exists now so that
-  // thread streams need no second migration. It stays internal: public cursors are per stream.
-  database.exec(`
+    let current = readSchemaVersion(database);
+    if (current === undefined) {
+      // `position` is the log-wide order from ADR 0007. Nothing reads it yet; it exists now so that
+      // thread streams need no second migration. It stays internal: public cursors are per stream.
+      database.exec(`
     CREATE TABLE IF NOT EXISTS runs (
       run_id TEXT PRIMARY KEY,
       project_root TEXT NOT NULL,
@@ -52,7 +61,25 @@ export function initializeSchema(database: DatabaseSync): void {
     );
     CREATE INDEX IF NOT EXISTS runs_started_at_index ON runs(started_at);
   `);
-  database
-    .prepare("INSERT OR REPLACE INTO plico_meta(key, value) VALUES ('schema_version', ?)")
-    .run(sqliteSchemaVersion);
+      database
+        .prepare("INSERT OR REPLACE INTO plico_meta(key, value) VALUES ('schema_version', ?)")
+        .run(String(baselineVersion));
+      current = baselineVersion;
+    }
+    while (current < sqliteSchemaVersion) {
+      const migration = migrations.find((item) => item.from === current);
+      if (!migration || migration.to <= current) {
+        throw new Error(`Database uses an older schema (${current}) with no supported migration.`);
+      }
+      database.exec(migration.sql);
+      current = migration.to;
+      database
+        .prepare("UPDATE plico_meta SET value = ? WHERE key = 'schema_version'")
+        .run(String(current));
+    }
+    database.exec("COMMIT");
+  } catch (error) {
+    database.exec("ROLLBACK");
+    throw error;
+  }
 }

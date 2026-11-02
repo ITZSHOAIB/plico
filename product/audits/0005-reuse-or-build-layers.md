@@ -4,9 +4,9 @@ Date: 2026-11-02
 
 Goal: create a very good way to build AI agents that is as easy and scalable as possible, reusing good open source where it earns its place. What exists today does not constrain these choices.
 
-Evidence came from repo data, npm and docs, plus some source reading. All twelve planned PoCs have now run, covering layers 1 through 10, 12, 13 and 18. At the owner's request, memory ran first, followed by the tracing, artifact and validation PoCs as one batch. Layers with no planned PoC still need the combined decision review. Maintenance numbers cover 1 August to early November 2026. Stable release counts include small patches.
+Evidence came from repo data, npm and docs, plus some source reading. All twelve planned PoCs have now run, covering layers 1 through 10, 12, 13 and 18, plus a thirteenth that closed the DBOS gaps and ran the picks together. At the owner's request, memory ran first, followed by the tracing, artifact and validation PoCs as one batch. Layers with no planned PoC still need the combined decision review. Maintenance numbers cover 1 August to early November 2026. Stable release counts include small patches.
 
-Layer 1 has a working decision. No layer is final until all PoCs are complete, and the owner then decides them together. ADRs 0001, 0002 and 0004 stay in force until an ADR replaces them. Every PoC includes a build-our-own option, tested with the same scenarios as the reuse candidates.
+All PoCs are complete. On 2026-11-02 the owner asked for the documents to be revamped from these results, which settles the layers: ADR 0009 records each decision, ADR 0008 records layer 1, and the PRD, ADRs and epics were updated to match. Layers with no PoC (11 to 17) stay proposed in ADR 0009 until their epic proves them. The "working pick" labels below are now decisions where ADR 0009 says accepted. Every PoC includes a build-our-own option, tested with the same scenarios as the reuse candidates.
 
 ## How each layer is judged
 
@@ -697,7 +697,7 @@ Findings to carry forward:
 - **A timed-out wait looks like a denial.** `DBOS.recv` returns null on timeout, and this loop treats that as denied. The adapter uses 30 days, but the interface needs an explicit timeout result.
 - **The own engine was slower here.** Start to pause took a median of about 640 ms against 157 ms for DBOS over 20 runs. It was not tuned, and this matters little for local use.
 
-Not tested: streaming, parallel tool calls, several DBOS workers, load, a real upgrade with changed code that still replays, and `pi-agent-core` with a real model.
+Not tested here: streaming, parallel tool calls, several DBOS workers (PoC 13 covers this), load (PoC 13 covers this), a real upgrade with changed code that still replays, and `pi-agent-core` with a real model.
 
 ## PoC 3 results: model calls
 
@@ -734,7 +734,7 @@ Results:
 - **The tests tie.** Every arm passed. Our own adapters needed no workarounds for scenario G, while the AI SDK adapter needed two, and our own arm installs nothing. Gemini and the OpenAI format took 139 lines, and both worked on a real server after a 3-line fix for the signature. That is less than this audit assumed when it ruled out building.
 - **Upkeep decides it, so the working pick stays the AI SDK behind the Plico interface.** About 10 of the 40 most recent commits to `@ai-sdk/google` since 1 August fix the chat path: streamed tool arguments, in-stream errors, interrupted streams, metadata lost on replay, and undercounted usage. `@ai-sdk/anthropic` had 64 source commits in the same period, and its adapter handles `cache_control`, thinking blocks and beta headers. The built `google` and `anthropic` packages are about 300 KB each, against our 65-line Gemini adapter. Our adapters match on what was tested, not on those cases: for example, ours does not read in-stream errors.
 - **Own adapters are the fallback and the exit.** The AI SDK is a single-vendor dependency with a major version about every 6 months. A small own adapter limits that risk, and may be worth shipping for the OpenAI format alone, which covers local servers.
-- **`pi-ai` and TanStack AI both work,** but neither showed an advantage here. `pi-ai` installs provider SDKs a Gemini-only setup does not use. TanStack's AG-UI dependency goes to layer 13's PoC.
+- **`pi-ai` and TanStack AI both work,** but neither showed an advantage here. `pi-ai` installs provider SDKs a Gemini-only setup does not use. TanStack's AG-UI dependency goes to PoC 8, layer 10.
 
 Findings to carry forward:
 
@@ -766,7 +766,7 @@ Date: 2026-11-02. Throwaway code in `D:\projects\plico-poc\poc4`. SQLite and Pos
 | Two writers | Pass, both | Pass, both | Pass, both | **Fails: lost rows** |
 | Migrating twice does nothing | Pass, both | Pass, both | Pass, both | Pass |
 | Upgrade keeps data | Pass, both | Pass, both | Pass, both | Pass |
-| Three processes migrate at once | Pass, both | Pass, both | **Postgres fails** | Not applicable |
+| Three processes migrate at once | Pass, both | **SQLite flaky** (PoC 13 corrections) | **Postgres fails** | Not applicable |
 | Failed migration leaves no partial change | Pass, both | **SQLite fails** | Pass, both | Pass, column not inspected |
 | Migrates from a packed, installed package | Pass, both | Pass, both | Pass, both | Not run |
 
@@ -783,7 +783,7 @@ Results:
 
 - **Plain SQL stays primary.** It was the only arm to pass everything on both databases, with no dependency beyond `pg`. One set of queries worked because `ON CONFLICT DO NOTHING` and the rest of this SQL are common to both. It costs about 40 lines more than Kysely here and gives no query types.
 - **Table count stays near the limit, not over it.** Plico has four tables today: `plico_meta`, `runs`, `events` and `eval_reports`. Threads, approvals and artifact metadata could take that to five to seven, depending on later PoCs. The own engine's tables stay private to it. Revisit this once those layers are done.
-- **Kysely is now the first fallback.** The community `node:sqlite` dialects were last published in 2025, which fails the maintenance rule, so this arm adapted `node:sqlite` with a 20-line shim. Its SQLite adapter reports no transactional DDL, so a failed multi-step migration leaves earlier steps applied. SQLite migrations would need one change each or a wrapper.
+- **Kysely is now the first fallback, though its SQLite migration later proved flaky (PoC 13 corrections).** The community `node:sqlite` dialects were last published in 2025, which fails the maintenance rule, so this arm adapted `node:sqlite` with a 20-line shim. Its SQLite adapter reports no transactional DDL, so a failed multi-step migration leaves earlier steps applied. SQLite migrations would need one change each or a wrapper.
 - **Drizzle drops to second fallback.** On the stable release it needs `better-sqlite3`, two schemas and two migration folders. Its Postgres migrator takes no lock, so two of three processes starting together crashed. Deployments with several workers would have to run migrations as a separate step. Drizzle 1.0 betas were not tested.
 - **PGlite is out as the local store.** A second process opened the same folder with no error. With forced overlap, each of two processes reported 6,000 successful inserts, and only 11,774 of 12,000 rows existed after reopening. `plico serve` running alongside `plico runs` is exactly that setup. An earlier run without confirmed overlap lost nothing, so this is a race, not a constant.
 
@@ -986,7 +986,7 @@ Findings to carry forward:
 - **`deepagents` sends nothing unless asked.** A scripted run made 0 offsite calls with no `LANGSMITH_` or `LANGCHAIN_` variables set, so unlike `mcp-use` it is not out on telemetry. With `LANGSMITH_TRACING=true` it called `api.smith.langchain.com` 5 times, so Plico must leave that off.
 - **`deepagents` needs a host to notice.** Nothing restarts a killed run. My driver called resume, whereas the own engine reclaims runs by lease. Plico would have to add that.
 
-Not tested: runs of hundreds of turns, costs, nested or parallel subagents, a denied approval through the parent, more than two approvals in one run, long waits, a Studio view, DBOS under the subagent (only the own engine ran), Postgres, `@ai-sdk/harness` with Claude Code or Codex or on a network sandbox, Pi `sessionStorage`, and any other real model. The final Gemini runs of own and `deepagents` each happened once, with no kill during them. Only `fetch` and socket connections were watched for offsite calls.
+Not tested: runs of hundreds of turns, costs, nested or parallel subagents, a denied approval through the parent, more than two approvals in one run, long waits, a Studio view, DBOS under the subagent (only the own engine ran; PoC 13 covers this), Postgres, `@ai-sdk/harness` with Claude Code or Codex or on a network sandbox, Pi `sessionStorage`, and any other real model. The final Gemini runs of own and `deepagents` each happened once, with no kill during them. Only `fetch` and socket connections were watched for offsite calls.
 
 ## PoC 8 results: frontend protocol and ecosystem
 
@@ -1062,8 +1062,6 @@ Limits: one deterministic task and one socket-cut position; no active mid-frame/
 During continuation, three fixture errors were corrected before the final matrix: a guessed AI SDK cursor skipped events; AG-UI connect could submit stored approval answers; and the hub exposed `approval.required` before installing its answer handler. The final tests assert actual outcomes and fail with nonzero exits rather than only printing comparisons. The intentionally unsupported offset-only AI case remains an asserted negative control; the invalid wire-chunk control is rejected by the official schema.
 
 Official references checked for this continuation: [AG-UI events and draft interrupt lifecycle](https://docs.ag-ui.com/concepts/events), [AI SDK resume streams](https://ai-sdk.dev/docs/ai-sdk-ui/chatbot-resume-streams), [TanStack transports](https://tanstack.com/ai/latest/docs/transports/overview), [assistant-ui runtime choices](https://www.assistant-ui.com/docs/runtimes/pick-a-runtime). Installed source and the executed tests are authoritative for the versions above.
-
-Remaining planned PoCs: 9, tracing; 10, artifact versioning; 11, memory; 12, validation. Final ADR/PRD/epic revisions still wait until those are finished and the owner decides the layers together.
 
 ## PoC 11 results: explicit memory and optional retrieval
 
@@ -1173,8 +1171,6 @@ Popularity gives Mem0 a credible optional ecosystem; it does not establish a rea
 - **Budget and trust are host concerns.** Prompt data boundaries do not by themselves prevent injection, and an oversized list must not silently displace higher-priority instructions. The fixture fails visibly at its budget. Selecting notes, rendering their provenance, and testing no-answer retrieval remain product work.
 
 Not tested: Plico's real runtime/event transaction boundary, readiness or Studio, Postgres or a host without writable disk, multiple machines, filesystem watchers, network filesystems, human edits during the actual rename window, forced OS/power loss, malicious symlink swaps, all-directory permission errors, receipt retention/migration, inferred Mem0 extraction, unknown-query abstention, rerankers, vector-store migrations, embedding-model changes, real remote vector stores, or large/long-lived corpora. The 28 tests and small Gemini check justify the working pick, not production readiness.
-
-Remaining planned PoCs: 9, tracing; 10, artifact versioning; 12, validation. Final ADR/PRD/epic revisions still wait for the owner's combined layer decisions.
 
 ## PoCs 9, 10 and 12: remaining-layer batch
 
@@ -1296,9 +1292,103 @@ Monthly npm downloads ending 29 October: Zod 1.336B, TypeBox 51.3M, Valibot 89.8
 
 Not tested: Plico config/loading end to end, the full JSON Schema conformance suite, async refinements, arbitrary transforms, recursive/reference-heavy tools, defaults and coercion policies, malicious schemas, browser bundle/CSP behavior, every provider's supported schema subset or future version compatibility. These limits should shape the eventual tool-schema contract, not become implicit promises. Sources: [Zod JSON Schema](https://zod.dev/json-schema), [Valibot JSON Schema](https://valibot.dev/guides/json-schema/), [TypeBox](https://github.com/sinclairzx81/typebox), [Standard Schema](https://standardschema.dev/), [Ajv](https://ajv.js.org/).
 
+## PoC 13 results: DBOS gaps and the combined run
+
+Date: 2026-11-02. Throwaway code in `D:\projects\plico-poc\poc13`, on Windows with Node 22.23.3, `@dbos-inc/dbos-sdk` 5.4.0, `ai` 7.0.159, `@modelcontextprotocol/client` 2.4.0 and `hono` 4.13.16. The DBOS findings may change with its version. This closes the gaps a review of PoCs 1 to 12 found: DBOS could not express per-step retries, several DBOS behaviours were untested, and no run had combined the picks. The build-our-own arm is the own SQLite engine, on the same scenarios through the same interface. This changes no decision; the owner still decides all layers together.
+
+**DBOS holds up as the production engine, with one real condition: nothing takes over a dead worker's runs by default.** Everything else tested passed on both engines, and the picks work together in one process with a real model.
+
+### Shared scenarios
+
+Both engines passed 14 of 14: own in one final full run, DBOS in two. Workflows use only the engine interface.
+
+| Scenario | Own | DBOS |
+| --- | --- | --- |
+| `retries: 0`: one attempt, the failure is an event | Pass | Pass |
+| `retries: 2`: three attempts inside one step | Pass | Pass |
+| Crash inside a `retries: 0` step runs it again on recovery | Pass, 2 attempts | Pass, 2 attempts |
+| Wait timeout is distinct from a denial | Pass | Pass |
+| Kill during a 6 s wait keeps the deadline | Pass, 6,036 ms | Pass, 6,020 ms |
+| Late decision changes nothing | Pass | Pass |
+| Two named approvals need two decisions | Pass | Pass |
+| Decision sent before the wait is held | Pass | Pass |
+| First of two conflicting decisions wins | Pass | Pass |
+| Cancel while paused stays cancelled after a restart | Pass | Pass |
+| Cancel aborts a running step; the next step never runs | Pass | Pass |
+| Subagent: kill at its approval, a new process approves through the parent | Pass, each effect once | Pass, each effect once |
+| Subagent: a denial reaches the child | Pass | Pass |
+| Subagent: cancelling the parent cancels the child | Pass | Pass |
+
+- **Per-step retries needed no workaround.** `DBOS.runStep` takes `retriesAllowed` and `maxAttempts`.
+- **Child cancel is built in.** `cancelWorkflow(id, { cancelChildren: true })` replaces the parent lookup the own engine needs.
+- **DBOS refuses status reads inside a step.** The first adapter polled there, swallowed the error and never aborted, so the step finished after cancel. That was the one failure in the first DBOS run. The fix is one poller per process, outside any workflow context, which also reaches steps on other workers.
+
+### Several workers
+
+Cancel issued on another worker aborted the step on both engines. Takeover differs:
+
+| Situation | Own | DBOS |
+| --- | --- | --- |
+| Worker dies, a live peer stays up, nobody acts | Peer takes over at lease expiry | **Run stays stuck** (10 s observed) |
+| Same worker ID restarts | Not needed | Run recovers |
+| Peer calls public `resumeWorkflow` | Not applicable | Run recovers |
+| Peer calls internal `recoverPendingWorkflows` | Not applicable | Run recovers; needs a file-path import past the package's `exports` |
+| Worker still alive when its run is recovered | Not applicable | **Side effect runs twice** |
+| Second process starts with the same worker ID during a live run | Not applicable | **Side effect runs twice** |
+| Worker stalls past its 3 s lease mid-step | **Side effect runs twice** | Not tested |
+
+- **DBOS only recovers its own worker ID at launch.** `executorID` defaults to `DBOS__VMID` or `local`, so two processes on the default ID collide. Plico must set a unique, stable ID per worker.
+- **A stuck run needs an owner.** The options are stable worker IDs with automatic restart, Conductor (not tested here), or a Plico heartbeat calling `resumeWorkflow`. A heartbeat that fires on a live worker causes the duplicate above.
+- **Neither engine fences a stale worker.** Both are at-least-once for anything in flight. The own engine's result also limits its 3 s lease: a stall that long repeats the step. Tools with side effects need the `runId:turn:callIndex` key as an idempotency key on any engine.
+
+### Load
+
+One Windows machine, embedded Postgres on default settings apart from `max_connections`, one run per row. Each run is three 20 ms simulated model steps and five events. Every row finished all runs with no errors and the expected event count, and workflow executions across workers summed to exactly the run count, so nothing ran twice. Event counts alone could not show that, because event writes are idempotent.
+
+| Arm | Runs | Runs/s | p50 | p95 | Resume all paused | RSS while paused, all workers |
+| --- | --- | --- | --- | --- | --- | --- |
+| Own, 1 process | 300 | 269 | 527 ms | 617 ms | 0.6 s | 95 MB |
+| Own, 3 processes | 300 | 302 | 429 ms | 665 ms | 0.6 s | 250 MB |
+| Own, 3 processes | 1,000 | 337 | 611 ms | 912 ms | 1.6 s | 279 MB |
+| DBOS, 1 worker | 300 | 128 | 1,660 ms | 1,776 ms | 1.0 s | 132 MB |
+| DBOS, 3 workers | 300 | 167 | 1,041 ms | 1,573 ms | 0.6 s | 338 MB |
+| DBOS, 3 workers, queue | 300 | 135 | 1,708 ms | 1,818 ms | 0.8 s | 324 MB |
+| DBOS, 3 workers | 1,000 | 213 | 2,770 ms | 3,079 ms | 1.9 s | 391 MB |
+
+These show no loss and no duplicates at this size, not capacity. The own engine is faster on one disk but cannot span machines. The DBOS queue spread work unevenly in all three runs, with no registration errors: 173, 8 and 119, then 197, 103 and 0, then 200, 0 and 100. It was also slower than direct starts, and did not beat them for fairness. The queue was registered after launch, which this PoC did not vary.
+
+### Combined run
+
+A project folder with `agent.md`, `plico.config.ts` and a `.tool.ts` file was loaded through `tsx`, with Zod schemas and sibling and npm imports. One host ran the AI SDK adapter, the official MCP client, own Markdown memory, a content-addressed artifact write with `diff`, plain SQL events, Hono and the OTel API. The driver worked over HTTP and killed the host at both approvals (a TypeScript tool and an MCP tool), then approved from a new process.
+
+Passed on own and DBOS, with both the scripted model and real `gemini-3.5-flash-lite`, one run each:
+
+- The run completed through both kills, and each side effect happened once.
+- The native stream resumed with `Last-Event-ID` with no gap or duplicate across 18 events.
+- Memory and two artifact versions with a diff were written.
+- AG-UI frames passed the official schemas in every segment; the AI SDK reader rebuilt the message across segments.
+- One connected trace covered all restarts, with AI SDK spans under Plico's, and no prompt or output text in spans.
+- The only hosts contacted were local and, on real runs, `generativelanguage.googleapis.com`.
+
+Event timelines were identical across engines with each model. Startup was about 0.9 s on own and 1.3 s on DBOS. Everything installed with no resolver conflict: 101 packages and 194 MB, of which 107 MB is the test-only embedded Postgres. The only duplicates were zod 3.25.76 and 4.6.7 (from AG-UI) and `@opentelemetry/api` 1.9.1 and 1.10.0.
+
+The combined run covers the reuse picks only. The own model adapter, own MCP client and `node:http` fallbacks were not run together.
+
+Three deliberate breaks each failed the matching check: dropping the trace carrier split the trace, running a tool outside a step repeated the refund, and turning on input recording exposed content in spans.
+
+### Corrections to earlier results
+
+- **Kysely, PoC 4:** the three-process migration failed about half of 12 reruns on SQLite. The PoC 4 table now says so.
+- **Drizzle, PoC 4:** one unidentified 9 of 10 on SQLite, then none in 11 reruns.
+- **PoC 3:** the TanStack AG-UI question went to PoC 8, layer 10, not layer 13.
+
+### Not tested
+
+More than one machine, network partitions, Conductor, a DBOS worker stalling rather than dying, in-flight runs across an application version change, or sustained load. Tokens did not stream live in the combined run: text enters the log after the model step ends, so live deltas need their own path. Subagents, skills, compaction and evals were not part of the combined run; subagents ran only in the engine suite. The artifact step was a simple stand-in, not PoC 10's full store. MCP ran over HTTP without OAuth. AG-UI frames were checked by schema, not by a client this time. Reusing one wait name in a run: the first-decision scenario passes on both engines, but the own engine stores one signal per name while DBOS `recv` appears to consume queued messages, so results could differ. Wait names should be unique per run, as the combined host's per-call keys are.
+
 ## What this pauses
 
-#69 should wait for the PoC results. Its run state machine and migrator are built for a log Plico may stop treating as the source of truth for execution.
+This audit led to ADR 0008 and a revision of the planning documents: a new epic #95 for the execution engine, and changes to ADRs 0002, 0003, 0004 and 0007, the PRD and epics #69, #70, #72, #73, #77, #78, #79 and #82. #69 keeps its state machine and migrator, because the event log stays authoritative for what happened. Only its killed-run slice changes.
 
 ## Sources
 

@@ -2,7 +2,7 @@
 
 Status: accepted
 
-TypeScript tools will export declared tool objects with name, description, input schema, capabilities, approval policy, and handler. Approval requirements will be decided by a runtime policy engine, MCP servers will be normalized as tool sources, and memory will use a Plico-owned port with lightweight explicit local memory by default and Mem0 as the first optional advanced adapter.
+TypeScript tools will export declared tool objects with name, description, input schema, capabilities, approval policy, and handler. Approval requirements will be decided by a runtime policy engine, MCP servers will be normalized as tool sources, and memory will use a Plico-owned port with explicit Markdown files by default. SQLite full-text retrieval is the first optional addition and Mem0 the second. Every tool handler receives an idempotency key derived as `runId:turn:callIndex`, because a step can run again after a crash (ADR 0008). MCP tools are at-least-once for the same reason, and their approval comes from Plico config, never from server annotations.
 
 ## Considered Options
 
@@ -10,7 +10,7 @@ TypeScript tools will export declared tool objects with name, description, input
 - Function-inferred tools.
 - Tool-internal approval prompts.
 - MCP-first tools.
-- Mem0 as required default memory.
+- Mem0 as required default memory, or as the first optional adapter. Superseded by the audit: explicit Markdown wins on inspectability and portability.
 
 ## Consequences
 
