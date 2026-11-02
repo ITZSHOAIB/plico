@@ -66,6 +66,11 @@ export function formatRunResult(target: string, result: RunResult): string[] {
       continue;
     }
 
+    if (event.type === "run.cancelled") {
+      lines.push("run.cancelled: cancelled");
+      continue;
+    }
+
     if (event.type === "run.error") {
       lines.push(`run.error: ${readString(event.payload.message) ?? "runtime error"}`);
     }

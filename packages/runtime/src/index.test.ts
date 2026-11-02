@@ -638,14 +638,19 @@ describe("runProject", () => {
     const result = await runProject(root, {
       runId: "run-test-003",
       eventStore,
-      script: [{ type: "tool.call", toolName: "delete_ticket", arguments: { ticketId: "TCK-1" } }],
+      script: [
+        { type: "assistant.output", content: "Please approve this change." },
+        { type: "tool.call", toolName: "delete_ticket", arguments: { ticketId: "TCK-1" } },
+      ],
     });
 
     expect(result.status).toBe("waiting");
+    expect(result.output).toBe("Please approve this change.");
     expect(result.events.map((event) => event.type)).toEqual([
       "run.started",
       "instructions.composed",
       "tools.discovered",
+      "assistant.output",
       "tool.call",
       "approval.requested",
       "run.waiting",
@@ -655,14 +660,16 @@ describe("runProject", () => {
     expect(await reopenedStore.getRun("run-test-003")).toMatchObject({
       runId: "run-test-003",
       status: "waiting",
+      endedAt: null,
+      output: "Please approve this change.",
     });
-    expect(await reopenedStore.getEvents("run-test-003", { afterSequence: 4 })).toEqual([
+    expect(await reopenedStore.getEvents("run-test-003", { afterSequence: 5 })).toEqual([
       expect.objectContaining({
-        sequence: 5,
+        sequence: 6,
         type: "approval.requested",
       }),
       expect.objectContaining({
-        sequence: 6,
+        sequence: 7,
         type: "run.waiting",
       }),
     ]);
@@ -671,6 +678,7 @@ describe("runProject", () => {
     const waiting = replayed.find((event) => event.type === "run.waiting");
     expect(request?.payload.requestId).toEqual(expect.any(String));
     expect(waiting?.payload.requestId).toBe(request?.payload.requestId);
+    expect(waiting?.payload.output).toBe("Please approve this change.");
     expect(waiting?.payload).not.toHaveProperty("status");
   });
 

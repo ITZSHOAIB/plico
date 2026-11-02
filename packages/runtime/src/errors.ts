@@ -6,7 +6,11 @@ export class RuntimeDiagnosticError extends Error {
   }
 }
 
-export class RunWaitingError extends Error {}
+export class RunWaitingError extends Error {
+  constructor(readonly output: string | undefined = undefined) {
+    super("Run waiting for approval");
+  }
+}
 
 export function errorMessage(error: unknown): string {
   if (error instanceof Error && error.message) {

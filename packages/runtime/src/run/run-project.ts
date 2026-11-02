@@ -88,7 +88,12 @@ export async function runProject(
     return await finalizeRun({ ...summary, status: "completed", output, events: events.all() });
   } catch (error) {
     if (error instanceof RunWaitingError) {
-      return finalizeRun({ ...summary, status: "waiting", events: events.all() });
+      return finalizeRun({
+        ...summary,
+        status: "waiting",
+        output: error.output,
+        events: events.all(),
+      });
     }
 
     await events.append("run.error", runtimeErrorPayload(error));

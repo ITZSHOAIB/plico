@@ -1,4 +1,4 @@
-﻿import type { ValidationIssue } from "./project.js";
+import type { ValidationIssue } from "./project.js";
 
 export interface PlicoEventPayloads {
   "run.started": { projectRoot: string; projectName: string };
@@ -37,7 +37,7 @@ export interface PlicoEventPayloads {
   "artifact.file.written": { path: string; content: string; mimeType: string };
   "artifact.snapshot.created": { snapshotId: string; fileCount: number };
   "run.completed": { output?: string };
-  "run.waiting": { requestId: string; toolName: string };
+  "run.waiting": { requestId: string; toolName: string; output?: string };
   "run.failed": { phase: string };
   "run.cancelled": Record<string, never>;
   "run.error": { phase: string; message?: string; issues?: ValidationIssue[]; toolName?: string };

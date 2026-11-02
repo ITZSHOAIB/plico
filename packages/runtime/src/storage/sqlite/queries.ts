@@ -85,6 +85,7 @@ function rowToRunSummary(row: Record<string, unknown>): RunSummary {
 }
 
 function rowToEvent(row: Record<string, unknown>): PlicoEvent {
+  // Stored rows are trusted, not validated; pre-publication rows may have status and lack requestId and are not migrated.
   return {
     schemaVersion: 1,
     streamType: runStreamType,

@@ -12,6 +12,7 @@ import {
   readRunSummaries,
   readRunSummary,
 } from "./queries.js";
+import { recoverInterruptedRuns } from "./recover-interrupted.js";
 import { initializeSchema } from "./schema.js";
 
 export function createSqliteEventStore({
@@ -25,9 +26,9 @@ export function createSqliteEventStore({
   try {
     database.exec("PRAGMA busy_timeout = 5000;");
     if (!readOnly) {
-      // WAL setup is outside the schema transaction; concurrent first opens use busy_timeout.
-      database.exec("PRAGMA journal_mode = WAL;");
+      setWalMode(database);
       initializeSchema(database);
+      recoverInterruptedRuns(database);
     }
   } catch (error) {
     database.close();
@@ -57,6 +58,22 @@ export function createSqliteEventStore({
       return readLatestEvalReport(database);
     },
   };
+}
+
+function setWalMode(database: DatabaseSync): void {
+  // Changing journal mode may return SQLITE_BUSY immediately even with busy_timeout set.
+  const deadline = Date.now() + 5000;
+  const pause = new Int32Array(new SharedArrayBuffer(4));
+  while (true) {
+    try {
+      database.exec("PRAGMA journal_mode = WAL;");
+      return;
+    } catch (error) {
+      const code = (error as { errcode?: number }).errcode;
+      if (code === undefined || (code & 0xff) !== 5 || Date.now() >= deadline) throw error;
+      Atomics.wait(pause, 0, 0, Math.min(25, deadline - Date.now()));
+    }
+  }
 }
 
 // A plain read-only open of a WAL database creates -shm and -wal files. Immutable mode

@@ -13,9 +13,12 @@ export function formatRunSummaries(
   }
 
   for (const run of runs) {
-    const summary = [run.runId, run.status, run.projectName || "unknown project", run.endedAt].join(
-      " | ",
-    );
+    const summary = [
+      run.runId,
+      run.status,
+      run.projectName || "unknown project",
+      run.endedAt ?? "not ended",
+    ].join(" | ");
     lines.push(summary);
   }
 

@@ -21,14 +21,18 @@ export function RunView({ selectedRun, events }: RunViewProps) {
   if (!selectedRun) {
     return <div style={emptyPanel}>Select a run to inspect.</div>;
   }
+  const error = [...events].reverse().find((event) => event.type === "run.error");
+  const reason =
+    error?.payload.message ?? error?.payload.issues?.map((issue) => issue.message).join(", ");
 
   return (
     <div style={panel}>
       <h3 style={headingTight}>{selectedRun.runId}</h3>
       <div style={metaLoose}>
         Status: {selectedRun.status} | Started: {selectedRun.startedAt} | Ended:{" "}
-        {selectedRun.endedAt}
+        {selectedRun.endedAt ?? "Not ended"}
       </div>
+      {selectedRun.status === "failed" && reason && <div>Failure: {reason}</div>}
       <div style={{ marginBottom: "8px" }}>
         <button
           type="button"

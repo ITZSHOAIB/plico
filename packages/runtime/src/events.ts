@@ -16,6 +16,7 @@ export class InMemoryEventLog {
     payload: PlicoEventPayloads[T],
   ): Promise<PlicoEvent> {
     const sequence = this.#events.length + 1;
+    // TypeScript cannot prove this generic object is a union member; callers are checked against PlicoEventPayloads[T].
     const event = {
       schemaVersion: 1,
       streamType: runStreamType,

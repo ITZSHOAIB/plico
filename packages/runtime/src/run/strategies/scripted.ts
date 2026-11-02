@@ -75,8 +75,9 @@ export async function runScriptedDryRun(
       await events.append("run.waiting", {
         requestId,
         toolName: tool.name,
+        ...(output === undefined ? {} : { output }),
       });
-      throw new RunWaitingError();
+      throw new RunWaitingError(output);
     }
 
     const result = await tool.handler(step.arguments);
