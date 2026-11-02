@@ -36,6 +36,7 @@ export function ownerIsAlive(token: string, path: string): boolean {
   try {
     statSync(path);
   } catch (error) {
+    // ENOENT means the owner is gone, though a temp-folder cleaner could remove a live lock file.
     return (error as NodeJS.ErrnoException).code !== "ENOENT";
   }
   let probe: DatabaseSync | undefined;
@@ -44,7 +45,7 @@ export function ownerIsAlive(token: string, path: string): boolean {
     probe.exec("PRAGMA busy_timeout = 0; BEGIN EXCLUSIVE; ROLLBACK;");
     return false;
   } catch {
-    // An inaccessible or locked owner file is treated as live to avoid failing an active run.
+    // Any probe error counts as alive, so the run stays running rather than failing spuriously.
     return true;
   } finally {
     probe?.close();

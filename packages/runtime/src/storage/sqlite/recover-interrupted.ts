@@ -8,6 +8,7 @@ export function recoverInterruptedRuns(database: DatabaseSync): void {
       .get()
   )
     return;
+  if (!database.prepare("SELECT 1 FROM runs WHERE status = 'running' LIMIT 1").get()) return;
   database.exec("BEGIN IMMEDIATE");
   try {
     const rows = database
@@ -25,6 +26,7 @@ export function recoverInterruptedRuns(database: DatabaseSync): void {
         ownerIsAlive(row.owner_token, row.owner_path)
       )
         continue;
+      // A running row always has run.started because both are written in one transaction.
       const last = database
         .prepare(
           "SELECT sequence, type FROM events WHERE stream_type = 'run' AND stream_id = ? ORDER BY sequence DESC LIMIT 1",
@@ -35,6 +37,7 @@ export function recoverInterruptedRuns(database: DatabaseSync): void {
       const insert = database.prepare(
         "INSERT INTO events (stream_type, stream_id, sequence, event_id, schema_version, type, timestamp, payload_json) VALUES ('run', ?, ?, ?, 1, ?, ?, ?)",
       );
+      // Event IDs follow the sequence-based scheme defined in runtime/src/events.ts.
       if (last.type !== "run.error") {
         sequence += 1;
         insert.run(
