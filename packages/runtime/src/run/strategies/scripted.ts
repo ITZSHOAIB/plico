@@ -1,10 +1,11 @@
-import { randomUUID } from "node:crypto";
+import type { RunContext } from "../../engine/index.js";
 import { RuntimeDiagnosticError, RunWaitingError } from "../../errors.js";
 import type { InMemoryEventLog } from "../../events.js";
 import { validateJsonSchemaSubset } from "../../tools/schema.js";
 import type { DeclaredTool, DryRunScriptStep } from "../../types/index.js";
 
 export async function runScriptedDryRun(
+  ctx: RunContext,
   script: DryRunScriptStep[],
   tools: DeclaredTool[],
   events: InMemoryEventLog,
@@ -14,7 +15,7 @@ export async function runScriptedDryRun(
   let workspaceId: string | undefined;
   const artifactPaths = new Set<string>();
 
-  for (const step of script) {
+  for (const [index, step] of script.entries()) {
     if (step.type === "assistant.output") {
       output = step.content;
       await events.append("assistant.output", { content: step.content });
@@ -23,7 +24,7 @@ export async function runScriptedDryRun(
 
     if (step.type === "artifact.write") {
       if (workspaceId === undefined) {
-        workspaceId = randomUUID();
+        workspaceId = `${ctx.runId}:workspace`;
         await events.append("artifact.workspace.created", { workspaceId });
       }
 
@@ -36,7 +37,7 @@ export async function runScriptedDryRun(
         });
       }
 
-      const snapshotId = randomUUID();
+      const snapshotId = `${ctx.runId}:snapshot:${index}`;
       await events.append("artifact.snapshot.created", {
         snapshotId,
         fileCount: artifactPaths.size,
@@ -65,7 +66,7 @@ export async function runScriptedDryRun(
     }
 
     if (tool.approval.required) {
-      const requestId = randomUUID();
+      const requestId = `${ctx.runId}:${index}`;
       await events.append("approval.requested", {
         requestId,
         toolName: tool.name,
@@ -80,7 +81,7 @@ export async function runScriptedDryRun(
       throw new RunWaitingError(output);
     }
 
-    const result = await tool.handler(step.arguments);
+    const result = await ctx.step(`tool:${index}`, () => tool.handler(step.arguments));
     await events.append("tool.result", {
       toolName: tool.name,
       result,
