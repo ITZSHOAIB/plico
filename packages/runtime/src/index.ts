@@ -2,16 +2,18 @@ export { buildArtifactWorkspace, readArtifactSnapshot } from "./artifacts.js";
 export {
   createEngine,
   createMemoryJournal,
+  createSqliteEngine,
   type Engine,
   type Journal,
   ProjectChangedError,
+  type RecoveredRun,
   type RunContext,
   type Workflow,
 } from "./engine/index.js";
 export { runEvals } from "./evals/index.js";
 export { composeInstructions } from "./instructions.js";
 export { checkReadiness } from "./readiness/index.js";
-export { runProject } from "./run/index.js";
+export { recoverRuns, runProject } from "./run/index.js";
 export { createSqliteEventStore } from "./storage/index.js";
 export { discoverTools } from "./tools/index.js";
 export type {

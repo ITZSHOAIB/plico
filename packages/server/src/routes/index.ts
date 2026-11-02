@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import type { EventStore } from "@plico/runtime";
+import type { Engine, EventStore } from "@plico/runtime";
 import { errorMessage, HttpError, sendError } from "../errors.js";
 import { artifactRoutes } from "./artifacts.js";
 import { evalRoutes } from "./eval.js";
@@ -21,13 +21,14 @@ const routes: readonly Route[] = [
 interface HandleRequestOptions {
   projectRoot: string;
   eventStore: EventStore;
+  engine: Engine | undefined;
   studioPath: string | undefined;
   request: IncomingMessage;
   response: ServerResponse;
 }
 
 export async function handleRequest(options: HandleRequestOptions): Promise<void> {
-  const { projectRoot, eventStore, studioPath, request, response } = options;
+  const { projectRoot, eventStore, engine, studioPath, request, response } = options;
   const url = new URL(request.url ?? "/", "http://127.0.0.1");
 
   try {
@@ -36,7 +37,16 @@ export async function handleRequest(options: HandleRequestOptions): Promise<void
     if (route) {
       const match = route.pattern.exec(url.pathname);
       const params = (match?.slice(1) ?? []).map(decodeParam);
-      await route.handler({ projectRoot, eventStore, studioPath, request, response, url, params });
+      await route.handler({
+        projectRoot,
+        eventStore,
+        engine,
+        studioPath,
+        request,
+        response,
+        url,
+        params,
+      });
       return;
     }
 
