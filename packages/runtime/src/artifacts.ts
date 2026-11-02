@@ -59,6 +59,7 @@ export function readArtifactSnapshot(
       event.type === "artifact.snapshot.created" && event.payload.snapshotId === snapshotId,
   );
   const snapshot = events[index];
+  // This narrows the event for TypeScript and also returns early when the snapshot is missing.
   if (snapshot?.type !== "artifact.snapshot.created") return undefined;
 
   const workspace = buildArtifactWorkspace(snapshot.runId, events.slice(0, index + 1));

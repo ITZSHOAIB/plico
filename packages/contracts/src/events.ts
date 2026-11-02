@@ -1,4 +1,4 @@
-﻿import type { ValidationIssue } from "./project.js";
+import type { ValidationIssue } from "./project.js";
 
 export interface PlicoEventPayloads {
   "run.started": { projectRoot: string; projectName: string };
