@@ -27,4 +27,10 @@ The local engine is Plico's own, on SQLite. The production engine is DBOS on Pos
 
 **Model calls make no retries of their own.** The model adapter sets provider retries to zero and the engine retries the step, so retries are counted once. A real provider outage used up DBOS's default retries after side effects had run (PoC 2), so the model step needs backoff and a retry budget set by Plico config. Tool retries also come from Plico config, and a side-effect tool defaults to none.
 
-**The own engine's lease is a trade-off.** The lease is the time a worker holds a step before another worker may claim it. A worker that stalls past it repeats its step. The default and renewal rule are set in epic #95; the own engine is supported for single-machine local use only.
+**The own engine's lease is a trade-off.** The lease is the time a worker holds a step before another worker may claim it. A worker that stalls past it repeats its step. The default is 30 s, renewed every 10 s while a step runs, and it is a config setting. The own engine is supported for single-machine local use only.
+
+**Where it lives.** The interface and the own engine live in `@plico/runtime` under `engine/`. The engine's tables are private to it, prefixed `engine_`, in the same database file. A separate package waits for the DBOS adapter (#82).
+
+**Code changes fail loudly.** The journal stores step names. If a resumed run's steps no longer match, the run ends as `run.failed` with the reason that the project changed during the run. It never replays against different code.
+
+**Recovery replaces the interim killed-run handling.** A killed run resumes from its journal at the next start. Only a run that cannot be recovered is marked failed.
