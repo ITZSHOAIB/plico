@@ -1,6 +1,6 @@
 import type { DatabaseSync } from "node:sqlite";
 import type { PlicoEvent } from "@plico/contracts";
-import { currentOwner } from "./owner-lock.js";
+import { acquireOwner } from "./owner-lock.js";
 
 export function appendEventRecord(database: DatabaseSync, event: PlicoEvent): void {
   if (event.streamType !== "run" || event.streamId !== event.runId) {
@@ -51,7 +51,7 @@ export function appendEventRecord(database: DatabaseSync, event: PlicoEvent): vo
           String(event.payload.projectName ?? ""),
           event.timestamp,
         );
-      const owner = currentOwner();
+      const owner = acquireOwner();
       database
         .prepare(
           "INSERT INTO run_owners (run_id, process_id, owner_token, owner_path) VALUES (?, ?, ?, ?)",
@@ -81,6 +81,7 @@ export function appendEventRecord(database: DatabaseSync, event: PlicoEvent): vo
         database
           .prepare("UPDATE runs SET status = ?, ended_at = ?, output = ? WHERE run_id = ?")
           .run(status, endedAt, output, event.runId);
+        // Drop the owner once the run leaves running, including waiting; recovery only inspects running runs.
         database.prepare("DELETE FROM run_owners WHERE run_id = ?").run(event.runId);
       }
     }

@@ -10,7 +10,7 @@ function lockPath(token: string): string {
   return join(tmpdir(), `plico-run-owner-${token}.sqlite`);
 }
 
-export function currentOwner(): { token: string; path: string } {
+export function acquireOwner(): { token: string; path: string } {
   if (current) return current;
   const token = randomUUID();
   const path = lockPath(token);
