@@ -61,6 +61,7 @@ export async function runCommand(args: string[]): Promise<number> {
       }
     }
 
+    // Exit 0 for completion, 2 when waiting for approval, and 1 for anything else.
     return result.status === "completed" ? 0 : result.status === "waiting" ? 2 : 1;
   } catch (error) {
     console.error(errorMessage(error));

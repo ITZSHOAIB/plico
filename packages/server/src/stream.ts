@@ -3,6 +3,8 @@ import type { EventStore, PlicoEventType, RunStatus } from "@plico/runtime";
 import { HttpError, sendError } from "./errors.js";
 import { initSSEStream, sendSSEEvent, sendSSEHeartbeat } from "./sse.js";
 
+// Waiting is not terminal: the stream stays open for approval (#69). run.error is followed by
+// run.failed, which closes the stream.
 const TERMINAL_EVENT_TYPES: readonly PlicoEventType[] = ["run.completed", "run.failed"];
 
 const TERMINAL_RUN_STATUSES: readonly RunStatus[] = ["completed", "failed"];
