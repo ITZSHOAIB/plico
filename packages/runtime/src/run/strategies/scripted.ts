@@ -65,13 +65,15 @@ export async function runScriptedDryRun(
     }
 
     if (tool.approval.required) {
+      const requestId = randomUUID();
       await events.append("approval.requested", {
+        requestId,
         toolName: tool.name,
         arguments: step.arguments,
         approval: tool.approval,
       });
       await events.append("run.waiting", {
-        status: "waiting",
+        requestId,
         toolName: tool.name,
       });
       throw new RunWaitingError();

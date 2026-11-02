@@ -16,7 +16,6 @@
           "sources": [
             "string"
           ],
-          "status": "string",
           "tools": [],
           "workspaceId": "string"
         },
@@ -85,7 +84,6 @@
         "sources": [
           "string"
         ],
-        "status": "string",
         "tools": [],
         "workspaceId": "string"
       },

@@ -35,7 +35,7 @@ describe("event log streams", () => {
     if (!last) throw new Error("Expected terminal event");
     await store.appendEvent(last);
     expect(await store.getEvents(run.runId)).toEqual(events);
-    await expect(store.appendEvent({ ...last, payload: { changed: true } })).rejects.toThrow(
+    await expect(store.appendEvent({ ...last, timestamp: "changed" })).rejects.toThrow(
       "Conflicting",
     );
     await expect(store.appendEvent({ ...last, sequence: last.sequence + 1 })).rejects.toThrow(

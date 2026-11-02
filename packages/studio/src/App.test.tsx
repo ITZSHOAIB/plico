@@ -23,7 +23,11 @@ const run: RunSummary = {
   endedAt: "2026-10-31T10:00:01.000Z",
 };
 
-function event(sequence: number, type: PlicoEvent["type"], payload = {}): PlicoEvent {
+function event<T extends PlicoEvent["type"]>(
+  sequence: number,
+  type: T,
+  payload: PlicoEvent<T>["payload"],
+): PlicoEvent {
   return {
     schemaVersion: 1,
     streamType: "run",
@@ -34,14 +38,19 @@ function event(sequence: number, type: PlicoEvent["type"], payload = {}): PlicoE
     timestamp: run.startedAt,
     type,
     payload,
-  };
+  } as PlicoEvent;
 }
 
 const events = [
-  event(1, "run.started"),
+  event(1, "run.started", { projectRoot: "/demo", projectName: "Internal Ops" }),
   event(2, "tool.call", { toolName: "create-ticket", arguments: { title: "Fix VPN" } }),
   event(3, "tool.result", { toolName: "create-ticket", result: { id: 7 } }),
-  event(4, "approval.requested", { toolName: "delete-ticket" }),
+  event(4, "approval.requested", {
+    requestId: "approval-1",
+    toolName: "delete-ticket",
+    arguments: {},
+    approval: { required: true },
+  }),
 ];
 
 const instructions: ComposedInstructions = {

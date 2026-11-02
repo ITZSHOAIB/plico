@@ -6,20 +6,23 @@ import type {
   PlicoEvent,
 } from "./types/index.js";
 
-function applyFileWritten(files: Map<string, ArtifactFile>, event: PlicoEvent): void {
-  const path = event.payload.path as string;
+function applyFileWritten(
+  files: Map<string, ArtifactFile>,
+  event: PlicoEvent<"artifact.file.written">,
+): void {
+  const path = event.payload.path;
   files.set(path, {
     path,
-    content: event.payload.content as string,
-    mimeType: (event.payload.mimeType as string) ?? "text/plain",
+    content: event.payload.content,
+    mimeType: event.payload.mimeType,
     version: (files.get(path)?.version ?? 0) + 1,
   });
 }
 
-function toSnapshot(event: PlicoEvent): ArtifactSnapshot {
+function toSnapshot(event: PlicoEvent<"artifact.snapshot.created">): ArtifactSnapshot {
   return {
-    snapshotId: event.payload.snapshotId as string,
-    fileCount: event.payload.fileCount as number,
+    snapshotId: event.payload.snapshotId,
+    fileCount: event.payload.fileCount,
     createdAt: event.timestamp,
   };
 }
@@ -39,7 +42,7 @@ export function buildArtifactWorkspace(
   }
 
   return {
-    workspaceId: created.payload.workspaceId as string,
+    workspaceId: created.payload.workspaceId,
     runId: created.runId,
     files: [...files.values()],
     snapshots,
@@ -56,7 +59,7 @@ export function readArtifactSnapshot(
       event.type === "artifact.snapshot.created" && event.payload.snapshotId === snapshotId,
   );
   const snapshot = events[index];
-  if (!snapshot) return undefined;
+  if (snapshot?.type !== "artifact.snapshot.created") return undefined;
 
   const workspace = buildArtifactWorkspace(snapshot.runId, events.slice(0, index + 1));
   return { ...toSnapshot(snapshot), files: workspace?.files ?? [] };
