@@ -1,0 +1,137 @@
+.fh-conversation {
+  position: relative;
+  min-height: 197px;
+  padding: 14px 12px;
+}
+.fh-placeholder {
+  position: absolute;
+  inset: 22px 18px;
+  transition: opacity 0.5s;
+}
+.fh-placeholder > span {
+  display: block;
+  background: #29313d;
+  height: 3px;
+  width: 60%;
+  margin-bottom: 10px;
+  border-radius: 2px;
+  opacity: 0.6;
+}
+.fh-placeholder > span:nth-child(2) {
+  width: 84%;
+}
+.fh-placeholder > span:nth-child(3) {
+  width: 43%;
+}
+.fh-placeholder p {
+  font-size: 10px;
+  color: #616c7c;
+  margin-top: 38px;
+  max-width: 150px;
+}
+.fh-request,
+.fh-answer,
+.fh-tool {
+  transition:
+    opacity 0.55s,
+    transform 0.65s var(--fh-ease);
+}
+.fh-request > span,
+.fh-answer > span {
+  font: 6px var(--fh-mono);
+  color: #737f91;
+  letter-spacing: 0.08em;
+}
+.fh-request p {
+  margin: 4px 0 12px;
+  color: #bfc7d3;
+  font-size: 10px;
+  line-height: 1.6;
+}
+.fh-tool {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  border-left: 1px solid #846447;
+  padding: 7px 8px;
+  background: #bc8c5e0b;
+  margin: 0 0 10px;
+}
+.fh-tool-symbol {
+  font-size: 18px;
+  color: #bda081;
+}
+.fh-tool > div > span {
+  display: block;
+  color: #d2b090;
+  font: 8px var(--fh-mono);
+}
+.fh-tool code {
+  display: block;
+  color: #797c80;
+  font: 7px var(--fh-mono);
+  margin-top: 4px;
+}
+.fh-tool-check {
+  color: #c3c8b5;
+  margin-left: auto;
+  font-size: 10px;
+  transition: opacity 0.4s;
+}
+.fh-answer p {
+  margin: 4px 0 0;
+  color: #bdc7d3;
+  font-size: 10px;
+  line-height: 1.65;
+  min-height: 33px;
+}
+.fh-answer > span {
+  color: #c9a787;
+}
+.fh-event {
+  display: flex;
+  gap: 6px;
+  padding: 9px 11px;
+  border-top: 1px solid #2a323e;
+  align-items: center;
+  min-height: 28px;
+}
+.fh-event-light {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #a79784;
+}
+.fh-event code {
+  color: #a7a095;
+  font: 7px var(--fh-mono);
+}
+.fh-event > span:last-child {
+  margin-left: auto;
+  font: 6px var(--fh-mono);
+  color: #647083;
+}
+@media (min-width: 661px) and (max-width: 900px) {
+  .fh-request p,
+  .fh-answer p {
+    font-size: 9px;
+  }
+  .fh-tool code {
+    font-size: 6px;
+  }
+}
+@media (max-width: 660px) {
+  .fh-conversation {
+    min-height: 208px;
+  }
+  .fh-request p,
+  .fh-answer p {
+    font-size: 11px;
+  }
+  .fh-tool > div > span {
+    font-size: 9px;
+  }
+  .fh-tool code {
+    font-size: 8px;
+  }
+}

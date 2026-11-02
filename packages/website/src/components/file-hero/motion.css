@@ -1,0 +1,172 @@
+.fh-connections path {
+  fill: none;
+  stroke: #78604b55;
+  stroke-width: 1;
+}
+.fh-connections .fh-wire-signal {
+  stroke: url(#fh-signal);
+  stroke-dasharray: 15 85;
+  stroke-dashoffset: 100;
+  stroke-width: 1.5;
+  animation: fh-flow 2.8s linear infinite;
+  opacity: 0;
+  transition: opacity 0.6s;
+}
+.fh-connections .fh-wire-signal:nth-child(4) {
+  animation-delay: -0.9s;
+}
+.fh-connections .fh-wire-signal:nth-child(6) {
+  animation-delay: -1.8s;
+}
+@keyframes fh-flow {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+.file-hero[data-phase="2"] .fh-wire-signal,
+.file-hero[data-phase="3"] .fh-wire-signal {
+  opacity: 0.9;
+}
+.file-hero[data-phase="0"] .fh-harness,
+.file-hero[data-phase="1"] .fh-harness {
+  border-color: #333a44;
+  background: transparent;
+  box-shadow: none;
+}
+.file-hero[data-phase="0"] .fh-capabilities > div,
+.file-hero[data-phase="1"] .fh-capabilities > div {
+  opacity: 0.3;
+  transform: translateY(4px);
+}
+.file-hero[data-phase="0"] .fh-agent,
+.file-hero[data-phase="1"] .fh-agent {
+  opacity: 0.4;
+  transform: scale(0.97);
+}
+.file-hero[data-phase="0"] .fh-harness::before,
+.file-hero[data-phase="0"] .fh-harness::after,
+.file-hero[data-phase="1"] .fh-harness::before,
+.file-hero[data-phase="1"] .fh-harness::after {
+  width: 12px;
+  height: 12px;
+  opacity: 0.3;
+}
+.file-hero[data-phase="2"] .fh-capabilities > div:nth-child(2) {
+  transition-delay: 0.12s;
+}
+.file-hero[data-phase="2"] .fh-capabilities > div:nth-child(3) {
+  transition-delay: 0.24s;
+}
+.file-hero[data-phase="2"] .fh-capabilities > div:nth-child(4) {
+  transition-delay: 0.36s;
+}
+.file-hero[data-phase="2"] .fh-harness,
+.file-hero[data-phase="3"] .fh-harness {
+  border-color: #987050;
+  box-shadow: 0 0 50px #b9753c09;
+  background: #ac704b05;
+}
+.file-hero .fh-request,
+.file-hero .fh-answer,
+.file-hero .fh-tool {
+  opacity: 0;
+  transform: translateY(8px);
+}
+.file-hero[data-phase="3"] .fh-placeholder {
+  opacity: 0;
+}
+.file-hero[data-phase="3"][data-run-step="1"] .fh-request,
+.file-hero[data-phase="3"][data-run-step="2"] .fh-request,
+.file-hero[data-phase="3"][data-run-step="3"] .fh-request,
+.file-hero[data-phase="3"][data-run-step="4"] .fh-request {
+  opacity: 1;
+  transform: none;
+}
+.file-hero[data-phase="3"][data-run-step="2"] .fh-tool,
+.file-hero[data-phase="3"][data-run-step="3"] .fh-tool,
+.file-hero[data-phase="3"][data-run-step="4"] .fh-tool {
+  opacity: 1;
+  transform: none;
+}
+.file-hero[data-phase="3"][data-run-step="3"] .fh-answer,
+.file-hero[data-phase="3"][data-run-step="4"] .fh-answer {
+  opacity: 1;
+  transform: none;
+}
+.file-hero .fh-tool-check {
+  opacity: 0;
+}
+.file-hero[data-run-step="3"] .fh-tool-check,
+.file-hero[data-run-step="4"] .fh-tool-check {
+  opacity: 1;
+}
+.file-hero[data-playing="false"] .fh-wire-signal {
+  animation-play-state: paused;
+}
+.file-hero[data-visible="false"] .fh-wire-signal {
+  animation-play-state: paused;
+}
+.fh-file-packet {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 2;
+  width: 15px;
+  height: 20px;
+  offset-rotate: 0deg;
+  animation: fh-packet 3.8s var(--fh-ease) infinite;
+  pointer-events: none;
+  opacity: 0;
+}
+.fh-file-packet svg {
+  width: 100%;
+  height: 100%;
+  fill: #161b22;
+  stroke: #e3b38d;
+  stroke-width: 0.8;
+}
+.fh-file-packet > span {
+  position: absolute;
+  left: 3px;
+  top: 2px;
+  color: #e8b78f;
+  font: 4px var(--fh-mono);
+}
+@keyframes fh-packet {
+  0% {
+    offset-distance: 0%;
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    offset-distance: 100%;
+    opacity: 0;
+  }
+}
+.file-hero:not([data-phase="2"]):not([data-phase="3"]) .fh-file-packet {
+  display: none;
+}
+.file-hero[data-playing="false"] .fh-file-packet,
+.file-hero[data-visible="false"] .fh-file-packet {
+  animation-play-state: paused;
+}
+@media (max-width: 660px) {
+  .fh-file-packet {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .file-hero *,
+  .file-hero *::before,
+  .file-hero *::after {
+    /* biome-ignore lint/complexity/noImportantStyles: accessibility override must stop all scene transitions. */
+    transition: none !important;
+    /* biome-ignore lint/complexity/noImportantStyles: accessibility override must stop all scene animations. */
+    animation: none !important;
+  }
+}

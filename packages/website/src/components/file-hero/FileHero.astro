@@ -1,0 +1,30 @@
+---
+import Agent from "./Agent.astro";
+import Files from "./Files.astro";
+import { beats } from "./story";
+import "./hero.css";
+import "./editor.css";
+import "./runtime.css";
+import "./conversation.css";
+import "./motion.css";
+import "./responsive.css";
+---
+<figure class="file-hero" data-file-hero data-phase="0" data-source="0" data-playing="true" data-view="files">
+  <div class="fh-topline"><span class="fh-kicker">THE FILES ARE THE INTERFACE</span><span class="fh-live"><i></i> An agent, taking shape</span></div>
+  <div class="fh-mobile-views" role="group" aria-label="Choose a view">
+    <button type="button" data-mobile-view="files" aria-pressed="true">Your files <span>01</span></button>
+    <button type="button" data-mobile-view="agent" aria-pressed="false">Agent + harness <span>02</span></button>
+  </div>
+  <div class="fh-scene">
+    <svg class="fh-connections" aria-hidden="true"><defs><linearGradient id="fh-signal"><stop stop-color="#8a7769" stop-opacity=".05"/><stop offset=".48" stop-color="#ffad7e"/><stop offset="1" stop-color="#ffad7e" stop-opacity=".12"/></linearGradient></defs><g data-connections></g></svg>
+    <Files />
+    <div class="fh-transfer" aria-hidden="true"><div class="fh-transfer-line"></div><span class="fh-transfer-icon">↗</span><span>files in.<br />agent out.</span><div class="fh-transfer-line"></div></div>
+    <Agent />
+  </div>
+  <figcaption class="fh-caption"><span class="fh-beat-number" data-beat-number>01 / 04</span><div><h2 data-beat-title>{beats[0].title}</h2><p data-beat-detail>{beats[0].detail}</p></div><button type="button" class="fh-play" data-play aria-label="Pause animation" aria-pressed="true"><span data-play-icon aria-hidden="true">Ⅱ</span></button></figcaption>
+  <div class="fh-timeline" role="group" aria-label="Explore how Plico works">{beats.map((beat, index) => <button type="button" data-beat={index} aria-pressed={index === 0}><span class="fh-beat-track"><i></i></span><span><b>0{index + 1}</b>{beat.label}</span></button>)}</div>
+</figure>
+<script>
+  import { mountFileHero } from "./controller";
+  document.querySelectorAll<HTMLElement>("[data-file-hero]").forEach(mountFileHero);
+</script>
