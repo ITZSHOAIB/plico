@@ -1,8 +1,9 @@
 import type { RunContext } from "../../engine/index.js";
-import { RuntimeDiagnosticError, RunWaitingError } from "../../errors.js";
+import { RuntimeDiagnosticError } from "../../errors.js";
 import type { InMemoryEventLog } from "../../events.js";
 import { validateJsonSchemaSubset } from "../../tools/schema.js";
 import type { DeclaredTool, DryRunScriptStep } from "../../types/index.js";
+import { awaitApproval } from "./approval.js";
 
 export async function runScriptedDryRun(
   ctx: RunContext,
@@ -78,7 +79,7 @@ export async function runScriptedDryRun(
         toolName: tool.name,
         ...(output === undefined ? {} : { output }),
       });
-      throw new RunWaitingError(output);
+      await awaitApproval(ctx, requestId, tool.name, output);
     }
 
     const result = await ctx.step(`tool:${index}`, () => tool.handler(step.arguments));

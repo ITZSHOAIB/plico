@@ -37,7 +37,13 @@ export async function runProject(
     ...(options.script === undefined ? {} : { script: options.script }),
   };
 
-  return engine.run(runId, (ctx, journaled: RunInput) => runLoop(ctx, journaled, options), input);
+  const outcome = await engine.run(
+    runId,
+    (ctx, journaled: RunInput) => runLoop(ctx, journaled, options),
+    input,
+  );
+  if (outcome.output === undefined) throw new Error(`Run ${runId} stopped without a result.`);
+  return outcome.output;
 }
 
 /**

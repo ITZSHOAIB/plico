@@ -1,7 +1,15 @@
 import { randomUUID } from "node:crypto";
-import { ProjectChangedError } from "./errors.js";
+import { createContext, toJson } from "./context.js";
+import { RunSuspended } from "./errors.js";
 import type { Journal, Lease } from "./journal.js";
-import type { Engine, RecoveredRun, RunContext, RunHandle, Workflow } from "./types.js";
+import type {
+  Engine,
+  RecoveredRun,
+  RunHandle,
+  RunOutcome,
+  SignalResult,
+  Workflow,
+} from "./types.js";
 
 export interface EngineOptions {
   journal: Journal;
@@ -14,8 +22,9 @@ export interface EngineOptions {
 
 export const defaultLeaseMs = 30_000;
 
-function toJson(value: unknown): string {
-  return JSON.stringify(value === undefined ? null : value);
+interface Registered {
+  workflow: Workflow<unknown, unknown>;
+  input: unknown;
 }
 
 export function createEngine({
@@ -25,48 +34,92 @@ export function createEngine({
   now = Date.now,
 }: EngineOptions): Engine {
   const lease = (): Lease => ({ workerId, until: now() + leaseMs });
+  /** Runs this process can continue by itself when a signal or timeout arrives. */
+  const registered = new Map<string, Registered>();
+  /** Runs executing in this process right now. */
+  const active = new Set<string>();
+  const timers = new Map<string, NodeJS.Timeout>();
 
-  function contextFor(runId: string): RunContext {
-    let next = 0;
-    return {
-      runId,
-      async step(name, fn, options) {
-        const index = next++;
-        const recorded = await journal.getStep(runId, index);
-        if (recorded) {
-          if (recorded.name !== name)
-            throw new ProjectChangedError("step", index, recorded.name, name);
-          return JSON.parse(recorded.resultJson);
-        }
-        const retries = options?.retries ?? 0;
-        for (let attempt = 0; ; attempt++) {
-          try {
-            const resultJson = toJson(await fn({ attempt }));
-            await journal.putStep(runId, index, { name, resultJson });
-            return JSON.parse(resultJson);
-          } catch (error) {
-            if (attempt >= retries) throw error;
-          }
-        }
-      },
-    };
+  function stopTimer(runId: string): void {
+    clearTimeout(timers.get(runId));
+    timers.delete(runId);
   }
 
-  async function execute<I, O>(runId: string, workflow: Workflow<I, O>, input: I): Promise<O> {
+  /** Runs the workflow, replaying it each time a wait ends, until it completes or must wait. */
+  async function execute<I, O>(
+    runId: string,
+    workflow: Workflow<I, O>,
+    input: I,
+  ): Promise<RunOutcome<O>> {
+    registered.set(runId, { workflow, input } as Registered);
+    stopTimer(runId);
     const heartbeat = setInterval(() => {
       journal.renew(runId, lease()).catch(() => undefined);
     }, leaseMs / 3);
     heartbeat.unref();
     try {
-      const output = await workflow(contextFor(runId), input);
-      await journal.setState(runId, "completed");
-      return output;
+      for (;;) {
+        const ctx = createContext(runId, journal, now);
+        let output: O | undefined;
+        let returned = false;
+        try {
+          output = await workflow(ctx, input);
+          returned = true;
+        } catch (error) {
+          if (!(error instanceof RunSuspended)) throw error;
+        }
+        const suspension = ctx.suspension();
+        if (!suspension) {
+          await journal.setState(runId, "completed");
+          registered.delete(runId);
+          return { state: "completed", output: output as O };
+        }
+        await journal.setState(runId, "waiting");
+        // A signal or timeout that landed while the run was stopping must not be lost.
+        const wait = await journal.getWait(runId, suspension.name);
+        const ready =
+          (await journal.getSignal(runId, suspension.name)) !== undefined ||
+          (wait?.deadline != null && now() >= wait.deadline);
+        if (ready) {
+          await journal.claim(runId, lease());
+          continue;
+        }
+        if (suspension.deadline !== null) {
+          const delay = Math.max(0, suspension.deadline - now());
+          const timer = setTimeout(() => void resumeHere(runId), delay);
+          timer.unref();
+          timers.set(runId, timer);
+        }
+        return returned ? { state: "waiting", output: output as O } : { state: "waiting" };
+      }
     } catch (error) {
       await journal.setState(runId, "failed");
+      registered.delete(runId);
       throw error;
     } finally {
       clearInterval(heartbeat);
+      active.delete(runId);
     }
+  }
+
+  /** Continues a waiting run this process started, once its wait can end. */
+  async function resumeHere(runId: string): Promise<void> {
+    const known = registered.get(runId);
+    if (!known || active.has(runId)) return;
+    active.add(runId);
+    try {
+      const run = await journal.getRun(runId);
+      if (run?.state !== "waiting") {
+        active.delete(runId);
+        return;
+      }
+      await journal.claim(runId, lease());
+    } catch (error) {
+      active.delete(runId);
+      throw error;
+    }
+    // Everything the run did is in the event log; its outcome here has no reader.
+    execute(runId, known.workflow, known.input).catch(() => undefined);
   }
 
   async function start<I, O>(
@@ -78,6 +131,7 @@ export function createEngine({
     if (!(await journal.begin(runId, inputJson, lease()))) {
       throw new Error(`Run ${runId} already exists.`);
     }
+    active.add(runId);
     const result = execute(runId, workflow, JSON.parse(inputJson) as I);
     // The handle's reader observes the failure; this keeps an unread handle from crashing the process.
     result.catch(() => undefined);
@@ -102,21 +156,44 @@ export function createEngine({
       } else if (!(await journal.claim(runId, lease()))) {
         throw new Error(`Run ${runId} could not be claimed.`);
       }
+      active.add(runId);
       return execute(runId, workflow, JSON.parse(run.inputJson));
+    },
+    async signal(runId, name, value): Promise<SignalResult> {
+      const run = await journal.getRun(runId);
+      if (!run) return "unknown";
+      if (run.state === "completed" || run.state === "failed") return "ignored";
+      const wait = await journal.getWait(runId, name);
+      if (wait?.outcomeJson != null) return "ignored";
+      if (wait?.deadline != null && now() >= wait.deadline) {
+        // The deadline passed first: the wait ends as a timeout and this decision is late.
+        await journal.resolveWait(runId, name, JSON.stringify({ kind: "timeout" }));
+        void resumeHere(runId);
+        return "ignored";
+      }
+      if (!(await journal.putSignal(runId, name, toJson(value)))) return "ignored";
+      void resumeHere(runId);
+      return "accepted";
     },
     async recover<I, O>(
       resolve: (runId: string, input: I) => Workflow<I, O> | undefined,
     ): Promise<RecoveredRun[]> {
+      const candidates = [
+        ...(await journal.listStale(workerId, now())),
+        ...(await journal.listReady(now())),
+      ];
       const recovered: Array<Promise<RecoveredRun>> = [];
-      for (const { runId, held } of await journal.listStale(workerId, now())) {
+      for (const { runId, held } of candidates) {
+        if (active.has(runId)) continue;
         const run = await journal.getRun(runId);
         if (!run) continue;
         const input = JSON.parse(run.inputJson) as I;
         const workflow = resolve(runId, input);
         if (!workflow || !(await journal.claim(runId, lease(), held))) continue;
+        active.add(runId);
         recovered.push(
           execute(runId, workflow, input).then(
-            (): RecoveredRun => ({ runId, state: "completed" }),
+            (outcome): RecoveredRun => ({ runId, state: outcome.state }),
             (error: unknown): RecoveredRun => ({
               runId,
               state: "failed",
