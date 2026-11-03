@@ -74,6 +74,38 @@ describe.each(journals)("cancel on the %s", (_name, makeJournal) => {
     expect(await engine.status("run-1")).toEqual({ state: "cancelled" });
   });
 
+  it("aborts a running step when another engine requests cancellation", async () => {
+    const journal = await makeJournal();
+    const first = createEngine({ journal, workerId: "a", leaseMs: 30 });
+    const second = createEngine({ journal, workerId: "b", leaseMs: 30 });
+    let aborted = false;
+    let started!: () => void;
+    const ready = new Promise<void>((resolve) => {
+      started = resolve;
+    });
+    const handle = await first.start(
+      "cross",
+      async (ctx) => {
+        await ctx.step(
+          "slow",
+          ({ signal }) =>
+            new Promise((_resolve, reject) => {
+              signal.addEventListener("abort", () => {
+                aborted = true;
+                reject(new Error("stopped"));
+              });
+              started();
+            }),
+        );
+      },
+      {},
+    );
+    await ready;
+    expect(await second.cancel("cross")).toBe("accepted");
+    expect((await handle.result()).state).toBe("cancelled");
+    expect(aborted).toBe(true);
+  });
+
   it("stops before the next step when a step ignores the abort signal", async () => {
     const engine = createEngine({ journal: await makeJournal() });
     const log: string[] = [];
