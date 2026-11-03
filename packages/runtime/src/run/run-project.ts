@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { validateProject } from "@plico/core";
+import { createEngine, createMemoryJournal, type RunContext } from "../engine/index.js";
 import { RunWaitingError, runtimeErrorPayload } from "../errors.js";
 import { InMemoryEventLog } from "../events.js";
 import { composeInstructions } from "../instructions.js";
@@ -14,9 +15,21 @@ export async function runProject(
   root: string,
   options: RunProjectOptions = {},
 ): Promise<RunResult> {
-  const validation = await validateProject(root);
+  const engine = options.engine ?? createEngine({ journal: createMemoryJournal() });
   const runId = options.runId ?? `run-${randomUUID()}`;
   const startedAt = new Date().toISOString();
+
+  return engine.run(runId, (ctx) => runLoop(ctx, root, startedAt, options), {});
+}
+
+async function runLoop(
+  ctx: RunContext,
+  root: string,
+  startedAt: string,
+  options: RunProjectOptions,
+): Promise<RunResult> {
+  const { runId } = ctx;
+  const validation = await validateProject(root);
   const events = new InMemoryEventLog(runId, options.eventStore);
   await events.append("run.started", {
     projectRoot: validation.project?.root ?? root,
@@ -72,6 +85,7 @@ export async function runProject(
     const output =
       options.provider !== undefined
         ? await runProviderBackedRun(
+            ctx,
             options.provider,
             options.message,
             instructions.content,
@@ -80,7 +94,7 @@ export async function runProject(
           )
         : options.script === undefined
           ? await runDefaultDryRun(project, events)
-          : await runScriptedDryRun(options.script, tools, events);
+          : await runScriptedDryRun(ctx, options.script, tools, events);
     await events.append("run.completed", {
       ...(output === undefined ? {} : { output }),
     });

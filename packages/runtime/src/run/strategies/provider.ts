@@ -1,10 +1,11 @@
-import { randomUUID } from "node:crypto";
+import type { RunContext } from "../../engine/index.js";
 import { RuntimeDiagnosticError, RunWaitingError } from "../../errors.js";
 import type { InMemoryEventLog } from "../../events.js";
 import { validateJsonSchemaSubset } from "../../tools/schema.js";
 import type { DeclaredTool, ModelProvider, ModelRequest } from "../../types/index.js";
 
 export async function runProviderBackedRun(
+  ctx: RunContext,
   provider: ModelProvider,
   message: string | undefined,
   instructions: string,
@@ -36,7 +37,7 @@ export async function runProviderBackedRun(
 
   let output: string | undefined;
 
-  for (let step = 0; step < 10; step++) {
+  for (let turn = 0; turn < 10; turn++) {
     const modelRequest: ModelRequest = {
       messages,
       maxSteps: 10,
@@ -49,7 +50,7 @@ export async function runProviderBackedRun(
       tools: providerTools,
     });
 
-    const modelResponse = await provider.complete(modelRequest);
+    const modelResponse = await ctx.step(`model:${turn}`, () => provider.complete(modelRequest));
 
     await events.append("model.response", {
       content: modelResponse.content,
@@ -66,7 +67,7 @@ export async function runProviderBackedRun(
       return output ?? finalContent;
     }
 
-    for (const toolCall of modelResponse.toolCalls) {
+    for (const [callIndex, toolCall] of modelResponse.toolCalls.entries()) {
       const tool = toolsByName.get(toolCall.name);
       if (!tool) {
         throw new RuntimeDiagnosticError({
@@ -91,7 +92,7 @@ export async function runProviderBackedRun(
       }
 
       if (tool.approval.required) {
-        const requestId = randomUUID();
+        const requestId = `${ctx.runId}:${turn}:${callIndex}`;
         await events.append("approval.requested", {
           requestId,
           toolName: tool.name,
@@ -108,7 +109,9 @@ export async function runProviderBackedRun(
 
       let result: unknown;
       try {
-        result = await tool.handler(toolCall.arguments);
+        result = await ctx.step(`tool:${turn}:${callIndex}`, () =>
+          tool.handler(toolCall.arguments),
+        );
       } catch (error) {
         throw new RuntimeDiagnosticError({
           phase: "runtime",

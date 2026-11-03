@@ -1,4 +1,13 @@
 export { buildArtifactWorkspace, readArtifactSnapshot } from "./artifacts.js";
+export {
+  createEngine,
+  createMemoryJournal,
+  type Engine,
+  type Journal,
+  ProjectChangedError,
+  type RunContext,
+  type Workflow,
+} from "./engine/index.js";
 export { runEvals } from "./evals/index.js";
 export { composeInstructions } from "./instructions.js";
 export { checkReadiness } from "./readiness/index.js";
