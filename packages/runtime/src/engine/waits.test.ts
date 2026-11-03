@@ -1,6 +1,8 @@
+import { execFileSync } from "node:child_process";
 import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
   createEngine,
@@ -183,4 +185,20 @@ describe.each(journals)("waits on the %s", (_name, makeJournal) => {
     expect(await engine.signal("missing", "approval:1", true)).toBe("unknown");
     expect(await engine.signal("done", "approval:1", true)).toBe("ignored");
   });
+});
+
+it("does not crash when a background resume cannot claim", () => {
+  const moduleUrl = pathToFileURL(join(process.cwd(), "packages/runtime/src/engine/index.ts")).href;
+  const program = `
+    import { createEngine, createMemoryJournal } from ${JSON.stringify(moduleUrl)};
+    const journal = createMemoryJournal();
+    journal.claim = async () => { throw new Error("claim failed"); };
+    const engine = createEngine({ journal });
+    await engine.run("run", async (ctx) => ctx.wait("approval"), {});
+    await engine.signal("run", "approval", true);
+    await new Promise(resolve => setTimeout(resolve, 30));
+  `;
+  expect(() =>
+    execFileSync(process.execPath, ["--import", "tsx", "--input-type=module", "-e", program]),
+  ).not.toThrow();
 });
