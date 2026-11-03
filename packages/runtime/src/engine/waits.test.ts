@@ -10,6 +10,7 @@ import {
   createSqliteJournal,
   type Journal,
   type RunContext,
+  RunSuspended,
   type WaitOutcome,
 } from "./index.js";
 
@@ -243,4 +244,31 @@ it("does not crash when a background resume cannot claim", () => {
   expect(() =>
     execFileSync(process.execPath, ["--import", "tsx", "--input-type=module", "-e", program]),
   ).not.toThrow();
+});
+
+it("reports what the run produced when another worker claims it first", async () => {
+  const journal = createMemoryJournal();
+  const setState = journal.setState;
+  journal.setState = async (runId, state) => {
+    await setState(runId, state);
+    // The decision lands while the run is stopping, and a second worker wins the claim.
+    if (state === "waiting") await journal.putSignal(runId, "approval:1", "true");
+  };
+  journal.claimWaiting = async () => false;
+
+  const outcome = await createEngine({ journal }).run(
+    "run-1",
+    async (ctx) => {
+      try {
+        await ctx.wait("approval:1");
+      } catch (error) {
+        if (error instanceof RunSuspended) return "partial";
+        throw error;
+      }
+      return "full";
+    },
+    {},
+  );
+
+  expect(outcome).toEqual({ state: "waiting", output: "partial" });
 });
