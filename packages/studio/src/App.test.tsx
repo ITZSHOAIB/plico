@@ -102,7 +102,9 @@ describe("artifacts", () => {
 
     expect(screen.getByRole("button", { name: /summary\.md.*v2/ })).toBeTruthy();
     expect(screen.getByText(/snapshot-1/)).toBeTruthy();
-    expect(screen.getByText(/current workspace/i)).toBeTruthy();
+    expect(
+      screen.getByText(/Showing the current workspace, not the workspace at the selected event/i),
+    ).toBeTruthy();
   });
 
   it("previews Markdown, JSON, and text", async () => {
@@ -110,7 +112,9 @@ describe("artifacts", () => {
 
     click(/summary\.md/);
     expect(screen.getByRole("heading", { name: "Weekly summary" })).toBeTruthy();
-    expect(screen.getByText(/current workspace/i)).toBeTruthy();
+    expect(
+      screen.getByText(/Showing the current workspace, not the workspace at the selected event/i),
+    ).toBeTruthy();
     click(/Back to files/);
 
     click(/data\.json/);

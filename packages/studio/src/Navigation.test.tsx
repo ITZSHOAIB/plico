@@ -2,6 +2,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "./App";
+import { required } from "./testing/fakeEventSource";
 import { click, openRun, otherRun, runEvent, stubApi } from "./testing/fixtures";
 
 beforeEach(() => vi.unstubAllGlobals());
@@ -27,8 +28,7 @@ describe("run navigation", () => {
 
 it("opens a different run at its latest event", async () => {
   const fetchMock = stubApi();
-  const original = fetchMock.getMockImplementation();
-  if (!original) throw new Error("Missing fetch stub");
+  const original = required(fetchMock.getMockImplementation());
   fetchMock.mockImplementation(async (input, init) => {
     if (input === "/v1/runs") {
       const response = await original(input, init);
@@ -56,4 +56,14 @@ it("opens a different run at its latest event", async () => {
   expect((screen.getByRole("button", { name: "Go to latest" }) as HTMLButtonElement).disabled).toBe(
     true,
   );
+});
+
+it("returns to the latest event when the selected run is selected again", async () => {
+  stubApi();
+  render(<App />);
+  await openRun();
+  click("Previous event");
+  expect(screen.getByText(/Event 3 of 4/)).toBeTruthy();
+  click(/run-12345678/);
+  expect(await screen.findByText(/Event 4 of 4/)).toBeTruthy();
 });

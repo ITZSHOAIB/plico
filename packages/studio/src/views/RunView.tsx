@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { EventList } from "../components/EventList";
-import { statusAfter } from "../hooks/runState";
+import { useReplayPosition } from "../hooks/useReplayPosition";
 import type { StreamState } from "../hooks/useRunStream";
 import {
   codeBlockScroll,
@@ -11,6 +11,7 @@ import {
   toolbarButton,
 } from "../styles";
 import type { PlicoEvent, RunSummary } from "../types";
+import { ReplayControls } from "./ReplayControls";
 
 interface RunViewProps {
   selectedRun: RunSummary | null;
@@ -21,17 +22,13 @@ interface RunViewProps {
 
 export function RunView({ selectedRun, events, streamState, eventsError }: RunViewProps) {
   const [mode, setMode] = useState<"timeline" | "raw">("timeline");
-  const [position, setPosition] = useState<number | null>(null);
+  const replay = useReplayPosition(selectedRun, events);
 
   if (!selectedRun) {
     return <div style={emptyPanel}>Select a run to inspect.</div>;
   }
-  const index = position === null ? events.length - 1 : Math.min(position, events.length - 1);
-  const visibleEvents = events.slice(0, index + 1);
-  const shownRun =
-    position === null
-      ? selectedRun
-      : visibleEvents.reduce(statusAfter, { ...selectedRun, status: "running", endedAt: null });
+  const { visibleEvents, shownRun } = replay;
+  if (!shownRun) return null;
   const error = [...visibleEvents].reverse().find((event) => event.type === "run.error");
   const reason =
     error?.payload.message ?? error?.payload.issues?.map((issue) => issue.message).join(", ");
@@ -49,32 +46,7 @@ export function RunView({ selectedRun, events, streamState, eventsError }: RunVi
       )}
       {streamState === "reconnecting" && <div role="status">Reconnecting to run updates...</div>}
       {shownRun.status === "failed" && reason && <div>Failure: {reason}</div>}
-      <section aria-label="Run replay" style={{ marginBottom: "8px" }}>
-        <button
-          type="button"
-          onClick={() => setPosition(Math.max(0, index - 1))}
-          disabled={index <= 0}
-        >
-          Previous event
-        </button>
-        <button
-          type="button"
-          onClick={() => setPosition(index + 1 >= events.length - 1 ? null : index + 1)}
-          disabled={index >= events.length - 1}
-        >
-          Next event
-        </button>
-        <button type="button" onClick={() => setPosition(null)} disabled={position === null}>
-          Go to latest
-        </button>
-        <span>
-          {" "}
-          Event {index + 1} of {events.length}
-        </span>
-        {position !== null && index < events.length - 1 && (
-          <span> ({events.length - index - 1} newer)</span>
-        )}
-      </section>
+      <ReplayControls replay={replay} />
       <div style={{ marginBottom: "8px" }}>
         <button
           type="button"

@@ -6,6 +6,7 @@ import { type StreamTarget, useRunStream } from "./useRunStream";
 
 export function useRunInspector() {
   const selection = useRef(0);
+  const [selectionKey, setSelectionKey] = useState(0);
   const selectedId = useRef<string | null>(null);
   const [eventsError, setEventsError] = useState<string | null>(null);
   const [target, setTarget] = useState<StreamTarget | null>(null);
@@ -28,6 +29,7 @@ export function useRunInspector() {
   const selectRun = useCallback(
     async (run: RunSummary) => {
       const generation = ++selection.current;
+      setSelectionKey(generation);
       selectedId.current = run.runId;
       setTarget(null);
       setEventsError(null);
@@ -76,6 +78,7 @@ export function useRunInspector() {
 
   return {
     selectedRun,
+    selectionKey,
     events,
     streamState,
     eventsError,

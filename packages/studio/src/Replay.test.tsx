@@ -1,49 +1,17 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, expect, it } from "vitest";
-import type { PlicoEvent, RunSummary } from "../types";
-import { RunView } from "./RunView";
+import { otherRun, runEvent } from "./testing/fixtures";
+import type { PlicoEvent, RunSummary } from "./types";
+import { RunView } from "./views/RunView";
 
 afterEach(cleanup);
-const run: RunSummary = {
-  runId: "run-1",
-  projectRoot: "/demo",
-  projectName: "Demo",
-  status: "failed",
-  startedAt: "2026-01-01T00:00:00.000Z",
-  endedAt: "2026-01-01T00:00:03.000Z",
-};
-const envelope = {
-  schemaVersion: 1 as const,
-  streamType: "run" as const,
-  streamId: "run-1",
-  runId: "run-1",
-  timestamp: "2026-01-01T00:00:00.000Z",
-};
+const run: RunSummary = { ...otherRun, status: "failed", endedAt: "2026-01-01T00:00:03.000Z" };
 const events: PlicoEvent[] = [
-  {
-    ...envelope,
-    id: "1",
-    sequence: 1,
-    type: "run.started",
-    payload: { projectRoot: "/demo", projectName: "Demo" },
-  },
-  {
-    ...envelope,
-    id: "2",
-    sequence: 2,
-    type: "run.error",
-    payload: { phase: "runtime", message: "Disk failed" },
-  },
-  {
-    ...envelope,
-    id: "3",
-    sequence: 3,
-    type: "run.failed",
-    timestamp: "2026-01-01T00:00:03.000Z",
-    payload: { phase: "runtime" },
-  },
-];
+  runEvent(1, "run.started", { projectRoot: "/demo", projectName: "Demo" }),
+  runEvent(2, "run.error", { phase: "runtime", message: "Disk failed" }),
+  { ...runEvent(3, "run.failed", { phase: "runtime" }), timestamp: "2026-01-01T00:00:03.000Z" },
+].map((event) => ({ ...event, runId: run.runId, streamId: run.runId }));
 
 it("replays earlier events without showing a future failure", () => {
   render(<RunView selectedRun={run} events={events} />);
@@ -66,10 +34,11 @@ it("keeps a historical position when a new event arrives", () => {
     />,
   );
   fireEvent.click(screen.getByRole("button", { name: "Previous event" }));
-  expect(screen.getByText(/Event 1 of 2/)).toBeTruthy();
+  expect(screen.getByRole("status").textContent).toContain("Event 1 of 2");
+  expect(screen.getByRole("status").textContent).toContain("1 newer");
   rerender(<RunView selectedRun={run} events={events} />);
   expect(screen.getByText(/Event 1 of 3/)).toBeTruthy();
-  expect(screen.getByText(/2 newer/)).toBeTruthy();
+  expect(screen.getByRole("status").textContent).toContain("2 newer");
   expect(screen.queryByText("run.failed")).toBeNull();
   fireEvent.click(screen.getByRole("button", { name: "Go to latest" }));
   expect(screen.getByText("run.failed")).toBeTruthy();
@@ -93,4 +62,20 @@ it("follows new events at the latest position and limits raw output while replay
   fireEvent.click(screen.getByRole("button", { name: "Next event" }));
   expect(screen.getByText(/Event 3 of 3/)).toBeTruthy();
   expect(screen.getByText(/Status: failed/)).toBeTruthy();
+});
+
+it("shows an empty history without replay controls", () => {
+  render(<RunView selectedRun={run} events={[]} />);
+  expect(screen.getByText("No events yet")).toBeTruthy();
+  expect(screen.queryByRole("button", { name: "Previous event" })).toBeNull();
+  expect(screen.queryByText(/Event 0 of 0/)).toBeNull();
+});
+
+it("continues following new events after Next reaches the latest event", () => {
+  const { rerender } = render(<RunView selectedRun={run} events={events.slice(0, 2)} />);
+  fireEvent.click(screen.getByRole("button", { name: "Previous event" }));
+  fireEvent.click(screen.getByRole("button", { name: "Next event" }));
+  rerender(<RunView selectedRun={run} events={events} />);
+  expect(screen.getByText(/Event 3 of 3/)).toBeTruthy();
+  expect(screen.getByText("run.failed")).toBeTruthy();
 });
