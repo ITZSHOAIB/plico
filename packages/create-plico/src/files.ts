@@ -49,6 +49,10 @@ export function toolsReadmeFile(): string {
     "",
     "Keep the public contract file-first until tools are explicitly required.",
     "",
+    "A tool handler receives `(input, { signal, idempotencyKey })`. A run that is interrupted can repeat",
+    "the tool call that was in flight, so pass `idempotencyKey` to any API that takes one. The key is",
+    "stable for a call, and `signal` aborts when the run is cancelled.",
+    "",
   ].join("\n");
 }
 

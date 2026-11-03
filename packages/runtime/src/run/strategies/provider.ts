@@ -110,8 +110,9 @@ export async function runProviderBackedRun(
 
       let result: unknown;
       try {
+        const idempotencyKey = `${ctx.runId}:${turn}:${callIndex}`;
         result = await ctx.step(`tool:${turn}:${callIndex}`, ({ signal }) =>
-          tool.handler(toolCall.arguments, { signal }),
+          tool.handler(toolCall.arguments, { signal, idempotencyKey }),
         );
       } catch (error) {
         if (error instanceof RunCancelled) throw error;
