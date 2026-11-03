@@ -1,0 +1,79 @@
+/*
+ * Design tokens. Components use semantic names (bg-surface, text-muted), never raw colours,
+ * so a theme is only a different set of values for the variables below.
+ * Add a theme: add a [data-theme="name"] block. Rebrand: change --accent.
+ */
+
+:root,
+[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0b0c0e;
+  --surface: #101114;
+  --surface-raised: #15171b;
+  --border: #23262c;
+  --border-subtle: #1a1c20;
+  --text: #e6e8eb;
+  --muted: #8a8f98;
+  --faint: #5b6068;
+  --accent: #7c8cff;
+  --accent-contrast: #0b0c0e;
+  --accent-soft: #171a30;
+  --success: #3ecf8e;
+  --success-soft: #11291f;
+  --danger: #ff6369;
+  --danger-soft: #2d1416;
+  --warning: #f5a524;
+  --warning-soft: #2b2110;
+  --code-key: #7aa2f7;
+  --code-string: #9ece6a;
+}
+
+[data-theme="light"] {
+  color-scheme: light;
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --surface-raised: #f1f3f6;
+  --border: #dfe3e8;
+  --border-subtle: #edf0f3;
+  --text: #16191d;
+  --muted: #667085;
+  --faint: #98a2b3;
+  --accent: #4f5bd5;
+  --accent-contrast: #ffffff;
+  --accent-soft: #eef0ff;
+  --success: #16a34a;
+  --success-soft: #e7f6ec;
+  --danger: #dc2626;
+  --danger-soft: #fdecec;
+  --warning: #b45309;
+  --warning-soft: #fef3e0;
+  --code-key: #2f4fd1;
+  --code-string: #15803d;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-raised: var(--surface-raised);
+  --color-line: var(--border);
+  --color-line-subtle: var(--border-subtle);
+  --color-fg: var(--text);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+  --color-accent: var(--accent);
+  --color-on-accent: var(--accent-contrast);
+  --color-accent-soft: var(--accent-soft);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-code-key: var(--code-key);
+  --color-code-string: var(--code-string);
+
+  --font-sans: "Inter Variable", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono Variable", ui-monospace, Consolas, monospace;
+  --radius-control: 6px;
+  --radius-panel: 8px;
+}

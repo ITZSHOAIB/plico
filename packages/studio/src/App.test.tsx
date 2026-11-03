@@ -27,7 +27,8 @@ describe("run inspection", () => {
     expect(screen.getByText("tool.result")).toBeTruthy();
     expect(screen.getAllByText("create-ticket")).toHaveLength(2);
     expect(screen.getByText("delete-ticket requires approval")).toBeTruthy();
-    expect(screen.getByText(/Status: waiting/).textContent).toContain("Not ended");
+    expect(screen.getByText(/Status: waiting/)).toBeTruthy();
+    expect(screen.getByText("Not ended")).toBeTruthy();
   });
 
   it("replays raw events", async () => {

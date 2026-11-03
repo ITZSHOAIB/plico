@@ -1,56 +1,52 @@
-import { codeBlock, codeBlockScroll } from "../styles";
 import type { ArtifactFile } from "../types";
+import { CodeBlock } from "../ui/Page";
+
+function Markdown({ content }: { content: string }) {
+  return (
+    <div className="rounded-panel border border-line bg-surface p-4 leading-relaxed">
+      {content.split("\n").map((line, i) => {
+        const key = `l-${i}`;
+        if (line.startsWith("# "))
+          return (
+            <h1 key={key} className="mt-2 mb-1 text-lg font-semibold">
+              {line.slice(2)}
+            </h1>
+          );
+        if (line.startsWith("## "))
+          return (
+            <h2 key={key} className="mt-2 mb-1 text-[15px] font-semibold">
+              {line.slice(3)}
+            </h2>
+          );
+        if (line.startsWith("### "))
+          return (
+            <h3 key={key} className="mt-1 mb-0.5 text-sm font-semibold">
+              {line.slice(4)}
+            </h3>
+          );
+        if (line.trim() === "") return <br key={key} />;
+        return (
+          <p key={key} className="my-0.5">
+            {line}
+          </p>
+        );
+      })}
+    </div>
+  );
+}
 
 export function FilePreview({ file }: { file: ArtifactFile }) {
   if (file.mimeType === "application/json") {
     try {
-      const parsed = JSON.parse(file.content);
-      return <pre style={codeBlockScroll("70vh")}>{JSON.stringify(parsed, null, 2)}</pre>;
+      return <CodeBlock>{JSON.stringify(JSON.parse(file.content), null, 2)}</CodeBlock>;
     } catch {
-      return <pre style={{ whiteSpace: "pre-wrap", fontSize: "12px" }}>{file.content}</pre>;
+      return <CodeBlock>{file.content}</CodeBlock>;
     }
   }
 
   if (file.mimeType === "text/markdown" || file.path.endsWith(".md")) {
-    return (
-      <div
-        style={{
-          ...codeBlockScroll("70vh"),
-          whiteSpace: "normal",
-          fontSize: "13px",
-          lineHeight: "1.6",
-        }}
-      >
-        {file.content.split("\n").map((line, i) => {
-          const k = `l-${i}`;
-          if (line.startsWith("# "))
-            return (
-              <h1 key={k} style={{ fontSize: "18px", margin: "8px 0 4px" }}>
-                {line.slice(2)}
-              </h1>
-            );
-          if (line.startsWith("## "))
-            return (
-              <h2 key={k} style={{ fontSize: "15px", margin: "6px 0 3px" }}>
-                {line.slice(3)}
-              </h2>
-            );
-          if (line.startsWith("### "))
-            return (
-              <h3 key={k} style={{ fontSize: "14px", margin: "4px 0 2px" }}>
-                {line.slice(4)}
-              </h3>
-            );
-          if (line.trim() === "") return <br key={k} />;
-          return (
-            <p key={k} style={{ margin: "2px 0" }}>
-              {line}
-            </p>
-          );
-        })}
-      </div>
-    );
+    return <Markdown content={file.content} />;
   }
 
-  return <pre style={{ ...codeBlock, ...codeBlockScroll("70vh") }}>{file.content}</pre>;
+  return <CodeBlock className="text-fg">{file.content}</CodeBlock>;
 }

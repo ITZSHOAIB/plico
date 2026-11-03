@@ -1,15 +1,8 @@
 import type { EvalsState } from "../hooks/useEvals";
-import {
-  backButton,
-  codeBlock,
-  headingTight,
-  listItemButton,
-  meta,
-  metaLoose,
-  panel,
-  toolbarButton,
-} from "../styles";
 import type { EvalCaseResult } from "../types";
+import { Button } from "../ui/Button";
+import { Icon } from "../ui/Icon";
+import { CodeBlock, listRowClass, Notice, Page } from "../ui/Page";
 
 interface EvalsViewProps {
   evals: EvalsState;
@@ -17,94 +10,95 @@ interface EvalsViewProps {
 }
 
 const statusStyle = {
-  pass: { label: "PASS", color: "#080", background: "#f0fff0" },
-  fail: { label: "FAIL", color: "#c00", background: "#fff0f0" },
-} satisfies Record<EvalCaseResult["status"], object>;
-
-function ErrorNotice({ message }: { message: string | null }) {
-  if (!message) return null;
-  return (
-    <div role="alert" style={{ ...metaLoose, color: "#c00" }}>
-      {message}
-    </div>
-  );
-}
+  pass: { label: "PASS", tone: "text-success", icon: "ok" },
+  fail: { label: "FAIL", tone: "text-danger", icon: "error" },
+} as const satisfies Record<EvalCaseResult["status"], object>;
 
 export function EvalsView({ evals, onOpenRun }: EvalsViewProps) {
   const { report, selected, running, error, run, select } = evals;
 
   if (selected) {
     return (
-      <div style={panel}>
-        <button type="button" onClick={() => select(null)} style={backButton}>
-          ← Back to evals
-        </button>
-        <h3 style={headingTight}>{selected.name}</h3>
-        <div style={meta}>
-          {statusStyle[selected.status].label} &middot; Run: {selected.runId}
-        </div>
-        <ErrorNotice message={error} />
-        <button
-          type="button"
-          onClick={() => onOpenRun(selected.runId)}
-          style={{ ...toolbarButton(false), marginBottom: "8px" }}
-        >
-          View run
-        </button>
+      <Page
+        title={selected.name}
+        subtitle={
+          <>
+            {statusStyle[selected.status].label} &middot; Run: {selected.runId}
+          </>
+        }
+        onBack={() => select(null)}
+        backLabel="Back to evals"
+        actions={<Button onClick={() => onOpenRun(selected.runId)}>View run</Button>}
+      >
+        {error && <Notice>{error}</Notice>}
         {selected.output && (
-          <div style={{ marginBottom: "8px" }}>
-            <strong style={{ fontSize: "12px" }}>Output:</strong>
-            <pre style={codeBlock}>{selected.output}</pre>
+          <div className="mb-4">
+            <h3 className="mb-1.5 text-xs font-semibold">Output:</h3>
+            <CodeBlock className="text-fg">{selected.output}</CodeBlock>
           </div>
         )}
         {selected.diagnostics?.length ? (
           <div>
-            <strong style={{ fontSize: "12px" }}>Diagnostics:</strong>
-            {selected.diagnostics.map((d) => (
-              <div key={`diag-${d}`} style={{ fontSize: "12px", color: "#c00", marginTop: "4px" }}>
-                {d}
-              </div>
-            ))}
+            <h3 className="mb-1.5 text-xs font-semibold">Diagnostics:</h3>
+            <ul className="m-0 grid list-none gap-1.5 p-0">
+              {selected.diagnostics.map((d) => (
+                <li
+                  key={`diag-${d}`}
+                  className="rounded-control border border-danger/40 bg-danger-soft px-3 py-2 text-xs text-danger"
+                >
+                  {d}
+                </li>
+              ))}
+            </ul>
           </div>
         ) : null}
-      </div>
+      </Page>
     );
   }
 
   return (
-    <div style={panel}>
-      <h3 style={headingTight}>Eval Results</h3>
-      <div style={{ marginBottom: "8px" }}>
-        <button type="button" onClick={run} disabled={running} style={toolbarButton(false)}>
-          {running ? "Running…" : "Run evals"}
-        </button>
-      </div>
-      <ErrorNotice message={error} />
-      {report ? (
-        <>
-          <div style={metaLoose}>
+    <Page
+      title="Eval Results"
+      subtitle={
+        report ? (
+          <>
             {report.passed}/{report.total} passed, {report.failed} failed &middot;{" "}
             {report.evaluatedAt}
-          </div>
+          </>
+        ) : undefined
+      }
+      actions={
+        <Button variant="primary" onClick={run} disabled={running}>
+          {running ? "Running…" : "Run evals"}
+        </Button>
+      }
+    >
+      {error && <Notice>{error}</Notice>}
+      {report ? (
+        <ul className="m-0 list-none overflow-hidden rounded-panel border border-line bg-surface p-0">
           {report.results.map((result) => {
-            const { label, color, background } = statusStyle[result.status];
+            const { label, tone, icon } = statusStyle[result.status];
             return (
-              <button
-                key={result.runId}
-                type="button"
-                onClick={() => select(result)}
-                style={{ ...listItemButton, background, border: "1px solid #ddd" }}
-              >
-                <span style={{ fontWeight: 500 }}>{result.name}</span>
-                <span style={{ marginLeft: "8px", color }}>{label}</span>
-                <span style={{ marginLeft: "8px", color: "#999" }}>{result.runId}</span>
-              </button>
+              <li key={result.runId}>
+                <button type="button" onClick={() => select(result)} className={listRowClass}>
+                  <span className={tone}>
+                    <Icon name={icon} />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="font-medium">{result.name}</span>
+                    <span className={`ml-2 text-[11px] font-semibold ${tone}`}>{label}</span>
+                    <span className="block truncate font-mono text-[11px] text-faint">
+                      {result.runId}
+                    </span>
+                  </span>
+                </button>
+              </li>
             );
           })}
-        </>
+        </ul>
       ) : !error ? (
-        <div style={metaLoose}>No eval results yet. Run evals to see them here.</div>
+        <div className="text-muted">No eval results yet. Run evals to see them here.</div>
       ) : null}
-    </div>
+    </Page>
   );
 }
