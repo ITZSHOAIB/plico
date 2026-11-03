@@ -58,6 +58,11 @@ export class InMemoryEventLog {
     return event;
   }
 
+  /** Continue after the recorded tail when recovery cannot replay the workflow. */
+  continueAfterReplay(): void {
+    this.#cursor = this.#replayed;
+  }
+
   all(): PlicoEvent[] {
     return [...this.#events];
   }
