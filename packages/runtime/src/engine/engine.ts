@@ -98,7 +98,8 @@ export function createEngine({
           (wait?.deadline != null && now() >= wait.deadline);
         if (ready) {
           if (await journal.claimWaiting(runId, lease())) continue;
-          return { state: "waiting" };
+          // Another worker took the run; report what this execution produced before it stopped.
+          return returned ? { state: "waiting", output: output as O } : { state: "waiting" };
         }
         if (suspension.deadline !== null) {
           const delay = Math.max(0, suspension.deadline - now());
