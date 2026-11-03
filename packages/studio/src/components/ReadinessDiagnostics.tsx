@@ -21,9 +21,10 @@ function severityLabel(severity: string): string {
 export function ReadinessDiagnostics({ diagnostics }: { diagnostics: ReadinessDiagnostic[] }) {
   return (
     <div>
-      {diagnostics.map((d) => (
+      {diagnostics.map((d, index) => (
         <div
-          key={`rd-${d.subsystem}-${d.message}`}
+          // biome-ignore lint/suspicious/noArrayIndexKey: Identical diagnostics need distinct keys.
+          key={`rd-${d.subsystem}-${d.message}-${d.path}-${index}`}
           style={{
             padding: "6px 8px",
             marginBottom: "4px",

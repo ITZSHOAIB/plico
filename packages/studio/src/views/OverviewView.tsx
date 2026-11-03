@@ -1,4 +1,5 @@
 import { ReadinessDiagnostics } from "../components/ReadinessDiagnostics";
+import { ReadinessError } from "../components/ReadinessError";
 import type { ProjectData } from "../hooks/useProjectData";
 import { emptyPanel, heading, meta, metaLoose, panel, toolbarButton } from "../styles";
 import type { EvalReport, RunSummary } from "../types";
@@ -12,6 +13,17 @@ function latestRunLabel(runs: RunSummary[]): string {
   const [latest] = runs;
   if (!latest) return "0 run(s)";
   return `${runs.length} run(s), latest ${latest.status}${latest.endedAt ? ` at ${latest.endedAt}` : " (not ended)"}`;
+}
+
+function formatCheckedAt(timestamp: string): string {
+  const date = new Date(timestamp);
+  if (Number.isNaN(date.getTime())) return timestamp;
+  const formatted = new Intl.DateTimeFormat("en-US", {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: "UTC",
+  }).format(date);
+  return `${formatted} UTC`;
 }
 
 export function OverviewView({ data, evalReport }: OverviewViewProps) {
@@ -34,6 +46,7 @@ export function OverviewView({ data, evalReport }: OverviewViewProps) {
             : "No eval results yet"
         }
       />
+      <Fact label="Instructions" value={instructions?.sources.join(", ") ?? "Loading…"} />
       <Fact
         label="Readiness"
         value={
@@ -45,17 +58,13 @@ export function OverviewView({ data, evalReport }: OverviewViewProps) {
         }
       />
       {data.readinessError && (
-        <div role="alert">
-          {data.readinessError}
-          {readiness && ". Showing the last successful report."}
-        </div>
+        <ReadinessError error={data.readinessError} hasReport={!!readiness} />
       )}
-      {readiness && <div style={meta}>Checked at {readiness.timestamp}</div>}
+      {readiness && <div style={meta}>Checked at {formatCheckedAt(readiness.timestamp)}</div>}
       <button type="button" style={toolbarButton(false)} onClick={() => void data.loadReadiness()}>
         Refresh readiness
       </button>
       {readiness && <ReadinessDiagnostics diagnostics={readiness.diagnostics} />}
-      <Fact label="Instructions" value={instructions?.sources.join(", ") ?? "Loading…"} />
     </section>
   );
 }

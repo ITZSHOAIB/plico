@@ -1,4 +1,5 @@
 import { ReadinessDiagnostics } from "../components/ReadinessDiagnostics";
+import { ReadinessError } from "../components/ReadinessError";
 import { emptyPanel, heading, metaLoose, panel } from "../styles";
 import type { ReadinessReport } from "../types";
 
@@ -9,12 +10,7 @@ export function ReadinessView({
   report: ReadinessReport | null;
   error: string | null;
 }) {
-  if (!report && error)
-    return (
-      <div role="alert" style={emptyPanel}>
-        {error}
-      </div>
-    );
+  if (!report && error) return <ReadinessError error={error} hasReport={false} />;
   if (!report) {
     return <div style={emptyPanel}>Loading readiness report…</div>;
   }
@@ -22,7 +18,7 @@ export function ReadinessView({
   return (
     <div style={panel}>
       <h3 style={heading}>Local Readiness Report</h3>
-      {error && <div role="alert">{error}. Showing the last successful report.</div>}
+      {error && <ReadinessError error={error} hasReport />}
       <div style={metaLoose}>
         {report.summary.ok} ok, {report.summary.warning} warning(s), {report.summary.error} error(s)
       </div>

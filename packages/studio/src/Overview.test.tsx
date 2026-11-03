@@ -19,10 +19,16 @@ describe("overview", () => {
     expect(within(overview).getByText(/current project and readiness/i)).toBeTruthy();
     expect(await within(overview).findByText("1 ok, 1 warning(s), 0 error(s)")).toBeTruthy();
     expect(await within(overview).findByText("Add more evals")).toBeTruthy();
-    expect(within(overview).getByText(/Checked at 2026-10-31T10:00:00.000Z/)).toBeTruthy();
+    expect(within(overview).getByText("Checked at Oct 31, 2026, 10:00 AM UTC")).toBeTruthy();
     expect(await within(overview).findByText("1/2 passed, 1 failed")).toBeTruthy();
     expect(await within(overview).findByText(/1 run\(s\)/)).toBeTruthy();
     expect(await within(overview).findByText("agent.md, skills/triage.md")).toBeTruthy();
+    expect(
+      within(overview)
+        .getByText("Instructions")
+        .compareDocumentPosition(within(overview).getByText("Readiness")) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 
   it("refreshes readiness from the project overview", async () => {
