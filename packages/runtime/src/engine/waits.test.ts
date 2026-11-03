@@ -71,6 +71,48 @@ describe.each(journals)("waits on the %s", (_name, makeJournal) => {
     expect(log).toEqual(["before", 'after:{"kind":"signal","value":{"approved":true}}']);
   });
 
+  it("only one adopter continues a timed-out run", async () => {
+    const journal = await makeJournal();
+    let continued = 0;
+    const workflow = async (ctx: RunContext) => {
+      await ctx.wait("approval", { timeoutMs: 60_300 });
+      await ctx.step("side effect", async () => {
+        continued++;
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      });
+    };
+    await createEngine({ journal, workerId: "a", now: () => Date.now() - 60_000 }).run(
+      "race",
+      workflow,
+      {},
+    );
+    let arrivals = 0;
+    let release!: () => void;
+    const barrier = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let race = false;
+    const guarded: Journal = {
+      ...journal,
+      async getRun(id) {
+        const run = await journal.getRun(id);
+        if (race && id === "race" && run?.state === "waiting") {
+          arrivals++;
+          if (arrivals === 2) release();
+          await barrier;
+        }
+        return run;
+      },
+    };
+    const b = createEngine({ journal: guarded, workerId: "b" });
+    const c = createEngine({ journal: guarded, workerId: "c" });
+    await b.recover(() => workflow);
+    await c.recover(() => workflow);
+    race = true;
+    await until(async () => (await journal.getRun("race"))?.state === "completed");
+    expect(continued).toBe(1);
+  });
+
   it("uses a decision that arrived before the wait was reached", async () => {
     const engine = createEngine({ journal: await makeJournal() });
     const log: string[] = [];
@@ -192,7 +234,7 @@ it("does not crash when a background resume cannot claim", () => {
   const program = `
     import { createEngine, createMemoryJournal } from ${JSON.stringify(moduleUrl)};
     const journal = createMemoryJournal();
-    journal.claim = async () => { throw new Error("claim failed"); };
+    journal.claimWaiting = async () => { throw new Error("claim failed"); };
     const engine = createEngine({ journal });
     await engine.run("run", async (ctx) => ctx.wait("approval"), {});
     await engine.signal("run", "approval", true);

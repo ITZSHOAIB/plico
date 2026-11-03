@@ -81,8 +81,8 @@ export function createEngine({
           (await journal.getSignal(runId, suspension.name)) !== undefined ||
           (wait?.deadline != null && now() >= wait.deadline);
         if (ready) {
-          await journal.claim(runId, lease());
-          continue;
+          if (await journal.claimWaiting(runId, lease())) continue;
+          return { state: "waiting" };
         }
         if (suspension.deadline !== null) {
           const delay = Math.max(0, suspension.deadline - now());
@@ -113,7 +113,10 @@ export function createEngine({
         active.delete(runId);
         return;
       }
-      await journal.claim(runId, lease());
+      if (!(await journal.claimWaiting(runId, lease()))) {
+        active.delete(runId);
+        return;
+      }
     } catch (error) {
       active.delete(runId);
       throw error;
@@ -153,7 +156,11 @@ export function createEngine({
         );
         if (!stale || !(await journal.claim(runId, lease(), stale.held)))
           throw new Error(`Run ${runId} is held by a live worker or its lease changed.`);
-      } else if (!(await journal.claim(runId, lease()))) {
+      } else if (
+        !(await (run.state === "waiting"
+          ? journal.claimWaiting(runId, lease())
+          : journal.claim(runId, lease())))
+      ) {
         throw new Error(`Run ${runId} could not be claimed.`);
       }
       active.add(runId);
@@ -196,17 +203,23 @@ export function createEngine({
         }
       }
       const candidates = [
-        ...(await journal.listStale(workerId, now())),
-        ...(await journal.listReady(now())),
+        ...(await journal.listStale(workerId, now())).map((item) => ({ ...item, waiting: false })),
+        ...(await journal.listReady(now())).map((item) => ({ ...item, waiting: true })),
       ];
       const recovered: Array<Promise<RecoveredRun>> = [];
-      for (const { runId, held } of candidates) {
+      for (const { runId, held, waiting } of candidates) {
         if (active.has(runId)) continue;
         const run = await journal.getRun(runId);
         if (!run) continue;
         const input = JSON.parse(run.inputJson) as I;
         const workflow = resolve(runId, input);
-        if (!workflow || !(await journal.claim(runId, lease(), held))) continue;
+        if (
+          !workflow ||
+          !(await (waiting
+            ? journal.claimWaiting(runId, lease(), held)
+            : journal.claim(runId, lease(), held)))
+        )
+          continue;
         active.add(runId);
         recovered.push(
           execute(runId, workflow, input).then(

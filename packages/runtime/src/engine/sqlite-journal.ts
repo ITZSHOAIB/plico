@@ -73,6 +73,24 @@ export function createSqliteJournal({ databasePath }: { databasePath: string }):
             .run(lease.workerId, lease.until, owner.token, owner.path, runId);
       return result.changes === 1;
     },
+    async claimWaiting(runId, lease, expected) {
+      const owner = acquireOwner();
+      const sql = `UPDATE engine_runs SET state = 'running', worker_id = ?, lease_until = ?, owner_token = ?, owner_path = ? WHERE run_id = ? AND state = 'waiting'`;
+      const result = expected
+        ? database
+            .prepare(`${sql} AND worker_id = ? AND lease_until = ?`)
+            .run(
+              lease.workerId,
+              lease.until,
+              owner.token,
+              owner.path,
+              runId,
+              expected.workerId,
+              expected.until,
+            )
+        : database.prepare(sql).run(lease.workerId, lease.until, owner.token, owner.path, runId);
+      return result.changes === 1;
+    },
     async listStale(workerId, now) {
       const rows = database
         .prepare("SELECT * FROM engine_runs WHERE state = 'running' AND worker_id != ?")
