@@ -24,6 +24,25 @@ it("reports when the selected run history could not load", async () => {
   const run = await screen.findByRole("button", { name: /run-12345678/ });
   act(() => run.click());
   expect(await screen.findByText(/could not load run events/i)).toBeTruthy();
+  expect(screen.queryByText("No events yet")).toBeNull();
+});
+
+it("does not show an empty history while events are loading", async () => {
+  const fetchMock = stubApi();
+  const original = required(fetchMock.getMockImplementation());
+  let release!: (response: Response) => void;
+  const pending = new Promise<Response>((resolve) => {
+    release = resolve;
+  });
+  fetchMock.mockImplementation(async (input, init) =>
+    input === "/v1/runs/run-1234567890ab/events" ? pending : original(input, init),
+  );
+  render(<App />);
+  const run = await screen.findByRole("button", { name: /run-12345678/ });
+  act(() => run.click());
+  expect(screen.queryByText("No events yet")).toBeNull();
+  await act(async () => release(new Response("[]")));
+  expect(await screen.findByText("No events yet")).toBeTruthy();
 });
 
 it("uses a terminal event in loaded history even when the run list is stale", async () => {

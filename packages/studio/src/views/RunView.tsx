@@ -18,17 +18,24 @@ interface RunViewProps {
   events: PlicoEvent[];
   streamState?: StreamState;
   eventsError?: string | null;
+  eventsLoaded?: boolean;
 }
 
-export function RunView({ selectedRun, events, streamState, eventsError }: RunViewProps) {
+export function RunView(props: RunViewProps) {
+  if (!props.selectedRun) return <div style={emptyPanel}>Select a run to inspect.</div>;
+  return <SelectedRunView {...props} selectedRun={props.selectedRun} />;
+}
+
+function SelectedRunView({
+  selectedRun,
+  events,
+  streamState,
+  eventsError,
+  eventsLoaded = true,
+}: RunViewProps & { selectedRun: RunSummary }) {
   const [mode, setMode] = useState<"timeline" | "raw">("timeline");
   const replay = useReplayPosition(selectedRun, events);
-
-  if (!selectedRun) {
-    return <div style={emptyPanel}>Select a run to inspect.</div>;
-  }
   const { visibleEvents, shownRun } = replay;
-  if (!shownRun) return null;
   const error = [...visibleEvents].reverse().find((event) => event.type === "run.error");
   const reason =
     error?.payload.message ?? error?.payload.issues?.map((issue) => issue.message).join(", ");
@@ -46,7 +53,7 @@ export function RunView({ selectedRun, events, streamState, eventsError }: RunVi
       )}
       {streamState === "reconnecting" && <div role="status">Reconnecting to run updates...</div>}
       {shownRun.status === "failed" && reason && <div>Failure: {reason}</div>}
-      <ReplayControls replay={replay} />
+      <ReplayControls replay={replay} eventsLoaded={eventsLoaded} />
       <div style={{ marginBottom: "8px" }}>
         <button
           type="button"

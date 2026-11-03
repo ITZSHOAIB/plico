@@ -1,8 +1,14 @@
 import type { ReplayPosition } from "../hooks/useReplayPosition";
 
-export function ReplayControls({ replay }: { replay: ReplayPosition }) {
+export function ReplayControls({
+  replay,
+  eventsLoaded,
+}: {
+  replay: ReplayPosition;
+  eventsLoaded: boolean;
+}) {
   const { index, count, isLatest, previous, next, latest } = replay;
-  if (count === 0) return <div>No events yet</div>;
+  if (count === 0) return eventsLoaded ? <div>No events yet</div> : null;
   return (
     <section aria-label="Run replay" style={{ marginBottom: "8px" }}>
       <button type="button" onClick={previous} disabled={index <= 0}>

@@ -49,6 +49,7 @@ export function MainView({ view, data, inspector, evals, onOpenRun }: MainViewPr
       events={inspector.events}
       streamState={inspector.streamState}
       eventsError={inspector.eventsError}
+      eventsLoaded={inspector.eventsLoaded}
     />
   );
 }
