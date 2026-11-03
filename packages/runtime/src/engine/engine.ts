@@ -178,6 +178,20 @@ export function createEngine({
     async recover<I, O>(
       resolve: (runId: string, input: I) => Workflow<I, O> | undefined,
     ): Promise<RecoveredRun[]> {
+      for (const { runId, deadline } of await journal.listWaiting()) {
+        if (active.has(runId) || registered.has(runId)) continue;
+        const run = await journal.getRun(runId);
+        if (!run || run.state !== "waiting") continue;
+        const input = JSON.parse(run.inputJson) as I;
+        const workflow = resolve(runId, input);
+        if (!workflow) continue;
+        registered.set(runId, { workflow, input } as Registered);
+        if (deadline !== null) {
+          const timer = setTimeout(() => void resumeHere(runId), Math.max(0, deadline - now()));
+          timer.unref();
+          timers.set(runId, timer);
+        }
+      }
       const candidates = [
         ...(await journal.listStale(workerId, now())),
         ...(await journal.listReady(now())),

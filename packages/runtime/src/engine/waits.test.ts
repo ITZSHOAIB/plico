@@ -96,9 +96,7 @@ describe.each(journals)("waits on the %s", (_name, makeJournal) => {
     const restarted = createEngine({ journal, workerId: "b" });
     expect(await restarted.recover(() => approvalFlow(log))).toEqual([]);
     await restarted.signal("run-1", "approval:1", { approved: false });
-    const recovered = await restarted.recover(() => approvalFlow(log));
-
-    expect(recovered).toEqual([{ runId: "run-1", state: "completed" }]);
+    await until(async () => (await restarted.status("run-1"))?.state === "completed");
     expect(log).toEqual(["before", 'after:{"kind":"signal","value":{"approved":false}}']);
   });
 

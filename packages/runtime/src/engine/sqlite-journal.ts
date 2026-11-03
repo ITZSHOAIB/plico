@@ -96,6 +96,14 @@ export function createSqliteJournal({ databasePath }: { databasePath: string }):
         .all(now) as unknown as RunRow[];
       return rows.map((row) => ({ runId: row.run_id, held: leaseOf(row) }));
     },
+    async listWaiting() {
+      const rows = database
+        .prepare(`SELECT r.run_id, w.deadline FROM engine_runs r
+        JOIN engine_waits w ON w.run_id = r.run_id AND w.outcome_json IS NULL
+        WHERE r.state = 'waiting'`)
+        .all() as Array<{ run_id: string; deadline: number | null }>;
+      return rows.map((row) => ({ runId: row.run_id, deadline: row.deadline }));
+    },
     async getWait(runId, name) {
       const row = database
         .prepare("SELECT deadline, outcome_json FROM engine_waits WHERE run_id = ? AND name = ?")
