@@ -44,10 +44,12 @@ export function MainView({ view, data, inspector, evals, onOpenRun }: MainViewPr
 
   return (
     <RunView
+      key={inspector.selectionKey}
       selectedRun={inspector.selectedRun}
       events={inspector.events}
       streamState={inspector.streamState}
       eventsError={inspector.eventsError}
+      eventsLoaded={inspector.eventsLoaded}
     />
   );
 }

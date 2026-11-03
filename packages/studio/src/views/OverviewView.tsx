@@ -22,6 +22,7 @@ export function OverviewView({ data, evalReport }: OverviewViewProps) {
   return (
     <section aria-label="Project overview" style={panel}>
       <h3 style={heading}>{project.config.name}</h3>
+      <div style={meta}>Current project and readiness</div>
       <div style={metaLoose}>{project.root}</div>
       <Fact label="Runs" value={latestRunLabel(runs)} />
       <Fact

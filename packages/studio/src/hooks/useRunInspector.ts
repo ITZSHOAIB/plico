@@ -6,7 +6,9 @@ import { type StreamTarget, useRunStream } from "./useRunStream";
 
 export function useRunInspector() {
   const selection = useRef(0);
+  const [selectionKey, setSelectionKey] = useState(0);
   const selectedId = useRef<string | null>(null);
+  const [eventsLoaded, setEventsLoaded] = useState(false);
   const [eventsError, setEventsError] = useState<string | null>(null);
   const [target, setTarget] = useState<StreamTarget | null>(null);
   const [selectedRun, setSelectedRun] = useState<RunSummary | null>(null);
@@ -28,9 +30,11 @@ export function useRunInspector() {
   const selectRun = useCallback(
     async (run: RunSummary) => {
       const generation = ++selection.current;
+      setSelectionKey(generation);
       selectedId.current = run.runId;
       setTarget(null);
       setEventsError(null);
+      setEventsLoaded(false);
       setEvents([]);
       setSelectedRun(run);
       setPreviewFile(null);
@@ -38,6 +42,7 @@ export function useRunInspector() {
         const history = await fetchEvents(run.runId);
         if (selection.current !== generation) return;
         setEvents(history);
+        setEventsLoaded(true);
         const last = history.at(-1);
         if (last && isTerminalEvent(last)) {
           onEvent(last);
@@ -69,6 +74,7 @@ export function useRunInspector() {
   const clear = useCallback(() => {
     selection.current++;
     selectedId.current = null;
+    setEventsLoaded(false);
     setTarget(null);
     setSelectedRun(null);
     setPreviewFile(null);
@@ -76,9 +82,11 @@ export function useRunInspector() {
 
   return {
     selectedRun,
+    selectionKey,
     events,
     streamState,
     eventsError,
+    eventsLoaded,
     workspace,
     previewFile,
     selectRun,

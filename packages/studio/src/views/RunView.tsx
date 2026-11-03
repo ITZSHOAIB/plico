@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { EventList } from "../components/EventList";
+import { useReplayPosition } from "../hooks/useReplayPosition";
 import type { StreamState } from "../hooks/useRunStream";
 import {
   codeBlockScroll,
@@ -10,21 +11,32 @@ import {
   toolbarButton,
 } from "../styles";
 import type { PlicoEvent, RunSummary } from "../types";
+import { ReplayControls } from "./ReplayControls";
 
 interface RunViewProps {
   selectedRun: RunSummary | null;
   events: PlicoEvent[];
   streamState?: StreamState;
   eventsError?: string | null;
+  eventsLoaded?: boolean;
 }
 
-export function RunView({ selectedRun, events, streamState, eventsError }: RunViewProps) {
-  const [mode, setMode] = useState<"timeline" | "raw">("timeline");
+export function RunView(props: RunViewProps) {
+  if (!props.selectedRun) return <div style={emptyPanel}>Select a run to inspect.</div>;
+  return <SelectedRunView {...props} selectedRun={props.selectedRun} />;
+}
 
-  if (!selectedRun) {
-    return <div style={emptyPanel}>Select a run to inspect.</div>;
-  }
-  const error = [...events].reverse().find((event) => event.type === "run.error");
+function SelectedRunView({
+  selectedRun,
+  events,
+  streamState,
+  eventsError,
+  eventsLoaded = true,
+}: RunViewProps & { selectedRun: RunSummary }) {
+  const [mode, setMode] = useState<"timeline" | "raw">("timeline");
+  const replay = useReplayPosition(selectedRun, events);
+  const { visibleEvents, shownRun } = replay;
+  const error = [...visibleEvents].reverse().find((event) => event.type === "run.error");
   const reason =
     error?.payload.message ?? error?.payload.issues?.map((issue) => issue.message).join(", ");
 
@@ -32,15 +44,16 @@ export function RunView({ selectedRun, events, streamState, eventsError }: RunVi
     <div style={panel}>
       <h3 style={headingTight}>{selectedRun.runId}</h3>
       <div style={metaLoose}>
-        Status: {selectedRun.status} | Started: {selectedRun.startedAt} | Ended:{" "}
-        {selectedRun.endedAt ?? "Not ended"}
+        Status: {shownRun.status} | Started: {shownRun.startedAt} | Ended:{" "}
+        {shownRun.endedAt ?? "Not ended"}
       </div>
       {eventsError && <div role="alert">{eventsError}</div>}
       {streamState === "disconnected" && (
         <div role="alert">Disconnected from run updates. Reselect the run to retry.</div>
       )}
       {streamState === "reconnecting" && <div role="status">Reconnecting to run updates...</div>}
-      {selectedRun.status === "failed" && reason && <div>Failure: {reason}</div>}
+      {shownRun.status === "failed" && reason && <div>Failure: {reason}</div>}
+      <ReplayControls replay={replay} eventsLoaded={eventsLoaded} />
       <div style={{ marginBottom: "8px" }}>
         <button
           type="button"
@@ -54,10 +67,10 @@ export function RunView({ selectedRun, events, streamState, eventsError }: RunVi
         </button>
       </div>
       {mode === "timeline" ? (
-        <EventList events={events} />
+        <EventList events={visibleEvents} />
       ) : (
         <section aria-label="Raw events">
-          <pre style={codeBlockScroll("75vh")}>{JSON.stringify(events, null, 2)}</pre>
+          <pre style={codeBlockScroll("75vh")}>{JSON.stringify(visibleEvents, null, 2)}</pre>
         </section>
       )}
     </div>

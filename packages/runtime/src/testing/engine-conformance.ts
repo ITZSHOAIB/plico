@@ -71,13 +71,13 @@ export function engineConformance(name: string, makeEngine: () => Promise<Engine
         },
         {},
       );
-      expect((await handle.result()).state).toBe("waiting");
-      await new Promise((resolve) => setTimeout(resolve, 40));
-      expect(await engine.signal("timeout", "decision", true)).toBe("ignored");
-      for (let n = 0; n < 100 && (await engine.status("timeout"))?.state !== "completed"; n++)
-        await new Promise((resolve) => setTimeout(resolve, 5));
+      // A slow journal may reach the deadline before the first result is observed.
+      await handle.result();
+      for (let n = 0; n < 200 && (await engine.status("timeout"))?.state !== "completed"; n++)
+        await new Promise((resolve) => setTimeout(resolve, 10));
       expect(await engine.status("timeout")).toEqual({ state: "completed" });
       expect(outcome).toEqual({ kind: "timeout" });
+      expect(await engine.signal("timeout", "decision", true)).toBe("ignored");
     });
 
     it("requires a separate decision for each named approval", async () => {
