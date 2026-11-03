@@ -1,0 +1,49 @@
+﻿// @vitest-environment jsdom
+import React from 'react';
+import { render, screen, fireEvent, cleanup, act } from '@testing-library/react';
+import { afterEach, expect, it, vi } from 'vitest';
+import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
+import { createRootRoute, createRoute, createRouter, createMemoryHistory, RouterProvider, useNavigate, useSearch } from '@tanstack/react-router';
+const h = React.createElement;
+let request;
+function Workbench() {
+  const { run } = useSearch({ from: '/' });
+  const navigate = useNavigate({ from: '/' });
+  const workspace = useQuery({ queryKey: ['workspace', run], queryFn: () => request(run), enabled: !!run, retry: false });
+  return h('div', null,
+    h('button', { onClick: () => navigate({ search: { run: 'b' } }) }, 'Select B'),
+    h('span', null, `run:${run ?? 'none'}`),
+    workspace.isError && h('div', { role: 'alert' }, 'Could not load workspace'),
+    workspace.data && h('div', null, `workspace:${workspace.data}`));
+}
+function open(path) {
+  const root = createRootRoute();
+  const route = createRoute({ getParentRoute: () => root, path: '/', validateSearch: (search) => ({run: typeof search.run === 'string' ? search.run : undefined}), component: Workbench });
+  const router = createRouter({ routeTree: root.addChildren([route]), history: createMemoryHistory({ initialEntries: [path] }) });
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
+  render(h(QueryClientProvider, { client }, h(RouterProvider, { router })));
+}
+afterEach(() => { cleanup(); vi.restoreAllMocks(); });
+it('opens the selected run from URL and loads its workspace', async () => {
+  request = vi.fn(async (run) => `for-${run}`);
+  open('/?run=a');
+  expect(await screen.findByText('run:a')).toBeTruthy();
+  expect(await screen.findByText('workspace:for-a')).toBeTruthy();
+});
+it('reports failed workspace fetches', async () => {
+  request = vi.fn(async () => { throw new Error('offline'); });
+  open('/?run=a');
+  expect((await screen.findByRole('alert')).textContent).toBe('Could not load workspace');
+});
+it('does not show an old run workspace when its request finishes last', async () => {
+  let finish;
+  const pending = new Promise(resolve => { finish = resolve; });
+  request = vi.fn((run) => run === 'a' ? pending : Promise.resolve('for-b'));
+  open('/?run=a');
+  await screen.findByText('run:a');
+  fireEvent.click(screen.getByRole('button', {name:'Select B'}));
+  expect(await screen.findByText('workspace:for-b')).toBeTruthy();
+  await act(async () => finish('for-a'));
+  expect(screen.getByText('workspace:for-b')).toBeTruthy();
+  expect(screen.queryByText('workspace:for-a')).toBeNull();
+});
