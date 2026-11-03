@@ -15,6 +15,7 @@ export function useRunInspector() {
   const [selectedRun, setSelectedRun] = useState<RunSummary | null>(null);
   const [events, setEvents] = useState<PlicoEvent[]>([]);
   const [workspace, setWorkspace] = useState<ArtifactWorkspace | null>(null);
+  const [workspaceKey, setWorkspaceKey] = useState(0);
   const [workspaceError, setWorkspaceError] = useState<string | null>(null);
   const [workspaceLoading, setWorkspaceLoading] = useState(false);
   const [previewFile, setPreviewFile] = useState<ArtifactFile | null>(null);
@@ -71,6 +72,7 @@ export function useRunInspector() {
 
   const loadWorkspace = useCallback(async (runId: string) => {
     const request = ++workspaceRequest.current;
+    setWorkspaceKey(request);
     setWorkspace(null);
     setWorkspaceError(null);
     setWorkspaceLoading(true);
@@ -105,6 +107,7 @@ export function useRunInspector() {
     eventsError,
     eventsLoaded,
     workspace,
+    workspaceKey,
     workspaceError,
     workspaceLoading,
     previewFile,

@@ -3,7 +3,7 @@ import { act, cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { afterEach, expect, it, vi } from "vitest";
 import { App } from "./App";
 import { required } from "./testing/fakeEventSource";
-import { json, stubApi } from "./testing/fixtures";
+import { click, json, openRun, stubApi } from "./testing/fixtures";
 
 afterEach(() => {
   cleanup();
@@ -17,6 +17,14 @@ it("opens the run named by a shared URL", async () => {
   render(<App />);
   expect(await screen.findByText("tool.call")).toBeTruthy();
   expect(screen.getByText(/Status: waiting/)).toBeTruthy();
+});
+
+it.each(["Evals", "Readiness"])("clears the run URL when opening %s", async (view) => {
+  stubApi();
+  render(<App />);
+  await openRun();
+  click(view);
+  expect(new URLSearchParams(window.location.search).has("run")).toBe(false);
 });
 
 it("shows an error when a shared run cannot be opened", async () => {

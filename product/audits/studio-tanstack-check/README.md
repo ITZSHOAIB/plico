@@ -19,13 +19,17 @@ Retain the current implementation and reconsider the libraries when Studio
 needs richer routing or shared server-state caching. This does not change ADR
 0009's proposed status for the libraries.
 
-To rerun on Windows with Node and pnpm, copy the three `.txt` files into an
+Studio currently replaces the URL when a run is selected and does not handle
+`popstate`; the browser Back button does not change the selected run.
+
+To rerun on Windows with Node and pnpm, copy the two `.txt` files into an
 empty temporary directory, removing each `.txt` suffix, then run:
 
 ```powershell
-pnpm install --frozen-lockfile
+pnpm install
 pnpm exec vitest run comparison.test.js
 ```
 
-The saved prototype pins the Windows Rolldown binding used in this check; it
-is not intended as a cross-platform package or production implementation.
+The saved prototype pins its direct dependencies and the Windows Rolldown
+binding used in this check. Transitive versions may change. It is not intended
+as a cross-platform package or production implementation.

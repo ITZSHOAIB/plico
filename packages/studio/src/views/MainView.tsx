@@ -46,7 +46,7 @@ export function MainView({ view, data, inspector, evals, onOpenRun }: MainViewPr
   if (view === "artifacts") {
     return (
       <ArtifactsView
-        key={inspector.selectedRun?.runId}
+        key={`${inspector.selectedRun?.runId}-${inspector.workspaceKey}`}
         {...inspector}
         onPreviewFile={inspector.setPreviewFile}
       />

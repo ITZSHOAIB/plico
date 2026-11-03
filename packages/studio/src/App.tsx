@@ -1,10 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { fetchRun } from "./api";
+import { useCallback, useState } from "react";
 import { Sidebar } from "./components/Sidebar";
 import { useEvals } from "./hooks/useEvals";
 import { useProjectData } from "./hooks/useProjectData";
 import { useRunInspector } from "./hooks/useRunInspector";
-import type { RunSummary } from "./types";
+import { useRunUrl } from "./hooks/useRunUrl";
 import type { View } from "./view";
 import { MainView } from "./views/MainView";
 
@@ -20,55 +19,19 @@ export function App() {
   const { selectRun: inspectRun, clear } = inspector;
   const { select: selectEval, setError: setEvalError } = evals;
   const [view, setView] = useState<View>("overview");
-  const [openError, setOpenError] = useState<string | null>(null);
-  const openGeneration = useRef(0);
-
-  const selectRun = useCallback(
-    (run: RunSummary) => {
-      openGeneration.current++;
-      setOpenError(null);
-      const url = new URL(window.location.href);
-      url.searchParams.set("run", run.runId);
-      window.history.replaceState(null, "", url);
-      setView("runs");
-      selectEval(null);
-      return inspectRun(run);
-    },
-    [inspectRun, selectEval],
+  const onSelect = useCallback(() => {
+    setView("runs");
+    selectEval(null);
+  }, [selectEval]);
+  const { selectRun, openRun, openError, clearRunUrl } = useRunUrl(
+    inspectRun,
+    onSelect,
+    loadRuns,
+    setEvalError,
   );
-
-  // The run may be newer than the sidebar list, for example after a terminal plico eval.
-  const openRun = useCallback(
-    async (runId: string) => {
-      const generation = ++openGeneration.current;
-      try {
-        const run = await fetchRun(runId);
-        if (generation !== openGeneration.current) return;
-        await selectRun(run);
-        await loadRuns();
-      } catch {
-        if (generation !== openGeneration.current) return;
-        setOpenError(`Failed to open run ${runId}`);
-        setEvalError(`Failed to open run ${runId}`);
-      }
-    },
-    [loadRuns, selectRun, setEvalError],
-  );
-
-  useEffect(() => {
-    const runId = new URL(window.location.href).searchParams.get("run");
-    if (runId) void openRun(runId);
-    return () => {
-      openGeneration.current++;
-    };
-  }, [openRun]);
 
   const showTopLevelView = (next: View) => {
-    openGeneration.current++;
-    setOpenError(null);
-    const url = new URL(window.location.href);
-    url.searchParams.delete("run");
-    window.history.replaceState(null, "", url);
+    clearRunUrl();
     setView(next);
     clear();
   };
@@ -97,7 +60,7 @@ export function App() {
           void inspector.loadWorkspace(inspector.selectedRun.runId);
         }}
         onShowEvals={() => {
-          openGeneration.current++;
+          clearRunUrl();
           setView("evals");
           evals.select(null);
           evals.setError(null);
@@ -105,7 +68,7 @@ export function App() {
           void loadRuns();
         }}
         onShowReadiness={() => {
-          openGeneration.current++;
+          clearRunUrl();
           setView("readiness");
           void loadReadiness();
         }}
