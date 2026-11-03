@@ -66,10 +66,11 @@ export interface ExecutionStatus {
   state: ExecutionState;
 }
 
-export interface RecoveredRun {
+export interface RecoveredRun<O = unknown> {
   runId: string;
   state: "completed" | "waiting" | "failed" | "cancelled";
   error?: string;
+  output?: O;
 }
 
 export interface Engine {
@@ -91,7 +92,7 @@ export interface Engine {
    */
   recover<I, O>(
     resolve: (runId: string, input: I) => Workflow<I, O> | undefined,
-  ): Promise<RecoveredRun[]>;
+  ): Promise<RecoveredRun<O>[]>;
   /**
    * Cancels a run. A step that is running gets its abort signal fired; a waiting run ends at once
    * where it holds the run, or when `recover` next runs. The workflow sees RunCancelled at its next

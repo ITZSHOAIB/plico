@@ -35,6 +35,9 @@
   "GET /v1/project": {
     "project": {
       "config": {
+        "execution": {
+          "leaseMs": "number"
+        },
         "name": "string",
         "schemaVersion": "number"
       },

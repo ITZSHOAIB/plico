@@ -88,6 +88,19 @@ describe("Project Layout", () => {
 });
 
 describe("validateProject", () => {
+  it("validates and retains the execution lease setting", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-core-"));
+    await writeValidProject(root, {
+      configBody:
+        'export default { schemaVersion: 1, name: "Demo", execution: { leaseMs: 1234 } };',
+    });
+    expect((await validateProject(root)).project?.config.execution).toEqual({ leaseMs: 1234 });
+    await writeValidProject(root, {
+      configBody: 'export default { schemaVersion: 1, name: "Demo", execution: { leaseMs: 0 } };',
+    });
+    expect((await validateProject(root)).ok).toBe(false);
+  });
+
   it("loads a computed config export from plico.config.ts", async () => {
     const root = await mkdtemp(join(tmpdir(), "plico-core-"));
     await writeValidProject(root, {

@@ -46,7 +46,7 @@ describe.each(journals)("engine scenarios on the %s", (_name, makeJournal) => {
     clock += 101;
     const recovered = await live.recover(() => workflow(false));
 
-    expect(recovered).toEqual([{ runId: "run-1", state: "completed" }]);
+    expect(recovered).toEqual([{ runId: "run-1", state: "completed", output: "done" }]);
     expect(calls).toEqual(["first", "second", "second"]);
     expect(await live.status("run-1")).toEqual({ state: "completed" });
   });

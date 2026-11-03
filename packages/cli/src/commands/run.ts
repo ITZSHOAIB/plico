@@ -1,7 +1,9 @@
+import { validateProject } from "@plico/core";
 import {
   createSqliteEngine,
   createSqliteEventStore,
   type ModelProvider,
+  recoverRuns,
   runProject,
 } from "@plico/runtime";
 import { lastPositional, parseArgs, readStringOption } from "../args.js";
@@ -37,14 +39,36 @@ export async function runCommand(args: string[]): Promise<number> {
     const script = scriptPath ? await loadDryRunScript(scriptPath) : undefined;
     const databasePath = persist ? resolveDatabasePath(target, dbPath) : undefined;
     const eventStore = databasePath ? createSqliteEventStore({ databasePath }) : undefined;
-    const engine = databasePath ? createSqliteEngine({ databasePath }) : undefined;
+    const validation = databasePath ? await validateProject(target) : undefined;
+    const leaseMs = validation?.project?.config.execution?.leaseMs;
+    const engine = databasePath
+      ? createSqliteEngine({ databasePath, ...(leaseMs === undefined ? {} : { leaseMs }) })
+      : undefined;
+    const recovery =
+      engine && eventStore
+        ? recoverRuns({ engine, eventStore }).then(
+            (runs) => {
+              for (const run of runs)
+                console.error(
+                  `Recovered run ${run.runId}: ${run.state}${run.error ? ` (${run.error})` : ""}`,
+                );
+            },
+            (error: unknown) => {
+              console.error(`Recovery incomplete: ${errorMessage(error)}`);
+            },
+          )
+        : Promise.resolve();
 
-    const result = await runProject(target, {
+    const resultPromise = runProject(target, {
       ...(script ? { script } : {}),
       ...(eventStore ? { eventStore } : {}),
       ...(engine ? { engine } : {}),
       ...(message === undefined ? {} : { provider: createFakeProvider(), message }),
     });
+
+    const [requested] = await Promise.allSettled([resultPromise, recovery]);
+    if (requested.status === "rejected") throw requested.reason;
+    const result = requested.value;
 
     if (json) {
       console.log(JSON.stringify(result));

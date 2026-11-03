@@ -169,7 +169,7 @@ describe("crash recovery", () => {
       eventStore: store,
     });
 
-    expect(recovered).toEqual([{ runId: "run-crash", state: "completed" }]);
+    expect(recovered).toEqual([{ runId: "run-crash", state: "failed" }]);
     expect((await store.getRun("run-crash"))?.status).toBe("failed");
     const events = await store.getEvents("run-crash");
     expect(events.at(-2)).toMatchObject({

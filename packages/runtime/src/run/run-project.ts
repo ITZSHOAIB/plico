@@ -54,11 +54,16 @@ export async function runProject(
 export async function recoverRuns(
   options: RunProjectOptions & { engine: Engine },
 ): Promise<RecoveredRun[]> {
-  return options.engine.recover<RunInput, RunResult>((_runId, input) =>
+  const recovered = await options.engine.recover<RunInput, RunResult>((_runId, input) =>
     input.message !== undefined && options.provider === undefined
       ? (ctx, journaled) => failMissingProvider(ctx, journaled, options)
       : (ctx, journaled) => runLoop(ctx, journaled, options),
   );
+  return recovered.map(({ runId, state, error, output }) => ({
+    runId,
+    state: output && output.status !== "running" ? output.status : state,
+    ...(error === undefined ? {} : { error }),
+  }));
 }
 
 async function failMissingProvider(

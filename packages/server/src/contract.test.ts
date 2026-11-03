@@ -50,7 +50,7 @@ beforeAll(async () => {
   }
   await writeFile(
     join(root, "plico.config.ts"),
-    'export default { schemaVersion: 1, name: "Demo" } as const;\n',
+    'export default { schemaVersion: 1, name: "Demo", execution: { leaseMs: 30000 } } as const;\n',
   );
   await writeFile(join(root, "agent.md"), "# Demo\n");
   const script = [{ type: "assistant.output", content: "Hi" }];
