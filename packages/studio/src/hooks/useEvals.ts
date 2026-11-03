@@ -10,8 +10,11 @@ export function useEvals(onEvalsFinished: () => Promise<void>) {
 
   const refresh = useCallback(async () => {
     await fetchLatestEvalReport()
-      .then(setReport)
-      .catch(() => setReport(null));
+      .then((result) => {
+        setReport(result);
+        setError(null);
+      })
+      .catch(() => setError("Could not load eval results"));
   }, []);
 
   useEffect(() => {

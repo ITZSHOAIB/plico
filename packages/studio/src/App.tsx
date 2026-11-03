@@ -1,10 +1,9 @@
 import { useCallback, useState } from "react";
-import { fetchRun } from "./api";
 import { Sidebar } from "./components/Sidebar";
 import { useEvals } from "./hooks/useEvals";
 import { useProjectData } from "./hooks/useProjectData";
 import { useRunInspector } from "./hooks/useRunInspector";
-import type { RunSummary } from "./types";
+import { useRunUrl } from "./hooks/useRunUrl";
 import type { View } from "./view";
 import { MainView } from "./views/MainView";
 
@@ -17,27 +16,24 @@ export function App() {
   );
   const evals = useEvals(onEvalsFinished);
   const inspector = useRunInspector();
+  const { selectRun: inspectRun, clear } = inspector;
+  const { select: selectEval, setError: setEvalError } = evals;
   const [view, setView] = useState<View>("overview");
-
-  const selectRun = (run: RunSummary) => {
+  const onSelect = useCallback(() => {
     setView("runs");
-    evals.select(null);
-    return inspector.selectRun(run);
-  };
-
-  // The run may be newer than the sidebar list, for example after a terminal plico eval.
-  const openRun = async (runId: string) => {
-    try {
-      await selectRun(await fetchRun(runId));
-      await loadRuns();
-    } catch {
-      evals.setError(`Failed to open run ${runId}`);
-    }
-  };
+    selectEval(null);
+  }, [selectEval]);
+  const { selectRun, openRun, openError, clearRunUrl } = useRunUrl(
+    inspectRun,
+    onSelect,
+    loadRuns,
+    setEvalError,
+  );
 
   const showTopLevelView = (next: View) => {
+    clearRunUrl();
     setView(next);
-    inspector.clear();
+    clear();
   };
 
   return (
@@ -64,6 +60,7 @@ export function App() {
           void inspector.loadWorkspace(inspector.selectedRun.runId);
         }}
         onShowEvals={() => {
+          clearRunUrl();
           setView("evals");
           evals.select(null);
           evals.setError(null);
@@ -71,10 +68,13 @@ export function App() {
           void loadRuns();
         }}
         onShowReadiness={() => {
+          clearRunUrl();
           setView("readiness");
           void loadReadiness();
         }}
       />
+      {data.runsError && <div role="alert">{data.runsError}</div>}
+      {openError && view !== "evals" ? <div role="alert">{openError}</div> : null}
       <MainView view={view} data={data} inspector={inspector} evals={evals} onOpenRun={openRun} />
     </div>
   );

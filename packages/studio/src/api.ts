@@ -1,4 +1,5 @@
 import type {
+  ArtifactSnapshotDetail,
   ArtifactWorkspace,
   ComposedInstructions,
   EvalReport,
@@ -49,6 +50,15 @@ export function fetchInstructions(): Promise<ComposedInstructions> {
 
 export function fetchArtifactWorkspace(runId: string): Promise<ArtifactWorkspace | null> {
   return getJsonOrNull(`/v1/runs/${encodeURIComponent(runId)}/workspace`);
+}
+
+export function fetchArtifactSnapshot(
+  runId: string,
+  snapshotId: string,
+): Promise<ArtifactSnapshotDetail> {
+  return getJson(
+    `/v1/runs/${encodeURIComponent(runId)}/workspace/snapshots/${encodeURIComponent(snapshotId)}`,
+  );
 }
 
 export function fetchLatestEvalReport(): Promise<EvalReport | null> {
