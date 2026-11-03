@@ -212,7 +212,7 @@ export function createEngine({
     },
     async recover<I, O>(
       resolve: (runId: string, input: I) => Workflow<I, O> | undefined,
-    ): Promise<RecoveredRun[]> {
+    ): Promise<RecoveredRun<O>[]> {
       for (const { runId, deadline } of await journal.listWaiting()) {
         if (active.has(runId) || registered.has(runId)) continue;
         const run = await journal.getRun(runId);
@@ -234,7 +234,7 @@ export function createEngine({
         ...(await journal.listStale(workerId, now())).map((item) => ({ ...item, waiting: false })),
         ...(await journal.listReady(now())).map((item) => ({ ...item, waiting: true })),
       ];
-      const recovered: Array<Promise<RecoveredRun>> = [];
+      const recovered: Array<Promise<RecoveredRun<O>>> = [];
       for (const { runId, held, waiting } of candidates) {
         if (active.has(runId)) continue;
         const run = await journal.getRun(runId);
@@ -251,8 +251,12 @@ export function createEngine({
         active.add(runId);
         recovered.push(
           execute(runId, workflow, input).then(
-            (outcome): RecoveredRun => ({ runId, state: outcome.state }),
-            (error: unknown): RecoveredRun => ({
+            (outcome): RecoveredRun<O> => ({
+              runId,
+              state: outcome.state,
+              ...(outcome.output === undefined ? {} : { output: outcome.output }),
+            }),
+            (error: unknown): RecoveredRun<O> => ({
               runId,
               state: "failed",
               error: error instanceof Error ? error.message : String(error),

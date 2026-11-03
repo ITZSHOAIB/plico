@@ -11,6 +11,7 @@ export interface ProjectConfig {
   name: string;
   description?: string;
   template?: string;
+  execution?: { leaseMs?: number };
 }
 
 export interface LoadedProject {

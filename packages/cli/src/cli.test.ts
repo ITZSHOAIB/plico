@@ -1,7 +1,10 @@
+import { execFileSync } from "node:child_process";
 import { constants as fsConstants } from "node:fs";
 import { access, mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { pathToFileURL } from "node:url";
+import { createSqliteEventStore } from "@plico/runtime";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { main } from "./cli.js";
 
@@ -41,6 +44,44 @@ async function writeValidProject(root: string) {
 }
 
 describe("main", () => {
+  it("recovers a killed persistent run on the next CLI start", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-cli-recover-"));
+    await writeValidProject(root);
+    const databasePath = join(root, "state.sqlite");
+    const moduleUrl = pathToFileURL(join(process.cwd(), "packages/runtime/src/index.ts")).href;
+    const program = `import { createSqliteEngine, createSqliteEventStore, runProject } from ${JSON.stringify(moduleUrl)};
+      const [root, databasePath] = process.argv.slice(1);
+      await runProject(root, { runId: "crashed", message: "hello", engine: createSqliteEngine({ databasePath }),
+        eventStore: createSqliteEventStore({ databasePath }), provider: { complete: async () => process.kill(process.pid, "SIGKILL") } });`;
+    expect(() =>
+      execFileSync(
+        process.execPath,
+        ["--import", "tsx", "--input-type=module", "-e", program, root, databasePath],
+        { stdio: "pipe" },
+      ),
+    ).toThrow();
+    const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    expect(
+      await main([
+        "node",
+        "plico",
+        "run",
+        "--dry",
+        "--persist",
+        "--json",
+        "--db",
+        databasePath,
+        root,
+      ]),
+    ).toBe(0);
+    expect((await createSqliteEventStore({ databasePath }).getRun("crashed"))?.status).toBe(
+      "failed",
+    );
+    expect(error).toHaveBeenCalledWith(expect.stringContaining("crashed"));
+    expect(() => JSON.parse(String(log.mock.calls[0]?.[0]))).not.toThrow();
+  }, 30000);
+
   it("emits JSON for validate --json", async () => {
     const root = await mkdtemp(join(tmpdir(), "plico-cli-"));
     await writeValidProject(root);

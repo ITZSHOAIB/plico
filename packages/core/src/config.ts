@@ -106,6 +106,12 @@ function normalizeProjectConfig(value: unknown, configPath: string): ProjectConf
     normalized.template = config.template;
   }
 
+  if (config.execution !== undefined) {
+    normalized.execution = {};
+    if (config.execution.leaseMs !== undefined)
+      normalized.execution.leaseMs = config.execution.leaseMs;
+  }
+
   return normalized;
 }
 
@@ -166,6 +172,21 @@ function validateProjectConfigShape(value: unknown): ValidationIssue[] {
     });
   }
 
+  if (Object.hasOwn(value, "execution")) {
+    const execution = value.execution;
+    if (
+      !isRecord(execution) ||
+      Array.isArray(execution) ||
+      (Object.hasOwn(execution, "leaseMs") &&
+        (!Number.isSafeInteger(execution.leaseMs) || Number(execution.leaseMs) <= 0))
+    ) {
+      issues.push({
+        path: relativePaths.configFile,
+        message: "Expected execution.leaseMs to be a positive integer",
+        severity: "error",
+      });
+    }
+  }
   return issues;
 }
 

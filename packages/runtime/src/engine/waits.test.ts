@@ -161,7 +161,9 @@ describe.each(journals)("waits on the %s", (_name, makeJournal) => {
     clock = 7_000;
     const recovered = await restarted.recover(() => approvalFlow(log, "approval:1", 6_000));
 
-    expect(recovered).toEqual([{ runId: "run-1", state: "completed" }]);
+    expect(recovered).toEqual([
+      { runId: "run-1", state: "completed", output: { kind: "timeout" } },
+    ]);
     expect(log).toEqual(["before", 'after:{"kind":"timeout"}']);
   });
 
