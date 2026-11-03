@@ -82,8 +82,9 @@ export async function runScriptedDryRun(
       await awaitApproval(ctx, requestId, tool.name, output);
     }
 
+    const idempotencyKey = `${ctx.runId}:${index}`;
     const result = await ctx.step(`tool:${index}`, ({ signal }) =>
-      tool.handler(step.arguments, { signal }),
+      tool.handler(step.arguments, { signal, idempotencyKey }),
     );
     await events.append("tool.result", {
       toolName: tool.name,

@@ -14,6 +14,11 @@ export interface ToolApprovalPolicy {
 export interface ToolHandlerContext {
   /** Aborts when the run is cancelled. Pass it to fetch or a child process to stop early. */
   signal: AbortSignal;
+  /**
+   * Names this tool call and stays the same if the call runs again after a crash. Pass it to
+   * an API that accepts an idempotency key so a repeat does not act twice.
+   */
+  idempotencyKey: string;
 }
 
 export interface DeclaredTool {
