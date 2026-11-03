@@ -1,4 +1,4 @@
-import type { RunContext } from "../../engine/index.js";
+import { RunCancelled, type RunContext } from "../../engine/index.js";
 import { RuntimeDiagnosticError } from "../../errors.js";
 import type { InMemoryEventLog } from "../../events.js";
 import { validateJsonSchemaSubset } from "../../tools/schema.js";
@@ -110,10 +110,11 @@ export async function runProviderBackedRun(
 
       let result: unknown;
       try {
-        result = await ctx.step(`tool:${turn}:${callIndex}`, () =>
-          tool.handler(toolCall.arguments),
+        result = await ctx.step(`tool:${turn}:${callIndex}`, ({ signal }) =>
+          tool.handler(toolCall.arguments, { signal }),
         );
       } catch (error) {
+        if (error instanceof RunCancelled) throw error;
         throw new RuntimeDiagnosticError({
           phase: "runtime",
           toolName: tool.name,

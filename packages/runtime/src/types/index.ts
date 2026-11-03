@@ -30,7 +30,12 @@ export type { ReadinessOptions } from "./readiness.js";
 export type { RunProjectOptions } from "./run.js";
 export type { DryRunScriptStep } from "./script.js";
 export type { CreateSqliteEventStoreOptions, EventStore } from "./store.js";
-export type { DeclaredTool, JsonSchemaSubset, ToolApprovalPolicy } from "./tools.js";
+export type {
+  DeclaredTool,
+  JsonSchemaSubset,
+  ToolApprovalPolicy,
+  ToolHandlerContext,
+} from "./tools.js";
 export type {
   ArtifactFile,
   ArtifactSnapshot,

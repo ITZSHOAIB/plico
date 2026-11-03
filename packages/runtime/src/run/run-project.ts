@@ -5,6 +5,7 @@ import {
   createMemoryJournal,
   type Engine,
   type RecoveredRun,
+  RunCancelled,
   type RunContext,
 } from "../engine/index.js";
 import { RunWaitingError, runtimeErrorPayload } from "../errors.js";
@@ -178,6 +179,11 @@ async function runLoop(
         output: error.output,
         events: events.all(),
       });
+    }
+
+    if (error instanceof RunCancelled) {
+      await events.append("run.cancelled", {});
+      return finalizeRun({ ...summary, status: "cancelled", events: events.all() });
     }
 
     await events.append("run.error", runtimeErrorPayload(error));

@@ -12,6 +12,7 @@ interface RunRow {
   lease_until: number;
   owner_token: string;
   owner_path: string;
+  cancel_requested: number;
 }
 
 function leaseOf(row: RunRow): Lease {
@@ -40,7 +41,14 @@ export function createSqliteJournal({ databasePath }: { databasePath: string }):
     },
     async getRun(runId): Promise<JournalRun | undefined> {
       const row = readRun(runId);
-      return row && { runId, state: row.state, inputJson: row.input_json };
+      return (
+        row && {
+          runId,
+          state: row.state,
+          inputJson: row.input_json,
+          cancelRequested: row.cancel_requested === 1,
+        }
+      );
     },
     async setState(runId, state) {
       database.prepare("UPDATE engine_runs SET state = ? WHERE run_id = ?").run(state, runId);
@@ -106,7 +114,7 @@ export function createSqliteJournal({ databasePath }: { databasePath: string }):
           SELECT DISTINCT r.* FROM engine_runs r
           JOIN engine_waits w ON w.run_id = r.run_id AND w.outcome_json IS NULL
           WHERE r.state = 'waiting' AND (
-            w.deadline <= ? OR EXISTS (
+            r.cancel_requested = 1 OR w.deadline <= ? OR EXISTS (
               SELECT 1 FROM engine_signals s WHERE s.run_id = w.run_id AND s.name = w.name
             )
           )
@@ -121,6 +129,14 @@ export function createSqliteJournal({ databasePath }: { databasePath: string }):
         WHERE r.state = 'waiting'`)
         .all() as Array<{ run_id: string; deadline: number | null }>;
       return rows.map((row) => ({ runId: row.run_id, deadline: row.deadline }));
+    },
+    async requestCancel(runId) {
+      const result = database
+        .prepare(
+          "UPDATE engine_runs SET cancel_requested = 1 WHERE run_id = ? AND cancel_requested = 0 AND state IN ('running', 'waiting')",
+        )
+        .run(runId);
+      return result.changes === 1;
     },
     async getWait(runId, name) {
       const row = database

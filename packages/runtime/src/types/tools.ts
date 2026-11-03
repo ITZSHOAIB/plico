@@ -11,6 +11,11 @@ export interface ToolApprovalPolicy {
   reason?: string;
 }
 
+export interface ToolHandlerContext {
+  /** Aborts when the run is cancelled. Pass it to fetch or a child process to stop early. */
+  signal: AbortSignal;
+}
+
 export interface DeclaredTool {
   source: string;
   name: string;
@@ -18,5 +23,5 @@ export interface DeclaredTool {
   inputSchema: JsonSchemaSubset;
   capabilities: string[];
   approval: ToolApprovalPolicy;
-  handler: (input: unknown) => unknown | Promise<unknown>;
+  handler: (input: unknown, context: ToolHandlerContext) => unknown | Promise<unknown>;
 }

@@ -82,7 +82,9 @@ export async function runScriptedDryRun(
       await awaitApproval(ctx, requestId, tool.name, output);
     }
 
-    const result = await ctx.step(`tool:${index}`, () => tool.handler(step.arguments));
+    const result = await ctx.step(`tool:${index}`, ({ signal }) =>
+      tool.handler(step.arguments, { signal }),
+    );
     await events.append("tool.result", {
       toolName: tool.name,
       result,

@@ -4,6 +4,7 @@ export interface JournalRun {
   runId: string;
   state: ExecutionState;
   inputJson: string;
+  cancelRequested: boolean;
 }
 
 export interface JournalStep {
@@ -41,9 +42,11 @@ export interface Journal {
   claimWaiting(runId: string, lease: Lease, expected?: Lease): Promise<boolean>;
   /** Running runs another worker held and lost: its lease ran out or its process is gone. */
   listStale(workerId: string, now: number): Promise<Array<{ runId: string; held: Lease }>>;
-  /** Waiting runs whose wait can end now: it has a signal or its deadline has passed. */
+  /** Waiting runs that can move on now: a wait has a signal or passed its deadline, or cancel was requested. */
   listReady(now: number): Promise<Array<{ runId: string; held: Lease }>>;
   listWaiting(): Promise<Array<{ runId: string; deadline: number | null }>>;
+  /** Marks the run cancelled-on-next-chance. Returns false when it already finished or was marked. */
+  requestCancel(runId: string): Promise<boolean>;
   getWait(runId: string, name: string): Promise<JournalWait | undefined>;
   /** Opens the wait with its deadline. A second open changes nothing, so a replay keeps the deadline. */
   openWait(runId: string, name: string, deadline: number | null): Promise<void>;

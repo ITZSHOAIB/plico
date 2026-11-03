@@ -117,4 +117,20 @@ describe("approvals as waits", () => {
     expect((await store.getRun("run-1"))?.status).toBe("completed");
     expect(await readFile(marks, "utf8")).toBe("archive\n");
   });
+
+  it("cancels a run that is waiting for approval", async () => {
+    const { root, marks } = await scaffold();
+    (globalThis as { __archive?: () => void }).__archive = () => appendFileSync(marks, "archive\n");
+    const databasePath = join(root, "state.sqlite");
+    const store = createSqliteEventStore({ databasePath });
+    const engine = createSqliteEngine({ databasePath });
+    await runProject(root, { runId: "run-1", script, eventStore: store, engine });
+
+    expect(await engine.cancel("run-1")).toBe("accepted");
+    await until(async () => (await store.getRun("run-1"))?.status === "cancelled");
+
+    expect((await store.getEvents("run-1")).at(-1)?.type).toBe("run.cancelled");
+    expect(await engine.signal("run-1", "approval:run-1:1", { approved: true })).toBe("ignored");
+    expect(await readFile(marks, "utf8")).toBe("");
+  });
 });
