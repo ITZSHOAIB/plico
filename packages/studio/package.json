@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "test": "vitest run --root ../.. packages/studio/src",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "build": "vite build",
     "dev": "vite"

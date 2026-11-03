@@ -27,3 +27,7 @@ _Avoid_: History, checkpoint
 **Lease**:
 The time a worker holds a step before another worker may claim it. A worker that stalls past the lease repeats its step.
 _Avoid_: Lock, heartbeat timeout
+
+**Run replay**:
+A Studio view of a run at a chosen event in its recorded sequence, showing only what was known up to that point. It does not mean the engine replaying recorded steps after a crash.
+_Avoid_: Step replay, engine replay
