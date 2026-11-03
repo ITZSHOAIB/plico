@@ -41,6 +41,7 @@ export interface Journal {
   listStale(workerId: string, now: number): Promise<Array<{ runId: string; held: Lease }>>;
   /** Waiting runs whose wait can end now: it has a signal or its deadline has passed. */
   listReady(now: number): Promise<Array<{ runId: string; held: Lease }>>;
+  listWaiting(): Promise<Array<{ runId: string; deadline: number | null }>>;
   getWait(runId: string, name: string): Promise<JournalWait | undefined>;
   /** Opens the wait with its deadline. A second open changes nothing, so a replay keeps the deadline. */
   openWait(runId: string, name: string, deadline: number | null): Promise<void>;
