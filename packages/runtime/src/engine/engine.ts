@@ -86,7 +86,7 @@ export function createEngine({
         }
         if (suspension.deadline !== null) {
           const delay = Math.max(0, suspension.deadline - now());
-          const timer = setTimeout(() => void resumeHere(runId), delay);
+          const timer = setTimeout(() => resumeHere(runId).catch(() => undefined), delay);
           timer.unref();
           timers.set(runId, timer);
         }
@@ -168,11 +168,11 @@ export function createEngine({
       if (wait?.deadline != null && now() >= wait.deadline) {
         // The deadline passed first: the wait ends as a timeout and this decision is late.
         await journal.resolveWait(runId, name, JSON.stringify({ kind: "timeout" }));
-        void resumeHere(runId);
+        resumeHere(runId).catch(() => undefined);
         return "ignored";
       }
       if (!(await journal.putSignal(runId, name, toJson(value)))) return "ignored";
-      void resumeHere(runId);
+      resumeHere(runId).catch(() => undefined);
       return "accepted";
     },
     async recover<I, O>(
@@ -187,7 +187,10 @@ export function createEngine({
         if (!workflow) continue;
         registered.set(runId, { workflow, input } as Registered);
         if (deadline !== null) {
-          const timer = setTimeout(() => void resumeHere(runId), Math.max(0, deadline - now()));
+          const timer = setTimeout(
+            () => resumeHere(runId).catch(() => undefined),
+            Math.max(0, deadline - now()),
+          );
           timer.unref();
           timers.set(runId, timer);
         }
