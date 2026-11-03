@@ -37,6 +37,8 @@ export interface Journal {
    * when that holder still has the run, so two recoverers cannot both win.
    */
   claim(runId: string, lease: Lease, expected?: Lease): Promise<boolean>;
+  /** Atomically claims a waiting run; only one contender can transition it to running. */
+  claimWaiting(runId: string, lease: Lease, expected?: Lease): Promise<boolean>;
   /** Running runs another worker held and lost: its lease ran out or its process is gone. */
   listStale(workerId: string, now: number): Promise<Array<{ runId: string; held: Lease }>>;
   /** Waiting runs whose wait can end now: it has a signal or its deadline has passed. */
