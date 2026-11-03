@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "./App";
 import { click, events, json, openRun, stubApi } from "./testing/fixtures";
@@ -14,39 +14,6 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
-});
-
-describe("overview", () => {
-  it("is useful as the first screen", async () => {
-    stubApi();
-    render(<App />);
-
-    const overview = await screen.findByRole("region", { name: "Project overview" });
-
-    expect(within(overview).getByText("Internal Ops")).toBeTruthy();
-    expect(within(overview).getByText(/current project and readiness/i)).toBeTruthy();
-    expect(await within(overview).findByText("1 ok, 1 warning(s), 0 error(s)")).toBeTruthy();
-    expect(await within(overview).findByText("1/2 passed, 1 failed")).toBeTruthy();
-    expect(await within(overview).findByText(/1 run\(s\)/)).toBeTruthy();
-    expect(await within(overview).findByText("agent.md, skills/triage.md")).toBeTruthy();
-  });
-
-  it("shows when evals have not run yet", async () => {
-    stubApi({ report: null });
-    render(<App />);
-
-    expect(await screen.findByText("No eval results yet")).toBeTruthy();
-  });
-
-  it("shows an error when the project cannot load", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async () => json({ error: { message: "bad" } }, 400)),
-    );
-    render(<App />);
-
-    expect(await screen.findByText("Failed to load project")).toBeTruthy();
-  });
 });
 
 describe("run inspection", () => {

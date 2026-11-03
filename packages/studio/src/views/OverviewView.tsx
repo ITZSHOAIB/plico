@@ -1,5 +1,7 @@
+import { ReadinessDiagnostics } from "../components/ReadinessDiagnostics";
+import { ReadinessError } from "../components/ReadinessError";
 import type { ProjectData } from "../hooks/useProjectData";
-import { emptyPanel, heading, meta, metaLoose, panel } from "../styles";
+import { emptyPanel, heading, meta, metaLoose, panel, toolbarButton } from "../styles";
 import type { EvalReport, RunSummary } from "../types";
 
 interface OverviewViewProps {
@@ -11,6 +13,17 @@ function latestRunLabel(runs: RunSummary[]): string {
   const [latest] = runs;
   if (!latest) return "0 run(s)";
   return `${runs.length} run(s), latest ${latest.status}${latest.endedAt ? ` at ${latest.endedAt}` : " (not ended)"}`;
+}
+
+function formatCheckedAt(timestamp: string): string {
+  const date = new Date(timestamp);
+  if (Number.isNaN(date.getTime())) return timestamp;
+  const formatted = new Intl.DateTimeFormat("en-US", {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: "UTC",
+  }).format(date);
+  return `${formatted} UTC`;
 }
 
 export function OverviewView({ data, evalReport }: OverviewViewProps) {
@@ -33,15 +46,25 @@ export function OverviewView({ data, evalReport }: OverviewViewProps) {
             : "No eval results yet"
         }
       />
+      <Fact label="Instructions" value={instructions?.sources.join(", ") ?? "Loading…"} />
       <Fact
         label="Readiness"
         value={
           readiness
             ? `${readiness.summary.ok} ok, ${readiness.summary.warning} warning(s), ${readiness.summary.error} error(s)`
-            : "Loading…"
+            : data.readinessError
+              ? "Unavailable"
+              : "Loading…"
         }
       />
-      <Fact label="Instructions" value={instructions?.sources.join(", ") ?? "Loading…"} />
+      {data.readinessError && (
+        <ReadinessError error={data.readinessError} hasReport={!!readiness} />
+      )}
+      {readiness && <div style={meta}>Checked at {formatCheckedAt(readiness.timestamp)}</div>}
+      <button type="button" style={toolbarButton(false)} onClick={() => void data.loadReadiness()}>
+        Refresh readiness
+      </button>
+      {readiness && <ReadinessDiagnostics diagnostics={readiness.diagnostics} />}
     </section>
   );
 }

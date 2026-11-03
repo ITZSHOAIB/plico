@@ -35,7 +35,7 @@ export function MainView({ view, data, inspector, evals, onOpenRun }: MainViewPr
   }
 
   if (view === "readiness") {
-    return <ReadinessView report={data.readiness} />;
+    return <ReadinessView report={data.readiness} error={data.readinessError} />;
   }
 
   if (view === "artifacts") {
