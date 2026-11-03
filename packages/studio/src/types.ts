@@ -1,6 +1,7 @@
 export type {
   ArtifactFile,
   ArtifactSnapshot,
+  ArtifactSnapshotDetail,
   ArtifactWorkspace,
   ComposedInstructions,
   EvalCaseResult,

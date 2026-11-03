@@ -8,12 +8,15 @@ export function useRunInspector() {
   const selection = useRef(0);
   const [selectionKey, setSelectionKey] = useState(0);
   const selectedId = useRef<string | null>(null);
+  const workspaceRequest = useRef(0);
   const [eventsLoaded, setEventsLoaded] = useState(false);
   const [eventsError, setEventsError] = useState<string | null>(null);
   const [target, setTarget] = useState<StreamTarget | null>(null);
   const [selectedRun, setSelectedRun] = useState<RunSummary | null>(null);
   const [events, setEvents] = useState<PlicoEvent[]>([]);
   const [workspace, setWorkspace] = useState<ArtifactWorkspace | null>(null);
+  const [workspaceError, setWorkspaceError] = useState<string | null>(null);
+  const [workspaceLoading, setWorkspaceLoading] = useState(false);
   const [previewFile, setPreviewFile] = useState<ArtifactFile | null>(null);
 
   const onEvent = useCallback((event: PlicoEvent) => {
@@ -32,6 +35,10 @@ export function useRunInspector() {
       const generation = ++selection.current;
       setSelectionKey(generation);
       selectedId.current = run.runId;
+      workspaceRequest.current++;
+      setWorkspace(null);
+      setWorkspaceError(null);
+      setWorkspaceLoading(false);
       setTarget(null);
       setEventsError(null);
       setEventsLoaded(false);
@@ -63,16 +70,26 @@ export function useRunInspector() {
   );
 
   const loadWorkspace = useCallback(async (runId: string) => {
+    const request = ++workspaceRequest.current;
+    setWorkspace(null);
+    setWorkspaceError(null);
+    setWorkspaceLoading(true);
     setPreviewFile(null);
     try {
-      setWorkspace(await fetchArtifactWorkspace(runId));
+      const result = await fetchArtifactWorkspace(runId);
+      if (request === workspaceRequest.current && selectedId.current === runId)
+        setWorkspace(result);
     } catch {
-      setWorkspace(null);
+      if (request === workspaceRequest.current && selectedId.current === runId)
+        setWorkspaceError("Could not load artifact workspace");
+    } finally {
+      if (request === workspaceRequest.current) setWorkspaceLoading(false);
     }
   }, []);
 
   const clear = useCallback(() => {
     selection.current++;
+    workspaceRequest.current++;
     selectedId.current = null;
     setEventsLoaded(false);
     setTarget(null);
@@ -88,6 +105,8 @@ export function useRunInspector() {
     eventsError,
     eventsLoaded,
     workspace,
+    workspaceError,
+    workspaceLoading,
     previewFile,
     selectRun,
     loadWorkspace,

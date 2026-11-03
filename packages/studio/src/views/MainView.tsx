@@ -26,8 +26,13 @@ export function MainView({ view, data, inspector, evals, onOpenRun }: MainViewPr
     return <OverviewView data={data} evalReport={evals.report} />;
   }
 
-  if (view === "instructions" && data.instructions) {
-    return <InstructionsView instructions={data.instructions} />;
+  if (view === "instructions") {
+    if (data.instructionsError) return <div role="alert">{data.instructionsError}</div>;
+    return data.instructions ? (
+      <InstructionsView instructions={data.instructions} />
+    ) : (
+      <div>Loading instructions…</div>
+    );
   }
 
   if (view === "evals") {
@@ -39,7 +44,13 @@ export function MainView({ view, data, inspector, evals, onOpenRun }: MainViewPr
   }
 
   if (view === "artifacts") {
-    return <ArtifactsView {...inspector} onPreviewFile={inspector.setPreviewFile} />;
+    return (
+      <ArtifactsView
+        key={inspector.selectedRun?.runId}
+        {...inspector}
+        onPreviewFile={inspector.setPreviewFile}
+      />
+    );
   }
 
   return (

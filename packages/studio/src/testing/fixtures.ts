@@ -115,6 +115,7 @@ interface StubState {
 }
 
 export function stubApi(state: StubState = { report: evalReport }) {
+  window.history.replaceState(null, "", "/");
   const fetchMock = vi.fn(async (input: string, init?: RequestInit): Promise<Response> => {
     const method = init?.method ?? "GET";
     const path = String(input);

@@ -102,9 +102,9 @@ export function EvalsView({ evals, onOpenRun }: EvalsViewProps) {
             );
           })}
         </>
-      ) : (
+      ) : !error ? (
         <div style={metaLoose}>No eval results yet. Run evals to see them here.</div>
-      )}
+      ) : null}
     </div>
   );
 }
