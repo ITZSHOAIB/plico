@@ -86,11 +86,16 @@ describe("crash recovery", () => {
     expect((await store.getRun("run-crash"))?.status).toBe("running");
 
     process.env.PLICO_MARKS = marks;
+    let starts = 0;
     const recovered = await recoverRuns({
+      onStarted: () => {
+        starts += 1;
+      },
       engine: createSqliteEngine({ databasePath }),
       eventStore: store,
     });
 
+    expect(starts).toBe(0);
     expect(recovered).toEqual([{ runId: "run-crash", state: "completed" }]);
     expect((await store.getRun("run-crash"))?.status).toBe("completed");
     const events = await store.getEvents("run-crash");
