@@ -368,3 +368,16 @@ describe("readiness", () => {
     expect(screen.getByText("Add more evals")).toBeTruthy();
   });
 });
+
+describe("run navigation", () => {
+  it("enables artifacts only after a run is selected", async () => {
+    stubApi();
+    render(<App />);
+    const artifacts = screen.getByRole("button", { name: "Artifacts" });
+    expect((artifacts as HTMLButtonElement).disabled).toBe(true);
+    await openRun();
+    expect((artifacts as HTMLButtonElement).disabled).toBe(false);
+    click("Overview");
+    expect((artifacts as HTMLButtonElement).disabled).toBe(true);
+  });
+});

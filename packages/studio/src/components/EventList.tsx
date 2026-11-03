@@ -19,6 +19,7 @@ function EventRow({ event }: { event: PlicoEvent }) {
     <div style={{ marginBottom: "4px", border: "1px solid #eee", borderRadius: "3px" }}>
       <button
         type="button"
+        aria-expanded={expanded}
         onClick={() => setExpanded(!expanded)}
         style={{
           display: "flex",
