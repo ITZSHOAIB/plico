@@ -93,7 +93,15 @@ export function createEngine({
       const run = await journal.getRun(runId);
       if (!run) throw new Error(`Run ${runId} is unknown.`);
       if (run.state === "completed") throw new Error(`Run ${runId} already finished.`);
-      await journal.claim(runId, lease());
+      if (run.state === "running") {
+        const stale = (await journal.listStale(workerId, now())).find(
+          (item) => item.runId === runId,
+        );
+        if (!stale || !(await journal.claim(runId, lease(), stale.held)))
+          throw new Error(`Run ${runId} is held by a live worker or its lease changed.`);
+      } else if (!(await journal.claim(runId, lease()))) {
+        throw new Error(`Run ${runId} could not be claimed.`);
+      }
       return execute(runId, workflow, JSON.parse(run.inputJson));
     },
     async recover<I, O>(

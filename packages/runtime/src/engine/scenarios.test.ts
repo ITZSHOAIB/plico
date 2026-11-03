@@ -74,6 +74,14 @@ describe.each(journals)("engine scenarios on the %s", (_name, makeJournal) => {
     expect(ran).toBe(1);
   });
 
+  it("refuses to resume a run held by a live worker", async () => {
+    const journal = await makeJournal();
+    const first = createEngine({ journal, workerId: "a", leaseMs: 10_000 });
+    await first.start("run-live", () => never, {});
+    const second = createEngine({ journal, workerId: "b" });
+    await expect(second.resume("run-live", async () => "wrong")).rejects.toThrow(/lease|held/i);
+  });
+
   it("leaves finished runs alone", async () => {
     const journal = await makeJournal();
     let clock = 1_000;
