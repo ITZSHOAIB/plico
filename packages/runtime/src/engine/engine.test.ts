@@ -1,21 +1,35 @@
 import { describe, expect, it } from "vitest";
-import { createEngine, createMemoryJournal, type Engine } from "./index.js";
+import {
+  createEngine,
+  createMemoryJournal,
+  type Engine,
+  type RunContext,
+  type RunOutcome,
+} from "./index.js";
 
 function newEngine(): Engine {
   return createEngine({ journal: createMemoryJournal() });
+}
+
+async function completed<O>(outcome: Promise<RunOutcome<O>>): Promise<O> {
+  const result = await outcome;
+  if (result.state !== "completed") throw new Error("Run did not complete.");
+  return result.output;
 }
 
 describe("engine steps", () => {
   it("runs a workflow and returns its output", async () => {
     const engine = newEngine();
 
-    const output = await engine.run(
-      "run-1",
-      async (ctx, input: { n: number }) => {
-        const doubled = await ctx.step("double", () => input.n * 2);
-        return doubled + 1;
-      },
-      { n: 20 },
+    const output = await completed(
+      engine.run(
+        "run-1",
+        async (ctx, input: { n: number }) => {
+          const doubled = await ctx.step("double", () => input.n * 2);
+          return doubled + 1;
+        },
+        { n: 20 },
+      ),
     );
 
     expect(output).toBe(41);
@@ -46,19 +60,21 @@ describe("engine steps", () => {
     const engine = newEngine();
     let attempts = 0;
 
-    const output = await engine.run(
-      "run-1",
-      async (ctx) =>
-        ctx.step(
-          "flaky",
-          ({ attempt }) => {
-            attempts += 1;
-            if (attempt < 2) throw new Error("again");
-            return "ok";
-          },
-          { retries: 2 },
-        ),
-      {},
+    const output = await completed(
+      engine.run(
+        "run-1",
+        async (ctx) =>
+          ctx.step(
+            "flaky",
+            ({ attempt }) => {
+              attempts += 1;
+              if (attempt < 2) throw new Error("again");
+              return "ok";
+            },
+            { retries: 2 },
+          ),
+        {},
+      ),
     );
 
     expect(output).toBe("ok");
@@ -68,7 +84,7 @@ describe("engine steps", () => {
   it("replays recorded steps when a run starts again with the same id", async () => {
     const journal = createMemoryJournal();
     let calls = 0;
-    const workflow = async (ctx: import("./index.js").RunContext) => {
+    const workflow = async (ctx: RunContext) => {
       const first = await ctx.step("first", () => {
         calls += 1;
         return { value: "one" };
@@ -82,7 +98,7 @@ describe("engine steps", () => {
     };
 
     await expect(createEngine({ journal }).run("run-1", workflow, {})).rejects.toThrow("crash");
-    const output = await createEngine({ journal }).resume("run-1", workflow);
+    const output = await completed(createEngine({ journal }).resume("run-1", workflow));
 
     expect(output).toBe("one");
     expect(calls).toBe(3);
@@ -111,10 +127,8 @@ describe("engine steps", () => {
   it("returns step results as they survive JSON", async () => {
     const engine = newEngine();
 
-    const output = await engine.run(
-      "run-1",
-      (ctx) => ctx.step("value", () => ({ a: undefined, b: 1 })),
-      {},
+    const output = await completed(
+      engine.run("run-1", (ctx) => ctx.step("value", () => ({ a: undefined, b: 1 })), {}),
     );
 
     expect(output).toEqual({ b: 1 });
@@ -125,7 +139,7 @@ describe("engine steps", () => {
     const handle = await engine.start("run-1", async (ctx) => ctx.step("s", () => "done"), {});
 
     expect(handle.runId).toBe("run-1");
-    expect(await handle.result()).toBe("done");
+    expect(await handle.result()).toEqual({ state: "completed", output: "done" });
   });
 
   it("refuses to start a run id that already finished", async () => {

@@ -58,8 +58,20 @@ export function appendEventRecord(database: DatabaseSync, event: PlicoEvent): vo
         )
         .run(event.runId, process.pid, owner.token, owner.path);
     } else {
-      if (row.status !== "running")
+      if (row.status === "waiting") {
+        // The first event after run.waiting is the run continuing, so the log alone says it is running.
+        database
+          .prepare("UPDATE runs SET status = 'running', ended_at = NULL WHERE run_id = ?")
+          .run(event.runId);
+        const owner = acquireOwner();
+        database
+          .prepare(
+            "INSERT OR REPLACE INTO run_owners (run_id, process_id, owner_token, owner_path) VALUES (?, ?, ?, ?)",
+          )
+          .run(event.runId, process.pid, owner.token, owner.path);
+      } else if (row.status !== "running") {
         throw new Error(`Cannot append to run with status ${row.status}.`);
+      }
       if (event.type === "run.started") throw new Error("Run has already started.");
       const status =
         event.type === "run.waiting"

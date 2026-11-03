@@ -73,6 +73,24 @@ export function createSqliteJournal({ databasePath }: { databasePath: string }):
             .run(lease.workerId, lease.until, owner.token, owner.path, runId);
       return result.changes === 1;
     },
+    async claimWaiting(runId, lease, expected) {
+      const owner = acquireOwner();
+      const sql = `UPDATE engine_runs SET state = 'running', worker_id = ?, lease_until = ?, owner_token = ?, owner_path = ? WHERE run_id = ? AND state = 'waiting'`;
+      const result = expected
+        ? database
+            .prepare(`${sql} AND worker_id = ? AND lease_until = ?`)
+            .run(
+              lease.workerId,
+              lease.until,
+              owner.token,
+              owner.path,
+              runId,
+              expected.workerId,
+              expected.until,
+            )
+        : database.prepare(sql).run(lease.workerId, lease.until, owner.token, owner.path, runId);
+      return result.changes === 1;
+    },
     async listStale(workerId, now) {
       const rows = database
         .prepare("SELECT * FROM engine_runs WHERE state = 'running' AND worker_id != ?")
@@ -81,6 +99,59 @@ export function createSqliteJournal({ databasePath }: { databasePath: string }):
       return rows
         .filter((row) => row.lease_until < now || !ownerIsAlive(row.owner_token, row.owner_path))
         .map((row) => ({ runId: row.run_id, held: leaseOf(row) }));
+    },
+    async listReady(now) {
+      const rows = database
+        .prepare(`
+          SELECT DISTINCT r.* FROM engine_runs r
+          JOIN engine_waits w ON w.run_id = r.run_id AND w.outcome_json IS NULL
+          WHERE r.state = 'waiting' AND (
+            w.deadline <= ? OR EXISTS (
+              SELECT 1 FROM engine_signals s WHERE s.run_id = w.run_id AND s.name = w.name
+            )
+          )
+        `)
+        .all(now) as unknown as RunRow[];
+      return rows.map((row) => ({ runId: row.run_id, held: leaseOf(row) }));
+    },
+    async listWaiting() {
+      const rows = database
+        .prepare(`SELECT r.run_id, w.deadline FROM engine_runs r
+        JOIN engine_waits w ON w.run_id = r.run_id AND w.outcome_json IS NULL
+        WHERE r.state = 'waiting'`)
+        .all() as Array<{ run_id: string; deadline: number | null }>;
+      return rows.map((row) => ({ runId: row.run_id, deadline: row.deadline }));
+    },
+    async getWait(runId, name) {
+      const row = database
+        .prepare("SELECT deadline, outcome_json FROM engine_waits WHERE run_id = ? AND name = ?")
+        .get(runId, name) as { deadline: number | null; outcome_json: string | null } | undefined;
+      return row && { deadline: row.deadline, outcomeJson: row.outcome_json };
+    },
+    async openWait(runId, name, deadline) {
+      database
+        .prepare("INSERT OR IGNORE INTO engine_waits (run_id, name, deadline) VALUES (?, ?, ?)")
+        .run(runId, name, deadline);
+    },
+    async resolveWait(runId, name, outcomeJson) {
+      const result = database
+        .prepare(
+          "UPDATE engine_waits SET outcome_json = ? WHERE run_id = ? AND name = ? AND outcome_json IS NULL",
+        )
+        .run(outcomeJson, runId, name);
+      return result.changes === 1;
+    },
+    async putSignal(runId, name, valueJson) {
+      const result = database
+        .prepare("INSERT OR IGNORE INTO engine_signals (run_id, name, value_json) VALUES (?, ?, ?)")
+        .run(runId, name, valueJson);
+      return result.changes === 1;
+    },
+    async getSignal(runId, name) {
+      const row = database
+        .prepare("SELECT value_json FROM engine_signals WHERE run_id = ? AND name = ?")
+        .get(runId, name) as { value_json: string } | undefined;
+      return row?.value_json;
     },
     async getStep(runId, index) {
       const row = database
