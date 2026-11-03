@@ -1,4 +1,4 @@
-﻿// @vitest-environment jsdom
+// @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, expect, it } from "vitest";
 import type { PlicoEvent } from "../types";
@@ -14,7 +14,7 @@ it("lets a user expand and collapse event details", () => {
     runId: "run-1",
     id: "evt-1",
     sequence: 1,
-    timestamp: "now",
+    timestamp: "2026-01-01T00:00:00.000Z",
     type: "tool.call",
     payload: { toolName: "lookup", arguments: { query: "hello" } },
   };
