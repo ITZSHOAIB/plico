@@ -48,11 +48,41 @@ export async function recoverRuns(
   options: RunProjectOptions & { engine: Engine },
 ): Promise<RecoveredRun[]> {
   return options.engine.recover<RunInput, RunResult>((_runId, input) =>
-    // A message means a provider-backed run; without a provider here it stays down for one that has it.
     input.message !== undefined && options.provider === undefined
-      ? undefined
+      ? (ctx, journaled) => failMissingProvider(ctx, journaled, options)
       : (ctx, journaled) => runLoop(ctx, journaled, options),
   );
+}
+
+async function failMissingProvider(
+  ctx: RunContext,
+  input: RunInput,
+  options: RunProjectOptions,
+): Promise<RunResult> {
+  const events = await InMemoryEventLog.open(ctx.runId, options.eventStore);
+  const validation = await validateProject(input.root);
+  if (events.all().length === 0) {
+    await events.append("run.started", {
+      projectRoot: validation.project?.root ?? input.root,
+      projectName: validation.project?.config.name ?? "",
+    });
+    options.onStarted?.(ctx.runId);
+  }
+  events.continueAfterReplay();
+  await events.append("run.error", {
+    phase: "provider",
+    message: "Cannot recover provider-backed run without a provider.",
+  });
+  await events.append("run.failed", { phase: "provider" });
+  return finalizeRun({
+    runId: ctx.runId,
+    projectRoot: input.root,
+    projectName: validation.project?.config.name ?? "",
+    status: "failed",
+    startedAt: input.startedAt,
+    events: events.all(),
+    eventStore: options.eventStore,
+  });
 }
 
 async function runLoop(

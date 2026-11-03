@@ -117,6 +117,39 @@ describe("crash recovery", () => {
     ]);
   });
 
+  it("fails a killed provider run when recovery has no provider", async () => {
+    const root = await scaffold();
+    const databasePath = join(root, "provider.sqlite");
+    const moduleUrl = pathToFileURL(join(process.cwd(), "packages/runtime/src/index.ts")).href;
+    const program = `
+      import { createSqliteEngine, createSqliteEventStore, runProject } from ${JSON.stringify(moduleUrl)};
+      const [root, databasePath] = process.argv.slice(1);
+      await runProject(root, { runId: "provider-crash", message: "hello",
+        engine: createSqliteEngine({ databasePath }), eventStore: createSqliteEventStore({ databasePath }),
+        provider: { complete: async () => process.kill(process.pid, "SIGKILL") } });
+    `;
+    await expect(
+      execFileAsync(process.execPath, [
+        "--import",
+        "tsx",
+        "--input-type=module",
+        "-e",
+        program,
+        root,
+        databasePath,
+      ]),
+    ).rejects.toThrow();
+    const store = createSqliteEventStore({ databasePath });
+    await recoverRuns({ engine: createSqliteEngine({ databasePath }), eventStore: store });
+    expect((await store.getRun("provider-crash"))?.status).toBe("failed");
+    const events = await store.getEvents("provider-crash");
+    expect(events.at(-2)).toMatchObject({
+      type: "run.error",
+      payload: { message: expect.stringMatching(/provider/i) },
+    });
+    expect(events.at(-1)?.type).toBe("run.failed");
+  });
+
   it("fails a recovered run loudly when the project changed under it", async () => {
     const root = await scaffold();
     const databasePath = join(root, "state.sqlite");
