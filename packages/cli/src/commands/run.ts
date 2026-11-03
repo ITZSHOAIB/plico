@@ -1,4 +1,9 @@
-import { createSqliteEventStore, type ModelProvider, runProject } from "@plico/runtime";
+import {
+  createSqliteEngine,
+  createSqliteEventStore,
+  type ModelProvider,
+  runProject,
+} from "@plico/runtime";
 import { lastPositional, parseArgs, readStringOption } from "../args.js";
 import { errorMessage } from "../errors.js";
 import { formatRunResult } from "../format/run.js";
@@ -30,15 +35,14 @@ export async function runCommand(args: string[]): Promise<number> {
     }
 
     const script = scriptPath ? await loadDryRunScript(scriptPath) : undefined;
-    const eventStore = persist
-      ? createSqliteEventStore({
-          databasePath: resolveDatabasePath(target, dbPath),
-        })
-      : undefined;
+    const databasePath = persist ? resolveDatabasePath(target, dbPath) : undefined;
+    const eventStore = databasePath ? createSqliteEventStore({ databasePath }) : undefined;
+    const engine = databasePath ? createSqliteEngine({ databasePath }) : undefined;
 
     const result = await runProject(target, {
       ...(script ? { script } : {}),
       ...(eventStore ? { eventStore } : {}),
+      ...(engine ? { engine } : {}),
       ...(message === undefined ? {} : { provider: createFakeProvider(), message }),
     });
 
