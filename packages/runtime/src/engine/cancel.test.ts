@@ -163,3 +163,48 @@ it("does not crash when cancellation cannot claim a waiting run", () => {
     execFileSync(process.execPath, ["--import", "tsx", "--input-type=module", "-e", program]),
   ).not.toThrow();
 });
+
+it("aborts a step when cancellation comes from another process", async () => {
+  const databasePath = join(await mkdtemp(join(tmpdir(), "plico-cancel-process-")), "state.sqlite");
+  const journal = createSqliteJournal({ databasePath });
+  const engine = createEngine({ journal, workerId: "a", leaseMs: 60 });
+  let aborted = false;
+  let started!: () => void;
+  const ready = new Promise<void>((resolve) => {
+    started = resolve;
+  });
+  const handle = await engine.start(
+    "cross-process",
+    async (ctx) => {
+      await ctx.step(
+        "slow",
+        ({ signal }) =>
+          new Promise((_resolve, reject) => {
+            signal.addEventListener("abort", () => {
+              aborted = true;
+              reject(new Error("stopped"));
+            });
+            started();
+          }),
+      );
+    },
+    {},
+  );
+  await ready;
+  const moduleUrl = pathToFileURL(join(process.cwd(), "packages/runtime/src/engine/index.ts")).href;
+  const program = `
+    import { createEngine, createSqliteJournal } from ${JSON.stringify(moduleUrl)};
+    const engine = createEngine({ journal: createSqliteJournal({ databasePath: process.argv[1] }), workerId: "b" });
+    if (await engine.cancel("cross-process") !== "accepted") process.exit(1);
+  `;
+  execFileSync(process.execPath, [
+    "--import",
+    "tsx",
+    "--input-type=module",
+    "-e",
+    program,
+    databasePath,
+  ]);
+  expect((await handle.result()).state).toBe("cancelled");
+  expect(aborted).toBe(true);
+}, 15000);
