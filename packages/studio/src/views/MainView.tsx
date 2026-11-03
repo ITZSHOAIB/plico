@@ -42,5 +42,12 @@ export function MainView({ view, data, inspector, evals, onOpenRun }: MainViewPr
     return <ArtifactsView {...inspector} onPreviewFile={inspector.setPreviewFile} />;
   }
 
-  return <RunView selectedRun={inspector.selectedRun} events={inspector.events} />;
+  return (
+    <RunView
+      selectedRun={inspector.selectedRun}
+      events={inspector.events}
+      streamState={inspector.streamState}
+      eventsError={inspector.eventsError}
+    />
+  );
 }

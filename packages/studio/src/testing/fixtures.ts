@@ -21,7 +21,16 @@ const run: RunSummary = {
   endedAt: null,
 };
 
-function event<T extends PlicoEvent["type"]>(
+export const otherRun: RunSummary = {
+  runId: "run-other-1234",
+  projectRoot: "/demo",
+  projectName: "Internal Ops",
+  status: "running",
+  startedAt: "2026-01-01T00:00:00.000Z",
+  endedAt: null,
+};
+
+export function runEvent<T extends PlicoEvent["type"]>(
   sequence: number,
   type: T,
   payload: PlicoEvent<T>["payload"],
@@ -40,10 +49,10 @@ function event<T extends PlicoEvent["type"]>(
 }
 
 export const events = [
-  event(1, "run.started", { projectRoot: "/demo", projectName: "Internal Ops" }),
-  event(2, "tool.call", { toolName: "create-ticket", arguments: { title: "Fix VPN" } }),
-  event(3, "tool.result", { toolName: "create-ticket", result: { id: 7 } }),
-  event(4, "approval.requested", {
+  runEvent(1, "run.started", { projectRoot: "/demo", projectName: "Internal Ops" }),
+  runEvent(2, "tool.call", { toolName: "create-ticket", arguments: { title: "Fix VPN" } }),
+  runEvent(3, "tool.result", { toolName: "create-ticket", result: { id: 7 } }),
+  runEvent(4, "approval.requested", {
     requestId: "approval-1",
     toolName: "delete-ticket",
     arguments: {},

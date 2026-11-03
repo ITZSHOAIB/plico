@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { EventList } from "../components/EventList";
+import type { StreamState } from "../hooks/useRunStream";
 import {
   codeBlockScroll,
   emptyPanel,
@@ -13,9 +14,11 @@ import type { PlicoEvent, RunSummary } from "../types";
 interface RunViewProps {
   selectedRun: RunSummary | null;
   events: PlicoEvent[];
+  streamState?: StreamState;
+  eventsError?: string | null;
 }
 
-export function RunView({ selectedRun, events }: RunViewProps) {
+export function RunView({ selectedRun, events, streamState, eventsError }: RunViewProps) {
   const [mode, setMode] = useState<"timeline" | "raw">("timeline");
 
   if (!selectedRun) {
@@ -32,6 +35,11 @@ export function RunView({ selectedRun, events }: RunViewProps) {
         Status: {selectedRun.status} | Started: {selectedRun.startedAt} | Ended:{" "}
         {selectedRun.endedAt ?? "Not ended"}
       </div>
+      {eventsError && <div role="alert">{eventsError}</div>}
+      {streamState === "disconnected" && (
+        <div role="alert">Disconnected from run updates. Reselect the run to retry.</div>
+      )}
+      {streamState === "reconnecting" && <div role="status">Reconnecting to run updates...</div>}
       {selectedRun.status === "failed" && reason && <div>Failure: {reason}</div>}
       <div style={{ marginBottom: "8px" }}>
         <button
