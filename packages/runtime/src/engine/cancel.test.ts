@@ -153,7 +153,7 @@ it("does not crash when cancellation cannot claim a waiting run", () => {
   const program = `
     import { createEngine, createMemoryJournal } from ${JSON.stringify(moduleUrl)};
     const journal = createMemoryJournal();
-    journal.claim = async () => { throw new Error("claim failed"); };
+    journal.claimWaiting = async () => { throw new Error("claim failed"); };
     const engine = createEngine({ journal });
     await engine.run("run", async (ctx) => ctx.wait("approval"), {});
     await engine.cancel("run");
