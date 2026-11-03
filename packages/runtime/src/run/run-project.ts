@@ -64,11 +64,12 @@ async function runLoop(
   const { root, startedAt } = input;
   const validation = await validateProject(root);
   const events = await InMemoryEventLog.open(runId, options.eventStore);
+  const newlyStarted = events.all().length === 0;
   await events.append("run.started", {
     projectRoot: validation.project?.root ?? root,
     projectName: validation.project?.config.name ?? "",
   });
-  options.onStarted?.(runId);
+  if (newlyStarted) options.onStarted?.(runId);
 
   if (!validation.ok || !validation.project) {
     await events.append("run.error", { phase: "validation", issues: validation.errors });
