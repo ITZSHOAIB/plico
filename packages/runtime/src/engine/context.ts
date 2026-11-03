@@ -1,4 +1,4 @@
-import { ProjectChangedError, RunSuspended } from "./errors.js";
+import { ProjectChangedError, RunCancelled, RunSuspended } from "./errors.js";
 import type { Journal } from "./journal.js";
 import type { RunContext, WaitOutcome } from "./types.js";
 
@@ -11,6 +11,8 @@ export interface Suspension {
 export interface EngineContext extends RunContext {
   /** Set once `wait` has stopped the run. */
   suspension(): Suspension | undefined;
+  /** True once `step` or `wait` has stopped the run because it was cancelled. */
+  cancelled(): boolean;
 }
 
 export function toJson(value: unknown): string {
@@ -18,9 +20,22 @@ export function toJson(value: unknown): string {
 }
 
 /** The context one execution of a workflow sees. Steps and waits replay from the journal. */
-export function createContext(runId: string, journal: Journal, now: () => number): EngineContext {
+export function createContext(
+  runId: string,
+  journal: Journal,
+  now: () => number,
+  signal: AbortSignal,
+): EngineContext {
   let nextStep = 0;
   let suspended: Suspension | undefined;
+  let stopped = false;
+
+  async function checkCancel(): Promise<void> {
+    if (signal.aborted || (await journal.getRun(runId))?.cancelRequested) {
+      stopped = true;
+      throw new RunCancelled();
+    }
+  }
 
   async function endWait(
     name: string,
@@ -34,7 +49,9 @@ export function createContext(runId: string, journal: Journal, now: () => number
 
   return {
     runId,
+    signal,
     suspension: () => suspended,
+    cancelled: () => stopped,
     async step(name, fn, options) {
       const index = nextStep++;
       const recorded = await journal.getStep(runId, index);
@@ -44,18 +61,25 @@ export function createContext(runId: string, journal: Journal, now: () => number
         }
         return JSON.parse(recorded.resultJson);
       }
+      await checkCancel();
       const retries = options?.retries ?? 0;
       for (let attempt = 0; ; attempt++) {
         try {
-          const resultJson = toJson(await fn({ attempt }));
+          const resultJson = toJson(await fn({ attempt, signal }));
           await journal.putStep(runId, index, { name, resultJson });
           return JSON.parse(resultJson);
         } catch (error) {
+          // A step cut short by cancel is not recorded and not retried.
+          if (signal.aborted) {
+            stopped = true;
+            throw new RunCancelled();
+          }
           if (attempt >= retries) throw error;
         }
       }
     },
     async wait<T>(name: string, options?: { timeoutMs?: number }): Promise<WaitOutcome<T>> {
+      await checkCancel();
       // The deadline is stored when the wait is first reached, so a restart keeps it.
       await journal.openWait(
         runId,

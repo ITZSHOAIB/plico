@@ -51,6 +51,11 @@ const migrations: ReadonlyArray<{ from: number; to: number; sql: string }> = [
     );
   `,
   },
+  {
+    from: 6,
+    to: 7,
+    sql: `ALTER TABLE engine_runs ADD COLUMN cancel_requested INTEGER NOT NULL DEFAULT 0;`,
+  },
 ];
 
 function readSchemaVersion(

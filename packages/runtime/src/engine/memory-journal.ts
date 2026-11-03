@@ -13,12 +13,19 @@ export function createMemoryJournal(): Journal {
   return {
     async begin(runId, inputJson, lease) {
       if (runs.has(runId)) return false;
-      runs.set(runId, { runId, state: "running", inputJson, lease });
+      runs.set(runId, { runId, state: "running", inputJson, cancelRequested: false, lease });
       return true;
     },
     async getRun(runId) {
       const run = runs.get(runId);
-      return run && { runId, state: run.state, inputJson: run.inputJson };
+      return (
+        run && {
+          runId,
+          state: run.state,
+          inputJson: run.inputJson,
+          cancelRequested: run.cancelRequested,
+        }
+      );
     },
     async setState(runId, state) {
       const run = runs.get(runId);
@@ -65,12 +72,21 @@ export function createMemoryJournal(): Journal {
       return [...runs.values()]
         .filter((run) => {
           if (run.state !== "waiting") return false;
+          if (run.cancelRequested) return true;
           return [...waits.entries()].some(([key, wait]) => {
             if (!key.startsWith(`${run.runId}\u0000`) || wait.outcomeJson !== null) return false;
             return signals.has(key) || (wait.deadline !== null && wait.deadline <= now);
           });
         })
         .map((run) => ({ runId: run.runId, held: run.lease }));
+    },
+    async requestCancel(runId) {
+      const run = runs.get(runId);
+      if (!run || run.cancelRequested || ["completed", "failed", "cancelled"].includes(run.state)) {
+        return false;
+      }
+      run.cancelRequested = true;
+      return true;
     },
     async listWaiting() {
       return [...runs.values()]

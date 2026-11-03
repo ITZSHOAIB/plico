@@ -6,10 +6,14 @@ export interface StepOptions {
 export interface StepAttempt {
   /** Zero-based attempt number within this step. */
   attempt: number;
+  /** Aborts when the run is cancelled, so a long step can stop early. */
+  signal: AbortSignal;
 }
 
 export interface RunContext {
   readonly runId: string;
+  /** Aborts when the run is cancelled. */
+  readonly signal: AbortSignal;
   /**
    * Runs `fn` and records its result. When the run is replayed, the recorded result is returned
    * and `fn` does not run. Results are stored as JSON, so `undefined` properties are dropped.
@@ -30,7 +34,13 @@ export interface RunContext {
 }
 
 /** How a run ended for now. A waiting run may carry what the workflow returned before it stopped. */
-export type RunOutcome<O> = { state: "completed"; output: O } | { state: "waiting"; output?: O };
+export type RunOutcome<O> =
+  | { state: "completed"; output: O }
+  | { state: "waiting"; output?: O }
+  | { state: "cancelled"; output?: O };
+
+/** `ignored`: the run had already finished or been cancelled. */
+export type CancelResult = "accepted" | "ignored" | "unknown";
 
 /** `ignored`: a decision arrived late, twice, or for a finished run. The first one wins. */
 export type SignalResult = "accepted" | "ignored" | "unknown";
@@ -50,7 +60,7 @@ export interface RunHandle<O> {
   result(): Promise<RunOutcome<O>>;
 }
 
-export type ExecutionState = "running" | "waiting" | "completed" | "failed";
+export type ExecutionState = "running" | "waiting" | "completed" | "failed" | "cancelled";
 
 export interface ExecutionStatus {
   state: ExecutionState;
@@ -58,7 +68,7 @@ export interface ExecutionStatus {
 
 export interface RecoveredRun {
   runId: string;
-  state: "completed" | "waiting" | "failed";
+  state: "completed" | "waiting" | "failed" | "cancelled";
   error?: string;
 }
 
@@ -82,5 +92,11 @@ export interface Engine {
   recover<I, O>(
     resolve: (runId: string, input: I) => Workflow<I, O> | undefined,
   ): Promise<RecoveredRun[]>;
+  /**
+   * Cancels a run. A step that is running gets its abort signal fired; a waiting run ends at once
+   * where it holds the run, or when `recover` next runs. The workflow sees RunCancelled at its next
+   * step or wait and returns.
+   */
+  cancel(runId: string): Promise<CancelResult>;
   status(runId: string): Promise<ExecutionStatus | undefined>;
 }

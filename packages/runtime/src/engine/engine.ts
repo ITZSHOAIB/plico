@@ -1,8 +1,9 @@
 import { randomUUID } from "node:crypto";
 import { createContext, toJson } from "./context.js";
-import { RunSuspended } from "./errors.js";
+import { RunCancelled, RunSuspended } from "./errors.js";
 import type { Journal, Lease } from "./journal.js";
 import type {
+  CancelResult,
   Engine,
   RecoveredRun,
   RunHandle,
@@ -39,6 +40,8 @@ export function createEngine({
   /** Runs executing in this process right now. */
   const active = new Set<string>();
   const timers = new Map<string, NodeJS.Timeout>();
+  /** Aborts the step a run is executing here when it is cancelled. */
+  const controllers = new Map<string, AbortController>();
 
   function stopTimer(runId: string): void {
     clearTimeout(timers.get(runId));
@@ -53,20 +56,32 @@ export function createEngine({
   ): Promise<RunOutcome<O>> {
     registered.set(runId, { workflow, input } as Registered);
     stopTimer(runId);
+    const controller = new AbortController();
+    controllers.set(runId, controller);
     const heartbeat = setInterval(() => {
       journal.renew(runId, lease()).catch(() => undefined);
+      // Cancel may have been requested from another process.
+      journal
+        .getRun(runId)
+        .then((run) => run?.cancelRequested && controller.abort())
+        .catch(() => undefined);
     }, leaseMs / 3);
     heartbeat.unref();
     try {
       for (;;) {
-        const ctx = createContext(runId, journal, now);
+        const ctx = createContext(runId, journal, now, controller.signal);
         let output: O | undefined;
         let returned = false;
         try {
           output = await workflow(ctx, input);
           returned = true;
         } catch (error) {
-          if (!(error instanceof RunSuspended)) throw error;
+          if (!(error instanceof RunSuspended || error instanceof RunCancelled)) throw error;
+        }
+        if (ctx.cancelled()) {
+          await journal.setState(runId, "cancelled");
+          registered.delete(runId);
+          return returned ? { state: "cancelled", output: output as O } : { state: "cancelled" };
         }
         const suspension = ctx.suspension();
         if (!suspension) {
@@ -78,6 +93,7 @@ export function createEngine({
         // A signal or timeout that landed while the run was stopping must not be lost.
         const wait = await journal.getWait(runId, suspension.name);
         const ready =
+          (await journal.getRun(runId))?.cancelRequested === true ||
           (await journal.getSignal(runId, suspension.name)) !== undefined ||
           (wait?.deadline != null && now() >= wait.deadline);
         if (ready) {
@@ -99,6 +115,7 @@ export function createEngine({
       throw error;
     } finally {
       clearInterval(heartbeat);
+      controllers.delete(runId);
       active.delete(runId);
     }
   }
@@ -150,7 +167,8 @@ export function createEngine({
     async resume(runId, workflow) {
       const run = await journal.getRun(runId);
       if (!run) throw new Error(`Run ${runId} is unknown.`);
-      if (run.state === "completed") throw new Error(`Run ${runId} already finished.`);
+      if (run.state === "completed" || run.state === "cancelled")
+        throw new Error(`Run ${runId} already finished.`);
       if (run.state === "running") {
         const stale = (await journal.listStale(workerId, now())).find(
           (item) => item.runId === runId,
@@ -170,7 +188,7 @@ export function createEngine({
     async signal(runId, name, value): Promise<SignalResult> {
       const run = await journal.getRun(runId);
       if (!run) return "unknown";
-      if (run.state === "completed" || run.state === "failed") return "ignored";
+      if (["completed", "failed", "cancelled"].includes(run.state)) return "ignored";
       const wait = await journal.getWait(runId, name);
       if (wait?.outcomeJson != null) return "ignored";
       if (wait?.deadline != null && now() >= wait.deadline) {
@@ -181,6 +199,15 @@ export function createEngine({
       }
       if (!(await journal.putSignal(runId, name, toJson(value)))) return "ignored";
       resumeHere(runId).catch(() => undefined);
+      return "accepted";
+    },
+    async cancel(runId): Promise<CancelResult> {
+      const run = await journal.getRun(runId);
+      if (!run) return "unknown";
+      if (!(await journal.requestCancel(runId))) return "ignored";
+      const running = controllers.get(runId);
+      if (running) running.abort();
+      else resumeHere(runId).catch(() => undefined);
       return "accepted";
     },
     async recover<I, O>(

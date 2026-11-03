@@ -50,4 +50,5 @@ export type {
   RunStatus,
   RunSummary,
   ToolApprovalPolicy,
+  ToolHandlerContext,
 } from "./types/index.js";

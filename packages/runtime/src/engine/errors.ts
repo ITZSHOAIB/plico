@@ -10,3 +10,10 @@ export class RunSuspended extends Error {
     super(`Run is waiting for ${waitName}.`);
   }
 }
+
+/** Thrown by `ctx.step` and `ctx.wait` once the run is cancelled. Not a failure. */
+export class RunCancelled extends Error {
+  constructor() {
+    super("Run was cancelled.");
+  }
+}
