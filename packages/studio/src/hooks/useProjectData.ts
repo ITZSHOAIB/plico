@@ -4,10 +4,12 @@ import type { ComposedInstructions, LoadedProject, ReadinessReport, RunSummary }
 
 export function useProjectData() {
   const latestRunRequest = useRef(0);
+  const latestReadinessRequest = useRef(0);
   const [project, setProject] = useState<LoadedProject | null>(null);
   const [runs, setRuns] = useState<RunSummary[]>([]);
   const [instructions, setInstructions] = useState<ComposedInstructions | null>(null);
   const [readiness, setReadiness] = useState<ReadinessReport | null>(null);
+  const [readinessError, setReadinessError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const loadRuns = useCallback(async () => {
@@ -20,9 +22,15 @@ export function useProjectData() {
   }, []);
 
   const loadReadiness = useCallback(async () => {
-    await fetchReadiness()
-      .then(setReadiness)
-      .catch(() => setReadiness(null));
+    const request = ++latestReadinessRequest.current;
+    try {
+      const report = await fetchReadiness();
+      if (request !== latestReadinessRequest.current) return;
+      setReadiness(report);
+      setReadinessError(null);
+    } catch {
+      if (request === latestReadinessRequest.current) setReadinessError("Could not load readiness");
+    }
   }, []);
 
   useEffect(() => {
@@ -40,10 +48,11 @@ export function useProjectData() {
     return () => {
       clearInterval(refresh);
       latestRunRequest.current++;
+      latestReadinessRequest.current++;
     };
   }, [loadRuns, loadReadiness]);
 
-  return { project, runs, instructions, readiness, error, loadRuns, loadReadiness };
+  return { project, runs, instructions, readiness, readinessError, error, loadRuns, loadReadiness };
 }
 
 export type ProjectData = ReturnType<typeof useProjectData>;

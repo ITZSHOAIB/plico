@@ -1,5 +1,6 @@
+import { ReadinessDiagnostics } from "../components/ReadinessDiagnostics";
 import type { ProjectData } from "../hooks/useProjectData";
-import { emptyPanel, heading, meta, metaLoose, panel } from "../styles";
+import { emptyPanel, heading, meta, metaLoose, panel, toolbarButton } from "../styles";
 import type { EvalReport, RunSummary } from "../types";
 
 interface OverviewViewProps {
@@ -38,9 +39,22 @@ export function OverviewView({ data, evalReport }: OverviewViewProps) {
         value={
           readiness
             ? `${readiness.summary.ok} ok, ${readiness.summary.warning} warning(s), ${readiness.summary.error} error(s)`
-            : "Loading…"
+            : data.readinessError
+              ? "Unavailable"
+              : "Loading…"
         }
       />
+      {data.readinessError && (
+        <div role="alert">
+          {data.readinessError}
+          {readiness && ". Showing the last successful report."}
+        </div>
+      )}
+      {readiness && <div style={meta}>Checked at {readiness.timestamp}</div>}
+      <button type="button" style={toolbarButton(false)} onClick={() => void data.loadReadiness()}>
+        Refresh readiness
+      </button>
+      {readiness && <ReadinessDiagnostics diagnostics={readiness.diagnostics} />}
       <Fact label="Instructions" value={instructions?.sources.join(", ") ?? "Loading…"} />
     </section>
   );
