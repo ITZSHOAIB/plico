@@ -166,7 +166,8 @@ export function createEngine({
     async resume(runId, workflow) {
       const run = await journal.getRun(runId);
       if (!run) throw new Error(`Run ${runId} is unknown.`);
-      if (run.state === "completed" || run.state === "cancelled") throw new Error(`Run ${runId} already finished.`);
+      if (run.state === "completed" || run.state === "cancelled")
+        throw new Error(`Run ${runId} already finished.`);
       if (run.state === "running") {
         const stale = (await journal.listStale(workerId, now())).find(
           (item) => item.runId === runId,
@@ -205,7 +206,7 @@ export function createEngine({
       if (!(await journal.requestCancel(runId))) return "ignored";
       const running = controllers.get(runId);
       if (running) running.abort();
-      else void resumeHere(runId);
+      else resumeHere(runId).catch(() => undefined);
       return "accepted";
     },
     async recover<I, O>(

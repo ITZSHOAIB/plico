@@ -1,6 +1,8 @@
+import { execFileSync } from "node:child_process";
 import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
   createEngine,
@@ -144,4 +146,20 @@ describe.each(journals)("cancel on the %s", (_name, makeJournal) => {
     expect(await engine.cancel("done")).toBe("ignored");
     expect(await engine.cancel("missing")).toBe("unknown");
   });
+});
+
+it("does not crash when cancellation cannot claim a waiting run", () => {
+  const moduleUrl = pathToFileURL(join(process.cwd(), "packages/runtime/src/engine/index.ts")).href;
+  const program = `
+    import { createEngine, createMemoryJournal } from ${JSON.stringify(moduleUrl)};
+    const journal = createMemoryJournal();
+    journal.claim = async () => { throw new Error("claim failed"); };
+    const engine = createEngine({ journal });
+    await engine.run("run", async (ctx) => ctx.wait("approval"), {});
+    await engine.cancel("run");
+    await new Promise(resolve => setTimeout(resolve, 30));
+  `;
+  expect(() =>
+    execFileSync(process.execPath, ["--import", "tsx", "--input-type=module", "-e", program]),
+  ).not.toThrow();
 });
