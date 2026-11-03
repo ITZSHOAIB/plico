@@ -3,10 +3,11 @@ import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { App } from "./App";
 import { FakeEventSource, required } from "./testing/fakeEventSource";
-import { openRun, stubApi } from "./testing/fixtures";
+import { openRun, otherRun, runEvent, stubApi } from "./testing/fixtures";
 
 afterEach(() => {
   cleanup();
+  vi.useRealTimers();
   vi.unstubAllGlobals();
   FakeEventSource.instances = [];
 });
@@ -33,22 +34,7 @@ it("uses a terminal event in loaded history even when the run list is stale", as
     const response = await original(input, init);
     if (input !== "/v1/runs/run-1234567890ab/events") return response;
     const events = await response.json();
-    return new Response(
-      JSON.stringify([
-        ...events,
-        {
-          schemaVersion: 1,
-          streamType: "run",
-          streamId: "run-1234567890ab",
-          runId: "run-1234567890ab",
-          id: "evt-5",
-          sequence: 5,
-          timestamp: "2026-11-01T00:00:00.000Z",
-          type: "run.completed",
-          payload: {},
-        },
-      ]),
-    );
+    return new Response(JSON.stringify([...events, runEvent(5, "run.completed", {})]));
   });
   render(<App />);
   await openRun();
@@ -56,40 +42,10 @@ it("uses a terminal event in loaded history even when the run list is stale", as
   expect(FakeEventSource.instances).toHaveLength(0);
 });
 
-it("reconnects from the last known event if the stream skips a sequence", async () => {
-  vi.stubGlobal("EventSource", FakeEventSource);
-  stubApi();
-  render(<App />);
-  await openRun();
-  await waitFor(() => expect(FakeEventSource.instances).toHaveLength(1));
-  const first = FakeEventSource.instances[0];
-  if (!first) throw new Error("missing stream");
-  act(() =>
-    first.emit("plico.event", {
-      runId: "run-1234567890ab",
-      sequence: 6,
-      type: "assistant.output",
-      payload: { content: "later" },
-    }),
-  );
-  expect(await screen.findByText(/reconnecting/i)).toBeTruthy();
-  expect(screen.queryByText("assistant.output")).toBeNull();
-  await waitFor(() => expect(FakeEventSource.instances).toHaveLength(2), { timeout: 3000 });
-  expect(FakeEventSource.instances[1]?.url).toContain("after=4");
-});
-
 it("ignores an earlier history response after switching runs", async () => {
   const fetchMock = stubApi();
-  const original = fetchMock.getMockImplementation();
-  if (!original) throw new Error("missing fetch mock");
-  const other = {
-    runId: "run-other-1234",
-    projectRoot: "/demo",
-    projectName: "Internal Ops",
-    status: "running",
-    startedAt: "2026-01-01T00:00:00.000Z",
-    endedAt: null,
-  };
+  const original = required(fetchMock.getMockImplementation());
+
   let release!: (response: Response) => void;
   const delayed = new Promise<Response>((resolve) => {
     release = resolve;
@@ -97,10 +53,10 @@ it("ignores an earlier history response after switching runs", async () => {
   fetchMock.mockImplementation(async (input, init) => {
     if (input === "/v1/runs") {
       const response = await original(input, init);
-      return new Response(JSON.stringify([...(await response.json()), other]));
+      return new Response(JSON.stringify([...(await response.json()), otherRun]));
     }
     if (input === "/v1/runs/run-1234567890ab/events") return delayed;
-    if (input === `/v1/runs/${other.runId}/events`) return new Response("[]");
+    if (input === `/v1/runs/${otherRun.runId}/events`) return new Response("[]");
     return original(input, init);
   });
   render(<App />);

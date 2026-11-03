@@ -3,10 +3,11 @@ import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { App } from "./App";
 import { FakeEventSource, required } from "./testing/fakeEventSource";
-import { openRun, stubApi } from "./testing/fixtures";
+import { openRun, otherRun, runEvent, stubApi } from "./testing/fixtures";
 
 afterEach(() => {
   cleanup();
+  vi.useRealTimers();
   vi.unstubAllGlobals();
   FakeEventSource.instances = [];
 });
@@ -19,22 +20,14 @@ it("shows events and the terminal status as a selected run progresses", async ()
   await waitFor(() => expect(FakeEventSource.instances.length).toBe(1));
   const stream = required(FakeEventSource.instances[0]);
   expect(stream.url).toContain("after=4");
-  act(() =>
-    stream.emit("plico.event", {
-      schemaVersion: 1,
-      streamType: "run",
-      streamId: "run-1234567890ab",
-      runId: "run-1234567890ab",
-      id: "evt-5",
-      sequence: 5,
-      timestamp: "2026-11-01T00:00:00.000Z",
-      type: "run.completed",
-      payload: {},
-    }),
-  );
+  act(() => stream.emit("plico.event", runEvent(5, "run.completed", {})));
   expect(await screen.findByText("run.completed")).toBeTruthy();
   expect(screen.getByText(/Status: completed/)).toBeTruthy();
   expect(stream.closed).toBe(true);
+  vi.useFakeTimers();
+  act(() => stream.onerror?.());
+  await act(async () => vi.advanceTimersByTimeAsync(60_000));
+  expect(FakeEventSource.instances).toHaveLength(1);
 });
 
 it("visibly reconnects from the last received sequence without duplicating events", async () => {
@@ -44,24 +37,16 @@ it("visibly reconnects from the last received sequence without duplicating event
   await openRun();
   await waitFor(() => expect(FakeEventSource.instances.length).toBe(1));
   const first = required(FakeEventSource.instances[0]);
-  const event = {
-    schemaVersion: 1,
-    streamType: "run",
-    streamId: "run-1234567890ab",
-    runId: "run-1234567890ab",
-    id: "evt-5",
-    sequence: 5,
-    timestamp: "2026-11-01T00:00:00.000Z",
-    type: "assistant.output",
-    payload: { content: "hello" },
-  };
+  vi.useFakeTimers();
+  const event = runEvent(5, "assistant.output", { content: "hello" });
   act(() => {
     first.onopen?.();
     first.emit("plico.event", event);
     first.onerror?.();
   });
-  expect(await screen.findByText(/reconnecting/i)).toBeTruthy();
-  await waitFor(() => expect(FakeEventSource.instances.length).toBe(2), { timeout: 3000 });
+  expect(screen.getByText(/reconnecting/i)).toBeTruthy();
+  await act(async () => vi.advanceTimersByTimeAsync(1000));
+  expect(FakeEventSource.instances).toHaveLength(2);
   const second = required(FakeEventSource.instances[1]);
   expect(first.closed).toBe(true);
   expect(second.url).toContain("after=5");
@@ -73,6 +58,7 @@ it("visibly reconnects from the last received sequence without duplicating event
 });
 
 it("refreshes the run list when a run starts elsewhere", async () => {
+  vi.useFakeTimers();
   const fetchMock = stubApi();
   const original = required(fetchMock.getMockImplementation());
   let listReads = 0;
@@ -92,31 +78,25 @@ it("refreshes the run list when a run starts elsewhere", async () => {
       );
     return original(input, init);
   });
-  render(<App />);
-  expect(await screen.findByRole("button", { name: /run-12345678/ })).toBeTruthy();
-  expect(
-    await screen.findByRole("button", { name: /run-new-123/ }, { timeout: 6000 }),
-  ).toBeTruthy();
-}, 10000);
+  await act(async () => {
+    render(<App />);
+  });
+  expect(screen.getByRole("button", { name: /run-12345678/ })).toBeTruthy();
+  await act(async () => vi.advanceTimersByTimeAsync(2000));
+  expect(screen.getByRole("button", { name: /run-new-123/ })).toBeTruthy();
+});
 
 it("stops the old stream when the user selects another run", async () => {
   vi.stubGlobal("EventSource", FakeEventSource);
   const fetchMock = stubApi();
   const original = required(fetchMock.getMockImplementation());
-  const other = {
-    runId: "run-other-1234",
-    projectRoot: "/demo",
-    projectName: "Internal Ops",
-    status: "running",
-    startedAt: "2026-01-01T00:00:00.000Z",
-    endedAt: null,
-  };
+
   fetchMock.mockImplementation(async (input, init) => {
     if (input === "/v1/runs") {
       const response = await original(input, init);
-      return new Response(JSON.stringify([...(await response.json()), other]));
+      return new Response(JSON.stringify([...(await response.json()), otherRun]));
     }
-    if (input === `/v1/runs/${other.runId}/events`) return new Response("[]");
+    if (input === `/v1/runs/${otherRun.runId}/events`) return new Response("[]");
     return original(input, init);
   });
   render(<App />);
@@ -136,4 +116,81 @@ it("stops the old stream when the user selects another run", async () => {
   );
   expect(screen.queryByText("assistant.output")).toBeNull();
   expect(screen.getByText("run-other-1234")).toBeTruthy();
+});
+
+it("stops and reports a disconnected stream after repeated malformed events", async () => {
+  vi.stubGlobal("EventSource", FakeEventSource);
+  stubApi();
+  render(<App />);
+  await openRun();
+  await waitFor(() => expect(FakeEventSource.instances).toHaveLength(1));
+  vi.useFakeTimers();
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const source = required(FakeEventSource.instances.at(-1));
+    act(() => source.dispatchEvent(new MessageEvent("plico.event", { data: "null" })));
+    if (attempt < 4) await act(async () => vi.advanceTimersByTimeAsync(20_000));
+  }
+  expect(screen.getByText(/disconnected/i)).toBeTruthy();
+  const count = FakeEventSource.instances.length;
+  await act(async () => vi.advanceTimersByTimeAsync(60_000));
+  expect(FakeEventSource.instances).toHaveLength(count);
+});
+
+it("backs off consecutive failures and resets after a new event", async () => {
+  vi.stubGlobal("EventSource", FakeEventSource);
+  stubApi();
+  render(<App />);
+  await openRun();
+  await waitFor(() => expect(FakeEventSource.instances).toHaveLength(1));
+  vi.useFakeTimers();
+  act(() => required(FakeEventSource.instances[0]).onerror?.());
+  await act(async () => vi.advanceTimersByTimeAsync(999));
+  expect(FakeEventSource.instances).toHaveLength(1);
+  await act(async () => vi.advanceTimersByTimeAsync(1));
+  expect(FakeEventSource.instances).toHaveLength(2);
+  act(() => required(FakeEventSource.instances[1]).onerror?.());
+  await act(async () => vi.advanceTimersByTimeAsync(1999));
+  expect(FakeEventSource.instances).toHaveLength(2);
+  await act(async () => vi.advanceTimersByTimeAsync(1));
+  expect(FakeEventSource.instances).toHaveLength(3);
+  act(() => {
+    const stream = required(FakeEventSource.instances[2]);
+    stream.emit("plico.event", runEvent(5, "assistant.output", { content: "hello" }));
+    stream.onerror?.();
+  });
+  await act(async () => vi.advanceTimersByTimeAsync(1000));
+  expect(FakeEventSource.instances).toHaveLength(4);
+});
+
+it("does not poll the run list while the document is hidden", async () => {
+  vi.useFakeTimers();
+  const fetchMock = stubApi();
+  await act(async () => {
+    render(<App />);
+  });
+  expect(screen.getByRole("button", { name: /run-12345678/ })).toBeTruthy();
+  const listCalls = () => fetchMock.mock.calls.filter(([path]) => path === "/v1/runs").length;
+  const before = listCalls();
+  const hidden = vi.spyOn(document, "hidden", "get").mockReturnValue(true);
+  await act(async () => vi.advanceTimersByTimeAsync(4000));
+  expect(listCalls()).toBe(before);
+  hidden.mockReturnValue(false);
+  await act(async () => vi.advanceTimersByTimeAsync(2000));
+  expect(listCalls()).toBe(before + 1);
+  hidden.mockRestore();
+});
+
+it("reconnects from the last known event if the stream skips a sequence", async () => {
+  vi.stubGlobal("EventSource", FakeEventSource);
+  stubApi();
+  render(<App />);
+  await openRun();
+  await waitFor(() => expect(FakeEventSource.instances).toHaveLength(1));
+  const first = required(FakeEventSource.instances[0]);
+  vi.useFakeTimers();
+  act(() => first.emit("plico.event", runEvent(6, "assistant.output", { content: "later" })));
+  expect(screen.getByText(/reconnecting/i)).toBeTruthy();
+  expect(screen.queryByText("assistant.output")).toBeNull();
+  await act(async () => vi.advanceTimersByTimeAsync(1000));
+  expect(required(FakeEventSource.instances[1]).url).toContain("after=4");
 });

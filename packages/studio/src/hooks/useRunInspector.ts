@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from "react";
 import { fetchArtifactWorkspace, fetchEvents } from "../api";
 import type { ArtifactFile, ArtifactWorkspace, PlicoEvent, RunSummary } from "../types";
+import { isTerminalEvent, statusAfter } from "./runState";
 import { type StreamTarget, useRunStream } from "./useRunStream";
 
 export function useRunInspector() {
@@ -20,23 +21,7 @@ export function useRunInspector() {
     );
     setSelectedRun((current) => {
       if (!current || current.runId !== event.runId) return current;
-      const status =
-        event.type === "run.completed"
-          ? "completed"
-          : event.type === "run.failed"
-            ? "failed"
-            : event.type === "run.cancelled"
-              ? "cancelled"
-              : event.type === "run.waiting"
-                ? "waiting"
-                : current.status === "waiting"
-                  ? "running"
-                  : current.status;
-      return {
-        ...current,
-        status,
-        endedAt: ["completed", "failed", "cancelled"].includes(status) ? event.timestamp : null,
-      };
+      return statusAfter(current, event);
     });
   }, []);
   const streamState = useRunStream(target, onEvent);
@@ -54,7 +39,7 @@ export function useRunInspector() {
         if (selection.current !== generation) return;
         setEvents(history);
         const last = history.at(-1);
-        if (last && ["run.completed", "run.failed", "run.cancelled"].includes(last.type)) {
+        if (last && isTerminalEvent(last)) {
           onEvent(last);
           return;
         }

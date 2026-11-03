@@ -34,7 +34,9 @@ export function useProjectData() {
       .catch(() => {});
     void loadRuns();
     void loadReadiness();
-    const refresh = setInterval(() => void loadRuns(), 2_000);
+    const refresh = setInterval(() => {
+      if (!document.hidden) void loadRuns();
+    }, 2_000);
     return () => {
       clearInterval(refresh);
       latestRunRequest.current++;
