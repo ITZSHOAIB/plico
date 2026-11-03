@@ -24,6 +24,7 @@ describe("overview", () => {
     const overview = await screen.findByRole("region", { name: "Project overview" });
 
     expect(within(overview).getByText("Internal Ops")).toBeTruthy();
+    expect(within(overview).getByText(/current project and readiness/i)).toBeTruthy();
     expect(await within(overview).findByText("1 ok, 1 warning(s), 0 error(s)")).toBeTruthy();
     expect(await within(overview).findByText("1/2 passed, 1 failed")).toBeTruthy();
     expect(await within(overview).findByText(/1 run\(s\)/)).toBeTruthy();
@@ -101,6 +102,7 @@ describe("artifacts", () => {
 
     expect(screen.getByRole("button", { name: /summary\.md.*v2/ })).toBeTruthy();
     expect(screen.getByText(/snapshot-1/)).toBeTruthy();
+    expect(screen.getByText(/current workspace/i)).toBeTruthy();
   });
 
   it("previews Markdown, JSON, and text", async () => {
@@ -108,6 +110,7 @@ describe("artifacts", () => {
 
     click(/summary\.md/);
     expect(screen.getByRole("heading", { name: "Weekly summary" })).toBeTruthy();
+    expect(screen.getByText(/current workspace/i)).toBeTruthy();
     click(/Back to files/);
 
     click(/data\.json/);

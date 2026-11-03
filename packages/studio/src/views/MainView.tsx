@@ -44,6 +44,7 @@ export function MainView({ view, data, inspector, evals, onOpenRun }: MainViewPr
 
   return (
     <RunView
+      key={inspector.selectedRun?.runId}
       selectedRun={inspector.selectedRun}
       events={inspector.events}
       streamState={inspector.streamState}

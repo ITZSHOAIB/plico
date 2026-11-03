@@ -2,7 +2,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "./App";
-import { click, openRun, stubApi } from "./testing/fixtures";
+import { click, openRun, otherRun, runEvent, stubApi } from "./testing/fixtures";
 
 beforeEach(() => vi.unstubAllGlobals());
 afterEach(cleanup);
@@ -23,4 +23,37 @@ describe("run navigation", () => {
     expect(screen.queryByText(/Status: waiting/)).toBeNull();
     expect((artifacts as HTMLButtonElement).disabled).toBe(true);
   });
+});
+
+it("opens a different run at its latest event", async () => {
+  const fetchMock = stubApi();
+  const original = fetchMock.getMockImplementation();
+  if (!original) throw new Error("Missing fetch stub");
+  fetchMock.mockImplementation(async (input, init) => {
+    if (input === "/v1/runs") {
+      const response = await original(input, init);
+      return new Response(JSON.stringify([...(await response.json()), otherRun]));
+    }
+    if (input === `/v1/runs/${otherRun.runId}/events`) {
+      return new Response(
+        JSON.stringify([
+          {
+            ...runEvent(1, "run.started", { projectRoot: "/demo", projectName: "Demo" }),
+            runId: otherRun.runId,
+            streamId: otherRun.runId,
+          },
+        ]),
+      );
+    }
+    return original(input, init);
+  });
+  render(<App />);
+  await openRun();
+  click("Previous event");
+  expect(screen.getByText(/Event 3 of 4/)).toBeTruthy();
+  click(/run-other/);
+  expect(await screen.findByText(/Event 1 of 1/)).toBeTruthy();
+  expect((screen.getByRole("button", { name: "Go to latest" }) as HTMLButtonElement).disabled).toBe(
+    true,
+  );
 });

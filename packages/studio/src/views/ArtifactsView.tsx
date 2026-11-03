@@ -38,6 +38,7 @@ export function ArtifactsView({
           ← Back to files
         </button>
         <h3 style={headingTight}>{previewFile.path}</h3>
+        <div style={meta}>Current workspace, not historical replay</div>
         <div style={meta}>
           {previewFile.mimeType} &middot; v{previewFile.version}
         </div>
@@ -49,6 +50,7 @@ export function ArtifactsView({
   return (
     <div style={panel}>
       <h3 style={headingTight}>Artifact Workspace: {workspace.workspaceId}</h3>
+      <div style={meta}>Current workspace, not historical replay</div>
       <div style={metaLoose}>
         {workspace.files.length} file(s) &middot; {workspace.snapshots.length} snapshot(s)
       </div>
