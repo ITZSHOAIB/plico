@@ -3,6 +3,7 @@ import { RuntimeDiagnosticError } from "../../errors.js";
 import type { InMemoryEventLog } from "../../events.js";
 import { validateJsonSchemaSubset } from "../../tools/schema.js";
 import type { DeclaredTool, DryRunScriptStep } from "../../types/index.js";
+import { nameToolStep } from "../tracing.js";
 import { awaitApproval } from "./approval.js";
 
 export async function runScriptedDryRun(
@@ -83,6 +84,7 @@ export async function runScriptedDryRun(
     }
 
     const idempotencyKey = `${ctx.runId}:${index}`;
+    nameToolStep(ctx, `tool:${index}`, tool.name);
     const result = await ctx.step(`tool:${index}`, ({ signal }) =>
       tool.handler(step.arguments, { signal, idempotencyKey }),
     );

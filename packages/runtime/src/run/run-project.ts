@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { isAbsolute, resolve } from "node:path";
+import { type Span, type SpanContext, SpanStatusCode } from "@opentelemetry/api";
 import { validateProject } from "@plico/core";
 import {
   createEngine,
@@ -18,6 +19,7 @@ import { finalizeRun } from "./finalize.js";
 import { runDefaultDryRun } from "./strategies/default-dry.js";
 import { runProviderBackedRun } from "./strategies/provider.js";
 import { runScriptedDryRun } from "./strategies/scripted.js";
+import { startRunSpan, tracedContext } from "./tracing.js";
 
 interface RunInput {
   root: string;
@@ -26,6 +28,7 @@ interface RunInput {
   message?: string;
   script?: DryRunScriptStep[];
   providerRecoveryKey?: string;
+  traceContext?: SpanContext;
 }
 
 export async function runProject(
@@ -34,10 +37,12 @@ export async function runProject(
 ): Promise<RunResult> {
   const engine = options.engine ?? createEngine({ journal: createMemoryJournal() });
   const runId = options.runId ?? `run-${randomUUID()}`;
+  const span = startRunSpan(runId);
   const input: RunInput = {
     root: resolve(root),
     displayRoot: root,
     startedAt: new Date().toISOString(),
+    traceContext: span.spanContext(),
     ...(options.message === undefined ? {} : { message: options.message }),
     ...(options.script === undefined ? {} : { script: options.script }),
     ...(options.providerRecoveryKey === undefined
@@ -45,11 +50,30 @@ export async function runProject(
       : { providerRecoveryKey: options.providerRecoveryKey }),
   };
 
-  const outcome = await engine.run(
-    runId,
-    (ctx, journaled: RunInput) => runLoop(ctx, journaled, options),
-    input,
-  );
+  let firstExecution = true;
+
+  const outcome = await engine
+    .run(
+      runId,
+      async (ctx, journaled: RunInput) => {
+        const executionSpan = firstExecution
+          ? span
+          : startRunSpan(ctx.runId, journaled.traceContext);
+        firstExecution = false;
+        try {
+          const result = await runLoop(ctx, journaled, options, executionSpan);
+          if (result.status === "failed") executionSpan.setStatus({ code: SpanStatusCode.ERROR });
+          return result;
+        } catch (error) {
+          executionSpan.setStatus({ code: SpanStatusCode.ERROR });
+          throw error;
+        } finally {
+          executionSpan.end();
+        }
+      },
+      input,
+    )
+    .finally(() => span.end());
   if (outcome.output === undefined) throw new Error(`Run ${runId} stopped without a result.`);
   return outcome.output;
 }
@@ -81,13 +105,22 @@ export async function recoverRuns(
       return undefined;
     const { provider: _provider, ...withoutProvider } = options;
     return async (ctx, journaled) => {
+      const span = startRunSpan(ctx.runId, input.traceContext);
       options.onRecoveryStarted?.(ctx.runId);
       try {
-        if (input.message === undefined) return await runLoop(ctx, journaled, withoutProvider);
-        if (options.provider === undefined)
-          return await failMissingProvider(ctx, journaled, options);
-        return await runLoop(ctx, journaled, options);
+        const result =
+          input.message === undefined
+            ? await runLoop(ctx, journaled, withoutProvider, span)
+            : options.provider === undefined
+              ? await failMissingProvider(ctx, journaled, options)
+              : await runLoop(ctx, journaled, options, span);
+        if (result.status === "failed") span.setStatus({ code: SpanStatusCode.ERROR });
+        return result;
+      } catch (error) {
+        span.setStatus({ code: SpanStatusCode.ERROR });
+        throw error;
       } finally {
+        span.end();
         options.onRecoverySettled?.(ctx.runId);
       }
     };
@@ -139,6 +172,7 @@ async function runLoop(
   ctx: RunContext,
   input: RunInput,
   options: RunProjectOptions,
+  span: Span,
 ): Promise<RunResult> {
   const { runId } = ctx;
   const { root, startedAt } = input;
@@ -169,6 +203,7 @@ async function runLoop(
   }
 
   const { project } = validation;
+  ctx = tracedContext(ctx, span, project.config.model);
   const summary = {
     runId,
     projectRoot: displayRoot,

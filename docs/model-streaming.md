@@ -42,3 +42,15 @@ log; consumers must switch to the new attempt ID rather than append its text to 
 skips recorded deltas rather than appending them again. The response and
 `assistant.output` contain the assembled successful text, and should not be
 concatenated with the deltas.
+
+## Tracing
+
+The runtime emits OpenTelemetry API spans when the host registers a tracer
+provider; it does not install an SDK or exporter. Runs, durable steps, model
+attempts and tool attempts are traced. A resumed execution links to its original
+run span using context stored in the engine journal. Spans include identifiers,
+model and tool names, and status, but do not include prompts, instructions,
+output, tool arguments, tool results or credentials.
+
+Studio's timeline displays token usage on model responses and the final assistant
+output. Replay shows only details available at the selected event.
