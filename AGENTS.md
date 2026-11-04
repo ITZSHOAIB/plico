@@ -47,6 +47,7 @@ Use small vertical slices:
 - Wire changes follow `product/adrs/0006-wire-contract-versioning.md`. Update the snapshot in `packages/server/src/contract.test.ts` deliberately, never to silence a failure.
 - Add dependencies only when they improve developer workflow or remove real maintenance cost.
 - Keep generated projects valid through `validateProject`.
+- For every implementation change, check `README.md` and the docs site in `packages/website` for affected instructions, examples, and feature status. Update relevant pages in the same change so they match the implemented behavior.
 
 ## Verification
 

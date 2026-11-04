@@ -19,6 +19,11 @@ export interface ProjectConfig {
     retryDelayMs?: number;
   };
   execution?: { leaseMs?: number };
+  approvals?: {
+    default?: "none" | "required";
+    timeoutMs?: number;
+    tools?: Record<string, "none" | "required">;
+  };
 }
 
 export interface LoadedProject {
