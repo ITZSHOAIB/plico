@@ -1,5 +1,6 @@
 const USAGE_LINES: readonly string[] = [
   "Usage: plico validate [path]",
+  "Usage: plico run [--db <path>] [--json] [--message <text>] [path]",
   "Usage: plico run --dry [--persist] [--db <path>] [--json] [--script <file>] [--message <text>] [path]",
   "Usage: plico runs [--db <path>] [--json] [path]",
   "Usage: plico events <runId> [--after <sequence>] [--db <path>] [--json] [path]",

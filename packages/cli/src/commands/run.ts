@@ -1,8 +1,10 @@
+import { randomUUID } from "node:crypto";
 import { validateProject } from "@plico/core";
 import {
   createSqliteEngine,
   createSqliteEventStore,
   type ModelProvider,
+  modelProviderRecoveryKey,
   recoverRuns,
   runProject,
 } from "@plico/runtime";
@@ -11,6 +13,9 @@ import { errorMessage } from "../errors.js";
 import { formatRunResult } from "../format/run.js";
 import { resolveDatabasePath } from "../paths.js";
 import { loadDryRunScript } from "../script-file.js";
+import { cancelOnInterrupt } from "./interrupt.js";
+import { streamModelOutput } from "./live-output.js";
+import { resolveMessage, resolveModelProvider } from "./model-provider.js";
 
 export async function runCommand(args: string[]): Promise<number> {
   try {
@@ -25,28 +30,54 @@ export async function runCommand(args: string[]): Promise<number> {
     });
     const dry = parsed.flags.has("--dry");
     const json = parsed.flags.has("--json");
-    const persist = parsed.flags.has("--persist");
+    const persist = parsed.flags.has("--persist") || !dry;
     const target = lastPositional(parsed, process.cwd());
     const scriptPath = readStringOption(parsed, "--script");
     const dbPath = readStringOption(parsed, "--db");
-    const message = readStringOption(parsed, "--message");
+    let message = readStringOption(parsed, "--message");
 
-    if (!dry) {
-      console.error("plico run only supports --dry in this release.");
-      return 1;
-    }
-
+    if (!dry && scriptPath) throw new Error("--script requires --dry.");
     const script = scriptPath ? await loadDryRunScript(scriptPath) : undefined;
     const databasePath = persist ? resolveDatabasePath(target, dbPath) : undefined;
-    const eventStore = databasePath ? createSqliteEventStore({ databasePath }) : undefined;
     const validation = databasePath ? await validateProject(target) : undefined;
+    if (!dry && (!validation?.ok || !validation.project)) {
+      throw new Error("Project is invalid. Run plico validate for details.");
+    }
+    const provider = dry
+      ? message === undefined
+        ? undefined
+        : createFakeProvider()
+      : resolveModelProvider(validation?.project?.config.model);
+    if (!dry) message = await resolveMessage(message);
+    const recoveryKey = dry
+      ? "plico:dry-fake:v1"
+      : validation?.project?.config.model
+        ? modelProviderRecoveryKey(validation.project.config.model)
+        : undefined;
+    const eventStore = databasePath ? createSqliteEventStore({ databasePath }) : undefined;
     const leaseMs = validation?.project?.config.execution?.leaseMs;
     const engine = databasePath
       ? createSqliteEngine({ databasePath, ...(leaseMs === undefined ? {} : { leaseMs }) })
       : undefined;
+    const runId = !dry ? `run-${randomUUID()}` : undefined;
+    const interruption = engine && runId ? cancelOnInterrupt(engine, runId) : undefined;
     const recovery =
       engine && eventStore
-        ? recoverRuns({ engine, eventStore }).then(
+        ? recoverRuns({
+            engine,
+            eventStore,
+            recoveryFilter: {
+              projectRoot: target,
+              ...(recoveryKey ? { providerRecoveryKey: recoveryKey } : {}),
+            },
+            ...(dry ? { provider: createFakeProvider() } : provider ? { provider } : {}),
+            ...(interruption
+              ? {
+                  onRecoveryStarted: interruption.onRecoveryStarted,
+                  onRecoverySettled: interruption.onRecoverySettled,
+                }
+              : {}),
+          }).then(
             (runs) => {
               for (const run of runs)
                 console.error(
@@ -59,16 +90,23 @@ export async function runCommand(args: string[]): Promise<number> {
           )
         : Promise.resolve();
 
+    const outputStore = eventStore && !dry && !json ? streamModelOutput(eventStore) : eventStore;
     const resultPromise = runProject(target, {
       ...(script ? { script } : {}),
-      ...(eventStore ? { eventStore } : {}),
+      ...(outputStore ? { eventStore: outputStore } : {}),
       ...(engine ? { engine } : {}),
-      ...(message === undefined ? {} : { provider: createFakeProvider(), message }),
+      ...(message === undefined ? {} : { message }),
+      ...(provider === undefined ? {} : { provider }),
+      ...(recoveryKey === undefined || provider === undefined
+        ? {}
+        : { providerRecoveryKey: recoveryKey }),
+      ...(runId === undefined ? {} : { runId }),
+      ...(interruption === undefined ? {} : { onStarted: interruption.onStarted }),
     });
 
-    const [requested] = await Promise.allSettled([resultPromise, recovery]);
-    if (requested.status === "rejected") throw requested.reason;
-    const result = requested.value;
+    const trackedResult = resultPromise.finally(() => interruption?.onCompleted());
+    void Promise.allSettled([trackedResult, recovery]).then(() => interruption?.dispose());
+    const result = await trackedResult;
 
     if (json) {
       console.log(JSON.stringify(result));
@@ -76,8 +114,15 @@ export async function runCommand(args: string[]): Promise<number> {
       for (const error of result.errors) {
         console.error(`${error.path}: ${error.message}`);
       }
+    } else if (!dry) {
+      process.stdout.write("\n");
+      if (result.status !== "completed") {
+        for (const line of formatRunResult(target, result, false)) console.error(line);
+      } else if (persist) {
+        console.log(`Persisted run ID: ${result.runId}`);
+      }
     } else {
-      for (const line of formatRunResult(target, result)) {
+      for (const line of formatRunResult(target, result, dry)) {
         if (result.status === "completed") {
           console.log(line);
         } else {

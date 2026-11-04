@@ -10,6 +10,8 @@ export interface RunProjectOptions {
   engine?: Engine;
   runId?: string;
   provider?: ModelProvider;
+  /** Opaque identity used to prevent recovery with a different provider configuration. */
+  providerRecoveryKey?: string;
   message?: string;
   onStarted?: (runId: string) => void;
 }

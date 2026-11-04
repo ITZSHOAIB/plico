@@ -2,7 +2,7 @@ import { existsSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { pathToFileURL } from "node:url";
-import { initializeSchema } from "./schema.js";
+import { checkReadOnlySchema, initializeSchema } from "./schema.js";
 
 /** Opens the database with the pragma order and migrator every Plico store shares. */
 export function openDatabase(databasePath: string, readOnly = false): DatabaseSync {
@@ -15,6 +15,8 @@ export function openDatabase(databasePath: string, readOnly = false): DatabaseSy
     if (!readOnly) {
       setWalMode(database);
       initializeSchema(database);
+    } else {
+      checkReadOnlySchema(database);
     }
   } catch (error) {
     database.close();

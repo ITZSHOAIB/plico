@@ -76,6 +76,21 @@ function readSchemaVersion(
   return version;
 }
 
+/** Read-only access must not silently accept an incompatible database. */
+export function checkReadOnlySchema(database: DatabaseSync): void {
+  const latest = migrations.at(-1)?.to ?? baselineVersion;
+  const table = database
+    .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'plico_meta'")
+    .get();
+  if (!table) throw new Error("Database has no Plico schema version.");
+  const version = readSchemaVersion(database, latest);
+  if (version === undefined) throw new Error("Database has no Plico schema version.");
+  if (version < latest)
+    throw new Error(
+      `Database uses an older schema (${version}, supported ${latest}); open it writable to migrate.`,
+    );
+}
+
 export function initializeSchema(
   database: DatabaseSync,
   steps: typeof migrations = migrations,
