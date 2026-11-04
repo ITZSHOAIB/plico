@@ -32,6 +32,7 @@ export function ChatView({ inspector }: { inspector: RunInspector }) {
   const [showInspector, setShowInspector] = useState(false);
   const [historical, setHistorical] = useState(false);
   const [inspectError, setInspectError] = useState<string | null>(null);
+  const [inspecting, setInspecting] = useState(false);
   const inspectRequest = useRef(0);
   const visibleInspector = historical ? inspector : active;
   const runId = active.selectedRun?.runId;
@@ -45,6 +46,7 @@ export function ChatView({ inspector }: { inspector: RunInspector }) {
   function resetSelection() {
     inspectRequest.current++;
     setInspectError(null);
+    setInspecting(false);
     setDraft("");
     setHistorical(false);
     setShowInspector(false);
@@ -59,18 +61,23 @@ export function ChatView({ inspector }: { inspector: RunInspector }) {
         void active.selectRun(active.selectedRun);
       return;
     }
-    void fetchRun(id).then(
-      (run) => {
-        if (request === inspectRequest.current) {
-          setHistorical(true);
-          void inspector.selectRun(run);
-        }
-      },
-      () => {
-        if (request === inspectRequest.current)
-          setInspectError("Could not load the associated run.");
-      },
-    );
+    setInspecting(true);
+    void fetchRun(id)
+      .then(
+        (run) => {
+          if (request === inspectRequest.current) {
+            setHistorical(true);
+            void inspector.selectRun(run);
+          }
+        },
+        () => {
+          if (request === inspectRequest.current)
+            setInspectError("Could not load the associated run.");
+        },
+      )
+      .finally(() => {
+        if (request === inspectRequest.current) setInspecting(false);
+      });
   }
 
   return (
@@ -174,6 +181,11 @@ export function ChatView({ inspector }: { inspector: RunInspector }) {
             <p className="m-0 mt-0.5 text-caption text-muted">Events, tool activity, and output</p>
           </div>
         </div>
+        {inspecting && (
+          <p role="status" className="px-4 py-2 text-small text-muted">
+            Loading run…
+          </p>
+        )}
         {visibleInspector.selectedRun ? (
           <RunView
             key={visibleInspector.selectionKey}

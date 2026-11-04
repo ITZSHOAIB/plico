@@ -21,6 +21,7 @@ export function useChat(inspector: RunInspector) {
   const currentThread = useRef<string | null>(null);
   const sendingRef = useRef(false);
   const loadedTerminal = useRef<string | null>(null);
+  const lastTerminalEventId = useRef<string | null>(null);
   const messageRevision = useRef(0);
 
   useEffect(() => {
@@ -59,6 +60,7 @@ export function useChat(inspector: RunInspector) {
       const generation = ++selection.current;
       currentThread.current = threadId;
       loadedTerminal.current = null;
+      lastTerminalEventId.current = null;
       setSelected(threadId);
       messageRevision.current++;
       setLoading(true);
@@ -127,6 +129,8 @@ export function useChat(inspector: RunInspector) {
       !["run.completed", "run.failed", "run.cancelled"].includes(terminal.type)
     )
       return;
+    if (lastTerminalEventId.current === terminal.id) return;
+    lastTerminalEventId.current = terminal.id;
     if (loadedTerminal.current === selectedRun.runId) return;
     loadedTerminal.current = selectedRun.runId;
     const generation = selection.current;
