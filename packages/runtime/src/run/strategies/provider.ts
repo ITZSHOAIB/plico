@@ -6,6 +6,7 @@ import { ModelProviderError, RuntimeDiagnosticError } from "../../errors.js";
 import type { InMemoryEventLog } from "../../events.js";
 import { validateJsonSchemaSubset } from "../../tools/schema.js";
 import type { DeclaredTool, ModelProvider, ModelRequest } from "../../types/index.js";
+import { nameToolStep } from "../tracing.js";
 import { awaitApproval } from "./approval.js";
 
 export async function runProviderBackedRun(
@@ -51,6 +52,7 @@ export async function runProviderBackedRun(
     };
 
     await events.append("model.request", {
+      ...(model ? { model: { provider: model.provider, name: model.name } } : {}),
       messages: modelRequest.messages,
       maxSteps: modelRequest.maxSteps,
       tools: providerTools,
@@ -166,6 +168,7 @@ export async function runProviderBackedRun(
       let result: unknown;
       try {
         const idempotencyKey = `${ctx.runId}:${turn}:${callIndex}`;
+        nameToolStep(ctx, `tool:${turn}:${callIndex}`, tool.name);
         result = await ctx.step(`tool:${turn}:${callIndex}`, ({ signal }) =>
           tool.handler(toolCall.arguments, { signal, idempotencyKey }),
         );

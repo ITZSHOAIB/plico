@@ -30,6 +30,7 @@ export interface PlicoEventPayloads {
   };
   "input.received": { content: string };
   "model.request": {
+    model?: { provider: string; name: string };
     messages: Array<{
       role: string;
       content: string;

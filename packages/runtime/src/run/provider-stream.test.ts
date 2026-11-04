@@ -56,6 +56,24 @@ it("persists text chunks while the model is still streaming", async () => {
   expect((await run).output).toBe("Hello world");
 });
 
+it("records configured model identity with the provider request", async () => {
+  const root = await scaffold(
+    "plico-model-identity-",
+    'export default { schemaVersion: 1, name: "Demo", model: { provider: "fake", name: "test-model" } };',
+  );
+  const result = await runProject(root, {
+    message: "hello",
+    provider: {
+      async *stream() {
+        yield { type: "finish", usage: { inputTokens: 1, outputTokens: 2 } };
+      },
+    },
+  });
+  expect(result.events.find((event) => event.type === "model.request")?.payload).toMatchObject({
+    model: { provider: "fake", name: "test-model" },
+  });
+});
+
 it("aborts the provider when the run is cancelled", async () => {
   const root = await scaffold("plico-abort-", 'export default { schemaVersion: 1, name: "Demo" };');
   const { createEngine, createMemoryJournal } = await import("../index.js");
