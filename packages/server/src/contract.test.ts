@@ -1,9 +1,9 @@
-import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, unlink, writeFile } from "node:fs/promises";
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createSqliteEventStore } from "@plico/runtime";
+import { createSqliteEventStore, runProject } from "@plico/runtime";
 import { afterAll, beforeAll, expect, it } from "vitest";
 import { createPlicoServer } from "./index.js";
 
@@ -14,6 +14,11 @@ function isRecord(value: Shape): value is { [key: string]: Shape } {
 }
 
 function merge(left: Shape, right: Shape): Shape {
+  if (Array.isArray(left) && Array.isArray(right)) {
+    if (left.length === 0) return right;
+    if (right.length === 0) return left;
+    return [merge(left[0] as Shape, right[0] as Shape)];
+  }
   if (isRecord(left) && isRecord(right)) {
     const merged: { [key: string]: Shape } = {};
     for (const key of Object.keys({ ...left, ...right }).sort()) {
@@ -42,6 +47,7 @@ function shapeOf(value: unknown): Shape {
 
 let server: Server;
 let baseUrl: string;
+let providerRunId: string;
 
 beforeAll(async () => {
   const root = await mkdtemp(join(tmpdir(), "plico-contract-"));
@@ -64,6 +70,42 @@ beforeAll(async () => {
   );
 
   const eventStore = createSqliteEventStore({ databasePath: join(root, "state.sqlite") });
+  await writeFile(
+    join(root, "tools", "lookup.tool.ts"),
+    `export default { name: "lookup", description: "Look up a record", inputSchema: { type: "object" }, capabilities: [], approval: { required: false }, handler: () => "found" };`,
+  );
+  let turn = 0;
+  const providerRun = await runProject(root, {
+    message: "Find it",
+    eventStore,
+    provider: {
+      async *stream() {
+        if (turn++ === 0) {
+          yield { type: "text", text: "Searching" };
+          yield {
+            type: "tool.call",
+            call: {
+              id: "call-1",
+              name: "lookup",
+              arguments: {},
+              providerMetadata: { callToken: "opaque" },
+            },
+          };
+          yield {
+            type: "finish",
+            usage: { inputTokens: 2, outputTokens: 1 },
+            providerMetadata: { cursor: "opaque" },
+          };
+        } else {
+          yield { type: "text", text: "Found" };
+          yield { type: "finish", usage: { inputTokens: 2, outputTokens: 1 } };
+        }
+      },
+    },
+  });
+  if (providerRun.status !== "completed") throw new Error("Provider fixture did not complete");
+  providerRunId = providerRun.runId;
+  await unlink(join(root, "tools", "lookup.tool.ts"));
   const api = await createPlicoServer({ projectRoot: root, eventStore });
   server = createServer(api.requestListener);
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
@@ -102,7 +144,19 @@ it("keeps the /v1 response shapes stable", async () => {
     snapshots: Array<{ snapshotId: string }>;
   };
 
+  const providerEvents = (await (
+    await fetch(`${baseUrl}/v1/runs/${providerRunId}/events`)
+  ).json()) as Array<{ type: string }>;
+  const providerShapes = Object.fromEntries(
+    ["model.request", "model.attempt", "model.delta", "model.response"].map((type) => {
+      const matching = providerEvents.filter((event) => event.type === type);
+      if (matching.length === 0) throw new Error(`Missing provider event: ${type}`);
+      return [type, shapeOf(matching)];
+    }),
+  );
+
   const shapes = {
+    "GET /v1/runs/:id/events (provider)": providerShapes,
     "POST /v1/runs/dry": await shape("/v1/runs/dry", dryRun),
     "GET /v1/project": await shape("/v1/project"),
     "GET /v1/instructions": await shape("/v1/instructions"),
