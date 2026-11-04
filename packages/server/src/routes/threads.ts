@@ -1,6 +1,10 @@
+import { randomUUID } from "node:crypto";
+import { resolve } from "node:path";
+import { runProject, ThreadBusyError } from "@plico/runtime";
 import { readJsonBody } from "../body.js";
 import { HttpError } from "../errors.js";
 import { sendJson } from "../responses.js";
+import { finishFailedThreadRun } from "../thread-failure.js";
 import type { Route, RouteContext } from "./types.js";
 
 function storeFor(context: RouteContext) {
@@ -49,7 +53,25 @@ export const threadRoutes: Route[] = [
       const body = await readJsonBody(ctx.request);
       if (typeof body.content !== "string" || !body.content.trim())
         throw new HttpError(400, "message.invalid", "Message content must be a nonempty string.");
-      const runId = ctx.provider ? `run-${randomUUID()}` : undefined;
+      if (body.startRun !== undefined && typeof body.startRun !== "boolean")
+        throw new HttpError(400, "message.invalid", "startRun must be a boolean.");
+      const startRun = body.startRun !== false;
+      if (startRun && !ctx.provider)
+        throw new HttpError(
+          503,
+          "provider.unavailable",
+          "Configure a model provider before sending a message.",
+        );
+      if (
+        startRun &&
+        (!store.storageIdentity || store.storageIdentity !== ctx.eventStore.storageIdentity)
+      )
+        throw new HttpError(
+          503,
+          "threads.store_mismatch",
+          "Thread and run stores must use the same database.",
+        );
+      const runId = startRun ? `run-${randomUUID()}` : undefined;
       let message: Awaited<ReturnType<typeof store.addMessage>>;
       try {
         message = await store.addMessage(
@@ -86,14 +108,25 @@ export const threadRoutes: Route[] = [
           ...(ctx.engine ? { engine: ctx.engine } : {}),
           ...(ctx.providerRecoveryKey ? { providerRecoveryKey: ctx.providerRecoveryKey } : {}),
           onStarted: resolveStarted,
-        }).catch(rejectStarted);
+        }).catch(async (error: unknown) => {
+          try {
+            if (ctx.engine)
+              await finishFailedThreadRun(
+                runId,
+                thread.id,
+                ctx.projectRoot,
+                ctx.engine,
+                ctx.eventStore,
+              );
+          } catch (settleError) {
+            console.error("Could not record failed thread run", settleError);
+          } finally {
+            rejectStarted(error);
+          }
+        });
         await started;
       }
       sendJson(ctx.response, 201, message);
     },
   },
 ];
-
-import { randomUUID } from "node:crypto";
-import { resolve } from "node:path";
-import { runProject, ThreadBusyError } from "@plico/runtime";

@@ -1,14 +1,17 @@
 import { randomUUID } from "node:crypto";
+import { resolve } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 import type { Thread, ThreadEvent, ThreadMessage } from "@plico/contracts";
 import { openDatabase } from "./open.js";
 
 export interface ThreadStore {
+  readonly storageIdentity?: string;
   /** Release resources owned by this store. */
   close(): void;
   createThread(): Promise<Thread>;
   listThreads(): Promise<Thread[]>;
   getThread(id: string): Promise<Thread | undefined>;
+  getThreadForRun(runId: string): Promise<string | undefined>;
   addMessage(
     threadId: string,
     content: string,
@@ -45,6 +48,14 @@ export function createSqliteThreadStore({
 }): ThreadStore {
   const db = openDatabase(databasePath, readOnly);
   return {
+    ...(databasePath === ":memory:"
+      ? {}
+      : {
+          storageIdentity:
+            process.platform === "win32"
+              ? resolve(databasePath).toLowerCase()
+              : resolve(databasePath),
+        }),
     close() {
       db.close();
     },
@@ -70,6 +81,12 @@ export function createSqliteThreadStore({
       return db
         .prepare("SELECT thread_id AS id, created_at AS createdAt FROM threads WHERE thread_id = ?")
         .get(id) as unknown as Thread | undefined;
+    },
+    async getThreadForRun(runId) {
+      const row = db.prepare("SELECT thread_id FROM thread_runs WHERE run_id = ?").get(runId) as
+        | { thread_id: string }
+        | undefined;
+      return row?.thread_id;
     },
     async addMessage(threadId, content, runId, recovery) {
       return transaction(db, () => {
@@ -124,7 +141,7 @@ export function createSqliteThreadStore({
     async listQueuedRuns() {
       const queued = db
         .prepare(
-          "SELECT t.run_id AS runId, t.thread_id AS threadId, t.provider_key AS providerKey, t.project_root AS projectRoot, m.content, m.sequence FROM thread_runs t JOIN thread_messages m ON m.run_id = t.run_id AND m.role = 'user' LEFT JOIN engine_runs e ON e.run_id = t.run_id LEFT JOIN runs r ON r.run_id = t.run_id WHERE e.run_id IS NULL AND r.run_id IS NULL",
+          "SELECT t.run_id AS runId, t.thread_id AS threadId, t.provider_key AS providerKey, t.project_root AS projectRoot, m.content, m.sequence FROM thread_runs t JOIN thread_messages m ON m.run_id = t.run_id AND m.role = 'user' LEFT JOIN runs r ON r.run_id = t.run_id WHERE r.run_id IS NULL",
         )
         .all() as unknown as Array<{
         runId: string;

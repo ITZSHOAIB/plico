@@ -44,10 +44,16 @@ it("creates and reads a durable thread and its messages through HTTP", async () 
     const created = await fetch(`${first.url}/v1/threads`, { method: "POST" });
     expect(created.status).toBe(201);
     const thread = (await created.json()) as { id: string };
-    const sent = await fetch(`${first.url}/v1/threads/${thread.id}/messages`, {
+    const unavailable = await fetch(`${first.url}/v1/threads/${thread.id}/messages`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ content: "Hello" }),
+    });
+    expect(unavailable.status).toBe(503);
+    const sent = await fetch(`${first.url}/v1/threads/${thread.id}/messages`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ content: "Hello", startRun: false }),
     });
     expect(sent.status).toBe(201);
     const message = await sent.json();

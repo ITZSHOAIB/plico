@@ -13,7 +13,8 @@ per thread may be active; a concurrent message receives `thread.busy` (HTTP 409)
 The run uses earlier thread messages as conversation history, and its successful
 answer is recorded as an assistant message. Stream run events at
 `GET /v1/runs/:runId/events/stream`; reconnect with `Last-Event-ID` or `?after=`.
-Without a configured provider the endpoint stores a message without starting a run.
+Without a configured provider the endpoint returns an actionable error. To store
+a message without starting a run, explicitly include `"startRun": false`.
 
 If a server stops after reserving a run but before starting it, startup resumes
 it only for the same project and provider identity. A mismatched identity leaves

@@ -3,6 +3,8 @@ import { resolve } from "node:path";
 import { validateProject } from "@plico/core";
 import {
   createConfiguredModelProvider,
+  createEngine,
+  createMemoryJournal,
   createSqliteEngine,
   createSqliteEventStore,
   createSqliteThreadStore,
@@ -12,13 +14,14 @@ import {
 } from "@plico/runtime";
 import { handleRequest } from "./routes/index.js";
 import { serveStaticFile } from "./serve-static.js";
+import { finishFailedThreadRun } from "./thread-failure.js";
 import type { CreatePlicoServerOptions, PlicoServer, ServePlicoOptions } from "./types.js";
 
 export async function createPlicoServer(options: CreatePlicoServerOptions): Promise<PlicoServer> {
   const projectRoot = options.projectRoot;
   const eventStore = options.eventStore;
   const studioPath = options.studioPath;
-  const engine = options.engine;
+  const engine = options.engine ?? createEngine({ journal: createMemoryJournal() });
 
   return {
     requestListener: async (request, response) => {
@@ -96,42 +99,80 @@ export async function servePlico(options: ServePlicoOptions): Promise<Server> {
     return [...dry, ...real];
   };
   void recovery().then(
-    (runs) => {
+    async (runs) => {
       for (const run of runs)
-        if (run.state === "failed")
+        if (run.state === "failed") {
           console.error(`Recovered run ${run.runId}: failed${run.error ? ` (${run.error})` : ""}`);
+          const threadId = await threadStore.getThreadForRun(run.runId);
+          if (threadId)
+            await finishFailedThreadRun(
+              run.runId,
+              threadId,
+              options.projectRoot,
+              engine,
+              eventStore,
+            );
+        }
     },
     (error: unknown) =>
       console.error(
         `Recovery incomplete: ${error instanceof Error ? error.message : String(error)}`,
       ),
   );
-  if (provider && model) {
-    const queued = await threadStore.listQueuedRuns();
-    for (const run of queued) {
-      const identity = (path: string) =>
-        process.platform === "win32" ? resolve(path).toLowerCase() : resolve(path);
-      if (
-        !run.projectRoot ||
-        identity(run.projectRoot) !== identity(options.projectRoot) ||
-        run.providerKey !== modelProviderRecoveryKey(model)
-      )
-        continue;
-      void runProject(options.projectRoot, {
-        runId: run.runId,
-        threadId: run.threadId,
-        history: run.history,
-        message: run.content,
-        provider,
-        providerRecoveryKey: modelProviderRecoveryKey(model),
-        engine,
-        eventStore,
-      }).catch((error: unknown) =>
-        console.error(
-          `Queued run ${run.runId} failed: ${error instanceof Error ? error.message : String(error)}`,
-        ),
-      );
+  try {
+    if (provider && model) {
+      const queued = await threadStore.listQueuedRuns();
+      for (const run of queued) {
+        const identity = (path: string) =>
+          process.platform === "win32" ? resolve(path).toLowerCase() : resolve(path);
+        if (
+          !run.projectRoot ||
+          identity(run.projectRoot) !== identity(options.projectRoot) ||
+          run.providerKey !== modelProviderRecoveryKey(model)
+        )
+          continue;
+        const status = await engine.status(run.runId);
+        if (status) {
+          if (
+            status.state === "failed" ||
+            status.state === "cancelled" ||
+            status.state === "completed"
+          )
+            await finishFailedThreadRun(
+              run.runId,
+              run.threadId,
+              options.projectRoot,
+              engine,
+              eventStore,
+            );
+          continue;
+        }
+        void runProject(options.projectRoot, {
+          runId: run.runId,
+          threadId: run.threadId,
+          history: run.history,
+          message: run.content,
+          provider,
+          providerRecoveryKey: modelProviderRecoveryKey(model),
+          engine,
+          eventStore,
+        }).catch(async (error: unknown) => {
+          await finishFailedThreadRun(
+            run.runId,
+            run.threadId,
+            options.projectRoot,
+            engine,
+            eventStore,
+          );
+          console.error(
+            `Queued run ${run.runId} failed: ${error instanceof Error ? error.message : String(error)}`,
+          );
+        });
+      }
     }
+  } catch (error) {
+    threadStore.close();
+    throw error;
   }
   const server = createServer(
     (

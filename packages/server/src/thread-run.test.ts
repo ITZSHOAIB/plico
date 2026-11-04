@@ -4,6 +4,7 @@ import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
+  createSqliteEngine,
   createSqliteEventStore,
   createSqliteThreadStore,
   modelProviderRecoveryKey,
@@ -75,6 +76,99 @@ it("starts a provider run from a thread message and persists its answer", async 
       { role: "assistant", content: "Hello back" },
       { role: "user", content: "Next" },
     ]);
+  } finally {
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+    threadStore.close();
+  }
+});
+
+it("releases a thread when its run fails before it starts", async () => {
+  const root = await mkdtemp(join(tmpdir(), "plico-thread-start-failure-"));
+  for (const dir of ["skills", "tools", "evals", "artifacts", "memory"])
+    await mkdir(join(root, dir));
+  await writeFile(
+    join(root, "plico.config.ts"),
+    'export default { schemaVersion: 1, name: "Demo" };',
+  );
+  await writeFile(join(root, "agent.md"), "instructions");
+  const databasePath = join(root, "state.sqlite");
+  const backing = createSqliteEventStore({ databasePath });
+  const threadStore = createSqliteThreadStore({ databasePath });
+  let fail = true;
+  const eventStore = {
+    ...backing,
+    async appendEvent(event: Parameters<typeof backing.appendEvent>[0]) {
+      if (fail) {
+        fail = false;
+        throw new Error("write failed");
+      }
+      return backing.appendEvent(event);
+    },
+  };
+  const api = await createPlicoServer({
+    projectRoot: root,
+    eventStore,
+    threadStore,
+    engine: createSqliteEngine({ databasePath }),
+    provider: {
+      async *stream() {
+        yield { type: "finish", usage: { inputTokens: 0, outputTokens: 0 } };
+      },
+    },
+  });
+  const server = createServer(api.requestListener);
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+  const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+  try {
+    const thread = (await (await fetch(`${base}/v1/threads`, { method: "POST" })).json()) as {
+      id: string;
+    };
+    const post = () =>
+      fetch(`${base}/v1/threads/${thread.id}/messages`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ content: "Hello" }),
+      });
+    expect((await post()).status).toBe(500);
+    const [failedMessage] = await threadStore.getMessages(thread.id);
+    expect(failedMessage?.runId).toBeDefined();
+    const failedRun = await (await fetch(`${base}/v1/runs/${failedMessage?.runId}`)).json();
+    expect(failedRun).toMatchObject({ status: "failed" });
+    expect((await post()).status).toBe(201);
+  } finally {
+    spy.mockRestore();
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+    threadStore.close();
+  }
+});
+
+it("rejects starting runs when thread and run stores use different databases", async () => {
+  const root = await mkdtemp(join(tmpdir(), "plico-thread-stores-"));
+  const eventStore = createSqliteEventStore({ databasePath: join(root, "runs.sqlite") });
+  const threadStore = createSqliteThreadStore({ databasePath: join(root, "threads.sqlite") });
+  const thread = await threadStore.createThread();
+  const api = await createPlicoServer({
+    projectRoot: root,
+    eventStore,
+    threadStore,
+    provider: {
+      async *stream() {
+        yield { type: "finish", usage: { inputTokens: 0, outputTokens: 0 } };
+      },
+    },
+  });
+  const server = createServer(api.requestListener);
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  try {
+    const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+    const response = await fetch(`${base}/v1/threads/${thread.id}/messages`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ content: "Hello" }),
+    });
+    expect(response.status).toBe(503);
+    expect(await threadStore.getMessages(thread.id)).toEqual([]);
   } finally {
     await new Promise<void>((resolve) => server.close(() => resolve()));
     threadStore.close();

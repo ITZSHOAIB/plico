@@ -1,3 +1,4 @@
+import { resolve } from "node:path";
 import type { EvalReport, PlicoEvent, RunSummary } from "@plico/contracts";
 import type { CreateSqliteEventStoreOptions, EventStore } from "../../types/index.js";
 import { appendEventRecord } from "./append-event.js";
@@ -26,6 +27,14 @@ export function createSqliteEventStore({
   }
 
   return {
+    ...(databasePath === ":memory:"
+      ? {}
+      : {
+          storageIdentity:
+            process.platform === "win32"
+              ? resolve(databasePath).toLowerCase()
+              : resolve(databasePath),
+        }),
     async appendEvent(event: PlicoEvent): Promise<void> {
       appendEventRecord(database, event);
     },
