@@ -71,10 +71,16 @@ describe("approvals as waits", () => {
       "tool.call",
       "approval.requested",
       "run.waiting",
+      "approval.decided",
       "tool.result",
       "assistant.output",
       "run.completed",
     ]);
+    expect(
+      (await store.getEvents("run-1")).find((event) => event.type === "approval.decided"),
+    ).toMatchObject({
+      payload: { requestId: "run-1:1", approved: true },
+    });
     expect(await readFile(marks, "utf8")).toBe("archive\n");
   });
 
@@ -90,6 +96,10 @@ describe("approvals as waits", () => {
     await until(async () => (await store.getRun("run-1"))?.status === "failed");
 
     const events = await store.getEvents("run-1");
+    expect(events.at(-3)).toMatchObject({
+      type: "approval.decided",
+      payload: { requestId: "run-1:1", approved: false },
+    });
     expect(events.at(-2)).toMatchObject({
       type: "run.error",
       payload: { phase: "approval", message: "Approval for archive was denied." },

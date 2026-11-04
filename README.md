@@ -8,9 +8,10 @@ Today this repo can:
 - validate projects with `@plico/core`
 - expose validation and dry runs through `@plico/cli`
 - expose persisted runs, replay, and the native HTTP API through `@plico/server`
+- run provider-backed conversations and review or decide approval-gated tool calls in Studio
 - generate the internal-ops starter with `create-plico`
 
-Real provider runs, threads, and approvals are not built yet. See the milestones in GitHub Issues.
+See the milestones in GitHub Issues for the remaining planned capabilities.
 
 ## Repo Layout
 
@@ -72,13 +73,13 @@ Run the dry runtime with the checked-in example tool:
 pnpm --filter @plico/cli exec plico run --dry --script examples/internal-ops-agent/evals/smoke.script.json examples/internal-ops-agent
 ```
 
-Persist the smoke run, list stored runs, replay events, and start the native API server:
+Persist the smoke run, list stored runs, replay events, and start the native API server with Studio:
 
 ```sh
 pnpm --filter @plico/cli exec plico run --dry --persist --script examples/internal-ops-agent/evals/smoke.script.json examples/internal-ops-agent
 pnpm --filter @plico/cli exec plico runs examples/internal-ops-agent
 pnpm --filter @plico/cli exec plico events <run-id> examples/internal-ops-agent
-pnpm --filter @plico/cli exec plico serve --db examples/internal-ops-agent/.plico/plico.sqlite examples/internal-ops-agent
+pnpm --filter @plico/cli exec plico serve --studio --db examples/internal-ops-agent/.plico/plico.sqlite examples/internal-ops-agent
 ```
 
 ## Scaffold

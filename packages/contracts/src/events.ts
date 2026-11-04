@@ -60,6 +60,7 @@ export interface PlicoEventPayloads {
     arguments: unknown;
     approval: { required: boolean; reason?: string };
   };
+  "approval.decided": { requestId: string; approved: boolean };
   "artifact.workspace.created": { workspaceId: string };
   "artifact.file.written": { path: string; content: string; mimeType: string };
   "artifact.snapshot.created": { snapshotId: string; fileCount: number };

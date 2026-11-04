@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { ApprovalDecision } from "../components/ApprovalDecision";
 import { EventList } from "../components/EventList";
 import { useReplayPosition } from "../hooks/useReplayPosition";
 import type { StreamState } from "../hooks/useRunStream";
@@ -46,6 +47,10 @@ function SelectedRunView({
     error?.payload.message ?? error?.payload.issues?.map((issue) => issue.message).join(", ");
   const toolCalls = visibleEvents.filter((event) => event.type === "tool.call").length;
   const elapsed = duration(shownRun);
+  const approvalRequest =
+    replay.isLatest && eventsLoaded && selectedRun.status === "waiting"
+      ? pendingApproval(events)
+      : null;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -94,6 +99,7 @@ function SelectedRunView({
           )}
         </div>
       )}
+      {approvalRequest && <ApprovalDecision runId={selectedRun.runId} request={approvalRequest} />}
       <div className="flex gap-0.5 border-b border-line px-2">
         <ModeTab active={mode === "timeline"} onClick={() => setMode("timeline")}>
           Timeline
@@ -114,6 +120,27 @@ function SelectedRunView({
       <ReplayControls replay={replay} eventsLoaded={eventsLoaded} />
     </div>
   );
+}
+
+function pendingApproval(events: PlicoEvent[]) {
+  const waiting = [...events].reverse().find((event) => event.type === "run.waiting");
+  if (waiting?.type !== "run.waiting") return null;
+  const request = [...events]
+    .reverse()
+    .find(
+      (event) =>
+        event.type === "approval.requested" &&
+        event.payload.requestId === waiting.payload.requestId,
+    );
+  if (request?.type !== "approval.requested") return null;
+  return {
+    requestId: request.payload.requestId,
+    toolName: request.payload.toolName,
+    arguments: request.payload.arguments,
+    ...(request.payload.approval.reason === undefined
+      ? {}
+      : { reason: request.payload.approval.reason }),
+  };
 }
 
 function MetaItem({ label, value }: { label: string; value: string }) {

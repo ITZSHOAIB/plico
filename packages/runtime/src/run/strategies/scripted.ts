@@ -84,7 +84,7 @@ export async function runScriptedDryRun(
         toolName: tool.name,
         ...(output === undefined ? {} : { output }),
       });
-      await awaitApproval(ctx, requestId, tool.name, output, approvalTimeoutMs(config));
+      await awaitApproval(ctx, requestId, tool.name, output, events, approvalTimeoutMs(config));
     }
 
     const idempotencyKey = `${ctx.runId}:${index}`;
