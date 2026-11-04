@@ -14,7 +14,7 @@
   --border-subtle: #1a1c20;
   --text: #e6e8eb;
   --muted: #8a8f98;
-  --faint: #5b6068;
+  --faint: #80868f;
   --accent: #7c8cff;
   --accent-contrast: #0b0c0e;
   --accent-soft: #171a30;
@@ -36,14 +36,14 @@
   --border: #dfe3e8;
   --border-subtle: #edf0f3;
   --text: #16191d;
-  --muted: #667085;
-  --faint: #98a2b3;
+  --muted: #566072;
+  --faint: #5f6a7b;
   --accent: #4f5bd5;
   --accent-contrast: #ffffff;
   --accent-soft: #eef0ff;
-  --success: #16a34a;
+  --success: #0f7a37;
   --success-soft: #e7f6ec;
-  --danger: #dc2626;
+  --danger: #c01f1f;
   --danger-soft: #fdecec;
   --warning: #b45309;
   --warning-soft: #fef3e0;

@@ -61,10 +61,10 @@ function SelectedRunView({
             Runs
           </Button>
         )}
-        <h3 className="m-0 mb-1.5 flex flex-wrap items-center gap-2.5 break-all font-mono text-[15px] font-semibold">
+        <h2 className="m-0 mb-1.5 flex flex-wrap items-center gap-2.5 break-all font-mono text-[15px] font-semibold">
           {selectedRun.runId}
           <StatusBadge status={shownRun.status} />
-        </h3>
+        </h2>
         <dl className="m-0 flex flex-wrap gap-x-5 gap-y-1 text-xs text-muted">
           <MetaItem label="Started" value={shownRun.startedAt} />
           <MetaItem label="Ended" value={shownRun.endedAt ?? "Not ended"} />

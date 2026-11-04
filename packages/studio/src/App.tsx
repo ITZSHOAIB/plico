@@ -117,6 +117,7 @@ export function App() {
       <main
         className={`min-h-0 min-w-0 flex-1 flex-col lg:flex ${runListOnMobile ? "hidden" : "flex"}`}
       >
+        <h1 className="sr-only">Plico Studio</h1>
         {data.runsError && <Notice>{data.runsError}</Notice>}
         {openError && view !== "evals" ? <Notice>{openError}</Notice> : null}
         <MainView
