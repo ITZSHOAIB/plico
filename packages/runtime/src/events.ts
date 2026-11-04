@@ -58,6 +58,19 @@ export class InMemoryEventLog {
     return event;
   }
 
+  /** Skip previously persisted live chunks when replaying a model step. */
+  skipModelDeltas(turn: number): void {
+    while (this.#cursor < this.#replayed) {
+      const event = this.#events[this.#cursor];
+      if (
+        (event?.type !== "model.delta" && event?.type !== "model.attempt") ||
+        event.payload.turn !== turn
+      )
+        break;
+      this.#cursor++;
+    }
+  }
+
   /** Continue after the recorded tail when recovery cannot replay the workflow. */
   continueAfterReplay(): void {
     this.#cursor = this.#replayed;

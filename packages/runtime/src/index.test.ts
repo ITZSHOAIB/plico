@@ -13,6 +13,25 @@ import {
   runProject,
 } from "./index.js";
 
+function fromComplete(provider: {
+  complete(
+    request: import("./types/provider.js").ModelRequest,
+  ): Promise<import("./types/provider.js").ModelResponse>;
+}): ModelProvider {
+  return {
+    async *stream(request) {
+      const response = await provider.complete(request);
+      if (response.content) yield { type: "text", text: response.content };
+      for (const call of response.toolCalls ?? []) yield { type: "tool.call", call };
+      yield { type: "finish", usage: response.usage };
+    },
+  };
+}
+
+function withoutDeltas(events: import("@plico/contracts").PlicoEvent[]) {
+  return events.filter((event) => event.type !== "model.delta" && event.type !== "model.attempt");
+}
+
 async function writeValidProject(root: string) {
   await mkdir(join(root, "skills"), { recursive: true });
   await mkdir(join(root, "tools"), { recursive: true });
@@ -73,13 +92,13 @@ describe("runProject", () => {
     const started = new Promise<void>((resolve) => {
       entered = resolve;
     });
-    const provider: ModelProvider = {
+    const provider: ModelProvider = fromComplete({
       complete: async () => {
         entered();
         await waiting;
         return { content: "done", usage: { inputTokens: 1, outputTokens: 1 } };
       },
-    };
+    });
     const run = runProject(root, { runId: "live-run", eventStore, provider, message: "hello" });
     await started;
     try {
@@ -686,12 +705,12 @@ describe("runProject", () => {
     const root = await mkdtemp(join(tmpdir(), "plico-runtime-"));
     await writeValidProject(root);
 
-    const fakeProvider: ModelProvider = {
+    const fakeProvider: ModelProvider = fromComplete({
       complete: async (request) => ({
         content: `Echo: ${request.messages[1]?.content ?? ""}`,
         usage: { inputTokens: 10, outputTokens: 5 },
       }),
-    };
+    });
 
     const result = await runProject(root, {
       provider: fakeProvider,
@@ -700,7 +719,7 @@ describe("runProject", () => {
 
     expect(result.status).toBe("completed");
     expect(result.output).toBe("Echo: Hello from user");
-    expect(result.events.map((event) => event.type)).toEqual([
+    expect(withoutDeltas(result.events).map((event) => event.type)).toEqual([
       "run.started",
       "instructions.composed",
       "tools.discovered",
@@ -710,13 +729,13 @@ describe("runProject", () => {
       "assistant.output",
       "run.completed",
     ]);
-    expect(result.events[3]?.payload).toMatchObject({
+    expect(withoutDeltas(result.events)[3]?.payload).toMatchObject({
       content: "Hello from user",
     });
-    expect(result.events[4]?.payload).toMatchObject({
+    expect(withoutDeltas(result.events)[4]?.payload).toMatchObject({
       messages: expect.arrayContaining([expect.objectContaining({ content: expect.any(String) })]),
     });
-    expect(result.events[5]?.payload).toMatchObject({
+    expect(withoutDeltas(result.events)[5]?.payload).toMatchObject({
       content: "Echo: Hello from user",
       usage: { inputTokens: 10, outputTokens: 5 },
     });
@@ -726,21 +745,21 @@ describe("runProject", () => {
     const root = await mkdtemp(join(tmpdir(), "plico-runtime-"));
     await writeValidProject(root);
 
-    const fakeProvider: ModelProvider = {
+    const fakeProvider: ModelProvider = fromComplete({
       complete: async () => ({ content: "", usage: { inputTokens: 0, outputTokens: 0 } }),
-    };
+    });
 
     const result = await runProject(root, { provider: fakeProvider });
 
     expect(result.status).toBe("failed");
-    expect(result.events.map((event) => event.type)).toEqual([
+    expect(withoutDeltas(result.events).map((event) => event.type)).toEqual([
       "run.started",
       "instructions.composed",
       "tools.discovered",
       "run.error",
       "run.failed",
     ]);
-    expect(result.events[3]?.payload).toMatchObject({
+    expect(withoutDeltas(result.events)[3]?.payload).toMatchObject({
       phase: "provider",
       message: expect.stringContaining("message"),
     });
@@ -753,12 +772,12 @@ describe("runProject", () => {
     const databasePath = join(root, ".plico", "plico.sqlite");
     const eventStore = createSqliteEventStore({ databasePath });
 
-    const fakeProvider: ModelProvider = {
+    const fakeProvider: ModelProvider = fromComplete({
       complete: async (request) => ({
         content: `Reply: ${request.messages[1]?.content ?? ""}`,
         usage: { inputTokens: 10, outputTokens: 5 },
       }),
-    };
+    });
 
     const result = await runProject(root, {
       runId: "run-provider-001",
@@ -806,7 +825,7 @@ describe("runProject", () => {
     );
 
     let callCount = 0;
-    const fakeProvider: ModelProvider = {
+    const fakeProvider: ModelProvider = fromComplete({
       complete: async (_request) => {
         callCount++;
         if (callCount === 1) {
@@ -821,7 +840,7 @@ describe("runProject", () => {
           usage: { inputTokens: 5, outputTokens: 4 },
         };
       },
-    };
+    });
 
     const result = await runProject(root, {
       provider: fakeProvider,
@@ -830,7 +849,7 @@ describe("runProject", () => {
 
     expect(result.status).toBe("completed");
     expect(result.output).toBe("Ticket created successfully.");
-    expect(result.events.map((event) => event.type)).toEqual([
+    expect(withoutDeltas(result.events).map((event) => event.type)).toEqual([
       "run.started",
       "instructions.composed",
       "tools.discovered",
@@ -844,11 +863,11 @@ describe("runProject", () => {
       "assistant.output",
       "run.completed",
     ]);
-    expect(result.events[6]?.payload).toMatchObject({
+    expect(withoutDeltas(result.events)[6]?.payload).toMatchObject({
       toolName: "create_ticket",
       arguments: { title: "VPN down" },
     });
-    expect(result.events[7]?.payload).toMatchObject({
+    expect(withoutDeltas(result.events)[7]?.payload).toMatchObject({
       toolName: "create_ticket",
       result: { ticketId: "TCK-8" },
     });
@@ -881,13 +900,13 @@ describe("runProject", () => {
       "utf8",
     );
 
-    const fakeProvider: ModelProvider = {
+    const fakeProvider: ModelProvider = fromComplete({
       complete: async () => ({
         content: "",
         usage: { inputTokens: 5, outputTokens: 1 },
         toolCalls: [{ name: "create_ticket", arguments: {} }],
       }),
-    };
+    });
 
     const result = await runProject(root, {
       provider: fakeProvider,
@@ -895,7 +914,7 @@ describe("runProject", () => {
     });
 
     expect(result.status).toBe("failed");
-    expect(result.events.map((event) => event.type)).toEqual([
+    expect(withoutDeltas(result.events).map((event) => event.type)).toEqual([
       "run.started",
       "instructions.composed",
       "tools.discovered",
@@ -906,7 +925,7 @@ describe("runProject", () => {
       "run.error",
       "run.failed",
     ]);
-    expect(result.events[7]?.payload).toMatchObject({
+    expect(withoutDeltas(result.events)[7]?.payload).toMatchObject({
       phase: "tool.validation",
       toolName: "create_ticket",
     });
@@ -931,13 +950,13 @@ describe("runProject", () => {
       "utf8",
     );
 
-    const fakeProvider: ModelProvider = {
+    const fakeProvider: ModelProvider = fromComplete({
       complete: async () => ({
         content: "",
         usage: { inputTokens: 5, outputTokens: 1 },
         toolCalls: [{ name: "failing_tool", arguments: {} }],
       }),
-    };
+    });
 
     const result = await runProject(root, {
       provider: fakeProvider,
@@ -945,7 +964,7 @@ describe("runProject", () => {
     });
 
     expect(result.status).toBe("failed");
-    expect(result.events.map((event) => event.type)).toEqual([
+    expect(withoutDeltas(result.events).map((event) => event.type)).toEqual([
       "run.started",
       "instructions.composed",
       "tools.discovered",
@@ -956,7 +975,7 @@ describe("runProject", () => {
       "run.error",
       "run.failed",
     ]);
-    expect(result.events[7]?.payload).toMatchObject({
+    expect(withoutDeltas(result.events)[7]?.payload).toMatchObject({
       phase: "runtime",
       message: "tool crashed",
     });
@@ -988,13 +1007,13 @@ describe("runProject", () => {
       "utf8",
     );
 
-    const fakeProvider: ModelProvider = {
+    const fakeProvider: ModelProvider = fromComplete({
       complete: async () => ({
         content: "",
         usage: { inputTokens: 5, outputTokens: 1 },
         toolCalls: [{ name: "delete_ticket", arguments: { ticketId: "TCK-1" } }],
       }),
-    };
+    });
 
     const result = await runProject(root, {
       provider: fakeProvider,
@@ -1002,7 +1021,7 @@ describe("runProject", () => {
     });
 
     expect(result.status).toBe("waiting");
-    expect(result.events.map((event) => event.type)).toEqual([
+    expect(withoutDeltas(result.events).map((event) => event.type)).toEqual([
       "run.started",
       "instructions.composed",
       "tools.discovered",
@@ -1037,10 +1056,10 @@ describe("runProject", () => {
     const databasePath = join(root, ".plico", "plico.sqlite");
     const eventStore = createSqliteEventStore({ databasePath });
 
-    const fakeProvider: ModelProvider = {
+    const fakeProvider: ModelProvider = fromComplete({
       complete: async (request) => {
         const hasToolResult = request.messages.some(
-          (m) => m.role === "assistant" && m.content.includes("ticketId"),
+          (m) => m.role === "tool" && m.content.includes("ticketId"),
         );
         if (hasToolResult) {
           return {
@@ -1054,7 +1073,7 @@ describe("runProject", () => {
           toolCalls: [{ name: "create_ticket", arguments: { title: "Test" } }],
         };
       },
-    };
+    });
 
     const result = await runProject(root, {
       runId: "run-provider-tool-001",
@@ -1064,8 +1083,8 @@ describe("runProject", () => {
     });
 
     expect(result.status).toBe("completed");
-    expect(result.events.some((e) => e.type === "tool.call")).toBe(true);
-    expect(result.events.some((e) => e.type === "tool.result")).toBe(true);
+    expect(withoutDeltas(result.events).some((e) => e.type === "tool.call")).toBe(true);
+    expect(withoutDeltas(result.events).some((e) => e.type === "tool.result")).toBe(true);
 
     const reopenedStore = createSqliteEventStore({ databasePath });
     expect(await reopenedStore.getRun("run-provider-tool-001")).toMatchObject({
@@ -1099,7 +1118,7 @@ describe("runProject", () => {
     await writeValidProject(root);
 
     let capturedRequest: unknown;
-    const fakeProvider: ModelProvider = {
+    const fakeProvider: ModelProvider = fromComplete({
       complete: async (request) => {
         capturedRequest = request;
         return {
@@ -1107,7 +1126,7 @@ describe("runProject", () => {
           usage: { inputTokens: 0, outputTokens: 0 },
         };
       },
-    };
+    });
 
     const result = await runProject(root, {
       provider: fakeProvider,

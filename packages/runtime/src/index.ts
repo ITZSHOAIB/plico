@@ -10,6 +10,7 @@ export {
   type RunContext,
   type Workflow,
 } from "./engine/index.js";
+export { type ModelErrorKind, ModelProviderError } from "./errors.js";
 export { runEvals } from "./evals/index.js";
 export { composeInstructions } from "./instructions.js";
 export { checkReadiness } from "./readiness/index.js";
@@ -34,6 +35,7 @@ export type {
   EvalSummary,
   EventStore,
   JsonSchemaSubset,
+  ModelChunk,
   ModelProvider,
   ModelRequest,
   ModelResponse,

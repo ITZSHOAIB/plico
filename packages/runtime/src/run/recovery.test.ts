@@ -128,7 +128,7 @@ describe("crash recovery", () => {
       const [root, databasePath] = process.argv.slice(1);
       await runProject(root, { runId: "provider-crash", message: "hello",
         engine: createSqliteEngine({ databasePath }), eventStore: createSqliteEventStore({ databasePath }),
-        provider: { complete: async () => process.kill(process.pid, "SIGKILL") } });
+        provider: { async *stream() { process.kill(process.pid, "SIGKILL"); } } });
     `;
     await expect(
       execFileAsync(process.execPath, [
@@ -178,5 +178,50 @@ describe("crash recovery", () => {
     });
     expect(events.at(-1)?.type).toBe("run.failed");
     expect((await readFile(marks, "utf8")).split("\n").filter(Boolean)).toEqual(["mark", "die"]);
+  });
+});
+
+it("keeps interrupted chunks distinguishable from the recovered model attempt", {
+  timeout: 30_000,
+}, async () => {
+  const root = await scaffold();
+  const databasePath = join(root, "stream.sqlite");
+  const moduleUrl = pathToFileURL(join(process.cwd(), "packages/runtime/src/index.ts")).href;
+  const program = `
+    import { createSqliteEngine, createSqliteEventStore, runProject } from ${JSON.stringify(moduleUrl)};
+    const [root, databasePath] = process.argv.slice(1);
+    await runProject(root, { runId: "stream-crash", message: "hello",
+      eventStore: createSqliteEventStore({ databasePath }), engine: createSqliteEngine({ databasePath }),
+      provider: { async *stream() { yield { type: "text", text: "partial" }; process.kill(process.pid, "SIGKILL"); } } });`;
+  await expect(
+    execFileAsync(process.execPath, [
+      "--import",
+      "tsx",
+      "--input-type=module",
+      "-e",
+      program,
+      root,
+      databasePath,
+    ]),
+  ).rejects.toThrow();
+  const store = createSqliteEventStore({ databasePath });
+  const recovered = await recoverRuns({
+    eventStore: store,
+    engine: createSqliteEngine({ databasePath }),
+    provider: {
+      async *stream() {
+        yield { type: "text", text: "complete" };
+        yield { type: "finish", usage: { inputTokens: 1, outputTokens: 1 } };
+      },
+    },
+  });
+  expect(recovered).toEqual([{ runId: "stream-crash", state: "completed" }]);
+  const events = await store.getEvents("stream-crash");
+  const deltas = events.filter((event) => event.type === "model.delta");
+  expect(deltas.map((event) => event.payload.text)).toEqual(["partial", "complete"]);
+  expect(deltas[0]?.payload.attemptId).not.toBe(deltas[1]?.payload.attemptId);
+  expect(events.find((event) => event.type === "model.response")?.payload).toMatchObject({
+    attemptId: deltas[1]?.payload.attemptId,
+    content: "complete",
   });
 });

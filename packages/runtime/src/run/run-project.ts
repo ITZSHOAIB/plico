@@ -167,6 +167,7 @@ async function runLoop(
             instructions.content,
             tools,
             events,
+            project.config.model,
           )
         : input.script === undefined
           ? await runDefaultDryRun(project, events)

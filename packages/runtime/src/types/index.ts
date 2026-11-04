@@ -20,6 +20,7 @@ import type {
 export type { ArtifactFileInput } from "./artifacts.js";
 export type { EvalCase, EvalExpectation, RunEvalsOptions } from "./evals.js";
 export type {
+  ModelChunk,
   ModelProvider,
   ModelRequest,
   ModelResponse,

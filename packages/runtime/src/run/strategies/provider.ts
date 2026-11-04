@@ -1,5 +1,8 @@
+import { randomUUID } from "node:crypto";
+import { setTimeout as delay } from "node:timers/promises";
+import type { ProjectConfig } from "@plico/contracts";
 import { RunCancelled, type RunContext } from "../../engine/index.js";
-import { RuntimeDiagnosticError } from "../../errors.js";
+import { ModelProviderError, RuntimeDiagnosticError } from "../../errors.js";
 import type { InMemoryEventLog } from "../../events.js";
 import { validateJsonSchemaSubset } from "../../tools/schema.js";
 import type { DeclaredTool, ModelProvider, ModelRequest } from "../../types/index.js";
@@ -12,7 +15,9 @@ export async function runProviderBackedRun(
   instructions: string,
   tools: DeclaredTool[],
   events: InMemoryEventLog,
+  model: ProjectConfig["model"],
 ): Promise<string> {
+  const maxSteps = model?.maxSteps ?? 10;
   if (!message) {
     throw new RuntimeDiagnosticError({
       phase: "provider",
@@ -38,10 +43,10 @@ export async function runProviderBackedRun(
 
   let output: string | undefined;
 
-  for (let turn = 0; turn < 10; turn++) {
+  for (let turn = 0; turn < maxSteps; turn++) {
     const modelRequest: ModelRequest = {
       messages,
-      maxSteps: 10,
+      maxSteps,
       tools: providerTools,
     };
 
@@ -51,9 +56,51 @@ export async function runProviderBackedRun(
       tools: providerTools,
     });
 
-    const modelResponse = await ctx.step(`model:${turn}`, () => provider.complete(modelRequest));
+    const modelResponse = await ctx.step(
+      `model:${turn}`,
+      async ({ signal, attempt }) => {
+        events.skipModelDeltas(turn);
+        if (attempt > 0)
+          await delay((model?.retryDelayMs ?? 100) * 2 ** (attempt - 1), undefined, { signal });
+        const attemptId = randomUUID();
+        await events.append("model.attempt", { turn, attemptId });
+        let content = "";
+        const toolCalls: NonNullable<import("../../types/index.js").ModelResponse["toolCalls"]> =
+          [];
+        let providerMetadata: import("@plico/contracts").JsonValue | undefined;
+        let usage: import("../../types/index.js").ModelResponse["usage"] | undefined;
+        for await (const chunk of provider.stream(modelRequest, { signal })) {
+          if (chunk.type === "text") {
+            content += chunk.text;
+            await events.append("model.delta", { turn, attemptId, text: chunk.text });
+          } else if (chunk.type === "tool.call") toolCalls.push(chunk.call);
+          else {
+            usage = chunk.usage;
+            providerMetadata = chunk.providerMetadata;
+          }
+        }
+        if (signal.aborted) throw new RunCancelled();
+        if (!usage) throw new Error("Model stream ended without a finish.");
+        return {
+          content,
+          usage,
+          attemptId,
+          ...(providerMetadata === undefined ? {} : { providerMetadata }),
+          ...(toolCalls.length ? { toolCalls } : {}),
+        };
+      },
+      {
+        retries: model?.retries ?? 2,
+        shouldRetry: (error) => error instanceof ModelProviderError && error.retryable,
+      },
+    );
+    events.skipModelDeltas(turn);
 
     await events.append("model.response", {
+      attemptId: modelResponse.attemptId,
+      ...(modelResponse.providerMetadata === undefined
+        ? {}
+        : { providerMetadata: modelResponse.providerMetadata }),
       content: modelResponse.content,
       usage: modelResponse.usage,
       toolCalls: modelResponse.toolCalls,
@@ -68,6 +115,14 @@ export async function runProviderBackedRun(
       return output ?? finalContent;
     }
 
+    messages.push({
+      role: "assistant",
+      content: modelResponse.content,
+      toolCalls: modelResponse.toolCalls,
+      ...(modelResponse.providerMetadata === undefined
+        ? {}
+        : { providerMetadata: modelResponse.providerMetadata }),
+    });
     for (const [callIndex, toolCall] of modelResponse.toolCalls.entries()) {
       const tool = toolsByName.get(toolCall.name);
       if (!tool) {
@@ -129,16 +184,16 @@ export async function runProviderBackedRun(
       });
 
       messages.push({
-        role: "assistant",
-        content: modelResponse.content || "",
-      });
-      messages.push({
         role: "tool",
         content: JSON.stringify(result),
         toolName: tool.name,
+        ...(toolCall.id === undefined ? {} : { toolCallId: toolCall.id }),
       });
     }
   }
 
-  return output ?? "Maximum steps reached";
+  throw new RuntimeDiagnosticError({
+    phase: "provider",
+    message: `Maximum steps reached (${maxSteps}).`,
+  });
 }
