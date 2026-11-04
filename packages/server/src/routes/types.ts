@@ -1,9 +1,10 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import type { Engine, EventStore } from "@plico/runtime";
+import type { Engine, EventStore, ThreadStore } from "@plico/runtime";
 
 export interface RouteContext {
   projectRoot: string;
   eventStore: EventStore;
+  threadStore: ThreadStore | undefined;
   engine: Engine | undefined;
   studioPath: string | undefined;
   request: IncomingMessage;

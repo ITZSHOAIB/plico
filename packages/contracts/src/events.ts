@@ -71,11 +71,11 @@ export interface PlicoEventPayloads {
 }
 
 export type PlicoEventType = keyof PlicoEventPayloads;
-export type EventStreamType = "run";
+export type EventStreamType = "run" | "thread";
 
 interface EventEnvelope {
   schemaVersion: 1;
-  streamType: EventStreamType;
+  streamType: "run";
   /** Canonical location in the log. */
   streamId: string;
   /** Always equals `streamId` on run streams. */

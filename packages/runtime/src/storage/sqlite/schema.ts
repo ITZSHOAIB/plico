@@ -56,6 +56,15 @@ const migrations: ReadonlyArray<{ from: number; to: number; sql: string }> = [
     to: 7,
     sql: `ALTER TABLE engine_runs ADD COLUMN cancel_requested INTEGER NOT NULL DEFAULT 0;`,
   },
+  {
+    from: 7,
+    to: 8,
+    sql: `
+    CREATE TABLE threads (thread_id TEXT PRIMARY KEY, created_at TEXT NOT NULL);
+    CREATE TABLE thread_messages (message_id TEXT PRIMARY KEY, thread_id TEXT NOT NULL, role TEXT NOT NULL, content TEXT NOT NULL, created_at TEXT NOT NULL, sequence INTEGER NOT NULL, FOREIGN KEY (thread_id) REFERENCES threads(thread_id));
+    CREATE INDEX thread_messages_thread_sequence ON thread_messages(thread_id, sequence);
+  `,
+  },
 ];
 
 function readSchemaVersion(
