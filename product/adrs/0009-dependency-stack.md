@@ -23,6 +23,7 @@ Plico owns what makes it a product: the folder contract, the event contract, the
 | TypeScript tool loading | `tsx` | proposed, to be proven in its epic |
 | CLI parsing | Commander | proposed |
 | Studio data and routing | TanStack Query and Router | proposed |
+| Studio styling and components | Own semantic CSS-variable theme tokens (dark default, light via `data-theme`); Tailwind v4 mapped onto them; Radix for accessible primitives; `lucide-react` behind one `Icon` wrapper; fonts bundled with Fontsource | proposed, to be proven by the Studio redesign epic |
 | Eval scorers | `autoevals` behind a Plico scorer interface, optional | proposed |
 | Skills format | Agent Skills layout and progressive loading, added next to flat files | proposed, see the skills epic |
 | Host auth | Host-supplied context; no Plico users | accepted (ADR 0005) |

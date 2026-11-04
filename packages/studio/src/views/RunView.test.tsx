@@ -27,7 +27,8 @@ const failure: PlicoEvent = {
 
 it("shows a waiting run without an end time", () => {
   render(<RunView selectedRun={run} events={[]} />);
-  expect(screen.getByText(/Status: waiting/).textContent).toContain("Not ended");
+  expect(screen.getByText(/Status: waiting/)).toBeTruthy();
+  expect(screen.getByText("Not ended")).toBeTruthy();
 });
 
 it("shows a failed run's reason without expanding its events", () => {

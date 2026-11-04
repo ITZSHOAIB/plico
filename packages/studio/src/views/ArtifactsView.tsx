@@ -1,16 +1,9 @@
 import { useRef, useState } from "react";
 import { fetchArtifactSnapshot } from "../api";
 import { FilePreview } from "../components/FilePreview";
-import {
-  backButton,
-  emptyPanel,
-  headingTight,
-  listItemButton,
-  meta,
-  metaLoose,
-  panel,
-} from "../styles";
 import type { ArtifactFile, ArtifactSnapshotDetail, ArtifactWorkspace, RunSummary } from "../types";
+import { Icon } from "../ui/Icon";
+import { EmptyState, listRowClass, Notice, Page } from "../ui/Page";
 
 const currentWorkspaceNotice =
   "Showing the current workspace, not the workspace at the selected event";
@@ -24,6 +17,27 @@ interface ArtifactsViewProps {
   onPreviewFile: (file: ArtifactFile | null) => void;
 }
 
+function FileRow({ file, onOpen }: { file: ArtifactFile; onOpen: () => void }) {
+  return (
+    <li>
+      <button type="button" onClick={onOpen} className={listRowClass}>
+        <span className="text-muted">
+          <Icon name="file" />
+        </span>
+        <span className="min-w-0 flex-1 truncate font-mono text-small">{file.path}</span>
+        {"mimeType" in file && (
+          <span className="shrink-0 text-caption text-faint">
+            {file.mimeType} v{file.version}
+          </span>
+        )}
+      </button>
+    </li>
+  );
+}
+
+const listClass =
+  "m-0 mb-4 list-none overflow-hidden rounded-panel border border-line bg-surface p-0";
+
 export function ArtifactsView({
   selectedRun,
   workspace,
@@ -36,111 +50,108 @@ export function ArtifactsView({
   const [snapshotError, setSnapshotError] = useState<string | null>(null);
   const snapshotRequest = useRef(0);
   if (!selectedRun) {
-    return <div style={emptyPanel}>Select a run to view artifacts.</div>;
+    return <EmptyState>Select a run to view artifacts.</EmptyState>;
   }
 
-  if (workspaceError)
-    return (
-      <div role="alert" style={emptyPanel}>
-        {workspaceError}
-      </div>
-    );
-  if (workspaceLoading) return <div style={emptyPanel}>Loading artifact workspace…</div>;
+  if (workspaceError) return <EmptyState alert>{workspaceError}</EmptyState>;
+  if (workspaceLoading) return <EmptyState>Loading artifact workspace…</EmptyState>;
   if (!workspace) {
-    return <div style={emptyPanel}>No artifact workspace for this run.</div>;
+    return <EmptyState>No artifact workspace for this run.</EmptyState>;
   }
 
   if (previewFile) {
     return (
-      <div style={panel}>
-        <button type="button" onClick={() => onPreviewFile(null)} style={backButton}>
-          ← Back to files
-        </button>
-        <h3 style={headingTight}>{previewFile.path}</h3>
-        <div style={meta}>
-          {snapshot ? `Snapshot: ${snapshot.snapshotId}` : currentWorkspaceNotice}
-        </div>
-        <div style={meta}>
-          {previewFile.mimeType} &middot; v{previewFile.version}
-        </div>
+      <Page
+        title={previewFile.path}
+        subtitle={
+          <>
+            <div>{snapshot ? `Snapshot: ${snapshot.snapshotId}` : currentWorkspaceNotice}</div>
+            <div>
+              {previewFile.mimeType} &middot; v{previewFile.version}
+            </div>
+          </>
+        }
+        onBack={() => onPreviewFile(null)}
+        backLabel="Back to files"
+      >
         <FilePreview file={previewFile} />
-      </div>
+      </Page>
     );
   }
 
   if (snapshot) {
     return (
-      <div style={panel}>
-        <button
-          type="button"
-          style={backButton}
-          onClick={() => {
-            snapshotRequest.current++;
-            setSnapshot(null);
-          }}
-        >
-          ← Back to workspace
-        </button>
-        <h3 style={headingTight}>Snapshot: {snapshot.snapshotId}</h3>
-        {snapshot.files.map((file) => (
-          <button
-            key={file.path}
-            type="button"
-            style={listItemButton}
-            onClick={() => onPreviewFile(file)}
-          >
-            {file.path}
-          </button>
-        ))}
-      </div>
+      <Page
+        title={`Snapshot: ${snapshot.snapshotId}`}
+        onBack={() => {
+          snapshotRequest.current++;
+          setSnapshot(null);
+        }}
+        backLabel="Back to workspace"
+      >
+        <ul className={listClass}>
+          {snapshot.files.map((file) => (
+            <FileRow key={file.path} file={file} onOpen={() => onPreviewFile(file)} />
+          ))}
+        </ul>
+      </Page>
     );
   }
 
   return (
-    <div style={panel}>
-      <h3 style={headingTight}>Artifact Workspace: {workspace.workspaceId}</h3>
-      <div style={meta}>{currentWorkspaceNotice}</div>
-      {snapshotError && <div role="alert">{snapshotError}</div>}
-      <div style={metaLoose}>
-        {workspace.files.length} file(s) &middot; {workspace.snapshots.length} snapshot(s)
-      </div>
-      {workspace.files.map((file) => (
-        <button
-          key={file.path}
-          type="button"
-          onClick={() => {
-            snapshotRequest.current++;
-            onPreviewFile(file);
-          }}
-          style={{ ...listItemButton, background: "#fafafa", border: "1px solid #eee" }}
-        >
-          {file.path}
-          <span style={{ color: "#999", marginLeft: "8px" }}>
-            {file.mimeType} v{file.version}
-          </span>
-        </button>
-      ))}
-      {workspace.snapshots.map((snapshot) => (
-        <button
-          key={snapshot.snapshotId}
-          type="button"
-          style={listItemButton}
-          onClick={() => {
-            const request = ++snapshotRequest.current;
-            setSnapshotError(null);
-            void fetchArtifactSnapshot(selectedRun.runId, snapshot.snapshotId)
-              .then((result) => {
-                if (request === snapshotRequest.current) setSnapshot(result);
-              })
-              .catch(() => {
-                if (request === snapshotRequest.current)
-                  setSnapshotError("Could not load snapshot");
-              });
-          }}
-        >
-          {snapshot.snapshotId} &middot; {snapshot.fileCount} file(s) &middot; {snapshot.createdAt}
-        </button>
-      ))}
-    </div>
+    <Page
+      title={`Artifact Workspace: ${workspace.workspaceId}`}
+      subtitle={
+        <>
+          <div>{currentWorkspaceNotice}</div>
+          <div>
+            {workspace.files.length} file(s) &middot; {workspace.snapshots.length} snapshot(s)
+          </div>
+        </>
+      }
+    >
+      {snapshotError && <Notice>{snapshotError}</Notice>}
+      <ul className={listClass}>
+        {workspace.files.map((file) => (
+          <FileRow
+            key={file.path}
+            file={file}
+            onOpen={() => {
+              snapshotRequest.current++;
+              onPreviewFile(file);
+            }}
+          />
+        ))}
+      </ul>
+      <ul className={listClass}>
+        {workspace.snapshots.map((item) => (
+          <li key={item.snapshotId}>
+            <button
+              type="button"
+              className={listRowClass}
+              onClick={() => {
+                const request = ++snapshotRequest.current;
+                setSnapshotError(null);
+                void fetchArtifactSnapshot(selectedRun.runId, item.snapshotId)
+                  .then((result) => {
+                    if (request === snapshotRequest.current) setSnapshot(result);
+                  })
+                  .catch(() => {
+                    if (request === snapshotRequest.current)
+                      setSnapshotError("Could not load snapshot");
+                  });
+              }}
+            >
+              <span className="text-muted">
+                <Icon name="snapshot" />
+              </span>
+              <span className="min-w-0 flex-1 truncate font-mono text-small">
+                {item.snapshotId} &middot; {item.fileCount} file(s) &middot; {item.createdAt}
+              </span>
+            </button>
+          </li>
+        ))}
+      </ul>
+    </Page>
   );
 }

@@ -1,10 +1,6 @@
-import { emptyPanel } from "../styles";
+import { EmptyState, Notice } from "../ui/Page";
 
 export function ReadinessError({ error, hasReport }: { error: string; hasReport: boolean }) {
-  return (
-    <div role="alert" style={hasReport ? undefined : emptyPanel}>
-      {error}
-      {hasReport && ". Showing the last successful report."}
-    </div>
-  );
+  if (!hasReport) return <EmptyState alert>{error}</EmptyState>;
+  return <Notice>{`${error}. Showing the last successful report.`}</Notice>;
 }

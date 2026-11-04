@@ -1,6 +1,7 @@
 import type { EvalsState } from "../hooks/useEvals";
 import type { ProjectData } from "../hooks/useProjectData";
 import type { RunInspector } from "../hooks/useRunInspector";
+import { EmptyState } from "../ui/Page";
 import type { View } from "../view";
 import { ArtifactsView } from "./ArtifactsView";
 import { EvalsView } from "./EvalsView";
@@ -15,11 +16,12 @@ interface MainViewProps {
   inspector: RunInspector;
   evals: EvalsState;
   onOpenRun: (runId: string) => void;
+  onBackToRuns: () => void;
 }
 
-export function MainView({ view, data, inspector, evals, onOpenRun }: MainViewProps) {
+export function MainView({ view, data, inspector, evals, onOpenRun, onBackToRuns }: MainViewProps) {
   if (data.error) {
-    return <div style={{ padding: "16px", color: "#c00" }}>{data.error}</div>;
+    return <EmptyState alert>{data.error}</EmptyState>;
   }
 
   if (view === "overview") {
@@ -27,11 +29,11 @@ export function MainView({ view, data, inspector, evals, onOpenRun }: MainViewPr
   }
 
   if (view === "instructions") {
-    if (data.instructionsError) return <div role="alert">{data.instructionsError}</div>;
+    if (data.instructionsError) return <EmptyState alert>{data.instructionsError}</EmptyState>;
     return data.instructions ? (
       <InstructionsView instructions={data.instructions} />
     ) : (
-      <div>Loading instructions…</div>
+      <EmptyState>Loading instructions…</EmptyState>
     );
   }
 
@@ -61,6 +63,7 @@ export function MainView({ view, data, inspector, evals, onOpenRun }: MainViewPr
       streamState={inspector.streamState}
       eventsError={inspector.eventsError}
       eventsLoaded={inspector.eventsLoaded}
+      onBack={onBackToRuns}
     />
   );
 }

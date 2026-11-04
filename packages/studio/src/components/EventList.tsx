@@ -3,11 +3,11 @@ import type { PlicoEvent } from "../types";
 
 export function EventList({ events }: { events: PlicoEvent[] }) {
   return (
-    <div>
+    <ul className="m-0 list-none p-0 font-mono text-small">
       {events.map((event) => (
         <EventRow key={event.id} event={event} />
       ))}
-    </div>
+    </ul>
   );
 }
 
@@ -16,50 +16,34 @@ function EventRow({ event }: { event: PlicoEvent }) {
   const summary = eventSummary(event);
 
   return (
-    <div style={{ marginBottom: "4px", border: "1px solid #eee", borderRadius: "3px" }}>
+    <li className="border-b border-line-subtle">
       <button
         type="button"
         aria-expanded={expanded}
         onClick={() => setExpanded(!expanded)}
-        style={{
-          display: "flex",
-          gap: "8px",
-          width: "100%",
-          padding: "4px 8px",
-          cursor: "pointer",
-          background: "#fafafa",
-          fontSize: "12px",
-          border: "none",
-          textAlign: "left",
-          fontFamily: "inherit",
-          color: "inherit",
-        }}
+        className="grid w-full cursor-pointer grid-cols-[2rem_1fr] items-baseline gap-x-3 gap-y-0.5 bg-transparent px-4 py-1.5 text-left text-inherit hover:bg-raised aria-expanded:bg-raised sm:grid-cols-[2rem_11rem_1fr_auto]"
       >
-        <span style={{ color: "#999", minWidth: "24px" }}>{event.sequence}</span>
-        <span style={{ fontWeight: 500, minWidth: "140px" }}>{event.type}</span>
-        {summary && <span>{summary}</span>}
-        <span style={{ color: "#999", fontSize: "11px", marginLeft: "auto" }}>
+        <span className="text-right text-faint tabular-nums">{event.sequence}</span>
+        <span className={`font-semibold ${typeTone(event.type)}`}>{event.type}</span>
+        <span className="col-start-2 truncate text-muted sm:col-start-auto">{summary}</span>
+        <span className="col-start-2 text-caption text-faint sm:col-start-auto">
           {event.timestamp}
         </span>
       </button>
       {expanded && (
-        <div style={{ padding: "4px 8px 8px", fontSize: "12px" }}>
-          <pre
-            style={{
-              whiteSpace: "pre-wrap",
-              background: "#f9f9f9",
-              padding: "4px",
-              borderRadius: "2px",
-              margin: "4px 0 0",
-              fontSize: "11px",
-            }}
-          >
-            {JSON.stringify(event.payload, null, 2)}
-          </pre>
-        </div>
+        <pre className="m-0 mx-4 mb-2 overflow-x-auto whitespace-pre-wrap rounded-panel border border-line bg-bg p-3 text-code-string">
+          {JSON.stringify(event.payload, null, 2)}
+        </pre>
       )}
-    </div>
+    </li>
   );
+}
+
+function typeTone(type: PlicoEvent["type"]): string {
+  if (type.startsWith("tool.") || type.startsWith("approval.")) return "text-accent";
+  if (type === "run.completed") return "text-success";
+  if (type === "run.failed" || type === "run.error") return "text-danger";
+  return "text-fg";
 }
 
 function eventSummary(event: PlicoEvent): string | undefined {
