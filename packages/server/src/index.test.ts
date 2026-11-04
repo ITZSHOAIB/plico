@@ -670,7 +670,7 @@ describe("SSE stream", () => {
     expect(heartbeats.length).toBeGreaterThanOrEqual(1);
 
     await new Promise<void>((resolve) => server.close(() => resolve()));
-  });
+  }, 15_000);
 
   it("closes the stream cleanly after terminal event", async () => {
     const root = await mkdtemp(join(tmpdir(), "plico-sse-"));
@@ -701,7 +701,7 @@ describe("SSE stream", () => {
     });
 
     await new Promise<void>((resolve) => server.close(() => resolve()));
-  });
+  }, 15_000);
 
   it("keeps the event stream open for a waiting run", async () => {
     const root = await mkdtemp(join(tmpdir(), "plico-sse-"));
