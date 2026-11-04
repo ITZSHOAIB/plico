@@ -55,6 +55,45 @@ it("traces a provider run and its model and tool steps without recording content
   }
 });
 
+it("makes the model attempt active for asynchronous provider spans", async () => {
+  const root = await mkdtemp(join(tmpdir(), "plico-trace-active-"));
+  for (const dir of ["skills", "tools", "evals", "artifacts", "memory"])
+    await mkdir(join(root, dir));
+  await writeFile(
+    join(root, "plico.config.ts"),
+    'export default { schemaVersion: 1, name: "Demo", model: { provider: "fake", name: "test" } };',
+  );
+  await writeFile(join(root, "agent.md"), "instructions");
+  const exporter = new InMemorySpanExporter();
+  const provider = new BasicTracerProvider({ spanProcessors: [new SimpleSpanProcessor(exporter)] });
+  trace.setGlobalTracerProvider(provider);
+  context.setGlobalContextManager(new AsyncLocalStorageContextManager().enable());
+  try {
+    const result = await runProject(root, {
+      message: "hello",
+      provider: {
+        async *stream() {
+          await Promise.resolve();
+          const span = trace.getTracer("provider-test").startSpan("provider.operation");
+          span.end();
+          yield { type: "finish", usage: { inputTokens: 1, outputTokens: 1 } };
+        },
+      },
+    });
+    expect(result.status).toBe("completed");
+    const spans = exporter.getFinishedSpans();
+    const attempt = spans.find((span) => span.name === "chat test");
+    const nested = spans.find((span) => span.name === "provider.operation");
+    expect(attempt).toBeDefined();
+    expect(nested?.parentSpanContext?.spanId).toBe(attempt?.spanContext().spanId);
+    expect(nested?.spanContext().traceId).toBe(attempt?.spanContext().traceId);
+  } finally {
+    context.disable();
+    trace.disable();
+    await provider.shutdown();
+  }
+});
+
 it("links a resumed run to the execution before restart", async () => {
   const root = await mkdtemp(join(tmpdir(), "plico-trace-resume-"));
   for (const dir of ["skills", "tools", "evals", "artifacts", "memory"])

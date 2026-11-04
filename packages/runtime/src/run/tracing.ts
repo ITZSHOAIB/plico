@@ -1,4 +1,5 @@
 import {
+  context,
   createTraceState,
   ROOT_CONTEXT,
   type Span,
@@ -98,7 +99,7 @@ export function tracedContext(
               trace.setSpan(ROOT_CONTEXT, step),
             );
             try {
-              return await fn(attempt);
+              return await context.with(trace.setSpan(context.active(), child), () => fn(attempt));
             } catch (error) {
               child.setStatus({ code: SpanStatusCode.ERROR });
               throw error;
