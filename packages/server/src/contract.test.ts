@@ -4,7 +4,7 @@ import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createSqliteEventStore, createSqliteThreadStore, runProject } from "@plico/runtime";
-import { afterAll, beforeAll, expect, it } from "vitest";
+import { afterAll, beforeAll, expect, it, vi } from "vitest";
 import { createPlicoServer } from "./index.js";
 
 type Shape = string | Shape[] | { [key: string]: Shape };
@@ -118,6 +118,12 @@ beforeAll(async () => {
     projectRoot: root,
     eventStore,
     threadStore: createSqliteThreadStore({ databasePath: join(root, "state.sqlite") }),
+    provider: {
+      async *stream() {
+        yield { type: "text", text: "Hello" };
+        yield { type: "finish", usage: { inputTokens: 1, outputTokens: 1 } };
+      },
+    },
   });
   server = createServer(api.requestListener);
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
@@ -171,13 +177,18 @@ it("keeps the /v1 response shapes stable", async () => {
     await fetch(`${baseUrl}/v1/threads`, { method: "POST" })
   ).json()) as { id: string };
   const threadPath = `/v1/threads/${createdThread.id}`;
+  const posted = (await (
+    await fetch(`${baseUrl}${threadPath}/messages`, post({ content: "Hello" }))
+  ).json()) as { runId: string };
+  await vi.waitFor(async () => {
+    const response = await fetch(`${baseUrl}/v1/runs/${posted.runId}`);
+    const run = (await response.json()) as { status: string };
+    expect(run.status).toBe("completed");
+  });
 
   const shapes = {
     "POST /v1/threads": shapeOf(createdThread),
-    "POST /v1/threads/:id/messages": await shape(
-      `${threadPath}/messages`,
-      post({ content: "Hello" }),
-    ),
+    "POST /v1/threads/:id/messages": shapeOf(posted),
     "GET /v1/threads": await shape("/v1/threads"),
     "GET /v1/threads/:id": await shape(threadPath),
     "GET /v1/threads/:id/messages": await shape(`${threadPath}/messages`),

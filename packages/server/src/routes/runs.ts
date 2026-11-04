@@ -78,7 +78,11 @@ export const runRoutes: Route[] = [
     pattern: /^\/v1\/runs\/([^/]+)\/events\/stream$/,
     handler: async (context) => {
       const runId = context.params[0] ?? "";
-      const afterSequence = readAfterCursor(context.url);
+      const lastEventId = context.request.headers["last-event-id"];
+      const afterSequence =
+        lastEventId === undefined || lastEventId === ""
+          ? readAfterCursor(context.url)
+          : parseAfterCursor(Array.isArray(lastEventId) ? (lastEventId[0] ?? "") : lastEventId);
       await handleEventStream({
         projectRoot: context.projectRoot,
         eventStore: context.eventStore,

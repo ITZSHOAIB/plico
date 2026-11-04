@@ -25,7 +25,11 @@ export {
 export { checkReadiness } from "./readiness/index.js";
 export { recoverRuns, runProject } from "./run/index.js";
 export { createSqliteEventStore } from "./storage/index.js";
-export { createSqliteThreadStore, type ThreadStore } from "./storage/sqlite/threads.js";
+export {
+  createSqliteThreadStore,
+  ThreadBusyError,
+  type ThreadStore,
+} from "./storage/sqlite/threads.js";
 export { discoverTools } from "./tools/index.js";
 export type {
   ArtifactFile,
