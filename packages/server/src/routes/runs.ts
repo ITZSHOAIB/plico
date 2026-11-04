@@ -112,4 +112,56 @@ export const runRoutes: Route[] = [
       sendJson(context.response, 200, events);
     },
   },
+  {
+    method: "POST",
+    pattern: /^\/v1\/runs\/([^/]+)\/cancel$/,
+    handler: async (context) => {
+      const runId = context.params[0] ?? "";
+      const run = await context.eventStore.getRun(runId);
+      if (!run) {
+        runNotFound(context, runId);
+        return;
+      }
+      if (!context.engine) {
+        sendError(
+          context.response,
+          503,
+          "engine.unavailable",
+          "No execution engine is configured.",
+        );
+        return;
+      }
+      const result = await context.engine.cancel(runId);
+      sendJson(context.response, 200, { result });
+    },
+  },
+  {
+    method: "POST",
+    pattern: /^\/v1\/runs\/([^/]+)\/signal$/,
+    handler: async (context) => {
+      const runId = context.params[0] ?? "";
+      const run = await context.eventStore.getRun(runId);
+      if (!run) {
+        runNotFound(context, runId);
+        return;
+      }
+      if (!context.engine) {
+        sendError(
+          context.response,
+          503,
+          "engine.unavailable",
+          "No execution engine is configured.",
+        );
+        return;
+      }
+      const body = await readJsonBody(context.request);
+      const name = typeof body.name === "string" ? body.name : "";
+      if (!name) {
+        sendError(context.response, 400, "request.invalid", "A signal name is required.");
+        return;
+      }
+      const result = await context.engine.signal(runId, name, body.value);
+      sendJson(context.response, 200, { result });
+    },
+  },
 ];
