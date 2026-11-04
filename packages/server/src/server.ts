@@ -1,5 +1,4 @@
 import { createServer, type Server } from "node:http";
-import { resolve } from "node:path";
 import { validateProject } from "@plico/core";
 import {
   createConfiguredModelProvider,
@@ -8,13 +7,12 @@ import {
   createSqliteEngine,
   createSqliteEventStore,
   createSqliteThreadStore,
+  modelProviderAccountKey,
   modelProviderRecoveryKey,
-  recoverRuns,
-  runProject,
 } from "@plico/runtime";
+import { recoverPlicoState, resumeQueuedRuns } from "./recovery.js";
 import { handleRequest } from "./routes/index.js";
 import { serveStaticFile } from "./serve-static.js";
-import { finishFailedThreadRun } from "./thread-failure.js";
 import type { CreatePlicoServerOptions, PlicoServer, ServePlicoOptions } from "./types.js";
 
 export async function createPlicoServer(options: CreatePlicoServerOptions): Promise<PlicoServer> {
@@ -22,24 +20,46 @@ export async function createPlicoServer(options: CreatePlicoServerOptions): Prom
   const eventStore = options.eventStore;
   const studioPath = options.studioPath;
   const engine = options.engine ?? createEngine({ journal: createMemoryJournal() });
+  const providerAccountKey = options.providerAccountKey ?? options.providerRecoveryKey;
+  const recover = async () => {
+    await recoverPlicoState({
+      projectRoot,
+      eventStore,
+      engine,
+      ...(options.threadStore ? { threadStore: options.threadStore } : {}),
+      ...(options.provider ? { provider: options.provider } : {}),
+      ...(options.providerRecoveryKey ? { providerRecoveryKey: options.providerRecoveryKey } : {}),
+    });
+    await resumeQueuedRuns({
+      projectRoot,
+      eventStore,
+      engine,
+      ...(options.threadStore ? { threadStore: options.threadStore } : {}),
+      ...(providerAccountKey ? { providerAccountKey } : {}),
+      ...(options.provider ? { provider: options.provider } : {}),
+      ...(options.providerRecoveryKey ? { providerRecoveryKey: options.providerRecoveryKey } : {}),
+    });
+  };
 
   return {
     requestListener: async (request, response) => {
       const url = new URL(request.url ?? "/", "http://127.0.0.1");
       const isApiPath = url.pathname === "/health" || url.pathname.startsWith("/v1/");
+      const context = {
+        projectRoot,
+        eventStore,
+        threadStore: options.threadStore,
+        provider: options.provider,
+        providerRecoveryKey: options.providerRecoveryKey,
+        providerAccountKey: options.providerAccountKey,
+        engine,
+        studioPath,
+        request,
+        response,
+      };
 
       if (isApiPath) {
-        await handleRequest({
-          projectRoot,
-          eventStore,
-          threadStore: options.threadStore,
-          provider: options.provider,
-          providerRecoveryKey: options.providerRecoveryKey,
-          engine,
-          studioPath,
-          request,
-          response,
-        });
+        await handleRequest(context);
         return;
       }
 
@@ -51,18 +71,9 @@ export async function createPlicoServer(options: CreatePlicoServerOptions): Prom
         return;
       }
 
-      await handleRequest({
-        projectRoot,
-        eventStore,
-        threadStore: options.threadStore,
-        provider: options.provider,
-        providerRecoveryKey: options.providerRecoveryKey,
-        engine,
-        studioPath,
-        request,
-        response,
-      });
+      await handleRequest(context);
     },
+    recover,
   };
 }
 
@@ -77,100 +88,35 @@ export async function servePlico(options: ServePlicoOptions): Promise<Server> {
   // Runs a dead process left behind continue in the background; they appear in the log as they go.
   const model = validation.project?.config.model;
   const provider = model ? createConfiguredModelProvider(model) : undefined;
+  const providerRecoveryKey = model ? modelProviderRecoveryKey(model) : undefined;
+  const providerAccountKey = model ? modelProviderAccountKey(model) : undefined;
   const threadStore = createSqliteThreadStore({ databasePath: options.databasePath });
-  const recovery = async () => {
-    const dryRuns = recoverRuns({
-      engine,
-      eventStore,
-      recoveryFilter: { projectRoot: options.projectRoot },
-    });
-    if (!model || !provider) return dryRuns;
-    const modelRuns = recoverRuns({
-      engine,
-      eventStore,
-      provider,
-      recoveryFilter: {
-        projectRoot: options.projectRoot,
-        providerRecoveryKey: modelProviderRecoveryKey(model),
-        providerOnly: true,
-      },
-    });
-    const [dry, real] = await Promise.all([dryRuns, modelRuns]);
-    return [...dry, ...real];
-  };
-  void recovery().then(
-    async (runs) => {
-      for (const run of runs)
-        if (run.state === "failed") {
-          console.error(`Recovered run ${run.runId}: failed${run.error ? ` (${run.error})` : ""}`);
-          const threadId = await threadStore.getThreadForRun(run.runId);
-          if (threadId)
-            await finishFailedThreadRun(
-              run.runId,
-              threadId,
-              options.projectRoot,
-              engine,
-              eventStore,
-            );
-        }
-    },
-    (error: unknown) =>
-      console.error(
-        `Recovery incomplete: ${error instanceof Error ? error.message : String(error)}`,
-      ),
+  let closing = false;
+  const recovery = recoverPlicoState({
+    projectRoot: options.projectRoot,
+    eventStore,
+    threadStore,
+    engine,
+    ...(provider ? { provider } : {}),
+    ...(providerRecoveryKey ? { providerRecoveryKey } : {}),
+    isClosed: () => closing,
+  });
+  void recovery.catch((error: unknown) =>
+    console.error(`Recovery incomplete: ${error instanceof Error ? error.message : String(error)}`),
   );
   try {
-    if (provider && model) {
-      const queued = await threadStore.listQueuedRuns();
-      for (const run of queued) {
-        const identity = (path: string) =>
-          process.platform === "win32" ? resolve(path).toLowerCase() : resolve(path);
-        if (
-          !run.projectRoot ||
-          identity(run.projectRoot) !== identity(options.projectRoot) ||
-          run.providerKey !== modelProviderRecoveryKey(model)
-        )
-          continue;
-        const status = await engine.status(run.runId);
-        if (status) {
-          if (
-            status.state === "failed" ||
-            status.state === "cancelled" ||
-            status.state === "completed"
-          )
-            await finishFailedThreadRun(
-              run.runId,
-              run.threadId,
-              options.projectRoot,
-              engine,
-              eventStore,
-            );
-          continue;
-        }
-        void runProject(options.projectRoot, {
-          runId: run.runId,
-          threadId: run.threadId,
-          history: run.history,
-          message: run.content,
-          provider,
-          providerRecoveryKey: modelProviderRecoveryKey(model),
-          engine,
-          eventStore,
-        }).catch(async (error: unknown) => {
-          await finishFailedThreadRun(
-            run.runId,
-            run.threadId,
-            options.projectRoot,
-            engine,
-            eventStore,
-          );
-          console.error(
-            `Queued run ${run.runId} failed: ${error instanceof Error ? error.message : String(error)}`,
-          );
-        });
-      }
-    }
+    await resumeQueuedRuns({
+      projectRoot: options.projectRoot,
+      eventStore,
+      threadStore,
+      engine,
+      ...(provider ? { provider } : {}),
+      ...(providerRecoveryKey ? { providerRecoveryKey } : {}),
+      ...(providerAccountKey ? { providerAccountKey } : {}),
+      isClosed: () => closing,
+    });
   } catch (error) {
+    closing = true;
     threadStore.close();
     throw error;
   }
@@ -180,15 +126,18 @@ export async function servePlico(options: ServePlicoOptions): Promise<Server> {
         projectRoot: options.projectRoot,
         eventStore,
         threadStore,
-        ...(provider && model
-          ? { provider, providerRecoveryKey: modelProviderRecoveryKey(model) }
-          : {}),
+        ...(provider ? { provider } : {}),
+        ...(providerRecoveryKey ? { providerRecoveryKey } : {}),
+        ...(providerAccountKey ? { providerAccountKey } : {}),
         engine,
         ...(options.studioPath === undefined ? {} : { studioPath: options.studioPath }),
       })
     ).requestListener,
   );
-  server.once("close", () => threadStore.close());
+  server.once("close", () => {
+    closing = true;
+    threadStore.close();
+  });
 
   try {
     await new Promise<void>((resolve, reject) => {
@@ -196,6 +145,7 @@ export async function servePlico(options: ServePlicoOptions): Promise<Server> {
       server.listen(options.port ?? 3000, options.host ?? "127.0.0.1", () => resolve());
     });
   } catch (error) {
+    closing = true;
     threadStore.close();
     throw error;
   }

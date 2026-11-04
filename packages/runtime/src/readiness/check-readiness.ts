@@ -7,6 +7,7 @@ import { checkProject } from "./checks/project.js";
 import { checkProvider } from "./checks/provider.js";
 import { checkServerConfig } from "./checks/server-config.js";
 import { checkStudio } from "./checks/studio.js";
+import { checkThreadStore } from "./checks/thread-store.js";
 import { checkTools } from "./checks/tools.js";
 import { openDatabase } from "./open-database.js";
 
@@ -28,6 +29,7 @@ export async function checkReadiness(
     ...checkProvider(projectCheck.project.config.model),
     ...(await checkTools(projectCheck.project)),
     ...(await checkEvals(projectRoot, database.eventStore)),
+    ...checkThreadStore(database.eventStore, options.threadStore),
     ...(await checkPersistence(databasePath, database)),
     ...(await checkArtifacts(projectRoot)),
     ...(await checkServerConfig(projectRoot)),

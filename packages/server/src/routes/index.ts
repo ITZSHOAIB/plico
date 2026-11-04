@@ -26,6 +26,7 @@ interface HandleRequestOptions {
   threadStore: ThreadStore | undefined;
   provider: ModelProvider | undefined;
   providerRecoveryKey: string | undefined;
+  providerAccountKey: string | undefined;
   engine: Engine | undefined;
   studioPath: string | undefined;
   request: IncomingMessage;
@@ -39,6 +40,7 @@ export async function handleRequest(options: HandleRequestOptions): Promise<void
     threadStore,
     provider,
     providerRecoveryKey,
+    providerAccountKey,
     engine,
     studioPath,
     request,
@@ -58,6 +60,7 @@ export async function handleRequest(options: HandleRequestOptions): Promise<void
         threadStore,
         provider,
         providerRecoveryKey,
+        providerAccountKey,
         engine,
         studioPath,
         request,

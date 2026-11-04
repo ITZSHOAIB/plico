@@ -1,4 +1,5 @@
 import type { DatabaseSync } from "node:sqlite";
+import { runFailureEvents } from "../../events.js";
 import { ownerIsAlive } from "./owner-lock.js";
 
 export function recoverInterruptedRuns(database: DatabaseSync): void {
@@ -34,32 +35,24 @@ export function recoverInterruptedRuns(database: DatabaseSync): void {
           "SELECT sequence, type FROM events WHERE stream_type = 'run' AND stream_id = ? ORDER BY sequence DESC LIMIT 1",
         )
         .get(row.run_id) as { sequence: number; type: string };
-      let sequence = last.sequence;
       const timestamp = new Date().toISOString();
       const insert = database.prepare(
         "INSERT INTO events (stream_type, stream_id, sequence, event_id, schema_version, type, timestamp, payload_json) VALUES ('run', ?, ?, ?, 1, ?, ?, ?)",
       );
-      // Event IDs follow the sequence-based scheme defined in runtime/src/events.ts.
-      if (last.type !== "run.error") {
-        sequence += 1;
-        insert.run(
-          row.run_id,
-          sequence,
-          `evt-${String(sequence).padStart(4, "0")}`,
-          "run.error",
-          timestamp,
-          JSON.stringify({ phase: "runtime", message: "Run interrupted by process exit." }),
-        );
-      }
-      sequence += 1;
-      insert.run(
+      for (const event of runFailureEvents(
         row.run_id,
-        sequence,
-        `evt-${String(sequence).padStart(4, "0")}`,
-        "run.failed",
+        last,
+        "Run interrupted by process exit.",
         timestamp,
-        JSON.stringify({ phase: "runtime" }),
-      );
+      ))
+        insert.run(
+          event.streamId,
+          event.sequence,
+          event.id,
+          event.type,
+          event.timestamp,
+          JSON.stringify(event.payload),
+        );
       database
         .prepare(
           "UPDATE runs SET status = 'failed', ended_at = ? WHERE run_id = ? AND status = 'running'",

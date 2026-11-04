@@ -8,6 +8,8 @@ export interface CreatePlicoServerOptions {
   threadStore?: ThreadStore;
   provider?: ModelProvider;
   providerRecoveryKey?: string;
+  /** Account-only identity used to resume queued runs after a model change. */
+  providerAccountKey?: string;
   /** Runs started over HTTP. Defaults to an in-memory engine that does not survive a restart. */
   engine?: Engine;
   studioPath?: string;
@@ -23,4 +25,6 @@ export interface ServePlicoOptions {
 
 export interface PlicoServer {
   requestListener: RequestListener;
+  /** Resume interrupted and queued runs for hosts that build the server themselves. */
+  recover(): Promise<void>;
 }

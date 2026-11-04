@@ -7,6 +7,8 @@ export interface RouteContext {
   threadStore: ThreadStore | undefined;
   provider: ModelProvider | undefined;
   providerRecoveryKey: string | undefined;
+  /** Account-only identity used to resume queued runs after a model change. */
+  providerAccountKey: string | undefined;
   engine: Engine | undefined;
   studioPath: string | undefined;
   request: IncomingMessage;

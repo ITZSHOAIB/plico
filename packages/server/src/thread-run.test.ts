@@ -4,10 +4,13 @@ import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
+  createEngine,
+  createMemoryJournal,
   createSqliteEngine,
   createSqliteEventStore,
   createSqliteThreadStore,
-  modelProviderRecoveryKey,
+  type Journal,
+  modelProviderAccountKey,
 } from "@plico/runtime";
 import { expect, it, vi } from "vitest";
 import { createPlicoServer, servePlico } from "./index.js";
@@ -201,7 +204,7 @@ it("starts a queued thread run after restart with the same provider identity", a
   const store = createSqliteThreadStore({ databasePath });
   const thread = await store.createThread();
   await store.addMessage(thread.id, "resume me", "queued-run", {
-    providerKey: modelProviderRecoveryKey({ provider: "openai-compatible", name: "test" }),
+    providerKey: modelProviderAccountKey({ provider: "openai-compatible", name: "test" }),
     projectRoot: root,
   });
   store.close();
@@ -247,6 +250,195 @@ it("starts a queued thread run after restart with the same provider identity", a
   } finally {
     vi.unstubAllEnvs();
     await new Promise<void>((resolve) => gateway.close(() => resolve()));
+  }
+});
+
+it("resumes a queued thread run after only the configured model changes", async () => {
+  const root = await mkdtemp(join(tmpdir(), "plico-thread-model-change-"));
+  for (const dir of ["skills", "tools", "evals", "artifacts", "memory"])
+    await mkdir(join(root, dir));
+  const configPath = join(root, "plico.config.ts");
+  await writeFile(
+    configPath,
+    'export default { schemaVersion: 1, name: "Demo", model: { provider: "openai-compatible", name: "model-a" } };',
+  );
+  await writeFile(join(root, "agent.md"), "instructions");
+  const gateway = createServer((_req, res) => {
+    res.writeHead(200, { "content-type": "text/event-stream" });
+    res.write(
+      `data: ${JSON.stringify({ id: "x", object: "chat.completion.chunk", created: 1, model: "model-b", choices: [{ index: 0, delta: { content: "Recovered" }, finish_reason: null }] })}\n\n`,
+    );
+    res.write(
+      `data: ${JSON.stringify({ id: "x", object: "chat.completion.chunk", created: 1, model: "model-b", choices: [{ index: 0, delta: {}, finish_reason: "stop" }] })}\n\n`,
+    );
+    res.end("data: [DONE]\n\n");
+  });
+  await new Promise<void>((resolve) => gateway.listen(0, "127.0.0.1", resolve));
+  vi.stubEnv("OPENAI_API_KEY", "test-secret");
+  vi.stubEnv("OPENAI_BASE_URL", `http://127.0.0.1:${(gateway.address() as AddressInfo).port}/v1`);
+  const databasePath = join(root, "state.sqlite");
+  const store = createSqliteThreadStore({ databasePath });
+  const thread = await store.createThread();
+  await store.addMessage(thread.id, "resume me", "queued-model-change", {
+    providerKey: modelProviderAccountKey({ provider: "openai-compatible", name: "model-a" }),
+    projectRoot: root,
+  });
+  store.close();
+  try {
+    await writeFile(
+      configPath,
+      'export default { schemaVersion: 1, name: "Demo", model: { provider: "openai-compatible", name: "model-b" } };',
+    );
+    const server = await servePlico({
+      projectRoot: root,
+      databasePath,
+      host: "127.0.0.1",
+      port: 0,
+    });
+    try {
+      const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+      await vi.waitFor(
+        async () =>
+          expect(
+            await (await fetch(`${base}/v1/threads/${thread.id}/messages`)).json(),
+          ).toMatchObject([
+            { role: "user", content: "resume me" },
+            { role: "assistant", content: "Recovered", runId: "queued-model-change" },
+          ]),
+        { timeout: 5000 },
+      );
+      const next = await fetch(`${base}/v1/threads/${thread.id}/messages`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ content: "Next" }),
+      });
+      expect(next.status).toBe(201);
+    } finally {
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
+  } finally {
+    vi.unstubAllEnvs();
+    await new Promise<void>((resolve) => gateway.close(() => resolve()));
+  }
+});
+
+it("releases a thread when the engine cannot begin the run", async () => {
+  const root = await mkdtemp(join(tmpdir(), "plico-thread-engine-begin-"));
+  for (const dir of ["skills", "tools", "evals", "artifacts", "memory"])
+    await mkdir(join(root, dir));
+  await writeFile(
+    join(root, "plico.config.ts"),
+    'export default { schemaVersion: 1, name: "Demo" };',
+  );
+  await writeFile(join(root, "agent.md"), "instructions");
+  const databasePath = join(root, "state.sqlite");
+  const eventStore = createSqliteEventStore({ databasePath });
+  const threadStore = createSqliteThreadStore({ databasePath });
+  const memory = createMemoryJournal();
+  let fail = true;
+  const journal: Journal = {
+    ...memory,
+    async begin(...args) {
+      if (fail) {
+        fail = false;
+        throw new Error("journal begin failed");
+      }
+      return memory.begin(...args);
+    },
+  };
+  const api = await createPlicoServer({
+    projectRoot: root,
+    eventStore,
+    threadStore,
+    engine: createEngine({ journal }),
+    provider: {
+      async *stream() {
+        yield { type: "text", text: "Recovered" };
+        yield { type: "finish", usage: { inputTokens: 1, outputTokens: 1 } };
+      },
+    },
+  });
+  const server = createServer(api.requestListener);
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+  const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+  try {
+    const thread = (await (await fetch(`${base}/v1/threads`, { method: "POST" })).json()) as {
+      id: string;
+    };
+    const post = () =>
+      fetch(`${base}/v1/threads/${thread.id}/messages`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ content: "Hello" }),
+      });
+    expect((await post()).status).toBe(500);
+    const [failedMessage] = await threadStore.getMessages(thread.id);
+    const runId = failedMessage?.runId;
+    expect(runId).toBeDefined();
+    expect((await eventStore.getRun(runId as string))?.status).toBe("failed");
+    const events = await eventStore.getEvents(runId as string);
+    expect(events.map((event) => event.type)).toEqual(["run.started", "run.error", "run.failed"]);
+    expect(events.find((event) => event.type === "run.error")?.payload).toMatchObject({
+      message: expect.stringContaining("journal begin failed"),
+    });
+    const second = await post();
+    expect(second.status).toBe(201);
+    const secondRun = (await second.json()) as { runId: string };
+    await vi.waitFor(async () =>
+      expect((await eventStore.getRun(secondRun.runId))?.status).toBe("completed"),
+    );
+  } finally {
+    spy.mockRestore();
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+    threadStore.close();
+  }
+});
+
+it("exposes recovery to hosts that create their own server", async () => {
+  const root = await mkdtemp(join(tmpdir(), "plico-thread-host-recovery-"));
+  for (const dir of ["skills", "tools", "evals", "artifacts", "memory"])
+    await mkdir(join(root, dir));
+  await writeFile(
+    join(root, "plico.config.ts"),
+    'export default { schemaVersion: 1, name: "Demo" };',
+  );
+  await writeFile(join(root, "agent.md"), "instructions");
+  const databasePath = join(root, "state.sqlite");
+  const eventStore = createSqliteEventStore({ databasePath });
+  const threadStore = createSqliteThreadStore({ databasePath });
+  const thread = await threadStore.createThread();
+  const accountKey = modelProviderAccountKey({ provider: "openai-compatible", name: "test" });
+  await threadStore.addMessage(thread.id, "resume me", "queued-host", {
+    providerKey: accountKey,
+    projectRoot: root,
+  });
+  const api = await createPlicoServer({
+    projectRoot: root,
+    eventStore,
+    threadStore,
+    engine: createSqliteEngine({ databasePath }),
+    provider: {
+      async *stream() {
+        yield { type: "text", text: "Recovered" };
+        yield { type: "finish", usage: { inputTokens: 1, outputTokens: 1 } };
+      },
+    },
+    providerRecoveryKey: "recovery-key",
+    providerAccountKey: accountKey,
+  });
+  try {
+    await api.recover();
+    await vi.waitFor(
+      async () =>
+        expect(await threadStore.getMessages(thread.id)).toMatchObject([
+          { role: "user", content: "resume me" },
+          { role: "assistant", content: "Recovered", runId: "queued-host" },
+        ]),
+      { timeout: 5000 },
+    );
+  } finally {
+    threadStore.close();
   }
 });
 

@@ -16,13 +16,17 @@ answer is recorded as an assistant message. Stream run events at
 Without a configured provider the endpoint returns an actionable error. To store
 a message without starting a run, explicitly include `"startRun": false`.
 
-If a server stops after reserving a run but before starting it, startup resumes
-it only for the same project and provider identity. A mismatched identity leaves
-the message queued rather than sending its content to a different account.
+If a server stops after reserving a run but before starting it, `servePlico`
+resumes it only for the same project and provider account. A model change alone
+does not prevent recovery. A mismatched account leaves the message queued rather
+than sending its content to a different account.
 
 Hosts using `createPlicoServer` can enable these routes by passing a
 `threadStore` from `createSqliteThreadStore({ databasePath })`. If no thread
 store is supplied, thread routes return a `threads.unavailable` error.
 The host owns an injected thread store and must call its `close()` method when
 it is no longer needed. `servePlico` owns its thread store and closes it when
-the server shuts down.
+the server shuts down. Hosts using `createPlicoServer` should call and await the
+returned `recover()` method at startup, supplying stable provider recovery and
+account keys in the server options when using a provider. Readiness reports a
+thread and run store mismatch before a run is started.

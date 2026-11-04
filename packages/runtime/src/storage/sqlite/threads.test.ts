@@ -6,6 +6,27 @@ import { DatabaseSync } from "node:sqlite";
 import { expect, it } from "vitest";
 import { createSqliteThreadStore } from "../../index.js";
 
+it("indexes thread run and message lookups", async () => {
+  const databasePath = join(await mkdtemp(join(tmpdir(), "plico-thread-index-")), "state.sqlite");
+  const store = createSqliteThreadStore({ databasePath });
+  const thread = await store.createThread();
+  await store.addMessage(thread.id, "Hello", "run-1", {
+    providerKey: "provider-key",
+    projectRoot: "/project",
+  });
+  store.close();
+  const database = new DatabaseSync(databasePath);
+  const indexes = database
+    .prepare(
+      "SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name IN ('thread_runs', 'thread_messages')",
+    )
+    .all() as Array<{ name: string }>;
+  database.close();
+  expect(indexes.map((index) => index.name)).toEqual(
+    expect.arrayContaining(["thread_runs_thread", "thread_messages_run"]),
+  );
+});
+
 it("releases its SQLite connection each time the thread store closes", async () => {
   const databasePath = join(await mkdtemp(join(tmpdir(), "plico-thread-close-")), "state.sqlite");
   for (let index = 0; index < 3; index++) {

@@ -1,15 +1,19 @@
-import type { Engine, EventStore } from "@plico/runtime";
+import { type Engine, type EventStore, runFailureEvents } from "@plico/runtime";
 
-/** Persist a terminal outcome only after the engine confirms no worker is still running. */
+/**
+ * Persist a terminal outcome after the engine confirms no worker is still running. A run whose
+ * journal write never happened is also safe to fail: nothing can be executing it.
+ */
 export async function finishFailedThreadRun(
   runId: string,
   threadId: string,
   projectRoot: string,
   engine: Engine,
   eventStore: EventStore,
+  error?: unknown,
 ): Promise<void> {
   const state = await engine.status(runId);
-  if (state?.state !== "failed") return;
+  if (state && state.state !== "failed") return;
   let run = await eventStore.getRun(runId);
   if (!run) {
     await eventStore.appendEvent({
@@ -27,31 +31,12 @@ export async function finishFailedThreadRun(
   }
   if (run?.status !== "running") return;
   const events = await eventStore.getEvents(runId);
-  let sequence = events.at(-1)?.sequence ?? 0;
-  if (events.at(-1)?.type !== "run.error") {
-    sequence++;
-    await eventStore.appendEvent({
-      schemaVersion: 1,
-      streamType: "run",
-      streamId: runId,
-      runId,
-      id: `evt-${String(sequence).padStart(4, "0")}`,
-      sequence,
-      timestamp: new Date().toISOString(),
-      type: "run.error",
-      payload: { phase: "runtime", message: "Run execution failed before it could finish." },
-    });
-  }
-  sequence++;
-  await eventStore.appendEvent({
-    schemaVersion: 1,
-    streamType: "run",
-    streamId: runId,
-    runId,
-    id: `evt-${String(sequence).padStart(4, "0")}`,
-    sequence,
-    timestamp: new Date().toISOString(),
-    type: "run.failed",
-    payload: { phase: "runtime" },
-  });
+  for (const event of runFailureEvents(runId, events.at(-1), failureMessage(error)))
+    await eventStore.appendEvent(event);
+}
+
+function failureMessage(error: unknown): string {
+  if (typeof error === "string" && error) return error;
+  if (error instanceof Error && error.message) return error.message;
+  return "Run execution failed before it could finish.";
 }

@@ -72,15 +72,14 @@ export const threadRoutes: Route[] = [
           "Thread and run stores must use the same database.",
         );
       const runId = startRun ? `run-${randomUUID()}` : undefined;
+      const providerKey = ctx.providerAccountKey ?? ctx.providerRecoveryKey;
       let message: Awaited<ReturnType<typeof store.addMessage>>;
       try {
         message = await store.addMessage(
           thread.id,
           body.content,
           runId,
-          ctx.providerRecoveryKey
-            ? { providerKey: ctx.providerRecoveryKey, projectRoot: resolve(ctx.projectRoot) }
-            : undefined,
+          providerKey ? { providerKey, projectRoot: resolve(ctx.projectRoot) } : undefined,
         );
       } catch (error) {
         if (error instanceof ThreadBusyError)
@@ -117,6 +116,7 @@ export const threadRoutes: Route[] = [
                 ctx.projectRoot,
                 ctx.engine,
                 ctx.eventStore,
+                error,
               );
           } catch (settleError) {
             console.error("Could not record failed thread run", settleError);
