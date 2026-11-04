@@ -18,8 +18,8 @@ export async function runProviderBackedRun(
   tools: DeclaredTool[],
   events: InMemoryEventLog,
   model: ProjectConfig["model"],
-  history: Array<Pick<import("../../types/index.js").ProviderMessage, "role" | "content">> = [],
   config: ProjectConfig,
+  history: Array<Pick<import("../../types/index.js").ProviderMessage, "role" | "content">> = [],
 ): Promise<string> {
   const maxSteps = model?.maxSteps ?? 10;
   if (!message) {
@@ -42,7 +42,7 @@ export async function runProviderBackedRun(
 
   const messages: ModelRequest["messages"] = [
     { role: "system", content: instructions },
-    ...history,
+    ...(history ?? []),
     { role: "user", content: message },
   ];
 
