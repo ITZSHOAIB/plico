@@ -57,19 +57,15 @@ describe("tool idempotency keys", () => {
       runId: "run-1",
       message: "go",
       provider: {
-        async complete() {
+        async *stream() {
           turn += 1;
-          const usage = { inputTokens: 1, outputTokens: 1 };
-          return turn === 1
-            ? {
-                content: "",
-                usage,
-                toolCalls: [
-                  { name: "charge", arguments: {} },
-                  { name: "charge", arguments: {} },
-                ],
-              }
-            : { content: "done", usage };
+          if (turn === 1) {
+            yield { type: "tool.call", call: { name: "charge", arguments: {} } };
+            yield { type: "tool.call", call: { name: "charge", arguments: {} } };
+          } else {
+            yield { type: "text", text: "done" };
+          }
+          yield { type: "finish", usage: { inputTokens: 1, outputTokens: 1 } };
         },
       },
     });

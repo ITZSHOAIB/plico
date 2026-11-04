@@ -52,7 +52,7 @@ describe("main", () => {
     const program = `import { createSqliteEngine, createSqliteEventStore, runProject } from ${JSON.stringify(moduleUrl)};
       const [root, databasePath] = process.argv.slice(1);
       await runProject(root, { runId: "crashed", message: "hello", engine: createSqliteEngine({ databasePath }),
-        eventStore: createSqliteEventStore({ databasePath }), provider: { complete: async () => process.kill(process.pid, "SIGKILL") } });`;
+        eventStore: createSqliteEventStore({ databasePath }), provider: { async *stream() { process.kill(process.pid, "SIGKILL"); } } });`;
     expect(() =>
       execFileSync(
         process.execPath,

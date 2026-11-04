@@ -106,6 +106,14 @@ function normalizeProjectConfig(value: unknown, configPath: string): ProjectConf
     normalized.template = config.template;
   }
 
+  if (config.model !== undefined) {
+    normalized.model = { provider: config.model.provider, name: config.model.name };
+    if (config.model.maxSteps !== undefined) normalized.model.maxSteps = config.model.maxSteps;
+    if (config.model.retries !== undefined) normalized.model.retries = config.model.retries;
+    if (config.model.retryDelayMs !== undefined)
+      normalized.model.retryDelayMs = config.model.retryDelayMs;
+  }
+
   if (config.execution !== undefined) {
     normalized.execution = {};
     if (config.execution.leaseMs !== undefined)
@@ -172,6 +180,34 @@ function validateProjectConfigShape(value: unknown): ValidationIssue[] {
     });
   }
 
+  if (Object.hasOwn(value, "model")) {
+    const model = value.model;
+    if (
+      !isRecord(model) ||
+      Array.isArray(model) ||
+      typeof model.provider !== "string" ||
+      !model.provider.trim() ||
+      typeof model.name !== "string" ||
+      !model.name.trim() ||
+      (Object.hasOwn(model, "maxSteps") &&
+        (!Number.isSafeInteger(model.maxSteps) || Number(model.maxSteps) <= 0)) ||
+      (Object.hasOwn(model, "retries") &&
+        (!Number.isSafeInteger(model.retries) ||
+          Number(model.retries) < 0 ||
+          Number(model.retries) > 10)) ||
+      (Object.hasOwn(model, "retryDelayMs") &&
+        (!Number.isSafeInteger(model.retryDelayMs) ||
+          Number(model.retryDelayMs) < 0 ||
+          Number(model.retryDelayMs) > 60000))
+    ) {
+      issues.push({
+        path: relativePaths.configFile,
+        message:
+          "Expected non-empty model.provider and model.name, positive model.maxSteps, retries between 0 and 10, and retryDelayMs between 0 and 60000",
+        severity: "error",
+      });
+    }
+  }
   if (Object.hasOwn(value, "execution")) {
     const execution = value.execution;
     if (

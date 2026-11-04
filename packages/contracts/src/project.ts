@@ -11,6 +11,13 @@ export interface ProjectConfig {
   name: string;
   description?: string;
   template?: string;
+  model?: {
+    provider: string;
+    name: string;
+    maxSteps?: number;
+    retries?: number;
+    retryDelayMs?: number;
+  };
   execution?: { leaseMs?: number };
 }
 

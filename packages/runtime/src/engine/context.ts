@@ -74,7 +74,8 @@ export function createContext(
             stopped = true;
             throw new RunCancelled();
           }
-          if (attempt >= retries) throw error;
+          if (attempt >= retries || (options?.shouldRetry && !options.shouldRetry(error)))
+            throw error;
         }
       }
     },

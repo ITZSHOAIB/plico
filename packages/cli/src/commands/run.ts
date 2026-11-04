@@ -100,21 +100,17 @@ export async function runCommand(args: string[]): Promise<number> {
 /** Deterministic stand-in used by `--message` until real providers are wired in. */
 function createFakeProvider(): ModelProvider {
   return {
-    complete: async (request) => {
+    async *stream(request) {
       const lastUserMessage = [...request.messages].reverse().find((m) => m.role === "user");
       const lastToolMessage = [...request.messages].reverse().find((m) => m.role === "tool");
-      if (!lastToolMessage && request.tools && request.tools.length > 0) {
-        const tool = request.tools[0];
-        if (tool) {
-          return {
-            content: "",
-            usage: { inputTokens: 10, outputTokens: 1 },
-            toolCalls: [{ name: tool.name, arguments: { title: "Test ticket" } }],
-          };
-        }
+      const tool = request.tools?.[0];
+      if (!lastToolMessage && tool) {
+        yield { type: "tool.call", call: { name: tool.name, arguments: { title: "Test ticket" } } };
+        yield { type: "finish", usage: { inputTokens: 10, outputTokens: 1 } };
+        return;
       }
-      const assistantContent = `Fake provider response to: ${lastUserMessage?.content ?? ""}`;
-      return { content: assistantContent, usage: { inputTokens: 10, outputTokens: 5 } };
+      yield { type: "text", text: `Fake provider response to: ${lastUserMessage?.content ?? ""}` };
+      yield { type: "finish", usage: { inputTokens: 10, outputTokens: 5 } };
     },
   };
 }

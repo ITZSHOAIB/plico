@@ -101,7 +101,7 @@ describe("run recovery", () => {
     const program = `import { createSqliteEventStore, runProject } from ${JSON.stringify(moduleUrl)};
       const store = createSqliteEventStore({ databasePath: process.argv[1] });
       setInterval(() => {}, 1000);
-      void runProject(process.argv[2], { runId: "crashed", eventStore: store, onStarted: () => process.stdout.write("ready\\n"), provider: { complete: async () => new Promise(() => {}) }, message: "hello" });`;
+      void runProject(process.argv[2], { runId: "crashed", eventStore: store, onStarted: () => process.stdout.write("ready\\n"), provider: { async *stream() { await new Promise(() => {}); } }, message: "hello" });`;
     const child = spawn(
       process.execPath,
       ["--import", "tsx", "--input-type=module", "-e", program, databasePath, root],

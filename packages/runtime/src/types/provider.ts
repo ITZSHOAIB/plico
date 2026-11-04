@@ -1,3 +1,4 @@
+import type { JsonValue, ModelToolCall } from "@plico/contracts";
 import type { JsonSchemaSubset } from "./tools.js";
 
 export interface ProviderMessage {
@@ -5,12 +6,11 @@ export interface ProviderMessage {
   content: string;
   toolCallId?: string;
   toolName?: string;
+  toolCalls?: ModelToolCall[];
+  providerMetadata?: JsonValue;
 }
 
-export interface ModelToolCall {
-  name: string;
-  arguments: unknown;
-}
+export type { ModelToolCall } from "@plico/contracts";
 
 export interface ModelRequest {
   messages: ProviderMessage[];
@@ -23,6 +23,7 @@ export interface ModelRequest {
 }
 
 export interface ModelResponse {
+  providerMetadata?: JsonValue;
   content: string;
   usage: {
     inputTokens: number;
@@ -31,6 +32,11 @@ export interface ModelResponse {
   toolCalls?: ModelToolCall[];
 }
 
+export type ModelChunk =
+  | { type: "text"; text: string }
+  | { type: "tool.call"; call: ModelToolCall }
+  | { type: "finish"; usage: ModelResponse["usage"]; providerMetadata?: JsonValue };
+
 export interface ModelProvider {
-  complete(request: ModelRequest): Promise<ModelResponse>;
+  stream(request: ModelRequest, options: { signal: AbortSignal }): AsyncIterable<ModelChunk>;
 }

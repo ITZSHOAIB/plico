@@ -1,6 +1,8 @@
 export interface StepOptions {
   /** Extra attempts inside one step. Defaults to 0: the step runs once unless the process dies inside it. */
   retries?: number;
+  /** When supplied, only errors accepted by this predicate are retried. */
+  shouldRetry?: (error: unknown) => boolean;
 }
 
 export interface StepAttempt {

@@ -1,4 +1,117 @@
 {
+  "GET /v1/runs/:id/events (provider)": {
+    "model.request": [
+      {
+        "id": "string",
+        "payload": {
+          "maxSteps": "number",
+          "messages": [
+            {
+              "content": "string",
+              "providerMetadata": {
+                "cursor": "string"
+              },
+              "role": "string",
+              "toolCallId": "string",
+              "toolCalls": [
+                {
+                  "arguments": {},
+                  "id": "string",
+                  "name": "string",
+                  "providerMetadata": {
+                    "callToken": "string"
+                  }
+                }
+              ],
+              "toolName": "string"
+            }
+          ],
+          "tools": [
+            {
+              "description": "string",
+              "inputSchema": {
+                "type": "string"
+              },
+              "name": "string"
+            }
+          ]
+        },
+        "runId": "string",
+        "schemaVersion": "number",
+        "sequence": "number",
+        "streamId": "string",
+        "streamType": "string",
+        "timestamp": "string",
+        "type": "string"
+      }
+    ],
+    "model.attempt": [
+      {
+        "id": "string",
+        "payload": {
+          "attemptId": "string",
+          "turn": "number"
+        },
+        "runId": "string",
+        "schemaVersion": "number",
+        "sequence": "number",
+        "streamId": "string",
+        "streamType": "string",
+        "timestamp": "string",
+        "type": "string"
+      }
+    ],
+    "model.delta": [
+      {
+        "id": "string",
+        "payload": {
+          "attemptId": "string",
+          "text": "string",
+          "turn": "number"
+        },
+        "runId": "string",
+        "schemaVersion": "number",
+        "sequence": "number",
+        "streamId": "string",
+        "streamType": "string",
+        "timestamp": "string",
+        "type": "string"
+      }
+    ],
+    "model.response": [
+      {
+        "id": "string",
+        "payload": {
+          "attemptId": "string",
+          "content": "string",
+          "providerMetadata": {
+            "cursor": "string"
+          },
+          "toolCalls": [
+            {
+              "arguments": {},
+              "id": "string",
+              "name": "string",
+              "providerMetadata": {
+                "callToken": "string"
+              }
+            }
+          ],
+          "usage": {
+            "inputTokens": "number",
+            "outputTokens": "number"
+          }
+        },
+        "runId": "string",
+        "schemaVersion": "number",
+        "sequence": "number",
+        "streamId": "string",
+        "streamType": "string",
+        "timestamp": "string",
+        "type": "string"
+      }
+    ]
+  },
   "POST /v1/runs/dry": {
     "events": [
       {

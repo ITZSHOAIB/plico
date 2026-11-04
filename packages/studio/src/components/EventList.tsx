@@ -47,6 +47,7 @@ function typeTone(type: PlicoEvent["type"]): string {
 }
 
 function eventSummary(event: PlicoEvent): string | undefined {
+  if (event.type === "model.delta") return event.payload.text;
   if (event.type === "approval.requested") return `${event.payload.toolName} requires approval`;
   if (event.type === "tool.call" || event.type === "tool.result") return event.payload.toolName;
   return undefined;

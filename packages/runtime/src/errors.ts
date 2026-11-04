@@ -30,3 +30,25 @@ export function runtimeErrorPayload(error: unknown): PlicoEventPayloads["run.err
     message: errorMessage(error),
   };
 }
+
+export type ModelErrorKind =
+  | "rate_limit"
+  | "overloaded"
+  | "auth"
+  | "bad_request"
+  | "aborted"
+  | "network";
+
+/** Provider adapters normalize errors to these provider-neutral kinds. */
+export class ModelProviderError extends Error {
+  readonly retryable: boolean;
+
+  constructor(
+    readonly kind: ModelErrorKind,
+    message: string,
+  ) {
+    super(message);
+    this.name = "ModelProviderError";
+    this.retryable = kind === "rate_limit" || kind === "overloaded" || kind === "network";
+  }
+}

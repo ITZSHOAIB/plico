@@ -1,5 +1,20 @@
 import type { ValidationIssue } from "./project.js";
 
+export type JsonValue =
+  | null
+  | boolean
+  | number
+  | string
+  | JsonValue[]
+  | { [key: string]: JsonValue };
+
+export interface ModelToolCall {
+  id?: string;
+  name: string;
+  arguments: unknown;
+  providerMetadata?: JsonValue;
+}
+
 export interface PlicoEventPayloads {
   "run.started": { projectRoot: string; projectName: string };
   "instructions.composed": { length: number; sources: string[]; content: string };
@@ -15,14 +30,25 @@ export interface PlicoEventPayloads {
   };
   "input.received": { content: string };
   "model.request": {
-    messages: Array<{ role: string; content: string; toolName?: string; toolCallId?: string }>;
+    messages: Array<{
+      role: string;
+      content: string;
+      toolName?: string;
+      toolCallId?: string;
+      toolCalls?: ModelToolCall[];
+      providerMetadata?: JsonValue;
+    }>;
     maxSteps: number;
     tools: Array<{ name: string; description: string; inputSchema: unknown }>;
   };
+  "model.attempt": { turn: number; attemptId: string };
+  "model.delta": { turn: number; attemptId: string; text: string };
   "model.response": {
+    attemptId?: string;
+    providerMetadata?: JsonValue;
     content: string;
     usage: { inputTokens: number; outputTokens: number };
-    toolCalls?: Array<{ name: string; arguments: unknown }> | undefined;
+    toolCalls?: ModelToolCall[] | undefined;
   };
   "assistant.output": { content: string };
   "tool.call": { toolName: string; arguments: unknown };
