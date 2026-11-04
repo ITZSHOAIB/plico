@@ -44,4 +44,9 @@ jobs:
         run: pnpm typecheck
 
       - name: Test
+        if: runner.os != 'Windows'
         run: pnpm test
+
+      - name: Test (Windows)
+        if: runner.os == 'Windows'
+        run: pnpm test --maxWorkers=2

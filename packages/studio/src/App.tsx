@@ -40,6 +40,7 @@ export function App() {
   };
 
   const navItems: NavItem[] = [
+    { view: "chat", label: "Chat", icon: "chat", onSelect: () => showTopLevelView("chat") },
     {
       view: "overview",
       label: "Overview",
@@ -108,12 +109,14 @@ export function App() {
         <ThemeToggle />
       </header>
       <NavRail items={navItems} view={view} />
-      <RunList
-        runs={data.runs}
-        selectedRun={inspector.selectedRun}
-        onSelectRun={selectRun}
-        visibleOnMobile={runListOnMobile}
-      />
+      {view !== "chat" && (
+        <RunList
+          runs={data.runs}
+          selectedRun={inspector.selectedRun}
+          onSelectRun={selectRun}
+          visibleOnMobile={runListOnMobile}
+        />
+      )}
       <main
         className={`min-h-0 min-w-0 flex-1 flex-col lg:flex ${runListOnMobile ? "hidden" : "flex"}`}
       >

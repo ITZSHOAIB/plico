@@ -8,6 +8,8 @@ import type {
   PlicoEvent,
   ReadinessReport,
   RunSummary,
+  Thread,
+  ThreadMessage,
 } from "./types";
 
 async function parseJson<T>(url: string, response: Response): Promise<T> {
@@ -34,6 +36,34 @@ export async function fetchProject(): Promise<LoadedProject> {
 
 export function fetchRuns(): Promise<RunSummary[]> {
   return getJson("/v1/runs");
+}
+
+export function fetchThreads(): Promise<Thread[]> {
+  return getJson("/v1/threads");
+}
+
+export function createThread(): Promise<Thread> {
+  return getJson("/v1/threads", { method: "POST" });
+}
+
+export function fetchThreadMessages(threadId: string): Promise<ThreadMessage[]> {
+  return getJson(`/v1/threads/${encodeURIComponent(threadId)}/messages`);
+}
+
+export async function sendThreadMessage(threadId: string, content: string): Promise<ThreadMessage> {
+  const url = `/v1/threads/${encodeURIComponent(threadId)}/messages`;
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ content }),
+  });
+  if (!response.ok) {
+    const body = (await response.json().catch(() => null)) as {
+      error?: { message?: string };
+    } | null;
+    throw new Error(body?.error?.message ?? `Could not send message (${response.status}).`);
+  }
+  return response.json() as Promise<ThreadMessage>;
 }
 
 export function fetchRun(runId: string): Promise<RunSummary> {

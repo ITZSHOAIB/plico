@@ -4,6 +4,7 @@ import type { RunInspector } from "../hooks/useRunInspector";
 import { EmptyState } from "../ui/Page";
 import type { View } from "../view";
 import { ArtifactsView } from "./ArtifactsView";
+import { ChatView } from "./ChatView";
 import { EvalsView } from "./EvalsView";
 import { InstructionsView } from "./InstructionsView";
 import { OverviewView } from "./OverviewView";
@@ -23,6 +24,8 @@ export function MainView({ view, data, inspector, evals, onOpenRun, onBackToRuns
   if (data.error) {
     return <EmptyState alert>{data.error}</EmptyState>;
   }
+
+  if (view === "chat") return <ChatView inspector={inspector} />;
 
   if (view === "overview") {
     return <OverviewView data={data} evalReport={evals.report} />;

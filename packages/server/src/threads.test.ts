@@ -90,7 +90,7 @@ it("creates and reads a durable thread and its messages through HTTP", async () 
   }
 });
 
-it("does not touch the thread store after servePlico closes", async () => {
+it("does not touch the thread store after servePlico closes", { timeout: 15000 }, async () => {
   const root = await mkdtemp(join(tmpdir(), "plico-thread-close-recovery-"));
   for (const dir of ["skills", "tools", "evals", "artifacts", "memory"])
     await mkdir(join(root, dir));

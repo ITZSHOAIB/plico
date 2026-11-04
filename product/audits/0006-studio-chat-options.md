@@ -13,7 +13,14 @@ native event cursor and attempt-reset semantics and work without hosted services
 
 ## Decision
 
-For the first local playground, build on Studio's existing components and native
+**Revisited:** The recommendation below predates the expanded comparison in
+[0007-chat-ui-research.md](./0007-chat-ui-research.md). For the upcoming slice,
+evaluate the maintained shadcn/ui message-scroller primitive first, while keeping
+Plico's native state and streaming. Adopt it if its integration, dependency and
+accessibility checks pass; otherwise use Studio's existing components. The
+comparison is source-based, not an integration or accessibility audit.
+
+The original decision was to build the first local playground on Studio's existing components and native
 event handling. The current requirement is deliberately narrower than a general
 chat product, and attempt resets, replay and the run inspector still need Plico
 integration with every option. Reassess assistant-ui if the playground expands to
