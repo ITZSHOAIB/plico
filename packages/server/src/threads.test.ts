@@ -32,6 +32,7 @@ it("creates and reads a durable thread and its messages through HTTP", async () 
     });
     expect(sent.status).toBe(201);
     const message = await sent.json();
+    await new Promise<void>((resolve) => first.server.close(() => resolve()));
     const second = await start();
     try {
       expect(await (await fetch(`${second.url}/v1/threads`)).json()).toEqual([thread]);
@@ -53,6 +54,7 @@ it("creates and reads a durable thread and its messages through HTTP", async () 
       await new Promise<void>((resolve) => second.server.close(() => resolve()));
     }
   } finally {
-    await new Promise<void>((resolve) => first.server.close(() => resolve()));
+    if (first.server.listening)
+      await new Promise<void>((resolve) => first.server.close(() => resolve()));
   }
 });

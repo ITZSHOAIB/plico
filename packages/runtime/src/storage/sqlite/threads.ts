@@ -72,28 +72,30 @@ export function createSqliteThreadStore({
     async getEvents(threadId) {
       const rows = db
         .prepare(
-          "SELECT sequence, event_id, type, timestamp, payload_json FROM events WHERE stream_type = 'thread' AND stream_id = ? ORDER BY sequence",
+          "SELECT sequence, event_id, schema_version, type, timestamp, payload_json FROM events WHERE stream_type = 'thread' AND stream_id = ? ORDER BY sequence",
         )
         .all(threadId) as unknown as Array<{
         sequence: number;
         event_id: string;
+        schema_version: number;
         type: ThreadEvent["type"];
         timestamp: string;
         payload_json: string;
       }>;
-      return rows.map(
-        (row) =>
-          ({
-            schemaVersion: 1,
-            streamType: "thread",
-            streamId: threadId,
-            sequence: row.sequence,
-            id: row.event_id,
-            type: row.type,
-            timestamp: row.timestamp,
-            payload: JSON.parse(row.payload_json),
-          }) as ThreadEvent,
-      );
+      return rows.map((row) => {
+        if (row.schema_version !== 1)
+          throw new Error(`Unsupported thread event schema version: ${row.schema_version}.`);
+        return {
+          schemaVersion: 1,
+          streamType: "thread",
+          streamId: threadId,
+          sequence: row.sequence,
+          id: row.event_id,
+          type: row.type,
+          timestamp: row.timestamp,
+          payload: JSON.parse(row.payload_json),
+        } as ThreadEvent;
+      });
     },
   };
 }

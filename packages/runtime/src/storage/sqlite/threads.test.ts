@@ -1,6 +1,7 @@
 import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { DatabaseSync } from "node:sqlite";
 import { expect, it } from "vitest";
 import { createSqliteThreadStore } from "../../index.js";
 
@@ -19,6 +20,18 @@ it("persists thread events and projects messages across database reopen", async 
     "thread.created",
     "message.created",
   ]);
+});
+
+it("rejects a thread event with an unsupported schema version", async () => {
+  const databasePath = join(await mkdtemp(join(tmpdir(), "plico-thread-version-")), "state.sqlite");
+  const store = createSqliteThreadStore({ databasePath });
+  const thread = await store.createThread();
+  const db = new DatabaseSync(databasePath);
+  db.prepare(
+    "UPDATE events SET schema_version = 2 WHERE stream_type = 'thread' AND stream_id = ?",
+  ).run(thread.id);
+  db.close();
+  await expect(store.getEvents(thread.id)).rejects.toThrow(/schema version/i);
 });
 
 it("keeps event order and message projections consistent across writers", async () => {
