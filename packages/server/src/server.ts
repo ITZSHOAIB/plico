@@ -4,6 +4,7 @@ import {
   createConfiguredModelProvider,
   createSqliteEngine,
   createSqliteEventStore,
+  createSqliteThreadStore,
   modelProviderRecoveryKey,
   recoverRuns,
 } from "@plico/runtime";
@@ -23,7 +24,15 @@ export async function createPlicoServer(options: CreatePlicoServerOptions): Prom
       const isApiPath = url.pathname === "/health" || url.pathname.startsWith("/v1/");
 
       if (isApiPath) {
-        await handleRequest({ projectRoot, eventStore, engine, studioPath, request, response });
+        await handleRequest({
+          projectRoot,
+          eventStore,
+          threadStore: options.threadStore,
+          engine,
+          studioPath,
+          request,
+          response,
+        });
         return;
       }
 
@@ -35,7 +44,15 @@ export async function createPlicoServer(options: CreatePlicoServerOptions): Prom
         return;
       }
 
-      await handleRequest({ projectRoot, eventStore, engine, studioPath, request, response });
+      await handleRequest({
+        projectRoot,
+        eventStore,
+        threadStore: options.threadStore,
+        engine,
+        studioPath,
+        request,
+        response,
+      });
     },
   };
 }
@@ -87,6 +104,7 @@ export async function servePlico(options: ServePlicoOptions): Promise<Server> {
       await createPlicoServer({
         projectRoot: options.projectRoot,
         eventStore,
+        threadStore: createSqliteThreadStore({ databasePath: options.databasePath }),
         engine,
         ...(options.studioPath === undefined ? {} : { studioPath: options.studioPath }),
       })

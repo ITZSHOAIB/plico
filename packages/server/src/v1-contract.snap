@@ -1,4 +1,34 @@
 {
+  "POST /v1/threads": {
+    "createdAt": "string",
+    "id": "string"
+  },
+  "POST /v1/threads/:id/messages": {
+    "content": "string",
+    "createdAt": "string",
+    "id": "string",
+    "role": "string",
+    "threadId": "string"
+  },
+  "GET /v1/threads": [
+    {
+      "createdAt": "string",
+      "id": "string"
+    }
+  ],
+  "GET /v1/threads/:id": {
+    "createdAt": "string",
+    "id": "string"
+  },
+  "GET /v1/threads/:id/messages": [
+    {
+      "content": "string",
+      "createdAt": "string",
+      "id": "string",
+      "role": "string",
+      "threadId": "string"
+    }
+  ],
   "GET /v1/runs/:id/events (provider)": {
     "model.request": [
       {

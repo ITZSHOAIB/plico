@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import type { Engine, EventStore } from "@plico/runtime";
+import type { Engine, EventStore, ThreadStore } from "@plico/runtime";
 import { errorMessage, HttpError, sendError } from "../errors.js";
 import { artifactRoutes } from "./artifacts.js";
 import { evalRoutes } from "./eval.js";
@@ -7,12 +7,14 @@ import { healthRoutes } from "./health.js";
 import { projectRoutes } from "./project.js";
 import { readinessRoutes } from "./readiness.js";
 import { runRoutes } from "./runs.js";
+import { threadRoutes } from "./threads.js";
 import type { Route } from "./types.js";
 
 const routes: readonly Route[] = [
   ...healthRoutes,
   ...projectRoutes,
   ...runRoutes,
+  ...threadRoutes,
   ...artifactRoutes,
   ...evalRoutes,
   ...readinessRoutes,
@@ -21,6 +23,7 @@ const routes: readonly Route[] = [
 interface HandleRequestOptions {
   projectRoot: string;
   eventStore: EventStore;
+  threadStore: ThreadStore | undefined;
   engine: Engine | undefined;
   studioPath: string | undefined;
   request: IncomingMessage;
@@ -28,7 +31,7 @@ interface HandleRequestOptions {
 }
 
 export async function handleRequest(options: HandleRequestOptions): Promise<void> {
-  const { projectRoot, eventStore, engine, studioPath, request, response } = options;
+  const { projectRoot, eventStore, threadStore, engine, studioPath, request, response } = options;
   const url = new URL(request.url ?? "/", "http://127.0.0.1");
 
   try {
@@ -40,6 +43,7 @@ export async function handleRequest(options: HandleRequestOptions): Promise<void
       await route.handler({
         projectRoot,
         eventStore,
+        threadStore,
         engine,
         studioPath,
         request,
