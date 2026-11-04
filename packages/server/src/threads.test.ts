@@ -3,9 +3,28 @@ import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { DatabaseSync } from "node:sqlite";
 import { createSqliteEventStore, createSqliteThreadStore } from "@plico/runtime";
-import { expect, it } from "vitest";
-import { createPlicoServer } from "./index.js";
+import { expect, it, vi } from "vitest";
+import { createPlicoServer, servePlico } from "./index.js";
+
+it("closes its owned thread connection when servePlico stops", async () => {
+  const root = await mkdtemp(join(tmpdir(), "plico-thread-serve-close-"));
+  const close = vi.spyOn(DatabaseSync.prototype, "close");
+  try {
+    const server = await servePlico({
+      projectRoot: root,
+      databasePath: join(root, "state.sqlite"),
+      host: "127.0.0.1",
+      port: 0,
+    });
+    const before = close.mock.calls.length;
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+    expect(close.mock.calls.length).toBe(before + 1);
+  } finally {
+    close.mockRestore();
+  }
+});
 
 it("creates and reads a durable thread and its messages through HTTP", async () => {
   const root = await mkdtemp(join(tmpdir(), "plico-thread-api-"));

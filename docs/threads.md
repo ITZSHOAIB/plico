@@ -13,3 +13,6 @@ stores it; provider execution from a thread is a later slice of epic #71.
 Hosts using `createPlicoServer` can enable these routes by passing a
 `threadStore` from `createSqliteThreadStore({ databasePath })`. If no thread
 store is supplied, thread routes return a `threads.unavailable` error.
+The host owns an injected thread store and must call its `close()` method when
+it is no longer needed. `servePlico` owns its thread store and closes it when
+the server shuts down.

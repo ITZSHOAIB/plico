@@ -4,6 +4,8 @@ import type { Thread, ThreadEvent, ThreadMessage } from "@plico/contracts";
 import { openDatabase } from "./open.js";
 
 export interface ThreadStore {
+  /** Release resources owned by this store. */
+  close(): void;
   createThread(): Promise<Thread>;
   listThreads(): Promise<Thread[]>;
   getThread(id: string): Promise<Thread | undefined>;
@@ -21,6 +23,9 @@ export function createSqliteThreadStore({
 }): ThreadStore {
   const db = openDatabase(databasePath, readOnly);
   return {
+    close() {
+      db.close();
+    },
     async createThread() {
       const thread: Thread = { id: randomUUID(), createdAt: new Date().toISOString() };
       transaction(db, () => {

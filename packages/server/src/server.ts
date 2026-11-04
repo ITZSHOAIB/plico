@@ -99,22 +99,29 @@ export async function servePlico(options: ServePlicoOptions): Promise<Server> {
         `Recovery incomplete: ${error instanceof Error ? error.message : String(error)}`,
       ),
   );
+  const threadStore = createSqliteThreadStore({ databasePath: options.databasePath });
   const server = createServer(
     (
       await createPlicoServer({
         projectRoot: options.projectRoot,
         eventStore,
-        threadStore: createSqliteThreadStore({ databasePath: options.databasePath }),
+        threadStore,
         engine,
         ...(options.studioPath === undefined ? {} : { studioPath: options.studioPath }),
       })
     ).requestListener,
   );
+  server.once("close", () => threadStore.close());
 
-  await new Promise<void>((resolve, reject) => {
-    server.once("error", reject);
-    server.listen(options.port ?? 3000, options.host ?? "127.0.0.1", () => resolve());
-  });
+  try {
+    await new Promise<void>((resolve, reject) => {
+      server.once("error", reject);
+      server.listen(options.port ?? 3000, options.host ?? "127.0.0.1", () => resolve());
+    });
+  } catch (error) {
+    threadStore.close();
+    throw error;
+  }
 
   return server;
 }

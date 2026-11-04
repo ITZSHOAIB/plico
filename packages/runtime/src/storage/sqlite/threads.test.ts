@@ -1,9 +1,22 @@
+import { existsSync } from "node:fs";
 import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { expect, it } from "vitest";
 import { createSqliteThreadStore } from "../../index.js";
+
+it("releases its SQLite connection each time the thread store closes", async () => {
+  const databasePath = join(await mkdtemp(join(tmpdir(), "plico-thread-close-")), "state.sqlite");
+  for (let index = 0; index < 3; index++) {
+    const store = createSqliteThreadStore({ databasePath });
+    await store.createThread();
+    expect(existsSync(`${databasePath}-wal`)).toBe(true);
+    store.close();
+    await expect(store.listThreads()).rejects.toThrow();
+    expect(existsSync(`${databasePath}-wal`)).toBe(false);
+  }
+});
 
 it("persists thread events and projects messages across database reopen", async () => {
   const root = await mkdtemp(join(tmpdir(), "plico-threads-"));
