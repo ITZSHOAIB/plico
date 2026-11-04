@@ -442,6 +442,48 @@ it("exposes recovery to hosts that create their own server", async () => {
   }
 });
 
+it("reports mismatched stores without starting or changing a queued run", async () => {
+  const root = await mkdtemp(join(tmpdir(), "plico-thread-recovery-mismatch-"));
+  for (const dir of ["skills", "tools", "evals", "artifacts", "memory"])
+    await mkdir(join(root, dir));
+  await writeFile(
+    join(root, "plico.config.ts"),
+    'export default { schemaVersion: 1, name: "Demo" };',
+  );
+  await writeFile(join(root, "agent.md"), "instructions");
+  const databasePath = join(root, "runs.sqlite");
+  const eventStore = createSqliteEventStore({ databasePath });
+  const threadStore = createSqliteThreadStore({ databasePath: join(root, "threads.sqlite") });
+  const engine = createSqliteEngine({ databasePath });
+  const thread = await threadStore.createThread();
+  await threadStore.addMessage(thread.id, "resume me", "queued-mismatch", {
+    providerKey: "account-key",
+    projectRoot: root,
+  });
+  const stream = vi.fn(async function* () {
+    yield { type: "text" as const, text: "Recovered" };
+  });
+  const api = await createPlicoServer({
+    projectRoot: root,
+    eventStore,
+    threadStore,
+    engine,
+    provider: { stream },
+    providerAccountKey: "account-key",
+  });
+  try {
+    await expect(api.recover()).rejects.toThrow("Thread and run stores must use the same database");
+    expect(stream).not.toHaveBeenCalled();
+    expect(await engine.status("queued-mismatch")).toBeUndefined();
+    expect(await eventStore.getRun("queued-mismatch")).toBeUndefined();
+    expect(await threadStore.listQueuedRuns()).toEqual([
+      expect.objectContaining({ runId: "queued-mismatch", content: "resume me" }),
+    ]);
+  } finally {
+    threadStore.close();
+  }
+});
+
 it("does not accept another message while the thread's run is active", async () => {
   const root = await mkdtemp(join(tmpdir(), "plico-thread-busy-"));
   for (const dir of ["skills", "tools", "evals", "artifacts", "memory"])

@@ -66,6 +66,11 @@ export async function recoverPlicoState(options: RecoveryOptions): Promise<void>
 /** Start thread runs that were reserved but never reached the engine. */
 export async function resumeQueuedRuns(options: ResumeQueuedOptions): Promise<void> {
   if (!options.provider || !options.providerAccountKey || !options.threadStore) return;
+  if (
+    !options.threadStore.storageIdentity ||
+    options.threadStore.storageIdentity !== options.eventStore.storageIdentity
+  )
+    throw new Error("Thread and run stores must use the same database.");
   const queued = await options.threadStore.listQueuedRuns();
   for (const run of queued) {
     if (options.isClosed?.()) return;
