@@ -2,7 +2,7 @@ import type { ProjectConfig } from "@plico/contracts";
 import type { RunContext } from "../../engine/index.js";
 import { RuntimeDiagnosticError } from "../../errors.js";
 import type { InMemoryEventLog } from "../../events.js";
-import { decideApproval } from "../../policy/approval.js";
+import { approvalTimeoutMs, decideApproval } from "../../policy/approval.js";
 import { validateJsonSchemaSubset } from "../../tools/schema.js";
 import type { DeclaredTool, DryRunScriptStep } from "../../types/index.js";
 import { nameToolStep } from "../tracing.js";
@@ -84,7 +84,7 @@ export async function runScriptedDryRun(
         toolName: tool.name,
         ...(output === undefined ? {} : { output }),
       });
-      await awaitApproval(ctx, requestId, tool.name, output);
+      await awaitApproval(ctx, requestId, tool.name, output, approvalTimeoutMs(config));
     }
 
     const idempotencyKey = `${ctx.runId}:${index}`;

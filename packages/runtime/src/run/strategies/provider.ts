@@ -4,7 +4,7 @@ import type { ProjectConfig } from "@plico/contracts";
 import { RunCancelled, type RunContext } from "../../engine/index.js";
 import { ModelProviderError, RuntimeDiagnosticError } from "../../errors.js";
 import type { InMemoryEventLog } from "../../events.js";
-import { decideApproval } from "../../policy/approval.js";
+import { approvalTimeoutMs, decideApproval } from "../../policy/approval.js";
 import { validateJsonSchemaSubset } from "../../tools/schema.js";
 import type { DeclaredTool, ModelProvider, ModelRequest } from "../../types/index.js";
 import { nameToolStep } from "../tracing.js";
@@ -167,7 +167,7 @@ export async function runProviderBackedRun(
           toolName: tool.name,
           ...(output === undefined ? {} : { output }),
         });
-        await awaitApproval(ctx, requestId, tool.name, output);
+        await awaitApproval(ctx, requestId, tool.name, output, approvalTimeoutMs(config));
       }
 
       let result: unknown;

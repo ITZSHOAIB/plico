@@ -21,10 +21,13 @@ export async function awaitApproval(
   requestId: string,
   toolName: string,
   output: string | undefined,
+  timeoutMs?: number,
 ): Promise<void> {
   let outcome: Awaited<ReturnType<typeof ctx.wait<ApprovalDecision | null>>>;
   try {
-    outcome = await ctx.wait<ApprovalDecision | null>(approvalWaitName(requestId));
+    outcome = await ctx.wait<ApprovalDecision | null>(approvalWaitName(requestId), {
+      ...(timeoutMs === undefined ? {} : { timeoutMs }),
+    });
   } catch (error) {
     if (error instanceof RunSuspended) throw new RunWaitingError(output);
     throw error;
