@@ -16,7 +16,7 @@ export interface ModelToolCall {
 }
 
 export interface PlicoEventPayloads {
-  "run.started": { projectRoot: string; projectName: string };
+  "run.started": { projectRoot: string; projectName: string; threadId?: string };
   "instructions.composed": { length: number; sources: string[]; content: string };
   "tools.discovered": {
     tools: Array<{

@@ -31,6 +31,8 @@ interface RunInput {
   displayRoot?: string;
   startedAt: string;
   message?: string;
+  threadId?: string;
+  history?: RunProjectOptions["history"];
   script?: DryRunScriptStep[];
   providerRecoveryKey?: string;
   traceContext?: StoredSpanContext;
@@ -49,6 +51,8 @@ export async function runProject(
     startedAt: new Date().toISOString(),
     traceContext: storeSpanContext(span),
     ...(options.message === undefined ? {} : { message: options.message }),
+    ...(options.threadId === undefined ? {} : { threadId: options.threadId }),
+    ...(options.history === undefined ? {} : { history: options.history }),
     ...(options.script === undefined ? {} : { script: options.script }),
     ...(options.providerRecoveryKey === undefined
       ? {}
@@ -188,6 +192,7 @@ async function runLoop(
   await events.append("run.started", {
     projectRoot: displayRoot,
     projectName: validation.project?.config.name ?? "",
+    ...(input.threadId === undefined ? {} : { threadId: input.threadId }),
   });
   if (newlyStarted) options.onStarted?.(runId);
 
@@ -247,6 +252,7 @@ async function runLoop(
             tools,
             events,
             project.config.model,
+            input.history,
           )
         : input.script === undefined
           ? await runDefaultDryRun(project, events)

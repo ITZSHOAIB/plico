@@ -1,6 +1,7 @@
 import type { EvalReport, PlicoEvent, RunSummary } from "@plico/contracts";
 
 export interface EventStore {
+  readonly storageIdentity?: string;
   appendEvent(event: PlicoEvent): Promise<void>;
   listRuns(): Promise<RunSummary[]>;
   getRun(runId: string): Promise<RunSummary | undefined>;

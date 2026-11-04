@@ -30,3 +30,19 @@ export function modelProviderRecoveryKey(model: ModelConfig): string {
     )
     .digest("hex");
 }
+
+/**
+ * Hash only the account and credential. A queued run has not called a model yet, so changing the
+ * configured model must not strand its reservation.
+ */
+export function modelProviderAccountKey(model: ModelConfig): string {
+  return createHash("sha256")
+    .update(
+      JSON.stringify([
+        model.provider,
+        process.env.OPENAI_BASE_URL || "https://api.openai.com/v1",
+        process.env.OPENAI_API_KEY ?? "",
+      ]),
+    )
+    .digest("hex");
+}

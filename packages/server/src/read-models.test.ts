@@ -3,7 +3,7 @@ import { createServer, type RequestListener, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createSqliteEventStore } from "@plico/runtime";
+import { createSqliteEventStore, createSqliteThreadStore } from "@plico/runtime";
 import { afterEach, describe, expect, it } from "vitest";
 import { createPlicoServer } from "./index.js";
 
@@ -167,6 +167,31 @@ describe("eval reads", () => {
 });
 
 describe("readiness", () => {
+  it("reports a thread and run store mismatch", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-read-models-"));
+    for (const dir of ["skills", "tools", "evals", "artifacts", "memory"])
+      await mkdir(join(root, dir), { recursive: true });
+    await writeFile(
+      join(root, "plico.config.ts"),
+      'export default { schemaVersion: 1, name: "Demo" } as const;\n',
+    );
+    await writeFile(join(root, "agent.md"), "# Demo\n");
+    const eventStore = createSqliteEventStore({ databasePath: join(root, "runs.sqlite") });
+    const threadStore = createSqliteThreadStore({
+      databasePath: join(root, "threads.sqlite"),
+    });
+    const api = await createPlicoServer({ projectRoot: root, eventStore, threadStore });
+    try {
+      const baseUrl = await listen(api.requestListener);
+      const report = await getJson(`${baseUrl}/v1/readiness`);
+      expect(report.body.diagnostics).toContainEqual(
+        expect.objectContaining({ subsystem: "threads.store", severity: "error" }),
+      );
+    } finally {
+      threadStore.close();
+    }
+  });
+
   it("reports Studio assets when the server is serving Studio", async () => {
     const studioPath = join(await mkdtemp(join(tmpdir(), "plico-studio-")), "missing");
     const baseUrl = await startProject({ studioPath });

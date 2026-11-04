@@ -1,6 +1,7 @@
 import type { DatabaseSync } from "node:sqlite";
 import type { PlicoEvent } from "@plico/contracts";
 import { acquireOwner } from "./owner-lock.js";
+import { projectThreadEvent } from "./project-thread.js";
 
 export function appendEventRecord(database: DatabaseSync, event: PlicoEvent): void {
   if (event.streamType !== "run" || event.streamId !== event.runId) {
@@ -111,6 +112,7 @@ export function appendEventRecord(database: DatabaseSync, event: PlicoEvent): vo
         event.timestamp,
         JSON.stringify(event.payload),
       );
+    projectThreadEvent(database, event);
     database.exec("COMMIT");
   } catch (error) {
     database.exec("ROLLBACK");

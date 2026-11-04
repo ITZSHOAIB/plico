@@ -12,9 +12,11 @@ export {
 } from "./engine/index.js";
 export { type ModelErrorKind, ModelProviderError } from "./errors.js";
 export { runEvals } from "./evals/index.js";
+export { runFailureEvents } from "./events.js";
 export { composeInstructions } from "./instructions.js";
 export {
   createConfiguredModelProvider,
+  modelProviderAccountKey,
   modelProviderRecoveryKey,
   supportsModelProvider,
 } from "./providers/configured.js";
@@ -25,7 +27,11 @@ export {
 export { checkReadiness } from "./readiness/index.js";
 export { recoverRuns, runProject } from "./run/index.js";
 export { createSqliteEventStore } from "./storage/index.js";
-export { createSqliteThreadStore, type ThreadStore } from "./storage/sqlite/threads.js";
+export {
+  createSqliteThreadStore,
+  ThreadBusyError,
+  type ThreadStore,
+} from "./storage/sqlite/threads.js";
 export { discoverTools } from "./tools/index.js";
 export type {
   ArtifactFile,

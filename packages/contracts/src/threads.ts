@@ -6,7 +6,8 @@ export interface Thread {
 export interface ThreadMessage {
   id: string;
   threadId: string;
-  role: "user";
+  role: "user" | "assistant";
+  runId?: string;
   content: string;
   createdAt: string;
 }

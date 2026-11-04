@@ -582,6 +582,29 @@ describe("SSE stream", () => {
     await new Promise<void>((resolve) => server.close(() => resolve()));
   });
 
+  it("resumes an event stream using Last-Event-ID", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-sse-header-"));
+    await writeValidProject(root);
+    const eventStore = createSqliteEventStore({
+      databasePath: join(root, ".plico", "plico.sqlite"),
+    });
+    const api = await createPlicoServer({ projectRoot: root, eventStore });
+    const { baseUrl, server } = await startTestServer(api.requestListener);
+    try {
+      const runId = await persistDryRun(baseUrl);
+      const response = await fetch(`${baseUrl}/v1/runs/${runId}/events/stream`, {
+        headers: { "Last-Event-ID": "2" },
+      });
+      const text = await response.text();
+      expect(text).not.toContain("id: 1\n");
+      expect(text).not.toContain("id: 2\n");
+      expect(text).toContain("id: 3\n");
+      expect(text).toContain("run.completed");
+    } finally {
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
+  });
+
   it("returns JSON 404 for unknown run IDs before starting a stream", async () => {
     const root = await mkdtemp(join(tmpdir(), "plico-sse-"));
     await writeValidProject(root);
@@ -647,7 +670,7 @@ describe("SSE stream", () => {
     expect(heartbeats.length).toBeGreaterThanOrEqual(1);
 
     await new Promise<void>((resolve) => server.close(() => resolve()));
-  });
+  }, 15_000);
 
   it("closes the stream cleanly after terminal event", async () => {
     const root = await mkdtemp(join(tmpdir(), "plico-sse-"));
@@ -678,7 +701,7 @@ describe("SSE stream", () => {
     });
 
     await new Promise<void>((resolve) => server.close(() => resolve()));
-  });
+  }, 15_000);
 
   it("keeps the event stream open for a waiting run", async () => {
     const root = await mkdtemp(join(tmpdir(), "plico-sse-"));

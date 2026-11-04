@@ -65,6 +65,17 @@ const migrations: ReadonlyArray<{ from: number; to: number; sql: string }> = [
     CREATE INDEX thread_messages_thread_sequence ON thread_messages(thread_id, sequence);
   `,
   },
+  {
+    from: 8,
+    to: 9,
+    sql: `
+      ALTER TABLE thread_messages ADD COLUMN run_id TEXT;
+      CREATE TABLE thread_runs (run_id TEXT PRIMARY KEY, thread_id TEXT NOT NULL, provider_key TEXT, project_root TEXT);
+      CREATE INDEX thread_runs_thread ON thread_runs(thread_id);
+      CREATE INDEX thread_messages_run ON thread_messages(run_id);
+      CREATE UNIQUE INDEX thread_assistant_run ON thread_messages(run_id) WHERE role = 'assistant';
+    `,
+  },
 ];
 
 function readSchemaVersion(

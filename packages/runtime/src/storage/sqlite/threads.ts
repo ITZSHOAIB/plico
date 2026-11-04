@@ -1,17 +1,42 @@
 import { randomUUID } from "node:crypto";
+import { resolve } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 import type { Thread, ThreadEvent, ThreadMessage } from "@plico/contracts";
 import { openDatabase } from "./open.js";
 
 export interface ThreadStore {
+  readonly storageIdentity?: string;
   /** Release resources owned by this store. */
   close(): void;
   createThread(): Promise<Thread>;
   listThreads(): Promise<Thread[]>;
   getThread(id: string): Promise<Thread | undefined>;
-  addMessage(threadId: string, content: string): Promise<ThreadMessage | undefined>;
+  getThreadForRun(runId: string): Promise<string | undefined>;
+  addMessage(
+    threadId: string,
+    content: string,
+    runId?: string,
+    recovery?: { providerKey: string; projectRoot: string },
+  ): Promise<ThreadMessage | undefined>;
   getMessages(threadId: string): Promise<ThreadMessage[]>;
   getEvents(threadId: string): Promise<ThreadEvent[]>;
+  listQueuedRuns(): Promise<
+    Array<{
+      runId: string;
+      threadId: string;
+      content: string;
+      providerKey: string | null;
+      projectRoot: string | null;
+      history: Array<Pick<ThreadMessage, "role" | "content">>;
+    }>
+  >;
+}
+
+export class ThreadBusyError extends Error {
+  constructor() {
+    super("Thread already has an active run.");
+    this.name = "ThreadBusyError";
+  }
 }
 
 export function createSqliteThreadStore({
@@ -23,6 +48,14 @@ export function createSqliteThreadStore({
 }): ThreadStore {
   const db = openDatabase(databasePath, readOnly);
   return {
+    ...(databasePath === ":memory:"
+      ? {}
+      : {
+          storageIdentity:
+            process.platform === "win32"
+              ? resolve(databasePath).toLowerCase()
+              : resolve(databasePath),
+        }),
     close() {
       db.close();
     },
@@ -49,30 +82,83 @@ export function createSqliteThreadStore({
         .prepare("SELECT thread_id AS id, created_at AS createdAt FROM threads WHERE thread_id = ?")
         .get(id) as unknown as Thread | undefined;
     },
-    async addMessage(threadId, content) {
+    async getThreadForRun(runId) {
+      const row = db.prepare("SELECT thread_id FROM thread_runs WHERE run_id = ?").get(runId) as
+        | { thread_id: string }
+        | undefined;
+      return row?.thread_id;
+    },
+    async addMessage(threadId, content, runId, recovery) {
       return transaction(db, () => {
         if (!db.prepare("SELECT 1 FROM threads WHERE thread_id = ?").get(threadId))
           return undefined;
+        if (
+          db
+            .prepare(
+              "SELECT 1 FROM thread_runs t LEFT JOIN runs r ON r.run_id = t.run_id WHERE t.thread_id = ? AND (r.status IS NULL OR r.status IN ('running', 'waiting')) LIMIT 1",
+            )
+            .get(threadId)
+        )
+          throw new ThreadBusyError();
+        if (runId !== undefined)
+          db.prepare(
+            "INSERT INTO thread_runs (run_id, thread_id, provider_key, project_root) VALUES (?, ?, ?, ?)",
+          ).run(runId, threadId, recovery?.providerKey ?? null, recovery?.projectRoot ?? null);
         const message: ThreadMessage = {
           id: randomUUID(),
           threadId,
           role: "user",
           content,
           createdAt: new Date().toISOString(),
+          ...(runId === undefined ? {} : { runId }),
         };
         const sequence = append(db, threadId, "message.created", { message }, message.createdAt);
         db.prepare(
-          "INSERT INTO thread_messages (message_id, thread_id, role, content, created_at, sequence) VALUES (?, ?, ?, ?, ?, ?)",
-        ).run(message.id, threadId, message.role, content, message.createdAt, sequence);
+          "INSERT INTO thread_messages (message_id, thread_id, role, content, created_at, sequence, run_id) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        ).run(
+          message.id,
+          threadId,
+          message.role,
+          content,
+          message.createdAt,
+          sequence,
+          runId ?? null,
+        );
         return message;
       });
     },
     async getMessages(threadId) {
       return db
         .prepare(
-          "SELECT message_id AS id, thread_id AS threadId, role, content, created_at AS createdAt FROM thread_messages WHERE thread_id = ? ORDER BY sequence",
+          "SELECT message_id AS id, thread_id AS threadId, role, content, created_at AS createdAt, run_id AS runId FROM thread_messages WHERE thread_id = ? ORDER BY sequence",
         )
-        .all(threadId) as unknown as ThreadMessage[];
+        .all(threadId)
+        .map(({ runId, ...message }) => ({
+          ...message,
+          ...(runId === null ? {} : { runId }),
+        })) as unknown as ThreadMessage[];
+    },
+    async listQueuedRuns() {
+      const queued = db
+        .prepare(
+          "SELECT t.run_id AS runId, t.thread_id AS threadId, t.provider_key AS providerKey, t.project_root AS projectRoot, m.content, m.sequence FROM thread_runs t JOIN thread_messages m ON m.run_id = t.run_id AND m.role = 'user' LEFT JOIN runs r ON r.run_id = t.run_id WHERE r.run_id IS NULL",
+        )
+        .all() as unknown as Array<{
+        runId: string;
+        threadId: string;
+        content: string;
+        sequence: number;
+        providerKey: string | null;
+        projectRoot: string | null;
+      }>;
+      return queued.map(({ sequence, ...run }) => ({
+        ...run,
+        history: db
+          .prepare(
+            "SELECT role, content FROM thread_messages WHERE thread_id = ? AND sequence < ? ORDER BY sequence",
+          )
+          .all(run.threadId, sequence) as unknown as Array<Pick<ThreadMessage, "role" | "content">>,
+      }));
     },
     async getEvents(threadId) {
       const rows = db

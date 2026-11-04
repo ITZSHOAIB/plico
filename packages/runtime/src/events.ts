@@ -4,6 +4,47 @@ import type { EventStore, PlicoEvent, PlicoEventType } from "./types/index.js";
 
 export const runStreamType: EventStreamType = "run";
 
+/**
+ * Build the terminal failure pair both recovery paths append. The caller supplies the tail so
+ * appending to an event store and inserting directly into SQLite share one sequencing scheme.
+ */
+export function runFailureEvents(
+  runId: string,
+  last: { sequence: number; type: string } | undefined,
+  message: string,
+  timestamp: string = new Date().toISOString(),
+): PlicoEvent[] {
+  const events: PlicoEvent[] = [];
+  let sequence = last?.sequence ?? 0;
+  if (last?.type !== "run.error") {
+    sequence += 1;
+    events.push({
+      schemaVersion: 1,
+      streamType: "run",
+      streamId: runId,
+      runId,
+      id: `evt-${String(sequence).padStart(4, "0")}`,
+      sequence,
+      timestamp,
+      type: "run.error",
+      payload: { phase: "runtime", message },
+    });
+  }
+  sequence += 1;
+  events.push({
+    schemaVersion: 1,
+    streamType: "run",
+    streamId: runId,
+    runId,
+    id: `evt-${String(sequence).padStart(4, "0")}`,
+    sequence,
+    timestamp,
+    type: "run.failed",
+    payload: { phase: "runtime" },
+  });
+  return events;
+}
+
 export class InMemoryEventLog {
   readonly #events: PlicoEvent[] = [];
   #replayed = 0;

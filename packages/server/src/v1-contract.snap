@@ -8,6 +8,7 @@
     "createdAt": "string",
     "id": "string",
     "role": "string",
+    "runId": "string",
     "threadId": "string"
   },
   "GET /v1/threads": [
@@ -26,6 +27,7 @@
       "createdAt": "string",
       "id": "string",
       "role": "string",
+      "runId": "string",
       "threadId": "string"
     }
   ],
