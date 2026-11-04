@@ -51,7 +51,7 @@ describe("main", () => {
     const moduleUrl = pathToFileURL(join(process.cwd(), "packages/runtime/src/index.ts")).href;
     const program = `import { createSqliteEngine, createSqliteEventStore, runProject } from ${JSON.stringify(moduleUrl)};
       const [root, databasePath] = process.argv.slice(1);
-      await runProject(root, { runId: "crashed", message: "hello", engine: createSqliteEngine({ databasePath }),
+      await runProject(root, { runId: "crashed", message: "hello", providerRecoveryKey: "plico:dry-fake:v1", engine: createSqliteEngine({ databasePath }),
         eventStore: createSqliteEventStore({ databasePath }), provider: { async *stream() { process.kill(process.pid, "SIGKILL"); } } });`;
     expect(() =>
       execFileSync(
@@ -75,10 +75,9 @@ describe("main", () => {
         root,
       ]),
     ).toBe(0);
-    expect((await createSqliteEventStore({ databasePath }).getRun("crashed"))?.status).toBe(
-      "failed",
-    );
-    expect(error).toHaveBeenCalledWith(expect.stringContaining("crashed"));
+    const store = createSqliteEventStore({ databasePath });
+    await vi.waitFor(async () => expect((await store.getRun("crashed"))?.status).toBe("completed"));
+    await vi.waitFor(() => expect(error).toHaveBeenCalledWith(expect.stringContaining("crashed")));
     expect(() => JSON.parse(String(log.mock.calls[0]?.[0]))).not.toThrow();
   }, 30000);
 

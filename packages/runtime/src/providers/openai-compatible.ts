@@ -34,13 +34,25 @@ function toMessages(request: ModelRequest): ModelMessage[] {
           },
         ],
       };
-    const providerOptions = message.providerMetadata as NonNullable<
+    const metadata = message.providerMetadata;
+    const envelope =
+      metadata && typeof metadata === "object" && !Array.isArray(metadata) ? metadata : undefined;
+    const adapter = envelope?.plicoAdapter;
+    const reasoning =
+      adapter &&
+      typeof adapter === "object" &&
+      !Array.isArray(adapter) &&
+      typeof adapter.reasoning === "string"
+        ? adapter.reasoning
+        : undefined;
+    const providerOptions = (envelope?.sdk ?? metadata) as NonNullable<
       ModelMessage["providerOptions"]
     >;
     return {
       role: "assistant",
       ...(providerOptions === undefined ? {} : { providerOptions }),
       content: [
+        ...(reasoning ? [{ type: "reasoning" as const, text: reasoning }] : []),
         ...(message.content ? [{ type: "text" as const, text: message.content }] : []),
         ...(message.toolCalls ?? []).map((call) => ({
           type: "tool-call" as const,
@@ -100,8 +112,10 @@ export function createOpenAICompatibleProvider(
           onError: () => {},
         });
         let metadata: JsonValue | undefined;
+        let reasoning = "";
         for await (const part of response.fullStream) {
           if (part.type === "text-delta") yield { type: "text", text: part.text };
+          else if (part.type === "reasoning-delta") reasoning += part.text;
           else if (part.type === "tool-call")
             yield {
               type: "tool.call",
@@ -124,7 +138,14 @@ export function createOpenAICompatibleProvider(
                 inputTokens: part.totalUsage.inputTokens ?? 0,
                 outputTokens: part.totalUsage.outputTokens ?? 0,
               },
-              ...(metadata === undefined ? {} : { providerMetadata: metadata }),
+              ...(!reasoning && metadata === undefined
+                ? {}
+                : {
+                    providerMetadata: {
+                      ...(metadata === undefined ? {} : { sdk: metadata }),
+                      ...(reasoning ? { plicoAdapter: { reasoning } } : {}),
+                    },
+                  }),
             };
         }
       } catch (error) {

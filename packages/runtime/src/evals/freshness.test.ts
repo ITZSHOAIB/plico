@@ -1,7 +1,8 @@
+import { execFileSync } from "node:child_process";
 import { chmod, mkdir, mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { DatabaseSync } from "node:sqlite";
+import { pathToFileURL } from "node:url";
 import { describe, expect, it } from "vitest";
 import { checkReadiness, createSqliteEventStore, runEvals } from "../index.js";
 
@@ -211,9 +212,15 @@ describe("read-only event store", () => {
   it("leaves no sidecar files next to a cleanly closed WAL database", async () => {
     const root = await mkdtemp(join(tmpdir(), "plico-readonly-"));
     const databasePath = join(root, "state.sqlite");
-    const database = new DatabaseSync(databasePath);
-    database.exec("PRAGMA journal_mode = WAL; CREATE TABLE marker (id INTEGER);");
-    database.close();
+    const moduleUrl = pathToFileURL(join(process.cwd(), "packages/runtime/src/index.ts")).href;
+    execFileSync(process.execPath, [
+      "--import",
+      "tsx",
+      "--input-type=module",
+      "-e",
+      `import { createSqliteEventStore } from ${JSON.stringify(moduleUrl)}; createSqliteEventStore({ databasePath: process.argv[1] });`,
+      databasePath,
+    ]);
 
     await createSqliteEventStore({ databasePath, readOnly: true }).getLatestEvalReport();
 

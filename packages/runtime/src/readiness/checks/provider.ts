@@ -1,4 +1,5 @@
 import type { ProjectConfig, ReadinessDiagnostic } from "@plico/contracts";
+import { supportsModelProvider } from "../../providers/configured.js";
 import { makeDiagnostic } from "../diagnostic.js";
 
 export function checkProvider(model: ProjectConfig["model"]): ReadinessDiagnostic[] {
@@ -11,7 +12,7 @@ export function checkProvider(model: ProjectConfig["model"]): ReadinessDiagnosti
         "plico.config.ts",
       ),
     ];
-  if (model.provider !== "openai-compatible" && model.provider !== "openai")
+  if (!supportsModelProvider(model.provider))
     return [
       makeDiagnostic(
         "warning",

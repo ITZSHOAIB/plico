@@ -1,0 +1,31 @@
+import { createHash } from "node:crypto";
+import type { ProjectConfig } from "@plico/contracts";
+import type { ModelProvider } from "../types/index.js";
+import { createOpenAICompatibleProvider } from "./openai-compatible.js";
+
+type ModelConfig = NonNullable<ProjectConfig["model"]>;
+
+export function supportsModelProvider(provider: string): boolean {
+  return provider === "openai" || provider === "openai-compatible";
+}
+
+export function createConfiguredModelProvider(model: ModelConfig): ModelProvider | undefined {
+  if (!supportsModelProvider(model.provider)) return undefined;
+  return createOpenAICompatibleProvider({
+    model: model.name,
+    ...(process.env.OPENAI_BASE_URL ? { baseURL: process.env.OPENAI_BASE_URL } : {}),
+  });
+}
+
+/** Hash the provider target without storing endpoint credentials in the execution journal. */
+export function modelProviderRecoveryKey(model: ModelConfig): string {
+  return createHash("sha256")
+    .update(
+      JSON.stringify([
+        model.provider,
+        model.name,
+        process.env.OPENAI_BASE_URL || "https://api.openai.com/v1",
+      ]),
+    )
+    .digest("hex");
+}

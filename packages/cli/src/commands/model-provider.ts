@@ -1,18 +1,11 @@
-import { validateProject } from "@plico/core";
-import { createOpenAICompatibleProvider, type ModelProvider } from "@plico/runtime";
+import type { ProjectConfig } from "@plico/core";
+import { createConfiguredModelProvider, type ModelProvider } from "@plico/runtime";
 
-export async function resolveModelProvider(root: string): Promise<ModelProvider> {
-  const validation = await validateProject(root);
-  if (!validation.ok || !validation.project)
-    throw new Error("Project is invalid. Run plico validate for details.");
-  const model = validation.project.config.model;
+export function resolveModelProvider(model: ProjectConfig["model"]): ModelProvider {
   if (!model) throw new Error("Model configuration is missing from plico.config.ts.");
-  if (model.provider !== "openai" && model.provider !== "openai-compatible")
-    throw new Error(`Unsupported model provider: ${model.provider}`);
-  return createOpenAICompatibleProvider({
-    model: model.name,
-    ...(process.env.OPENAI_BASE_URL ? { baseURL: process.env.OPENAI_BASE_URL } : {}),
-  });
+  const provider = createConfiguredModelProvider(model);
+  if (!provider) throw new Error(`Unsupported model provider: ${model.provider}`);
+  return provider;
 }
 
 export async function resolveMessage(message: string | undefined): Promise<string> {

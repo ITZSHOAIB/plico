@@ -14,6 +14,11 @@ export { type ModelErrorKind, ModelProviderError } from "./errors.js";
 export { runEvals } from "./evals/index.js";
 export { composeInstructions } from "./instructions.js";
 export {
+  createConfiguredModelProvider,
+  modelProviderRecoveryKey,
+  supportsModelProvider,
+} from "./providers/configured.js";
+export {
   createOpenAICompatibleProvider,
   type OpenAICompatibleProviderOptions,
 } from "./providers/openai-compatible.js";

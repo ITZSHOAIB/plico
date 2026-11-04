@@ -5,7 +5,11 @@ Projects can set `model: { provider: "...", name: "...", maxSteps: 10 }` in
 integer and defaults to 10. Set `model.provider` to `openai` or
 `openai-compatible`, export `OPENAI_API_KEY`, and run `plico run --message "Hello"`.
 Input can also be piped through standard input. Real runs are persisted to
-`.plico/plico.sqlite` by default and are available to Studio. Set `OPENAI_BASE_URL`
+`.plico/plico.sqlite` by default and are available to Studio. Text streams to the
+terminal as it arrives; `--json` emits a single result after the run. Interrupting
+the command requests durable cancellation. Recovery only resumes model runs for
+the same project and provider identity. Older runs without a recorded identity are
+left untouched because their provider cannot be determined safely. Set `OPENAI_BASE_URL`
 to use a compatible gateway.
 
 The OpenAI-compatible adapter is also available through the runtime API.

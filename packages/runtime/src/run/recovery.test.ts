@@ -190,7 +190,7 @@ it("keeps interrupted chunks distinguishable from the recovered model attempt", 
   const program = `
     import { createSqliteEngine, createSqliteEventStore, runProject } from ${JSON.stringify(moduleUrl)};
     const [root, databasePath] = process.argv.slice(1);
-    await runProject(root, { runId: "stream-crash", message: "hello",
+    await runProject(root, { runId: "stream-crash", message: "hello", providerRecoveryKey: "provider-a",
       eventStore: createSqliteEventStore({ databasePath }), engine: createSqliteEngine({ databasePath }),
       provider: { async *stream() { yield { type: "text", text: "partial" }; process.kill(process.pid, "SIGKILL"); } } });`;
   await expect(
@@ -205,9 +205,18 @@ it("keeps interrupted chunks distinguishable from the recovered model attempt", 
     ]),
   ).rejects.toThrow();
   const store = createSqliteEventStore({ databasePath });
+  const engine = createSqliteEngine({ databasePath });
+  const mismatch = await recoverRuns({
+    eventStore: store,
+    engine,
+    recoveryFilter: { projectRoot: root, providerRecoveryKey: "provider-b" },
+  });
+  expect(mismatch).toEqual([]);
+  expect((await store.getRun("stream-crash"))?.status).toBe("running");
   const recovered = await recoverRuns({
     eventStore: store,
-    engine: createSqliteEngine({ databasePath }),
+    engine,
+    recoveryFilter: { projectRoot: root, providerRecoveryKey: "provider-a" },
     provider: {
       async *stream() {
         yield { type: "text", text: "complete" };
@@ -224,4 +233,138 @@ it("keeps interrupted chunks distinguishable from the recovered model attempt", 
     attemptId: deltas[1]?.payload.attemptId,
     content: "complete",
   });
+});
+
+it("recovers a scripted run without invoking a supplied model provider", {
+  timeout: 30_000,
+}, async () => {
+  const root = await scaffold();
+  const databasePath = join(root, "script-with-provider.sqlite");
+  const marks = join(root, "marks.txt");
+  await writeFile(marks, "");
+  await killRunMidTool(root, databasePath, marks);
+  const store = createSqliteEventStore({ databasePath });
+  process.env.PLICO_MARKS = marks;
+  let modelCalls = 0;
+  const recovered = await recoverRuns({
+    engine: createSqliteEngine({ databasePath }),
+    eventStore: store,
+    recoveryFilter: { projectRoot: root, providerRecoveryKey: "configured-model" },
+    provider: {
+      async *stream() {
+        modelCalls++;
+        yield { type: "finish", usage: { inputTokens: 0, outputTokens: 0 } };
+      },
+    },
+  });
+  expect(recovered).toEqual([{ runId: "run-crash", state: "completed" }]);
+  expect(modelCalls).toBe(0);
+});
+
+it("recovers a run started with a relative project path from a different working directory", {
+  timeout: 30_000,
+}, async () => {
+  const root = await scaffold();
+  const databasePath = join(root, "relative.sqlite");
+  const moduleUrl = pathToFileURL(join(process.cwd(), "packages/runtime/src/index.ts")).href;
+  const program = `import { createSqliteEngine, createSqliteEventStore, runProject } from ${JSON.stringify(moduleUrl)};
+    const db = process.argv[1];
+    await runProject(".", { runId: "relative", message: "hello", providerRecoveryKey: "provider-a", engine: createSqliteEngine({ databasePath: db }), eventStore: createSqliteEventStore({ databasePath: db }), provider: { async *stream() { process.kill(process.pid, "SIGKILL"); } } });`;
+  await expect(
+    execFileAsync(
+      process.execPath,
+      ["--import", import.meta.resolve("tsx"), "--input-type=module", "-e", program, databasePath],
+      { cwd: root },
+    ),
+  ).rejects.toThrow();
+  const store = createSqliteEventStore({ databasePath });
+  expect((await store.getRun("relative"))?.status).toBe("running");
+  const recovered = await recoverRuns({
+    engine: createSqliteEngine({ databasePath }),
+    eventStore: store,
+    recoveryFilter: {
+      projectRoot: process.platform === "win32" ? root.toUpperCase() : root,
+      providerRecoveryKey: "provider-a",
+    },
+    provider: {
+      async *stream() {
+        yield { type: "text", text: "recovered" };
+        yield { type: "finish", usage: { inputTokens: 1, outputTokens: 1 } };
+      },
+    },
+  });
+  expect(recovered).toEqual([{ runId: "relative", state: "completed" }]);
+});
+
+it("leaves an ambiguous legacy relative-path run untouched during filtered recovery", {
+  timeout: 30_000,
+}, async () => {
+  const root = await scaffold();
+  const databasePath = join(root, "legacy-relative.sqlite");
+  const moduleUrl = pathToFileURL(join(process.cwd(), "packages/runtime/src/index.ts")).href;
+  const program = `import { createSqliteEngine, createSqliteEventStore, runProject } from ${JSON.stringify(moduleUrl)}; const [root, db] = process.argv.slice(1); await runProject(root, { runId: "legacy", message: "hello", providerRecoveryKey: "key", engine: createSqliteEngine({ databasePath: db }), eventStore: createSqliteEventStore({ databasePath: db }), provider: { async *stream() { process.kill(process.pid, "SIGKILL"); } } });`;
+  await expect(
+    execFileAsync(process.execPath, [
+      "--import",
+      "tsx",
+      "--input-type=module",
+      "-e",
+      program,
+      root,
+      databasePath,
+    ]),
+  ).rejects.toThrow();
+  const { DatabaseSync } = await import("node:sqlite");
+  const database = new DatabaseSync(databasePath);
+  const row = database
+    .prepare("SELECT input_json FROM engine_runs WHERE run_id = ?")
+    .get("legacy") as { input_json: string };
+  const input = JSON.parse(row.input_json);
+  input.root = ".";
+  delete input.displayRoot;
+  database
+    .prepare("UPDATE engine_runs SET input_json = ? WHERE run_id = ?")
+    .run(JSON.stringify(input), "legacy");
+  database.close();
+  const store = createSqliteEventStore({ databasePath });
+  const recovered = await recoverRuns({
+    engine: createSqliteEngine({ databasePath }),
+    eventStore: store,
+    recoveryFilter: { projectRoot: process.cwd(), providerRecoveryKey: "key" },
+    provider: {
+      async *stream() {
+        yield { type: "finish", usage: { inputTokens: 0, outputTokens: 0 } };
+      },
+    },
+  });
+  expect(recovered).toEqual([]);
+  expect((await store.getRun("legacy"))?.status).toBe("running");
+});
+
+it("does not claim an unidentified provider run during filtered dry recovery", {
+  timeout: 30_000,
+}, async () => {
+  const root = await scaffold();
+  const databasePath = join(root, "unidentified.sqlite");
+  const moduleUrl = pathToFileURL(join(process.cwd(), "packages/runtime/src/index.ts")).href;
+  const program = `import { createSqliteEngine, createSqliteEventStore, runProject } from ${JSON.stringify(moduleUrl)}; const [root, db] = process.argv.slice(1); await runProject(root, { runId: "unidentified", message: "hello", engine: createSqliteEngine({ databasePath: db }), eventStore: createSqliteEventStore({ databasePath: db }), provider: { async *stream() { process.kill(process.pid, "SIGKILL"); } } });`;
+  await expect(
+    execFileAsync(process.execPath, [
+      "--import",
+      "tsx",
+      "--input-type=module",
+      "-e",
+      program,
+      root,
+      databasePath,
+    ]),
+  ).rejects.toThrow();
+  const store = createSqliteEventStore({ databasePath });
+  const recovered = await recoverRuns({
+    engine: createSqliteEngine({ databasePath }),
+    eventStore: store,
+    recoveryFilter: { projectRoot: root },
+  });
+  expect(recovered).toEqual([]);
+  expect((await store.getRun("unidentified"))?.status).toBe("running");
 });

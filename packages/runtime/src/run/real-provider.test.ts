@@ -88,6 +88,7 @@ it("round trips tool calls and results through the provider protocol", async () 
     const delta =
       requests.length === 1
         ? {
+            reasoning_content: "reasoning trace",
             tool_calls: [
               {
                 index: 0,
@@ -137,6 +138,7 @@ it("round trips tool calls and results through the provider protocol", async () 
     messages: expect.arrayContaining([
       expect.objectContaining({
         role: "assistant",
+        reasoning_content: "reasoning trace",
         tool_calls: [expect.objectContaining({ id: "call-1" })],
       }),
       expect.objectContaining({ role: "tool", tool_call_id: "call-1", content: '"found"' }),

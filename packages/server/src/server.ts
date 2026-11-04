@@ -1,6 +1,12 @@
 import { createServer, type Server } from "node:http";
 import { validateProject } from "@plico/core";
-import { createSqliteEngine, createSqliteEventStore, recoverRuns } from "@plico/runtime";
+import {
+  createConfiguredModelProvider,
+  createSqliteEngine,
+  createSqliteEventStore,
+  modelProviderRecoveryKey,
+  recoverRuns,
+} from "@plico/runtime";
 import { handleRequest } from "./routes/index.js";
 import { serveStaticFile } from "./serve-static.js";
 import type { CreatePlicoServerOptions, PlicoServer, ServePlicoOptions } from "./types.js";
@@ -43,7 +49,29 @@ export async function servePlico(options: ServePlicoOptions): Promise<Server> {
     ...(leaseMs === undefined ? {} : { leaseMs }),
   });
   // Runs a dead process left behind continue in the background; they appear in the log as they go.
-  void recoverRuns({ engine, eventStore }).then(
+  const model = validation.project?.config.model;
+  const provider = model ? createConfiguredModelProvider(model) : undefined;
+  const recovery = async () => {
+    const dryRuns = recoverRuns({
+      engine,
+      eventStore,
+      recoveryFilter: { projectRoot: options.projectRoot },
+    });
+    if (!model || !provider) return dryRuns;
+    const modelRuns = recoverRuns({
+      engine,
+      eventStore,
+      provider,
+      recoveryFilter: {
+        projectRoot: options.projectRoot,
+        providerRecoveryKey: modelProviderRecoveryKey(model),
+        providerOnly: true,
+      },
+    });
+    const [dry, real] = await Promise.all([dryRuns, modelRuns]);
+    return [...dry, ...real];
+  };
+  void recovery().then(
     (runs) => {
       for (const run of runs)
         if (run.state === "failed")
