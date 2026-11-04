@@ -24,9 +24,9 @@ function FileRow({ file, onOpen }: { file: ArtifactFile; onOpen: () => void }) {
         <span className="text-muted">
           <Icon name="file" />
         </span>
-        <span className="min-w-0 flex-1 truncate font-mono text-xs">{file.path}</span>
+        <span className="min-w-0 flex-1 truncate font-mono text-small">{file.path}</span>
         {"mimeType" in file && (
-          <span className="shrink-0 text-[11px] text-faint">
+          <span className="shrink-0 text-caption text-faint">
             {file.mimeType} v{file.version}
           </span>
         )}
@@ -145,7 +145,7 @@ export function ArtifactsView({
               <span className="text-muted">
                 <Icon name="snapshot" />
               </span>
-              <span className="min-w-0 flex-1 truncate font-mono text-xs">
+              <span className="min-w-0 flex-1 truncate font-mono text-small">
                 {item.snapshotId} &middot; {item.fileCount} file(s) &middot; {item.createdAt}
               </span>
             </button>

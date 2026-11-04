@@ -45,7 +45,14 @@ const icons = {
 
 export type IconName = keyof typeof icons;
 
-export function Icon({ name, size = 16, ...props }: { name: IconName } & LucideProps) {
+/** sm: inline with text and inside buttons. md: standalone (navigation, rows, icon buttons). */
+const iconSizes = { sm: 14, md: 16 } as const;
+
+export function Icon({
+  name,
+  size = "md",
+  ...props
+}: { name: IconName; size?: keyof typeof iconSizes } & Omit<LucideProps, "size">) {
   const Component = icons[name];
-  return <Component aria-hidden="true" size={size} strokeWidth={1.75} {...props} />;
+  return <Component aria-hidden="true" size={iconSizes[size]} strokeWidth={1.75} {...props} />;
 }

@@ -2,6 +2,10 @@ import type { ReactNode } from "react";
 import { Button } from "./Button";
 import { Icon } from "./Icon";
 
+/** Heading styles shared by every view so titles look the same everywhere. */
+export const titleClass = "m-0 break-words text-title font-semibold";
+export const sectionHeadingClass = "m-0 mb-1.5 text-small font-semibold";
+
 /** Scrollable content area with a consistent title block. */
 export function Page({
   title,
@@ -25,14 +29,14 @@ export function Page({
       <div className="mx-auto max-w-5xl p-4 sm:p-6">
         {onBack && (
           <Button variant="ghost" onClick={onBack} className="-ml-2 mb-2">
-            <Icon name="back" size={14} />
+            <Icon name="back" size="sm" />
             {backLabel}
           </Button>
         )}
         <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
-            <h2 className="m-0 break-words text-base font-semibold">{title}</h2>
-            {subtitle && <div className="mt-1 text-xs break-words text-muted">{subtitle}</div>}
+            <h2 className={titleClass}>{title}</h2>
+            {subtitle && <div className="mt-1 text-small break-words text-muted">{subtitle}</div>}
           </div>
           {actions}
         </div>
@@ -68,7 +72,7 @@ export function Notice({
   children: ReactNode;
 }) {
   return (
-    <div role={role} className={`mb-3 rounded-control border px-3 py-2 text-xs ${tones[tone]}`}>
+    <div role={role} className={`mb-3 rounded-control border px-3 py-2 text-small ${tones[tone]}`}>
       {children}
     </div>
   );
@@ -83,7 +87,7 @@ export function CodeBlock({
 }) {
   return (
     <pre
-      className={`m-0 overflow-auto whitespace-pre-wrap break-words rounded-panel border border-line bg-bg p-3 font-mono text-xs text-code-string ${className}`}
+      className={`m-0 overflow-auto whitespace-pre-wrap break-words rounded-panel border border-line bg-bg p-3 font-mono text-small text-code-string ${className}`}
     >
       {children}
     </pre>

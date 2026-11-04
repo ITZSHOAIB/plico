@@ -14,7 +14,7 @@ function ReplayButton(props: {
       disabled={props.disabled}
       aria-label={props.label}
       title={props.label}
-      className="size-8 px-0"
+      size="icon"
     >
       <Icon name={props.icon} />
     </Button>

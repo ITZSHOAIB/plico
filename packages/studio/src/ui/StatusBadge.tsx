@@ -11,7 +11,7 @@ export const statusTones: Record<string, string> = {
 export function StatusBadge({ status }: { status: RunSummary["status"] }) {
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-semibold ${statusTones[status] ?? "bg-raised text-muted"}`}
+      className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-caption font-semibold ${statusTones[status] ?? "bg-raised text-muted"}`}
     >
       <span aria-hidden="true" className="size-1.5 rounded-full bg-current" />
       <span className="sr-only">{`Status: ${status}`}</span>

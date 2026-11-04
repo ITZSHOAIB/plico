@@ -44,15 +44,15 @@ export function RunList({ runs, selectedRun, onSelectRun, visibleOnMobile }: Run
               >
                 <StatusDot status={run.status} />
                 <span className="min-w-0">
-                  <span className="flex items-center gap-1.5 font-mono text-xs">
+                  <span className="flex items-center gap-1.5 font-mono text-small">
                     <span className="truncate">{run.runId.substring(0, 12)}…</span>
                     {run.runId.startsWith("eval-") && (
-                      <span className="rounded border border-line px-1 text-[10px] text-muted">
+                      <span className="rounded border border-line px-1 text-caption text-muted">
                         eval
                       </span>
                     )}
                   </span>
-                  <span className="block truncate text-[11px] text-faint">
+                  <span className="block truncate text-caption text-faint">
                     {run.status} &middot; {shortTime(run.endedAt)}
                   </span>
                 </span>

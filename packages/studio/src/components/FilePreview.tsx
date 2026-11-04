@@ -8,19 +8,19 @@ function Markdown({ content }: { content: string }) {
         const key = `l-${i}`;
         if (line.startsWith("# "))
           return (
-            <h1 key={key} className="mt-2 mb-1 text-lg font-semibold">
+            <h1 key={key} className="mt-2 mb-1 text-display font-semibold">
               {line.slice(2)}
             </h1>
           );
         if (line.startsWith("## "))
           return (
-            <h2 key={key} className="mt-2 mb-1 text-[15px] font-semibold">
+            <h2 key={key} className="mt-2 mb-1 text-title font-semibold">
               {line.slice(3)}
             </h2>
           );
         if (line.startsWith("### "))
           return (
-            <h3 key={key} className="mt-1 mb-0.5 text-sm font-semibold">
+            <h3 key={key} className="mt-1 mb-0.5 text-body font-semibold">
               {line.slice(4)}
             </h3>
           );

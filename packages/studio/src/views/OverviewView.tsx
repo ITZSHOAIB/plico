@@ -73,11 +73,11 @@ export function OverviewView({ data, evalReport }: OverviewViewProps) {
       )}
       <div className="mb-3 flex flex-wrap items-center gap-3">
         <Button onClick={() => void data.loadReadiness()}>
-          <Icon name="refresh" size={14} />
+          <Icon name="refresh" size="sm" />
           Refresh readiness
         </Button>
         {readiness && (
-          <span className="text-xs text-muted">
+          <span className="text-small text-muted">
             Checked at {formatCheckedAt(readiness.timestamp)}
           </span>
         )}
@@ -90,7 +90,7 @@ export function OverviewView({ data, evalReport }: OverviewViewProps) {
 function Fact({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="rounded-panel border border-line bg-surface p-3">
-      <dt className="mb-1 text-[11px] tracking-wider text-muted uppercase">{label}</dt>
+      <dt className="mb-1 text-caption tracking-wider text-muted uppercase">{label}</dt>
       <dd className="m-0 break-words">{value}</dd>
     </div>
   );

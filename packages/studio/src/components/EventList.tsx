@@ -3,7 +3,7 @@ import type { PlicoEvent } from "../types";
 
 export function EventList({ events }: { events: PlicoEvent[] }) {
   return (
-    <ul className="m-0 list-none p-0 font-mono text-xs">
+    <ul className="m-0 list-none p-0 font-mono text-small">
       {events.map((event) => (
         <EventRow key={event.id} event={event} />
       ))}
@@ -26,7 +26,7 @@ function EventRow({ event }: { event: PlicoEvent }) {
         <span className="text-right text-faint tabular-nums">{event.sequence}</span>
         <span className={`font-semibold ${typeTone(event.type)}`}>{event.type}</span>
         <span className="col-start-2 truncate text-muted sm:col-start-auto">{summary}</span>
-        <span className="col-start-2 text-[11px] text-faint sm:col-start-auto">
+        <span className="col-start-2 text-caption text-faint sm:col-start-auto">
           {event.timestamp}
         </span>
       </button>

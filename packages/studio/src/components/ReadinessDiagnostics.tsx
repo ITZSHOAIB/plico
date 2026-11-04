@@ -23,7 +23,7 @@ export function ReadinessDiagnostics({ diagnostics }: { diagnostics: ReadinessDi
             className={`rounded-panel border px-3 py-2 ${severity?.tone ?? ""}`}
           >
             <div className="flex items-center gap-2 font-medium">
-              <Icon name={severity?.icon ?? "ok"} size={14} />
+              <Icon name={severity?.icon ?? "ok"} size="sm" />
               <span>{severity?.label}</span>
               <span className="min-w-0 break-words text-fg">
                 {d.subsystem}

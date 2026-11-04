@@ -2,7 +2,7 @@ import type { EvalsState } from "../hooks/useEvals";
 import type { EvalCaseResult } from "../types";
 import { Button } from "../ui/Button";
 import { Icon } from "../ui/Icon";
-import { CodeBlock, listRowClass, Notice, Page } from "../ui/Page";
+import { CodeBlock, listRowClass, Notice, Page, sectionHeadingClass } from "../ui/Page";
 
 interface EvalsViewProps {
   evals: EvalsState;
@@ -33,18 +33,18 @@ export function EvalsView({ evals, onOpenRun }: EvalsViewProps) {
         {error && <Notice>{error}</Notice>}
         {selected.output && (
           <div className="mb-4">
-            <h3 className="mb-1.5 text-xs font-semibold">Output:</h3>
+            <h3 className={sectionHeadingClass}>Output:</h3>
             <CodeBlock className="text-fg">{selected.output}</CodeBlock>
           </div>
         )}
         {selected.diagnostics?.length ? (
           <div>
-            <h3 className="mb-1.5 text-xs font-semibold">Diagnostics:</h3>
+            <h3 className={sectionHeadingClass}>Diagnostics:</h3>
             <ul className="m-0 grid list-none gap-1.5 p-0">
               {selected.diagnostics.map((d) => (
                 <li
                   key={`diag-${d}`}
-                  className="rounded-control border border-danger/40 bg-danger-soft px-3 py-2 text-xs text-danger"
+                  className="rounded-control border border-danger/40 bg-danger-soft px-3 py-2 text-small text-danger"
                 >
                   {d}
                 </li>
@@ -86,8 +86,8 @@ export function EvalsView({ evals, onOpenRun }: EvalsViewProps) {
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="font-medium">{result.name}</span>
-                    <span className={`ml-2 text-[11px] font-semibold ${tone}`}>{label}</span>
-                    <span className="block truncate font-mono text-[11px] text-faint">
+                    <span className={`ml-2 text-caption font-semibold ${tone}`}>{label}</span>
+                    <span className="block truncate font-mono text-caption text-faint">
                       {result.runId}
                     </span>
                   </span>

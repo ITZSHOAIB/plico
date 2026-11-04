@@ -21,7 +21,7 @@ export function NavRail({ items, view }: { items: NavItem[]; view: View }) {
     >
       <div
         aria-hidden="true"
-        className="mb-2 hidden size-7 place-items-center rounded-lg bg-accent text-sm font-bold text-on-accent lg:grid"
+        className="mb-2 hidden size-7 place-items-center rounded-lg bg-accent text-body font-bold text-on-accent lg:grid"
       >
         P
       </div>
@@ -35,8 +35,8 @@ export function NavRail({ items, view }: { items: NavItem[]; view: View }) {
           aria-current={view === item.view ? "page" : undefined}
           className="relative flex min-w-0 flex-1 cursor-pointer flex-col items-center justify-center gap-0.5 border-0 bg-transparent px-1 py-2 text-muted hover:text-fg focus-visible:outline-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-35 aria-[current=page]:text-accent lg:size-9 lg:flex-none lg:rounded-control lg:p-0 lg:hover:bg-raised lg:aria-[current=page]:bg-raised"
         >
-          <Icon name={item.icon} size={18} />
-          <span className="text-[10px] leading-none lg:sr-only">{item.label}</span>
+          <Icon name={item.icon} />
+          <span className="text-caption leading-none lg:sr-only">{item.label}</span>
           {item.count !== undefined && <span className="sr-only"> ({item.count})</span>}
           {item.alert && (
             <span

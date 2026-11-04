@@ -72,6 +72,18 @@
   --color-code-key: var(--code-key);
   --color-code-string: var(--code-string);
 
+  /* Type scale: the only font sizes components may use (text-caption … text-display). */
+  --text-caption: 11px;
+  --text-caption--line-height: 1.35;
+  --text-small: 12px;
+  --text-small--line-height: 1.45;
+  --text-body: 13px;
+  --text-body--line-height: 1.45;
+  --text-title: 16px;
+  --text-title--line-height: 1.35;
+  --text-display: 20px;
+  --text-display--line-height: 1.3;
+
   --font-sans: "Inter Variable", system-ui, sans-serif;
   --font-mono: "JetBrains Mono Variable", ui-monospace, Consolas, monospace;
   --radius-control: 6px;

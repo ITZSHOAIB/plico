@@ -5,7 +5,7 @@ import type { StreamState } from "../hooks/useRunStream";
 import type { PlicoEvent, RunSummary } from "../types";
 import { Button } from "../ui/Button";
 import { Icon } from "../ui/Icon";
-import { CodeBlock, EmptyState, Notice } from "../ui/Page";
+import { CodeBlock, EmptyState, Notice, titleClass } from "../ui/Page";
 import { StatusBadge } from "../ui/StatusBadge";
 import { ReplayControls } from "./ReplayControls";
 
@@ -57,15 +57,17 @@ function SelectedRunView({
             aria-label="Back to runs"
             className="-ml-2 mb-1 lg:hidden"
           >
-            <Icon name="back" size={14} />
+            <Icon name="back" size="sm" />
             Runs
           </Button>
         )}
-        <h2 className="m-0 mb-1.5 flex flex-wrap items-center gap-2.5 break-all font-mono text-[15px] font-semibold">
+        <h2
+          className={`${titleClass} mb-1.5 flex flex-wrap items-center gap-2.5 break-all font-mono`}
+        >
           {selectedRun.runId}
           <StatusBadge status={shownRun.status} />
         </h2>
-        <dl className="m-0 flex flex-wrap gap-x-5 gap-y-1 text-xs text-muted">
+        <dl className="m-0 flex flex-wrap gap-x-5 gap-y-1 text-small text-muted">
           <MetaItem label="Started" value={shownRun.startedAt} />
           <MetaItem label="Ended" value={shownRun.endedAt ?? "Not ended"} />
           {elapsed && <MetaItem label="Duration" value={elapsed} />}
@@ -129,7 +131,7 @@ function ModeTab(props: { active: boolean; onClick: () => void; children: string
       type="button"
       aria-pressed={props.active}
       onClick={props.onClick}
-      className="cursor-pointer border-0 border-b-2 border-transparent bg-transparent px-3 py-2.5 text-muted hover:text-fg focus-visible:outline-2 focus-visible:outline-accent aria-pressed:border-accent aria-pressed:text-fg"
+      className="cursor-pointer border-0 border-b-2 border-transparent bg-transparent px-3 h-9 text-muted hover:text-fg focus-visible:outline-2 focus-visible:outline-accent aria-pressed:border-accent aria-pressed:text-fg"
     >
       {props.children}
     </button>
