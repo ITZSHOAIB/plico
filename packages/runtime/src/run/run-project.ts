@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { isAbsolute, resolve } from "node:path";
-import { type Span, type SpanContext, SpanStatusCode } from "@opentelemetry/api";
+import { type Span, SpanStatusCode } from "@opentelemetry/api";
 import { validateProject } from "@plico/core";
 import {
   createEngine,
@@ -19,7 +19,12 @@ import { finalizeRun } from "./finalize.js";
 import { runDefaultDryRun } from "./strategies/default-dry.js";
 import { runProviderBackedRun } from "./strategies/provider.js";
 import { runScriptedDryRun } from "./strategies/scripted.js";
-import { startRunSpan, tracedContext } from "./tracing.js";
+import {
+  type StoredSpanContext,
+  startRunSpan,
+  storeSpanContext,
+  tracedContext,
+} from "./tracing.js";
 
 interface RunInput {
   root: string;
@@ -28,7 +33,7 @@ interface RunInput {
   message?: string;
   script?: DryRunScriptStep[];
   providerRecoveryKey?: string;
-  traceContext?: SpanContext;
+  traceContext?: StoredSpanContext;
 }
 
 export async function runProject(
@@ -42,7 +47,7 @@ export async function runProject(
     root: resolve(root),
     displayRoot: root,
     startedAt: new Date().toISOString(),
-    traceContext: span.spanContext(),
+    traceContext: storeSpanContext(span),
     ...(options.message === undefined ? {} : { message: options.message }),
     ...(options.script === undefined ? {} : { script: options.script }),
     ...(options.providerRecoveryKey === undefined

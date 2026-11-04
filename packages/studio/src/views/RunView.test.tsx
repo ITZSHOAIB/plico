@@ -39,7 +39,12 @@ it("shows a failed run's reason without expanding its events", () => {
 
 it("shows provider output and token usage from visible native events", () => {
   const events = [
-    runEvent(1, "model.request", { messages: [], maxSteps: 3, tools: [] }),
+    runEvent(1, "model.request", {
+      messages: [],
+      maxSteps: 3,
+      tools: [],
+      model: { provider: "openai", name: "test-model" },
+    }),
     runEvent(2, "model.response", {
       content: "Hello",
       usage: { inputTokens: 12, outputTokens: 4 },
@@ -47,6 +52,7 @@ it("shows provider output and token usage from visible native events", () => {
     runEvent(3, "assistant.output", { content: "Hello" }),
   ];
   render(<RunView selectedRun={{ ...run, status: "completed" }} events={events} />);
+  expect(screen.getByText("openai / test-model")).toBeTruthy();
   expect(screen.getByText(/12 input tokens/)).toBeTruthy();
   expect(screen.getByText(/4 output tokens/)).toBeTruthy();
   expect(screen.getByText("Hello")).toBeTruthy();
@@ -55,4 +61,14 @@ it("shows provider output and token usage from visible native events", () => {
   expect(screen.getByText(/12 input tokens/)).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: "Previous event" }));
   expect(screen.queryByText(/12 input tokens/)).toBeNull();
+});
+
+it("renders older model events when usage or model metadata is unavailable", () => {
+  const event = runEvent(1, "model.response", {
+    content: "Done",
+    usage: { inputTokens: 0, outputTokens: 0 },
+  });
+  if (event.type === "model.response") Reflect.deleteProperty(event.payload, "usage");
+  render(<RunView selectedRun={run} events={[event]} />);
+  expect(screen.getByText("model.response")).toBeTruthy();
 });

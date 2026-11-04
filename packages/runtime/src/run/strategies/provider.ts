@@ -52,6 +52,7 @@ export async function runProviderBackedRun(
     };
 
     await events.append("model.request", {
+      ...(model ? { model: { provider: model.provider, name: model.name } } : {}),
       messages: modelRequest.messages,
       maxSteps: modelRequest.maxSteps,
       tools: providerTools,

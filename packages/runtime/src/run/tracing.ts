@@ -1,4 +1,5 @@
 import {
+  createTraceState,
   ROOT_CONTEXT,
   type Span,
   type SpanContext,
@@ -10,11 +11,33 @@ import type { RunContext } from "../engine/index.js";
 const getTracer = () => trace.getTracer("@plico/runtime");
 const toolNames = new WeakMap<RunContext, Map<string, string>>();
 
+export type StoredSpanContext = Pick<SpanContext, "traceId" | "spanId" | "traceFlags"> & {
+  traceState?: string;
+};
+
+export function storeSpanContext(span: Span): StoredSpanContext {
+  const { traceId, spanId, traceFlags, traceState } = span.spanContext();
+  return {
+    traceId,
+    spanId,
+    traceFlags,
+    ...(traceState ? { traceState: traceState.serialize() } : {}),
+  };
+}
+
 export function nameToolStep(ctx: RunContext, step: string, tool: string): void {
   toolNames.get(ctx)?.set(step, tool);
 }
 
-export function startRunSpan(runId: string, previous?: SpanContext): Span {
+export function startRunSpan(runId: string, stored?: StoredSpanContext): Span {
+  const previous = stored && {
+    traceId: stored.traceId,
+    spanId: stored.spanId,
+    traceFlags: stored.traceFlags,
+    ...(typeof stored.traceState === "string"
+      ? { traceState: createTraceState(stored.traceState) }
+      : {}),
+  };
   return getTracer().startSpan("plico.run", {
     attributes: { "plico.run.id": runId },
     ...(previous && trace.isSpanContextValid(previous) ? { links: [{ context: previous }] } : {}),
@@ -28,7 +51,13 @@ export function tracedContext(
 ): RunContext {
   const names = new Map<string, string>();
   const wrapped: RunContext = {
-    ...ctx,
+    get runId() {
+      return ctx.runId;
+    },
+    get signal() {
+      return ctx.signal;
+    },
+    wait: (name, options) => ctx.wait(name, options),
     step: (name, fn, options) => {
       const step = getTracer().startSpan(
         "plico.step",

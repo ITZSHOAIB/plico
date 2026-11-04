@@ -71,6 +71,10 @@ beforeAll(async () => {
 
   const eventStore = createSqliteEventStore({ databasePath: join(root, "state.sqlite") });
   await writeFile(
+    join(root, "plico.config.ts"),
+    'export default { schemaVersion: 1, name: "Demo", execution: { leaseMs: 30000 }, model: { provider: "fake", name: "test" } } as const;\n',
+  );
+  await writeFile(
     join(root, "tools", "lookup.tool.ts"),
     `export default { name: "lookup", description: "Look up a record", inputSchema: { type: "object" }, capabilities: [], approval: { required: false }, handler: () => "found" };`,
   );
@@ -105,6 +109,10 @@ beforeAll(async () => {
   });
   if (providerRun.status !== "completed") throw new Error("Provider fixture did not complete");
   providerRunId = providerRun.runId;
+  await writeFile(
+    join(root, "plico.config.ts"),
+    'export default { schemaVersion: 1, name: "Demo", execution: { leaseMs: 30000 } } as const;\n',
+  );
   await unlink(join(root, "tools", "lookup.tool.ts"));
   const api = await createPlicoServer({ projectRoot: root, eventStore });
   server = createServer(api.requestListener);

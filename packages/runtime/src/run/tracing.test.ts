@@ -1,7 +1,8 @@
 import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { trace } from "@opentelemetry/api";
+import { context, createTraceState, ROOT_CONTEXT, trace } from "@opentelemetry/api";
+import { AsyncLocalStorageContextManager } from "@opentelemetry/context-async-hooks";
 import {
   BasicTracerProvider,
   InMemorySpanExporter,
@@ -70,17 +71,27 @@ it("links a resumed run to the execution before restart", async () => {
   const exporter = new InMemorySpanExporter();
   const provider = new BasicTracerProvider({ spanProcessors: [new SimpleSpanProcessor(exporter)] });
   trace.setGlobalTracerProvider(provider);
+  context.setGlobalContextManager(new AsyncLocalStorageContextManager().enable());
   try {
     const databasePath = join(root, "state.sqlite");
     const store = createSqliteEventStore({ databasePath });
     expect(
       (
-        await runProject(root, {
-          runId: "resume-trace",
-          script: [{ type: "tool.call", toolName: "approve", arguments: {} }],
-          engine: createSqliteEngine({ databasePath }),
-          eventStore: store,
-        })
+        await context.with(
+          trace.setSpanContext(ROOT_CONTEXT, {
+            traceId: "0123456789abcdef0123456789abcdef",
+            spanId: "0123456789abcdef",
+            traceFlags: 1,
+            traceState: createTraceState("vendor=value"),
+          }),
+          () =>
+            runProject(root, {
+              runId: "resume-trace",
+              script: [{ type: "tool.call", toolName: "approve", arguments: {} }],
+              engine: createSqliteEngine({ databasePath }),
+              eventStore: store,
+            }),
+        )
       ).status,
     ).toBe("waiting");
     const initial = exporter.getFinishedSpans().find((span) => span.name === "plico.run");
@@ -93,8 +104,10 @@ it("links a resumed run to the execution before restart", async () => {
       .filter((span) => span.name === "plico.run")
       .at(-1);
     expect(resumed?.links.map((link) => link.context)).toContainEqual(initial?.spanContext());
+    expect(resumed?.links[0]?.context.traceState?.serialize()).toBe("vendor=value");
     expect((await store.getRun("resume-trace"))?.status).toBe("completed");
   } finally {
+    context.disable();
     trace.disable();
     await provider.shutdown();
   }

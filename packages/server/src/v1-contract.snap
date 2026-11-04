@@ -26,6 +26,10 @@
               "toolName": "string"
             }
           ],
+          "model": {
+            "name": "string",
+            "provider": "string"
+          },
           "tools": [
             {
               "description": "string",
