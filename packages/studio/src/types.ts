@@ -13,4 +13,6 @@ export type {
   ReadinessReport,
   RunStatus,
   RunSummary,
+  Thread,
+  ThreadMessage,
 } from "@plico/contracts";

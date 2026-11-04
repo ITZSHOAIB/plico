@@ -13,6 +13,7 @@ import {
   LayoutDashboard,
   type LucideIcon,
   type LucideProps,
+  MessageSquare,
   Moon,
   Package,
   RefreshCw,
@@ -24,6 +25,7 @@ import {
 // The single place icons are chosen. Swapping the icon set means editing this map only.
 const icons = {
   overview: LayoutDashboard,
+  chat: MessageSquare,
   runs: Activity,
   instructions: FileText,
   artifacts: Package,

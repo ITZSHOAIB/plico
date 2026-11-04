@@ -16,6 +16,11 @@ answer is recorded as an assistant message. Stream run events at
 Without a configured provider the endpoint returns an actionable error. To store
 a message without starting a run, explicitly include `"startRun": false`.
 
+Run `plico serve --studio` and select **Chat** to create or reopen a thread,
+send messages, follow the reply, and inspect the associated run's timeline and
+events. Studio reconnects to active runs using their event cursor. Configure a
+model provider for the project before sending messages from the playground.
+
 If a server stops after reserving a run but before starting it, `servePlico`
 resumes it only for the same project and provider account. A model change alone
 does not prevent recovery. A mismatched account leaves the message queued rather
