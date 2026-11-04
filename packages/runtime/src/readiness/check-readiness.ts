@@ -4,6 +4,7 @@ import { checkArtifacts } from "./checks/artifacts.js";
 import { checkEvals } from "./checks/evals.js";
 import { checkPersistence } from "./checks/persistence.js";
 import { checkProject } from "./checks/project.js";
+import { checkProvider } from "./checks/provider.js";
 import { checkServerConfig } from "./checks/server-config.js";
 import { checkStudio } from "./checks/studio.js";
 import { checkTools } from "./checks/tools.js";
@@ -24,6 +25,7 @@ export async function checkReadiness(
   const database = openDatabase(databasePath, options.eventStore);
 
   diagnostics.push(
+    ...checkProvider(projectCheck.project.config.model),
     ...(await checkTools(projectCheck.project)),
     ...(await checkEvals(projectRoot, database.eventStore)),
     ...(await checkPersistence(databasePath, database)),

@@ -2,8 +2,22 @@
 
 Projects can set `model: { provider: "...", name: "...", maxSteps: 10 }` in
 `plico.config.ts`. Both names must be nonempty; `maxSteps` must be a positive
-integer and defaults to 10. These settings are recorded now; selecting a real
-provider and reading credentials are part of a later slice.
+integer and defaults to 10. The OpenAI-compatible adapter is available through
+the runtime API. The CLI path for real models is part of a later slice.
+
+```ts
+import { createOpenAICompatibleProvider, runProject } from "@plico/runtime";
+
+const provider = createOpenAICompatibleProvider({ model: "your-model" });
+const result = await runProject(".", { provider, message: "Hello" });
+```
+
+The adapter reads `OPENAI_API_KEY` from the environment. To use an OpenAI-compatible
+gateway, pass `baseURL` and, if needed, the name of its credential environment
+variable as `apiKeyEnv`. Credentials are not stored in project configuration.
+To opt into the live smoke test, set `PLICO_LIVE_PROVIDER_TEST=1`,
+`PLICO_LIVE_MODEL`, and `OPENAI_API_KEY`, then run
+`pnpm exec vitest run packages/runtime/src/run/real-provider.test.ts`.
 
 A `ModelProvider` streams text, complete tool calls, and one finish with usage.
 It receives the engine's abort signal. Adapters classify failures with
