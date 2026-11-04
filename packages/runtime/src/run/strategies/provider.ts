@@ -4,6 +4,7 @@ import type { ProjectConfig } from "@plico/contracts";
 import { RunCancelled, type RunContext } from "../../engine/index.js";
 import { ModelProviderError, RuntimeDiagnosticError } from "../../errors.js";
 import type { InMemoryEventLog } from "../../events.js";
+import { approvalTimeoutMs, decideApproval } from "../../policy/approval.js";
 import { validateJsonSchemaSubset } from "../../tools/schema.js";
 import type { DeclaredTool, ModelProvider, ModelRequest } from "../../types/index.js";
 import { nameToolStep } from "../tracing.js";
@@ -17,6 +18,7 @@ export async function runProviderBackedRun(
   tools: DeclaredTool[],
   events: InMemoryEventLog,
   model: ProjectConfig["model"],
+  config: ProjectConfig,
   history: Array<Pick<import("../../types/index.js").ProviderMessage, "role" | "content">> = [],
 ): Promise<string> {
   const maxSteps = model?.maxSteps ?? 10;
@@ -40,7 +42,7 @@ export async function runProviderBackedRun(
 
   const messages: ModelRequest["messages"] = [
     { role: "system", content: instructions },
-    ...history,
+    ...(history ?? []),
     { role: "user", content: message },
   ];
 
@@ -151,20 +153,21 @@ export async function runProviderBackedRun(
         });
       }
 
-      if (tool.approval.required) {
+      const approval = decideApproval(tool, config);
+      if (approval.required) {
         const requestId = `${ctx.runId}:${turn}:${callIndex}`;
         await events.append("approval.requested", {
           requestId,
           toolName: tool.name,
           arguments: toolCall.arguments,
-          approval: tool.approval,
+          approval,
         });
         await events.append("run.waiting", {
           requestId,
           toolName: tool.name,
           ...(output === undefined ? {} : { output }),
         });
-        await awaitApproval(ctx, requestId, tool.name, output);
+        await awaitApproval(ctx, requestId, tool.name, output, approvalTimeoutMs(config));
       }
 
       let result: unknown;

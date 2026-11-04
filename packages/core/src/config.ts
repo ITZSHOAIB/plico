@@ -120,6 +120,16 @@ function normalizeProjectConfig(value: unknown, configPath: string): ProjectConf
       normalized.execution.leaseMs = config.execution.leaseMs;
   }
 
+  if (config.approvals !== undefined) {
+    normalized.approvals = {};
+    if (config.approvals.default !== undefined)
+      normalized.approvals.default = config.approvals.default;
+    if (config.approvals.timeoutMs !== undefined)
+      normalized.approvals.timeoutMs = config.approvals.timeoutMs;
+    if (config.approvals.tools !== undefined)
+      normalized.approvals.tools = { ...config.approvals.tools };
+  }
+
   return normalized;
 }
 
@@ -221,6 +231,58 @@ function validateProjectConfigShape(value: unknown): ValidationIssue[] {
         message: "Expected execution.leaseMs to be a positive integer",
         severity: "error",
       });
+    }
+  }
+  if (Object.hasOwn(value, "approvals")) {
+    const approvals = value.approvals;
+    if (!isRecord(approvals) || Array.isArray(approvals)) {
+      issues.push({
+        path: relativePaths.configFile,
+        message: "Expected approvals to be an object",
+        severity: "error",
+      });
+    } else {
+      if (
+        Object.hasOwn(approvals, "default") &&
+        approvals.default !== "none" &&
+        approvals.default !== "required"
+      ) {
+        issues.push({
+          path: relativePaths.configFile,
+          message: 'Expected approvals.default to be "none" or "required"',
+          severity: "error",
+        });
+      }
+      if (
+        Object.hasOwn(approvals, "timeoutMs") &&
+        (!Number.isSafeInteger(approvals.timeoutMs) || Number(approvals.timeoutMs) <= 0)
+      ) {
+        issues.push({
+          path: relativePaths.configFile,
+          message: "Expected approvals.timeoutMs to be a positive integer",
+          severity: "error",
+        });
+      }
+      if (Object.hasOwn(approvals, "tools")) {
+        const tools = approvals.tools;
+        if (!isRecord(tools) || Array.isArray(tools)) {
+          issues.push({
+            path: relativePaths.configFile,
+            message: "Expected approvals.tools to be an object",
+            severity: "error",
+          });
+        } else {
+          for (const [name, value2] of Object.entries(tools)) {
+            if (value2 !== "none" && value2 !== "required") {
+              issues.push({
+                path: relativePaths.configFile,
+                message: `Expected approvals.tools.${name} to be "none" or "required"`,
+                severity: "error",
+              });
+            }
+          }
+        }
+      }
     }
   }
   return issues;

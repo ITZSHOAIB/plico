@@ -1,6 +1,8 @@
+import type { ProjectConfig } from "@plico/contracts";
 import type { RunContext } from "../../engine/index.js";
 import { RuntimeDiagnosticError } from "../../errors.js";
 import type { InMemoryEventLog } from "../../events.js";
+import { approvalTimeoutMs, decideApproval } from "../../policy/approval.js";
 import { validateJsonSchemaSubset } from "../../tools/schema.js";
 import type { DeclaredTool, DryRunScriptStep } from "../../types/index.js";
 import { nameToolStep } from "../tracing.js";
@@ -11,6 +13,7 @@ export async function runScriptedDryRun(
   script: DryRunScriptStep[],
   tools: DeclaredTool[],
   events: InMemoryEventLog,
+  config: ProjectConfig,
 ): Promise<string | undefined> {
   const toolsByName = new Map(tools.map((tool) => [tool.name, tool]));
   let output: string | undefined;
@@ -67,20 +70,21 @@ export async function runScriptedDryRun(
       });
     }
 
-    if (tool.approval.required) {
+    const approval = decideApproval(tool, config);
+    if (approval.required) {
       const requestId = `${ctx.runId}:${index}`;
       await events.append("approval.requested", {
         requestId,
         toolName: tool.name,
         arguments: step.arguments,
-        approval: tool.approval,
+        approval,
       });
       await events.append("run.waiting", {
         requestId,
         toolName: tool.name,
         ...(output === undefined ? {} : { output }),
       });
-      await awaitApproval(ctx, requestId, tool.name, output);
+      await awaitApproval(ctx, requestId, tool.name, output, approvalTimeoutMs(config));
     }
 
     const idempotencyKey = `${ctx.runId}:${index}`;
