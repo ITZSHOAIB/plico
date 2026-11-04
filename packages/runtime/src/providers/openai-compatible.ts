@@ -131,7 +131,12 @@ export function createOpenAICompatibleProvider(
           else if (part.type === "finish-step")
             metadata = part.providerMetadata as JsonValue | undefined;
           else if (part.type === "error") throw part.error;
-          else if (part.type === "finish")
+          else if (part.type === "finish") {
+            if (part.finishReason !== "stop" && part.finishReason !== "tool-calls")
+              throw new ModelProviderError(
+                "bad_request",
+                `Model response did not complete (finish reason: ${part.finishReason}).`,
+              );
             yield {
               type: "finish",
               usage: {
@@ -147,6 +152,7 @@ export function createOpenAICompatibleProvider(
                     },
                   }),
             };
+          }
         }
       } catch (error) {
         if (signal.aborted) throw new ModelProviderError("aborted", "Model request aborted.");

@@ -86,6 +86,81 @@ it("does not recover a different project's run using the current project's provi
   }
 }, 30000);
 
+it("leaves an interrupted run untouched when the provider credential changes", async () => {
+  const root = await scaffold(
+    "plico-cli-account-",
+    'export default { schemaVersion: 1, name: "Demo", model: { provider: "openai", name: "test" } };',
+  );
+  const databasePath = join(root, "state.sqlite");
+  const bodies: string[] = [];
+  const server = createServer((req, res) => {
+    let body = "";
+    req.on("data", (part) => {
+      body += part;
+    });
+    req.on("end", () => {
+      bodies.push(body);
+      res.writeHead(200, { "content-type": "text/event-stream" });
+      res.write(
+        `data: ${JSON.stringify({ id: "x", object: "chat.completion.chunk", created: 1, model: "test", choices: [{ index: 0, delta: { content: "Done" }, finish_reason: null }] })}\n\n`,
+      );
+      res.write(
+        `data: ${JSON.stringify({ id: "x", object: "chat.completion.chunk", created: 1, model: "test", choices: [{ index: 0, delta: {}, finish_reason: "stop" }] })}\n\n`,
+      );
+      res.end("data: [DONE]\n\n");
+    });
+  });
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const baseURL = `http://127.0.0.1:${(server.address() as AddressInfo).port}/v1`;
+  const { execFileSync } = await import("node:child_process");
+  const { pathToFileURL } = await import("node:url");
+  const runtimeUrl = pathToFileURL(join(process.cwd(), "packages/runtime/src/index.ts")).href;
+  const program = `import { createSqliteEngine, createSqliteEventStore, modelProviderRecoveryKey, runProject } from ${JSON.stringify(runtimeUrl)};
+    const [root, db] = process.argv.slice(1);
+    await runProject(root, { runId: "old-account", message: "private prompt", providerRecoveryKey: modelProviderRecoveryKey({ provider: "openai", name: "test" }), engine: createSqliteEngine({ databasePath: db }), eventStore: createSqliteEventStore({ databasePath: db }), provider: { async *stream() { process.kill(process.pid, "SIGKILL"); } } });`;
+  expect(() =>
+    execFileSync(
+      process.execPath,
+      ["--import", "tsx", "--input-type=module", "-e", program, root, databasePath],
+      {
+        stdio: "pipe",
+        env: { ...process.env, OPENAI_API_KEY: "old-secret", OPENAI_BASE_URL: baseURL },
+      },
+    ),
+  ).toThrow();
+  const { createSqliteEventStore } = await import("@plico/runtime");
+  const store = createSqliteEventStore({ databasePath, readOnly: true });
+  const before = await store.getRun("old-account");
+  vi.spyOn(console, "log").mockImplementation(() => {});
+  vi.spyOn(console, "error").mockImplementation(() => {});
+  vi.stubEnv("OPENAI_API_KEY", "new-secret");
+  vi.stubEnv("OPENAI_BASE_URL", baseURL);
+  try {
+    expect(
+      await main([
+        "node",
+        "plico",
+        "run",
+        "--json",
+        "--message",
+        "new prompt",
+        "--db",
+        databasePath,
+        root,
+      ]),
+    ).toBe(0);
+    expect(bodies).toHaveLength(1);
+    expect(bodies[0]).not.toContain("private prompt");
+    expect(await store.getRun("old-account")).toEqual(before);
+  } finally {
+    vi.restoreAllMocks();
+    vi.unstubAllEnvs();
+    await new Promise<void>((resolve, reject) =>
+      server.close((error) => (error ? reject(error) : resolve())),
+    );
+  }
+}, 30000);
+
 it("recovers a matching provider run when the server starts", async () => {
   const root = await scaffold(
     "plico-serve-recovery-",
@@ -121,7 +196,7 @@ it("recovers a matching provider run when the server starts", async () => {
   const baseURL = `http://127.0.0.1:${(server.address() as AddressInfo).port}/v1`;
   const { createHash } = await import("node:crypto");
   const identity = createHash("sha256")
-    .update(JSON.stringify(["openai", "test", baseURL]))
+    .update(JSON.stringify(["openai", "test", baseURL, "test"]))
     .digest("hex");
   const { execFileSync, spawn } = await import("node:child_process");
   const { pathToFileURL } = await import("node:url");
@@ -232,7 +307,7 @@ it("keeps interruption handling active while an older run is recovering", {
   const baseURL = `http://127.0.0.1:${(server.address() as AddressInfo).port}/v1`;
   const { createHash } = await import("node:crypto");
   const key = createHash("sha256")
-    .update(JSON.stringify(["openai", "test", baseURL]))
+    .update(JSON.stringify(["openai", "test", baseURL, "test"]))
     .digest("hex");
   const { execFileSync } = await import("node:child_process");
   const { pathToFileURL } = await import("node:url");

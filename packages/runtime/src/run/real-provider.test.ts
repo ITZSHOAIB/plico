@@ -73,6 +73,41 @@ it("streams a provider response through a Plico run without live network access"
   expect(JSON.stringify(result.events)).not.toContain("test-secret");
 });
 
+it("fails a run when the provider truncates its answer at the output limit", async () => {
+  const root = await scaffold("plico-provider-length-");
+  vi.stubEnv("PLICO_TEST_MODEL_KEY", "test-secret");
+  const chunks = [
+    {
+      id: "x",
+      object: "chat.completion.chunk",
+      created: 1,
+      model: "test",
+      choices: [{ index: 0, delta: { content: "Partial" }, finish_reason: null }],
+    },
+    {
+      id: "x",
+      object: "chat.completion.chunk",
+      created: 1,
+      model: "test",
+      choices: [{ index: 0, delta: {}, finish_reason: "length" }],
+    },
+  ];
+  const provider = createOpenAICompatibleProvider({
+    model: "test",
+    apiKeyEnv: "PLICO_TEST_MODEL_KEY",
+    fetch: async () =>
+      new Response(
+        chunks.map((chunk) => `data: ${JSON.stringify(chunk)}\n\n`).join("") + "data: [DONE]\n\n",
+        { headers: { "content-type": "text/event-stream" } },
+      ),
+  });
+  const result = await runProject(root, { provider, message: "hello" });
+  expect(result.status).toBe("failed");
+  expect(result.events.find((event) => event.type === "run.error")?.payload).toMatchObject({
+    message: expect.stringContaining("length"),
+  });
+});
+
 it("round trips tool calls and results through the provider protocol", async () => {
   const root = await scaffold(
     "plico-provider-tool-",

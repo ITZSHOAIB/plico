@@ -17,7 +17,7 @@ export function createConfiguredModelProvider(model: ModelConfig): ModelProvider
   });
 }
 
-/** Hash the provider target without storing endpoint credentials in the execution journal. */
+/** Hash the provider target and credential without storing either secret in the journal. */
 export function modelProviderRecoveryKey(model: ModelConfig): string {
   return createHash("sha256")
     .update(
@@ -25,6 +25,7 @@ export function modelProviderRecoveryKey(model: ModelConfig): string {
         model.provider,
         model.name,
         process.env.OPENAI_BASE_URL || "https://api.openai.com/v1",
+        process.env.OPENAI_API_KEY ?? "",
       ]),
     )
     .digest("hex");
