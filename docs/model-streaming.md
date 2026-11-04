@@ -2,8 +2,13 @@
 
 Projects can set `model: { provider: "...", name: "...", maxSteps: 10 }` in
 `plico.config.ts`. Both names must be nonempty; `maxSteps` must be a positive
-integer and defaults to 10. The OpenAI-compatible adapter is available through
-the runtime API. The CLI path for real models is part of a later slice.
+integer and defaults to 10. Set `model.provider` to `openai` or
+`openai-compatible`, export `OPENAI_API_KEY`, and run `plico run --message "Hello"`.
+Input can also be piped through standard input. Real runs are persisted to
+`.plico/plico.sqlite` by default and are available to Studio. Set `OPENAI_BASE_URL`
+to use a compatible gateway.
+
+The OpenAI-compatible adapter is also available through the runtime API.
 
 ```ts
 import { createOpenAICompatibleProvider, runProject } from "@plico/runtime";

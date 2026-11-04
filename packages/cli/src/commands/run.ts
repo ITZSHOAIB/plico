@@ -11,6 +11,7 @@ import { errorMessage } from "../errors.js";
 import { formatRunResult } from "../format/run.js";
 import { resolveDatabasePath } from "../paths.js";
 import { loadDryRunScript } from "../script-file.js";
+import { resolveMessage, resolveModelProvider } from "./model-provider.js";
 
 export async function runCommand(args: string[]): Promise<number> {
   try {
@@ -25,16 +26,19 @@ export async function runCommand(args: string[]): Promise<number> {
     });
     const dry = parsed.flags.has("--dry");
     const json = parsed.flags.has("--json");
-    const persist = parsed.flags.has("--persist");
+    const persist = parsed.flags.has("--persist") || !dry;
     const target = lastPositional(parsed, process.cwd());
     const scriptPath = readStringOption(parsed, "--script");
     const dbPath = readStringOption(parsed, "--db");
-    const message = readStringOption(parsed, "--message");
+    let message = readStringOption(parsed, "--message");
 
-    if (!dry) {
-      console.error("plico run only supports --dry in this release.");
-      return 1;
-    }
+    if (!dry && scriptPath) throw new Error("--script requires --dry.");
+    const provider = dry
+      ? message === undefined
+        ? undefined
+        : createFakeProvider()
+      : await resolveModelProvider(target);
+    if (!dry) message = await resolveMessage(message);
 
     const script = scriptPath ? await loadDryRunScript(scriptPath) : undefined;
     const databasePath = persist ? resolveDatabasePath(target, dbPath) : undefined;
@@ -46,7 +50,7 @@ export async function runCommand(args: string[]): Promise<number> {
       : undefined;
     const recovery =
       engine && eventStore
-        ? recoverRuns({ engine, eventStore }).then(
+        ? recoverRuns({ engine, eventStore, ...(!dry && provider ? { provider } : {}) }).then(
             (runs) => {
               for (const run of runs)
                 console.error(
@@ -63,7 +67,8 @@ export async function runCommand(args: string[]): Promise<number> {
       ...(script ? { script } : {}),
       ...(eventStore ? { eventStore } : {}),
       ...(engine ? { engine } : {}),
-      ...(message === undefined ? {} : { provider: createFakeProvider(), message }),
+      ...(message === undefined ? {} : { message }),
+      ...(provider === undefined ? {} : { provider }),
     });
 
     const [requested] = await Promise.allSettled([resultPromise, recovery]);
@@ -77,7 +82,7 @@ export async function runCommand(args: string[]): Promise<number> {
         console.error(`${error.path}: ${error.message}`);
       }
     } else {
-      for (const line of formatRunResult(target, result)) {
+      for (const line of formatRunResult(target, result, dry)) {
         if (result.status === "completed") {
           console.log(line);
         } else {

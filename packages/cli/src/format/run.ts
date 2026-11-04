@@ -1,8 +1,8 @@
 import type { RunResult } from "@plico/runtime";
 import { readCount, readString } from "./values.js";
 
-export function formatRunResult(target: string, result: RunResult): string[] {
-  const lines = [`Running dry runtime for ${target}`];
+export function formatRunResult(target: string, result: RunResult, dry = true): string[] {
+  const lines = [`Running ${dry ? "dry runtime" : "model"} for ${target}`];
 
   for (const event of result.events) {
     if (event.type === "run.started") {
@@ -77,9 +77,9 @@ export function formatRunResult(target: string, result: RunResult): string[] {
   }
 
   if (result.status === "waiting") {
-    lines.push("Dry run waiting for approval.");
+    lines.push(dry ? "Dry run waiting for approval." : "Run waiting for approval.");
   } else if (result.status === "failed") {
-    lines.push("Dry run failed.");
+    lines.push(dry ? "Dry run failed." : "Run failed.");
   }
 
   return lines;
