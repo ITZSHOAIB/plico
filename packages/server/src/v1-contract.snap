@@ -148,6 +148,25 @@
       }
     ]
   },
+  "GET /v1/runs/:id/events (approval)": [
+    {
+      "id": "string",
+      "payload": {
+        "approved": "boolean",
+        "requestId": "string"
+      },
+      "runId": "string",
+      "schemaVersion": "number",
+      "sequence": "number",
+      "streamId": "string",
+      "streamType": "string",
+      "timestamp": "string",
+      "type": "string"
+    }
+  ],
+  "POST /v1/runs/:id/signal (approval)": {
+    "result": "string"
+  },
   "POST /v1/runs/dry": {
     "events": [
       {

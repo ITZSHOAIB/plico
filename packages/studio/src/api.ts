@@ -74,6 +74,32 @@ export function fetchEvents(runId: string): Promise<PlicoEvent[]> {
   return getJson(`/v1/runs/${encodeURIComponent(runId)}/events`);
 }
 
+export async function sendApprovalDecision(
+  runId: string,
+  requestId: string,
+  approved: boolean,
+): Promise<"accepted" | "ignored" | "unknown"> {
+  const url = `/v1/runs/${encodeURIComponent(runId)}/signal`;
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ name: `approval:${requestId}`, value: { approved } }),
+  });
+  if (!response.ok) {
+    const body = (await response.json().catch(() => null)) as {
+      error?: { message?: string };
+    } | null;
+    throw new Error(
+      body?.error?.message ?? `Could not send approval decision (${response.status}).`,
+    );
+  }
+  const body = (await response.json()) as { result?: string };
+  if (body.result !== "accepted" && body.result !== "ignored" && body.result !== "unknown") {
+    throw new Error("The server returned an invalid approval result.");
+  }
+  return body.result;
+}
+
 export function fetchInstructions(): Promise<ComposedInstructions> {
   return getJson("/v1/instructions");
 }

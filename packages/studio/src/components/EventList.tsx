@@ -54,6 +54,8 @@ function eventSummary(event: PlicoEvent): string | undefined {
     return `${event.payload.usage.inputTokens} input tokens · ${event.payload.usage.outputTokens} output tokens`;
   if (event.type === "assistant.output") return event.payload.content;
   if (event.type === "approval.requested") return `${event.payload.toolName} requires approval`;
+  if (event.type === "approval.decided")
+    return `Approval ${event.payload.approved ? "approved" : "denied"}`;
   if (event.type === "tool.call" || event.type === "tool.result") return event.payload.toolName;
   return undefined;
 }

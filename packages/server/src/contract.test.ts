@@ -3,7 +3,12 @@ import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createSqliteEventStore, createSqliteThreadStore, runProject } from "@plico/runtime";
+import {
+  createSqliteEngine,
+  createSqliteEventStore,
+  createSqliteThreadStore,
+  runProject,
+} from "@plico/runtime";
 import { afterAll, beforeAll, expect, it, vi } from "vitest";
 import { createPlicoServer } from "./index.js";
 
@@ -47,10 +52,13 @@ function shapeOf(value: unknown): Shape {
 
 let server: Server;
 let baseUrl: string;
+let root: string;
 let providerRunId: string;
+let eventStore: ReturnType<typeof createSqliteEventStore>;
+let engine: ReturnType<typeof createSqliteEngine>;
 
 beforeAll(async () => {
-  const root = await mkdtemp(join(tmpdir(), "plico-contract-"));
+  root = await mkdtemp(join(tmpdir(), "plico-contract-"));
   for (const dir of ["skills", "tools", "evals", "artifacts", "memory"]) {
     await mkdir(join(root, dir), { recursive: true });
   }
@@ -69,7 +77,8 @@ beforeAll(async () => {
     JSON.stringify({ script, expect: { outputContains: "nope" } }),
   );
 
-  const eventStore = createSqliteEventStore({ databasePath: join(root, "state.sqlite") });
+  const databasePath = join(root, "state.sqlite");
+  eventStore = createSqliteEventStore({ databasePath });
   await writeFile(
     join(root, "plico.config.ts"),
     'export default { schemaVersion: 1, name: "Demo", execution: { leaseMs: 30000 }, model: { provider: "fake", name: "test" } } as const;\n',
@@ -114,9 +123,11 @@ beforeAll(async () => {
     'export default { schemaVersion: 1, name: "Demo", execution: { leaseMs: 30000 } } as const;\n',
   );
   await unlink(join(root, "tools", "lookup.tool.ts"));
+  engine = createSqliteEngine({ databasePath });
   const api = await createPlicoServer({
     projectRoot: root,
     eventStore,
+    engine,
     threadStore: createSqliteThreadStore({ databasePath: join(root, "state.sqlite") }),
     provider: {
       async *stream() {
@@ -162,6 +173,18 @@ it("keeps the /v1 response shapes stable", async () => {
     snapshots: Array<{ snapshotId: string }>;
   };
 
+  await writeFile(
+    join(root, "tools", "archive.tool.ts"),
+    'export default { name: "archive", description: "Archive a record", inputSchema: { type: "object" }, capabilities: [], approval: { required: true }, handler: () => "archived" };',
+  );
+  const approvalRun = await runProject(root, {
+    runId: "approval-contract",
+    script: [{ type: "tool.call", toolName: "archive", arguments: {} }],
+    eventStore,
+    engine,
+  });
+  if (approvalRun.status !== "waiting") throw new Error("Approval fixture did not wait");
+
   const providerEvents = (await (
     await fetch(`${baseUrl}/v1/runs/${providerRunId}/events`)
   ).json()) as Array<{ type: string }>;
@@ -186,6 +209,23 @@ it("keeps the /v1 response shapes stable", async () => {
     expect(run.status).toBe("completed");
   });
 
+  const decisionResponse = await fetch(`${baseUrl}/v1/runs/${approvalRun.runId}/signal`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ name: `approval:${approvalRun.runId}:0`, value: { approved: true } }),
+  });
+  const decisionResult = await decisionResponse.json();
+  expect(decisionResponse.status).toBe(200);
+  await vi.waitFor(async () => {
+    const response = await fetch(`${baseUrl}/v1/runs/${approvalRun.runId}`);
+    const run = (await response.json()) as { status: string };
+    expect(run.status).toBe("completed");
+  });
+  const approvalEvents = (await (
+    await fetch(`${baseUrl}/v1/runs/${approvalRun.runId}/events`)
+  ).json()) as Array<{ type: string }>;
+  await unlink(join(root, "tools", "archive.tool.ts"));
+
   const shapes = {
     "POST /v1/threads": shapeOf(createdThread),
     "POST /v1/threads/:id/messages": shapeOf(posted),
@@ -193,6 +233,10 @@ it("keeps the /v1 response shapes stable", async () => {
     "GET /v1/threads/:id": await shape(threadPath),
     "GET /v1/threads/:id/messages": await shape(`${threadPath}/messages`),
     "GET /v1/runs/:id/events (provider)": providerShapes,
+    "GET /v1/runs/:id/events (approval)": approvalEvents
+      .filter((event) => event.type === "approval.decided")
+      .map((event) => shapeOf(event)),
+    "POST /v1/runs/:id/signal (approval)": shapeOf(decisionResult),
     "POST /v1/runs/dry": await shape("/v1/runs/dry", dryRun),
     "GET /v1/project": await shape("/v1/project"),
     "GET /v1/instructions": await shape("/v1/instructions"),

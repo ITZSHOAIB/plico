@@ -167,7 +167,7 @@ export async function runProviderBackedRun(
           toolName: tool.name,
           ...(output === undefined ? {} : { output }),
         });
-        await awaitApproval(ctx, requestId, tool.name, output, approvalTimeoutMs(config));
+        await awaitApproval(ctx, requestId, tool.name, output, events, approvalTimeoutMs(config));
       }
 
       let result: unknown;

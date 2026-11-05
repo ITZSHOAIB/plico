@@ -20,3 +20,10 @@ version-controllable, reviewable alongside your app code.
   artifacts, and streams all derive from that one log.
 - **Provider-agnostic.** Adapters map provider shapes to the project contract. Swap
   models and providers without rewriting your agent.
+
+## Inspect and approve runs
+
+Start the bundled Studio with `plico serve --studio <project>`. Studio shows the
+run's event history and, when a tool call needs approval, its reason and input
+arguments. Approve the call to resume the run or deny it to stop the run before
+the tool executes. Each decision is recorded in the run's event log.

@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "./App";
 import { click, events, json, openRun, stubApi } from "./testing/fixtures";
@@ -29,6 +29,42 @@ describe("run inspection", () => {
     expect(screen.getByText("delete-ticket requires approval")).toBeTruthy();
     expect(screen.getByText(/Status: waiting/)).toBeTruthy();
     expect(screen.getByText("Not ended")).toBeTruthy();
+  });
+
+  it("approves the waiting tool call through the run signal API", async () => {
+    const fetchMock = stubApi(undefined, { waitingApproval: true });
+    render(<App />);
+    await openRun();
+
+    click("Approve tool call");
+
+    const approval = await screen.findByRole("region", { name: "Approval required" });
+    expect(within(approval).getByRole("status").textContent).toContain(
+      "Approval approved. The run is resuming.",
+    );
+    const request = posts(fetchMock).find(([url]) => url === "/v1/runs/run-1234567890ab/signal");
+    expect(request?.[1]).toMatchObject({
+      method: "POST",
+      body: JSON.stringify({ name: "approval:approval-1", value: { approved: true } }),
+    });
+  });
+
+  it("denies the waiting tool call through the run signal API", async () => {
+    const fetchMock = stubApi(undefined, { waitingApproval: true });
+    render(<App />);
+    await openRun();
+
+    click("Deny tool call");
+
+    const approval = await screen.findByRole("region", { name: "Approval required" });
+    expect(within(approval).getByRole("status").textContent).toContain(
+      "Tool call denied. The run is ending.",
+    );
+    const request = posts(fetchMock).find(([url]) => url === "/v1/runs/run-1234567890ab/signal");
+    expect(request?.[1]).toMatchObject({
+      method: "POST",
+      body: JSON.stringify({ name: "approval:approval-1", value: { approved: false } }),
+    });
   });
 
   it("replays raw events", async () => {

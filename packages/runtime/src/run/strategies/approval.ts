@@ -1,6 +1,7 @@
 import type { RunContext } from "../../engine/index.js";
 import { RunSuspended } from "../../engine/index.js";
 import { RuntimeDiagnosticError, RunWaitingError } from "../../errors.js";
+import type { InMemoryEventLog } from "../../events.js";
 
 /** The decision a person sends for an approval. Only an explicit `approved: true` lets the tool run. */
 interface ApprovalDecision {
@@ -21,6 +22,7 @@ export async function awaitApproval(
   requestId: string,
   toolName: string,
   output: string | undefined,
+  events: InMemoryEventLog,
   timeoutMs?: number,
 ): Promise<void> {
   let outcome: Awaited<ReturnType<typeof ctx.wait<ApprovalDecision | null>>>;
@@ -40,6 +42,10 @@ export async function awaitApproval(
       message: `Approval for ${toolName} timed out.`,
     });
   }
+  await events.append("approval.decided", {
+    requestId,
+    approved: outcome.value?.approved === true,
+  });
   if (outcome.value?.approved !== true) {
     throw new RuntimeDiagnosticError({
       phase: "approval",
