@@ -27,3 +27,7 @@ Start the bundled Studio with `plico serve --studio <project>`. Studio shows the
 run's event history and, when a tool call needs approval, its reason and input
 arguments. Approve the call to resume the run or deny it to stop the run before
 the tool executes. Each decision is recorded in the run's event log.
+
+Cancel an active persisted run from the command line with
+`plico cancel <run-id> <project>`, or send `POST /v1/runs/<run-id>/cancel` to the
+server. Pressing Ctrl+C during `plico run` also cancels that run.
