@@ -21,7 +21,7 @@ export async function checkTools(project: LoadedProject): Promise<ReadinessDiagn
         "tools/ directory not found. Create tools/ to declare tools.",
         relativePaths.directories.tools,
       ),
-      ...checkApprovalPolicy(project, []),
+      ...checkApprovalPolicy(project, [], { toolsComplete: false }),
     ];
   }
 
@@ -62,6 +62,8 @@ export async function checkTools(project: LoadedProject): Promise<ReadinessDiagn
       `${validCount}/${toolFiles.length} tool(s) valid`,
     ),
   );
-  diagnostics.push(...checkApprovalPolicy(project, tools));
+  diagnostics.push(
+    ...checkApprovalPolicy(project, tools, { toolsComplete: validCount === toolFiles.length }),
+  );
   return diagnostics;
 }

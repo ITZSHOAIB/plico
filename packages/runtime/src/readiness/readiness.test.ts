@@ -82,4 +82,19 @@ describe("checkReadiness", () => {
         'Tool "delete_ticket" requires approval in its declaration; the "none" override has no effect.',
     });
   });
+
+  it("does not report a policy target as undeclared when a tool fails to load", async () => {
+    const root = await scaffold({
+      config:
+        'export default { schemaVersion: 1, name: "Demo", approvals: { tools: { broken_tool: "required" } } } as const;\n',
+    });
+    await writeFile(join(root, "tools", "broken.tool.ts"), "export default { name: ;\n");
+
+    const report = await checkReadiness(root);
+    const policy = report.diagnostics.filter(
+      (diagnostic) => diagnostic.subsystem === "approvals.policy",
+    );
+
+    expect(policy.some((diagnostic) => diagnostic.message.includes("undeclared tool"))).toBe(false);
+  });
 });

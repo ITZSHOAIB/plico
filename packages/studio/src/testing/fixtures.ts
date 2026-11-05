@@ -116,7 +116,11 @@ interface StubState {
 
 export function stubApi(
   state: StubState = { report: evalReport },
-  options: { waitingApproval?: boolean } = {},
+  options: {
+    waitingApproval?: boolean;
+    includeOtherRun?: boolean;
+    cancelResult?: "accepted" | "ignored" | "unknown";
+  } = {},
 ) {
   window.history.replaceState(null, "", "/");
   const runEvents = options.waitingApproval
@@ -129,15 +133,16 @@ export function stubApi(
     const method = init?.method ?? "GET";
     const path = String(input);
     if (path === "/v1/project") return json({ project });
-    if (path === "/v1/runs") return json([run]);
+    if (path === "/v1/runs") return json(options.includeOtherRun ? [run, otherRun] : [run]);
     if (path === "/v1/instructions") return json(instructions);
     if (path === "/v1/readiness") return json(readiness);
     if (path === `/v1/runs/${run.runId}`) return json(run);
     if (path === `/v1/runs/${run.runId}/events`) return json(runEvents);
+    if (path === `/v1/runs/${otherRun.runId}/events`) return json([]);
     if (path === `/v1/runs/${run.runId}/signal` && method === "POST")
       return json({ result: "accepted" });
     if (path === `/v1/runs/${run.runId}/cancel` && method === "POST")
-      return json({ result: "accepted" });
+      return json({ result: options.cancelResult ?? "accepted" });
     if (path === `/v1/runs/${run.runId}/workspace`) return json(workspace);
     if (path === "/v1/eval" && method === "POST") {
       state.report = evalReport;

@@ -102,7 +102,7 @@ function SelectedRunView({
       )}
       {approvalRequest && <ApprovalDecision runId={selectedRun.runId} request={approvalRequest} />}
       {replay.isLatest && ["running", "waiting"].includes(selectedRun.status) && (
-        <RunCancellation runId={selectedRun.runId} />
+        <RunCancellation key={selectedRun.runId} runId={selectedRun.runId} />
       )}
       <div className="flex gap-0.5 border-b border-line px-2">
         <ModeTab active={mode === "timeline"} onClick={() => setMode("timeline")}>
