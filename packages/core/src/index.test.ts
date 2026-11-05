@@ -179,7 +179,7 @@ describe("validateProject", () => {
       expect.arrayContaining([
         expect.objectContaining({
           path: "plico.config.ts",
-          message: expect.stringContaining("Failed to execute plico.config.ts: boom"),
+          message: expect.stringContaining("Failed to load plico.config.ts: boom"),
           severity: "error",
         }),
       ]),

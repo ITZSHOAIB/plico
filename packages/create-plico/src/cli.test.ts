@@ -1,6 +1,6 @@
 import { mkdtemp, readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { main } from "./cli.js";
 import type { ScaffoldPrompts } from "./prompts.js";
@@ -14,9 +14,24 @@ describe("create-plico main", () => {
 
     expect(exitCode).toBe(0);
     expect(logSpy).toHaveBeenCalledWith(`Created Plico scaffold in ${root}`);
-    expect(await readFile(join(root, "agent.md"), "utf8")).toContain("Internal Ops Agent");
+    expect(await readFile(join(root, "plico.config.ts"), "utf8")).toContain(
+      `name: "${basename(root)
+        .replace(/[-_]+/g, " ")
+        .replace(/\b\w/g, (c) => c.toUpperCase())}"`,
+    );
 
     logSpy.mockRestore();
+  });
+
+  it("derives the default project name from the supplied target directory", async () => {
+    const parent = await mkdtemp(join(tmpdir(), "plico-create-name-"));
+    const target = join(parent, "support_tools");
+    const exitCode = await main(["node", "create-plico", target]);
+
+    expect(exitCode).toBe(0);
+    expect(await readFile(join(target, "plico.config.ts"), "utf8")).toContain(
+      'name: "Support Tools"',
+    );
   });
 
   it("runs an interactive scaffold flow when no target directory is provided", async () => {

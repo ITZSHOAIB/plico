@@ -45,7 +45,8 @@ export async function serveCommand(args: string[]): Promise<number> {
     }
 
     const resolvedHost = normalizeDisplayHost(host ?? "127.0.0.1");
-    console.log(`Serving Plico at http://${resolvedHost}:${address.port}`);
+    const urlHost = resolvedHost.includes(":") ? `[${resolvedHost}]` : resolvedHost;
+    console.log(`Serving Plico at http://${urlHost}:${address.port}`);
     console.log(`Database: ${databasePath}`);
     return 0;
   } catch (error) {

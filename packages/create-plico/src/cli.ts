@@ -46,7 +46,7 @@ export async function main(
     try {
       await createInternalOpsScaffold({
         targetDir,
-        projectName: projectName ?? "Internal Ops Agent",
+        projectName: projectName ?? deriveProjectName(targetDir),
       });
       console.log(`Created Plico scaffold in ${targetDir}`);
       return 0;

@@ -169,6 +169,15 @@ it("keeps the /v1 response shapes stable", async () => {
   });
   const run = (await (await fetch(`${baseUrl}/v1/runs/dry`, dryRun)).json()) as { runId: string };
   const runPath = `/v1/runs/${run.runId}`;
+  const healthResponse = await fetch(`${baseUrl}/health`);
+  expect(healthResponse.status).toBe(200);
+  expect(await healthResponse.json()).toEqual({ ok: true });
+  const missingRunResponse = await fetch(`${baseUrl}/v1/runs/missing-contract-run`);
+  expect(missingRunResponse.status).toBe(404);
+  const streamResponse = await fetch(`${baseUrl}${runPath}/events/stream`);
+  expect(streamResponse.status).toBe(200);
+  expect(streamResponse.headers.get("content-type")).toContain("text/event-stream");
+  expect(await streamResponse.text()).toContain("run.completed");
   const workspace = (await (await fetch(`${baseUrl}${runPath}/workspace`)).json()) as {
     snapshots: Array<{ snapshotId: string }>;
   };

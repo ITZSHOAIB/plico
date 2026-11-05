@@ -68,6 +68,10 @@ Validate the example project from the repo root:
 pnpm --filter @plico/cli exec plico validate examples/internal-ops-agent
 ```
 
+Use `plico validate --help` to show the validate usage. Unknown flags such as
+`--jsn` are rejected instead of being treated as a project path. `plico runs`
+prints `No saved runs found.` when the project has not persisted a run yet.
+
 Run the dry runtime with the checked-in example tool:
 
 ```sh

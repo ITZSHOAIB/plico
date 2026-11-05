@@ -44,6 +44,42 @@ async function writeValidProject(root: string) {
 }
 
 describe("main", () => {
+  it("rejects misspelled validate flags and shows command help without treating it as a path", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
+
+    expect(await main(["node", "plico", "validate", "--jsn"])).toBe(1);
+    expect(errorSpy).toHaveBeenCalledWith("Unknown option: --jsn");
+    errorSpy.mockClear();
+    expect(await main(["node", "plico", "validate", "--help"])).toBe(0);
+    expect(logSpy).toHaveBeenCalledWith("Usage: plico validate [path]");
+    expect(errorSpy).not.toHaveBeenCalled();
+  });
+
+  it("accepts artifact.write scripts through the CLI dry-run entry point", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-cli-script-artifact-"));
+    await writeValidProject(root);
+    const scriptPath = join(root, "script.json");
+    await writeFile(
+      scriptPath,
+      JSON.stringify([
+        { type: "assistant.output", content: "Writing file" },
+        { type: "artifact.write", files: [{ path: "notes.txt", content: "saved" }] },
+      ]),
+      "utf8",
+    );
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    expect(
+      await main(["node", "plico", "run", "--dry", "--json", "--script", scriptPath, root]),
+    ).toBe(0);
+    expect(errorSpy).not.toHaveBeenCalled();
+    expect(JSON.parse(String(logSpy.mock.calls[0]?.[0])).events).toEqual(
+      expect.arrayContaining([expect.objectContaining({ type: "artifact.file.written" })]),
+    );
+  });
+
   it("cancels a persisted run by ID", async () => {
     const root = await mkdtemp(join(tmpdir(), "plico-cli-cancel-"));
     await writeValidProject(root);
@@ -776,10 +812,9 @@ describe("main", () => {
     const logSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
 
     const runsExitCode = await main(["node", "plico", "runs", root]);
-    expect(runsExitCode).toBe(1);
-    expect(errorSpy).toHaveBeenCalledWith(
-      `Missing database: ${join(root, ".plico", "plico.sqlite")}`,
-    );
+    expect(runsExitCode).toBe(0);
+    expect(logSpy).toHaveBeenCalledWith("No saved runs found.");
+    expect(errorSpy).not.toHaveBeenCalled();
 
     const persistedRunExitCode = await main(["node", "plico", "run", "--dry", "--persist", root]);
     expect(persistedRunExitCode).toBe(0);

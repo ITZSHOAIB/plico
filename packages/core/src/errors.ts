@@ -32,8 +32,9 @@ export function configLoadMessage(error: unknown): string {
   const relativePaths = getProjectRelativePaths();
 
   if (error instanceof Error && error.message) {
-    return `Failed to execute ${relativePaths.configFile}: ${error.message}`;
+    const detail = error.message.split("\n", 1)[0]?.trim();
+    return `Failed to load ${relativePaths.configFile}: ${detail}`;
   }
 
-  return `Failed to execute ${relativePaths.configFile}`;
+  return `Failed to load ${relativePaths.configFile}`;
 }

@@ -1,8 +1,20 @@
 import { validateProject } from "@plico/core";
-import { lastPositional, parseArgs } from "../args.js";
+import { lastPositional, type ParsedArgs, parseArgs } from "../args.js";
+import { errorMessage } from "../errors.js";
+import { usageCommand } from "./usage.js";
 
 export async function validateCommand(args: string[]): Promise<number> {
-  const parsed = parseArgs(args, { flags: ["--json"], values: {}, rejectUnknown: false });
+  if (args.includes("--help") || args.includes("-h")) {
+    usageCommand();
+    return 0;
+  }
+  let parsed: ParsedArgs;
+  try {
+    parsed = parseArgs(args, { flags: ["--json"], values: {}, rejectUnknown: true });
+  } catch (error) {
+    console.error(errorMessage(error));
+    return 1;
+  }
   const json = parsed.flags.has("--json");
   const target = lastPositional(parsed, process.cwd());
   const result = await validateProject(target);

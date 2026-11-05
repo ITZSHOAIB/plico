@@ -28,6 +28,9 @@ export function parseArgs(args: readonly string[], spec: ArgSpec): ParsedArgs {
 
   for (const arg of args) {
     if (pending !== undefined) {
+      if (arg.startsWith("-")) {
+        throw new Error(spec.values[pending]?.missing ?? `Missing value after ${pending}`);
+      }
       const option = spec.values[pending];
       values.set(pending, option?.parse ? option.parse(arg) : arg);
       pending = undefined;
