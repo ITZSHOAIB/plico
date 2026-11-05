@@ -123,19 +123,13 @@ export function appendEventRecord(database: DatabaseSync, event: PlicoEvent): vo
 }
 
 function compactArtifactPayload(database: DatabaseSync, event: PlicoEvent): unknown {
-  if (event.type !== "artifact.file.written" || !("contentHash" in event.payload)) {
-    return event.payload;
-  }
-  const { content, contentHash, ...receipt } = event.payload;
+  if (event.type !== "artifact.file.written") return event.payload;
+  const { content, contentHash: declaredHash, ...receipt } = event.payload;
   const actualHash = createHash("sha256").update(content, "utf8").digest("hex");
-  if (actualHash !== contentHash)
+  if (declaredHash !== undefined && actualHash !== declaredHash)
     throw new Error("Artifact content hash does not match its content.");
   database
     .prepare("INSERT OR IGNORE INTO artifact_content (content_hash, content) VALUES (?, ?)")
-    .run(contentHash, content);
-  const stored = database
-    .prepare("SELECT content FROM artifact_content WHERE content_hash = ?")
-    .get(contentHash) as { content: string } | undefined;
-  if (stored?.content !== content) throw new Error("Artifact content hash collision.");
-  return { ...receipt, contentHash };
+    .run(actualHash, content);
+  return { ...receipt, contentHash: actualHash };
 }

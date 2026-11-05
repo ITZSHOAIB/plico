@@ -47,9 +47,21 @@ describe("artifact workspace", () => {
     const workspace = buildArtifactWorkspace(result.runId, result.events);
 
     expect(result.events.filter((e) => e.type === "artifact.workspace.created")).toHaveLength(1);
-    expect(workspace?.files).toMatchObject([
-      { path: "a.md", content: "two", mimeType: "text/plain", version: 2 },
-      { path: "b.md", content: "bee", mimeType: "text/plain", version: 1 },
+    expect(workspace?.files).toEqual([
+      {
+        path: "a.md",
+        content: "two",
+        mimeType: "text/plain",
+        version: 2,
+        contentHash: "3fc4ccfe745870e2c0d99f71f30ff0656c8dedd41cc1d7d3d376b0dbe685e2f3",
+      },
+      {
+        path: "b.md",
+        content: "bee",
+        mimeType: "text/plain",
+        version: 1,
+        contentHash: "62cb81b5904a262ffaeed02abef36bfc540b09f964b8b0b636662f77ffce6714",
+      },
     ]);
     expect(workspace?.snapshots.map((s) => s.fileCount)).toEqual([1, 2]);
   });
@@ -61,8 +73,14 @@ describe("artifact workspace", () => {
 
     const snapshot = readArtifactSnapshot(result.events, first);
 
-    expect(snapshot?.files).toMatchObject([
-      { path: "a.md", content: "one", mimeType: "text/plain", version: 1 },
+    expect(snapshot?.files).toEqual([
+      {
+        path: "a.md",
+        content: "one",
+        mimeType: "text/plain",
+        version: 1,
+        contentHash: "7692c3ad3540bb803c020b3aee66cd8887123234ea0c6e7143c0add73ff431ed",
+      },
     ]);
     expect(readArtifactSnapshot(result.events, "missing")).toBeUndefined();
   });
@@ -109,6 +127,66 @@ describe("artifact workspace", () => {
     expect(replayedEvents.filter((event) => event.type === "artifact.file.written")).toHaveLength(
       3,
     );
+    database.close();
+  });
+
+  it("replays a legacy artifact event without hash or version fields from SQLite", async () => {
+    const root = await scaffold();
+    const databasePath = join(root, "events.sqlite");
+    const store = createSqliteEventStore({ databasePath });
+    const result = await runProject(root, {
+      eventStore: store,
+      script: [{ type: "artifact.write", files: [{ path: "legacy.md", content: "legacy" }] }],
+    });
+    const database = new DatabaseSync(databasePath);
+    const event = result.events.find((item) => item.type === "artifact.file.written");
+    if (event?.type !== "artifact.file.written") throw new Error("Missing artifact event");
+    database.prepare("UPDATE events SET payload_json = ? WHERE stream_id = ? AND sequence = ?").run(
+      JSON.stringify({
+        path: event.payload.path,
+        content: event.payload.content,
+        mimeType: event.payload.mimeType,
+      }),
+      result.runId,
+      event.sequence,
+    );
+
+    const replayed = await store.getEvents(result.runId);
+    const workspace = buildArtifactWorkspace(result.runId, replayed);
+
+    expect(workspace?.files).toEqual([
+      {
+        path: "legacy.md",
+        content: "legacy",
+        mimeType: "text/plain",
+        version: 1,
+        contentHash: "c49fea7425fa7f8699897a97c159c6690267d9003bb78c53fafa8fc15c325d84",
+      },
+    ]);
+    expect(workspace?.versions).toEqual([
+      {
+        path: "legacy.md",
+        mimeType: "text/plain",
+        version: 1,
+        contentHash: "c49fea7425fa7f8699897a97c159c6690267d9003bb78c53fafa8fc15c325d84",
+        createdAt: event.timestamp,
+      },
+    ]);
+    database.close();
+  });
+
+  it("fails event reads when an artifact receipt has no stored content", async () => {
+    const root = await scaffold();
+    const databasePath = join(root, "events.sqlite");
+    const store = createSqliteEventStore({ databasePath });
+    const result = await runProject(root, {
+      eventStore: store,
+      script: [{ type: "artifact.write", files: [{ path: "missing.md", content: "body" }] }],
+    });
+    const database = new DatabaseSync(databasePath);
+    database.prepare("DELETE FROM artifact_content").run();
+
+    await expect(store.getEvents(result.runId)).rejects.toThrow("is missing from storage");
     database.close();
   });
 });

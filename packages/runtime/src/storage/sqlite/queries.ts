@@ -91,6 +91,8 @@ function rowToEvent(row: Record<string, unknown>): PlicoEvent {
   const payload = JSON.parse(String(row.payload_json)) as Record<string, unknown>;
   if (row.type === "artifact.file.written" && typeof payload.contentHash === "string") {
     if (typeof row.artifact_content !== "string") {
+      // Missing artifact bodies make the canonical event log incomplete, so fail the read instead
+      // of returning a workspace that looks complete but silently omits an artifact version.
       throw new Error(`Artifact content ${payload.contentHash} is missing from storage.`);
     }
     payload.content = row.artifact_content;

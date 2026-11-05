@@ -66,8 +66,8 @@ export interface PlicoEventPayloads {
     path: string;
     content: string;
     mimeType: string;
-    contentHash: string;
-    version: number;
+    contentHash?: string;
+    version?: number;
   };
   "artifact.snapshot.created": { snapshotId: string; fileCount: number };
   "run.completed": { output?: string };

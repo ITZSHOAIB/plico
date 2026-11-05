@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import type { ProjectConfig } from "@plico/contracts";
 import type { RunContext } from "../../engine/index.js";
 import { RuntimeDiagnosticError } from "../../errors.js";
@@ -39,12 +38,10 @@ export async function runScriptedDryRun(
         artifactPaths.add(file.path);
         const version = (artifactVersions.get(file.path) ?? 0) + 1;
         artifactVersions.set(file.path, version);
-        const content = file.content;
         await events.append("artifact.file.written", {
           path: file.path,
-          content,
+          content: file.content,
           mimeType: file.mimeType ?? "text/plain",
-          contentHash: createHash("sha256").update(content, "utf8").digest("hex"),
           version,
         });
       }

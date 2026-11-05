@@ -1,4 +1,9 @@
 {
+  "Legacy artifact.file.written payload": {
+    "content": "string",
+    "mimeType": "string",
+    "path": "string"
+  },
   "POST /v1/threads": {
     "createdAt": "string",
     "id": "string"
@@ -173,7 +178,6 @@
         "id": "string",
         "payload": {
           "content": "string",
-          "contentHash": "string",
           "fileCount": "number",
           "length": "number",
           "mimeType": "string",
