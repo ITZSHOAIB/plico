@@ -1,4 +1,5 @@
 import { buildArtifactWorkspace, type PlicoEvent, readArtifactSnapshot } from "@plico/runtime";
+import { createTwoFilesPatch } from "diff";
 import { HttpError } from "../errors.js";
 import { sendJson } from "../responses.js";
 import type { Route, RouteContext } from "./types.js";
@@ -26,6 +27,43 @@ async function readWorkspace(context: RouteContext, runId: string) {
 }
 
 export const artifactRoutes: Route[] = [
+  {
+    method: "GET",
+    pattern: /^\/v1\/runs\/([^/]+)\/workspace\/files\/(.+)\/diff$/,
+    handler: async (context) => {
+      const [runId = "", path = ""] = context.params;
+      const fromVersion = readVersionQuery(context.url, "fromVersion");
+      const toVersion = readVersionQuery(context.url, "toVersion");
+      const events = await readRunEvents(context, runId);
+      const workspace = requireWorkspace(runId, events);
+      if (!workspace.files.some((file) => file.path === path)) {
+        throw new HttpError(404, "artifact.not_found", `Unknown artifact file: ${path}`);
+      }
+      const from = readArtifactVersion(events, path, fromVersion);
+      const to = readArtifactVersion(events, path, toVersion);
+      if (!from || !to) {
+        throw new HttpError(
+          404,
+          "artifact.version_not_found",
+          `Unknown artifact version for ${path}: ${!from ? fromVersion : toVersion}`,
+        );
+      }
+
+      sendJson(context.response, 200, {
+        path,
+        fromVersion,
+        toVersion,
+        diff: createTwoFilesPatch(
+          path,
+          path,
+          from.content,
+          to.content,
+          `version ${fromVersion}`,
+          `version ${toVersion}`,
+        ),
+      });
+    },
+  },
   {
     method: "GET",
     pattern: /^\/v1\/runs\/([^/]+)\/workspace$/,
@@ -63,3 +101,25 @@ export const artifactRoutes: Route[] = [
     },
   },
 ];
+
+function readVersionQuery(url: URL, name: "fromVersion" | "toVersion"): number {
+  const value = url.searchParams.get(name);
+  if (!value || !/^[1-9]\d*$/.test(value) || !Number.isSafeInteger(Number(value))) {
+    throw new HttpError(400, "artifact.invalid_version", `${name} must be a positive integer.`);
+  }
+  return Number(value);
+}
+
+function readArtifactVersion(
+  events: PlicoEvent[],
+  path: string,
+  targetVersion: number,
+): { content: string } | undefined {
+  let currentVersion = 0;
+  for (const event of events) {
+    if (event.type !== "artifact.file.written" || event.payload.path !== path) continue;
+    currentVersion = event.payload.version ?? currentVersion + 1;
+    if (currentVersion === targetVersion) return { content: event.payload.content };
+  }
+  return undefined;
+}

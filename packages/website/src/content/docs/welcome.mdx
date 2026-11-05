@@ -37,6 +37,8 @@ server. Pressing Ctrl+C during `plico run` also cancels that run.
 
 Artifact writes are persisted once per content hash. Workspace responses expose
 the latest files and an ordered version receipt history for each run.
+Compare two writes with
+`GET /v1/runs/<run-id>/workspace/files/<path>/diff?fromVersion=1&toVersion=2`.
 
 Use `plico validate --help` to show validation usage. Unknown flags are reported
 as errors, and `plico runs` clearly reports when a project has no saved runs.

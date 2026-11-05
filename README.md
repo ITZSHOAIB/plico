@@ -9,6 +9,7 @@ Today this repo can:
 - expose validation and dry runs through `@plico/cli`
 - expose persisted runs, replay, and the native HTTP API through `@plico/server`
 - persist artifact content by SHA-256 hash and expose ordered write receipts in run workspaces
+- compare artifact versions with `GET /v1/runs/<run-id>/workspace/files/<path>/diff?fromVersion=1&toVersion=2`
 - run provider-backed conversations, review approvals, and cancel active runs in Studio
 - check approval policy references and conflicts through readiness diagnostics
 - generate the internal-ops starter with `create-plico`

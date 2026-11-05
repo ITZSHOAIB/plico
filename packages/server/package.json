@@ -16,7 +16,8 @@
   "dependencies": {
     "@plico/contracts": "workspace:*",
     "@plico/core": "workspace:*",
-    "@plico/runtime": "workspace:*"
+    "@plico/runtime": "workspace:*",
+    "diff": "8.0.4"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --noEmit",
