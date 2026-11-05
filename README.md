@@ -8,7 +8,8 @@ Today this repo can:
 - validate projects with `@plico/core`
 - expose validation and dry runs through `@plico/cli`
 - expose persisted runs, replay, and the native HTTP API through `@plico/server`
-- run provider-backed conversations and review or decide approval-gated tool calls in Studio
+- run provider-backed conversations, review approvals, and cancel active runs in Studio
+- check approval policy references and conflicts through readiness diagnostics
 - generate the internal-ops starter with `create-plico`
 
 See the milestones in GitHub Issues for the remaining planned capabilities.

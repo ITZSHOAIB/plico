@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ApprovalDecision } from "../components/ApprovalDecision";
 import { EventList } from "../components/EventList";
+import { RunCancellation } from "../components/RunCancellation";
 import { useReplayPosition } from "../hooks/useReplayPosition";
 import type { StreamState } from "../hooks/useRunStream";
 import type { PlicoEvent, RunSummary } from "../types";
@@ -100,6 +101,9 @@ function SelectedRunView({
         </div>
       )}
       {approvalRequest && <ApprovalDecision runId={selectedRun.runId} request={approvalRequest} />}
+      {replay.isLatest && ["running", "waiting"].includes(selectedRun.status) && (
+        <RunCancellation runId={selectedRun.runId} />
+      )}
       <div className="flex gap-0.5 border-b border-line px-2">
         <ModeTab active={mode === "timeline"} onClick={() => setMode("timeline")}>
           Timeline

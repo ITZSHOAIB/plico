@@ -67,6 +67,20 @@ describe("run inspection", () => {
     });
   });
 
+  it("requests cancellation for an active run", async () => {
+    const fetchMock = stubApi();
+    render(<App />);
+    await openRun();
+
+    click("Cancel run");
+
+    expect(
+      await screen.findByText("Cancellation requested. Waiting for the run to stop."),
+    ).toBeTruthy();
+    const request = posts(fetchMock).find(([url]) => url === "/v1/runs/run-1234567890ab/cancel");
+    expect(request?.[1]).toMatchObject({ method: "POST" });
+  });
+
   it("replays raw events", async () => {
     stubApi();
     render(<App />);

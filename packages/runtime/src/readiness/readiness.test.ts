@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { checkReadiness, createSqliteEventStore } from "../index.js";
 
-async function scaffold(options: { tools?: boolean } = {}): Promise<string> {
+async function scaffold(options: { tools?: boolean; config?: string } = {}): Promise<string> {
   const root = await mkdtemp(join(tmpdir(), "plico-readiness-unit-"));
   for (const dir of ["skills", "evals", "artifacts", "memory"]) {
     await mkdir(join(root, dir), { recursive: true });
@@ -12,7 +12,7 @@ async function scaffold(options: { tools?: boolean } = {}): Promise<string> {
   if (options.tools !== false) await mkdir(join(root, "tools"), { recursive: true });
   await writeFile(
     join(root, "plico.config.ts"),
-    'export default { schemaVersion: 1, name: "Demo" } as const;\n',
+    options.config ?? 'export default { schemaVersion: 1, name: "Demo" } as const;\n',
   );
   await writeFile(join(root, "agent.md"), "# Demo\n");
   return root;
@@ -45,5 +45,41 @@ describe("checkReadiness", () => {
 
     const persistence = report.diagnostics.filter((d) => d.subsystem === "persistence.storage");
     expect(persistence.map((d) => d.severity)).toEqual(["ok"]);
+  });
+
+  it("warns when approval policy refers to a tool that is not declared", async () => {
+    const root = await scaffold({
+      config:
+        'export default { schemaVersion: 1, name: "Demo", approvals: { tools: { delelte_ticket: "required" } } } as const;\n',
+    });
+
+    const report = await checkReadiness(root);
+
+    expect(report.diagnostics).toContainEqual({
+      severity: "warning",
+      subsystem: "approvals.policy",
+      path: "plico.config.ts",
+      message: 'Approval policy refers to undeclared tool "delelte_ticket".',
+    });
+  });
+
+  it("warns when policy attempts to disable a tool-declared approval", async () => {
+    const root = await scaffold({
+      config:
+        'export default { schemaVersion: 1, name: "Demo", approvals: { tools: { delete_ticket: "none" } } } as const;\n',
+    });
+    await writeFile(
+      join(root, "tools", "delete-ticket.tool.ts"),
+      'export default { name: "delete_ticket", description: "Delete a ticket", inputSchema: { type: "object" }, capabilities: ["ticket:delete"], approval: { required: true }, handler: async () => ({}) };\n',
+    );
+
+    const report = await checkReadiness(root);
+
+    expect(report.diagnostics).toContainEqual({
+      severity: "warning",
+      subsystem: "approvals.policy",
+      message:
+        'Tool "delete_ticket" requires approval in its declaration; the "none" override has no effect.',
+    });
   });
 });

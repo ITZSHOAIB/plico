@@ -136,6 +136,8 @@ export function stubApi(
     if (path === `/v1/runs/${run.runId}/events`) return json(runEvents);
     if (path === `/v1/runs/${run.runId}/signal` && method === "POST")
       return json({ result: "accepted" });
+    if (path === `/v1/runs/${run.runId}/cancel` && method === "POST")
+      return json({ result: "accepted" });
     if (path === `/v1/runs/${run.runId}/workspace`) return json(workspace);
     if (path === "/v1/eval" && method === "POST") {
       state.report = evalReport;
