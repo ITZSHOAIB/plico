@@ -2,6 +2,7 @@ export type {
   ArtifactFile,
   ArtifactSnapshot,
   ArtifactSnapshotDetail,
+  ArtifactVersion,
   ArtifactWorkspace,
 } from "./artifacts.js";
 export type { EvalCaseResult, EvalReport, EvalSummary } from "./evals.js";

@@ -1,21 +1,37 @@
+import { createHash } from "node:crypto";
 import type {
   ArtifactFile,
   ArtifactSnapshot,
   ArtifactSnapshotDetail,
+  ArtifactVersion,
   ArtifactWorkspace,
   PlicoEvent,
 } from "./types/index.js";
 
 function applyFileWritten(
   files: Map<string, ArtifactFile>,
+  versions: ArtifactVersion[],
   event: PlicoEvent<"artifact.file.written">,
 ): void {
   const path = event.payload.path;
-  files.set(path, {
+  const version = event.payload.version ?? (files.get(path)?.version ?? 0) + 1;
+  const contentHash =
+    event.payload.contentHash ??
+    createHash("sha256").update(event.payload.content, "utf8").digest("hex");
+  const file = {
     path,
     content: event.payload.content,
     mimeType: event.payload.mimeType,
-    version: (files.get(path)?.version ?? 0) + 1,
+    version,
+    contentHash,
+  };
+  files.set(path, file);
+  versions.push({
+    path,
+    mimeType: file.mimeType,
+    version,
+    contentHash,
+    createdAt: event.timestamp,
   });
 }
 
@@ -35,9 +51,10 @@ export function buildArtifactWorkspace(
   if (!created) return undefined;
 
   const files = new Map<string, ArtifactFile>();
+  const versions: ArtifactVersion[] = [];
   const snapshots: ArtifactSnapshot[] = [];
   for (const event of events) {
-    if (event.type === "artifact.file.written") applyFileWritten(files, event);
+    if (event.type === "artifact.file.written") applyFileWritten(files, versions, event);
     if (event.type === "artifact.snapshot.created") snapshots.push(toSnapshot(event));
   }
 
@@ -45,6 +62,7 @@ export function buildArtifactWorkspace(
     workspaceId: created.payload.workspaceId,
     runId: created.runId,
     files: [...files.values()],
+    versions,
     snapshots,
     createdAt: created.timestamp,
   };

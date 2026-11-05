@@ -236,6 +236,12 @@ it("keeps the /v1 response shapes stable", async () => {
   await unlink(join(root, "tools", "archive.tool.ts"));
 
   const shapes = {
+    // Legacy rows predate receipts and omit contentHash/version; the runtime replays them with derived values.
+    "Legacy artifact.file.written payload": shapeOf({
+      path: "legacy.md",
+      content: "body",
+      mimeType: "text/plain",
+    }),
     "POST /v1/threads": shapeOf(createdThread),
     "POST /v1/threads/:id/messages": shapeOf(posted),
     "GET /v1/threads": await shape("/v1/threads"),

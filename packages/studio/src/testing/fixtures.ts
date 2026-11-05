@@ -70,9 +70,50 @@ const workspace: ArtifactWorkspace = {
   runId: run.runId,
   createdAt: run.startedAt,
   files: [
-    { path: "summary.md", content: "# Weekly summary", mimeType: "text/markdown", version: 2 },
-    { path: "data.json", content: '{"ok":true}', mimeType: "application/json", version: 1 },
-    { path: "notes.txt", content: "plain note", mimeType: "text/plain", version: 1 },
+    {
+      path: "summary.md",
+      content: "# Weekly summary",
+      mimeType: "text/markdown",
+      version: 2,
+      contentHash: "summary-hash",
+    },
+    {
+      path: "data.json",
+      content: '{"ok":true}',
+      mimeType: "application/json",
+      version: 1,
+      contentHash: "data-hash",
+    },
+    {
+      path: "notes.txt",
+      content: "plain note",
+      mimeType: "text/plain",
+      version: 1,
+      contentHash: "notes-hash",
+    },
+  ],
+  versions: [
+    {
+      path: "summary.md",
+      mimeType: "text/markdown",
+      version: 2,
+      contentHash: "summary-hash",
+      createdAt: run.startedAt,
+    },
+    {
+      path: "data.json",
+      mimeType: "application/json",
+      version: 1,
+      contentHash: "data-hash",
+      createdAt: run.startedAt,
+    },
+    {
+      path: "notes.txt",
+      mimeType: "text/plain",
+      version: 1,
+      contentHash: "notes-hash",
+      createdAt: run.startedAt,
+    },
   ],
   snapshots: [{ snapshotId: "snapshot-1", fileCount: 3, createdAt: run.startedAt }],
 };

@@ -1,4 +1,9 @@
 {
+  "Legacy artifact.file.written payload": {
+    "content": "string",
+    "mimeType": "string",
+    "path": "string"
+  },
   "POST /v1/threads": {
     "createdAt": "string",
     "id": "string"
@@ -185,6 +190,7 @@
             "string"
           ],
           "tools": [],
+          "version": "number",
           "workspaceId": "string"
         },
         "runId": "string",
@@ -244,6 +250,7 @@
       "id": "string",
       "payload": {
         "content": "string",
+        "contentHash": "string",
         "fileCount": "number",
         "length": "number",
         "mimeType": "string",
@@ -256,6 +263,7 @@
           "string"
         ],
         "tools": [],
+        "version": "number",
         "workspaceId": "string"
       },
       "runId": "string",
@@ -272,6 +280,7 @@
     "files": [
       {
         "content": "string",
+        "contentHash": "string",
         "mimeType": "string",
         "path": "string",
         "version": "number"
@@ -285,10 +294,20 @@
         "snapshotId": "string"
       }
     ],
+    "versions": [
+      {
+        "contentHash": "string",
+        "createdAt": "string",
+        "mimeType": "string",
+        "path": "string",
+        "version": "number"
+      }
+    ],
     "workspaceId": "string"
   },
   "GET /v1/runs/:id/workspace/files/:path": {
     "content": "string",
+    "contentHash": "string",
     "mimeType": "string",
     "path": "string",
     "version": "number"
@@ -299,6 +318,7 @@
     "files": [
       {
         "content": "string",
+        "contentHash": "string",
         "mimeType": "string",
         "path": "string",
         "version": "number"

@@ -19,6 +19,7 @@ export async function runScriptedDryRun(
   let output: string | undefined;
   let workspaceId: string | undefined;
   const artifactPaths = new Set<string>();
+  const artifactVersions = new Map<string, number>();
 
   for (const [index, step] of script.entries()) {
     if (step.type === "assistant.output") {
@@ -35,10 +36,13 @@ export async function runScriptedDryRun(
 
       for (const file of step.files) {
         artifactPaths.add(file.path);
+        const version = (artifactVersions.get(file.path) ?? 0) + 1;
+        artifactVersions.set(file.path, version);
         await events.append("artifact.file.written", {
           path: file.path,
           content: file.content,
           mimeType: file.mimeType ?? "text/plain",
+          version,
         });
       }
 

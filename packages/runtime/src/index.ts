@@ -39,6 +39,7 @@ export type {
   ArtifactFileInput,
   ArtifactSnapshot,
   ArtifactSnapshotDetail,
+  ArtifactVersion,
   ArtifactWorkspace,
   ComposedInstructions,
   CreateSqliteEventStoreOptions,
