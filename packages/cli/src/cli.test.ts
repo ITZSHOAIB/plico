@@ -84,6 +84,41 @@ describe("main", () => {
     expect(await engine.status("waiting-run")).toEqual({ state: "cancelled" });
   });
 
+  it("returns a machine-readable unknown result with a nonzero exit code", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-cli-cancel-unknown-"));
+    await writeValidProject(root);
+    const databasePath = join(root, "state.sqlite");
+    const store = createSqliteEventStore({ databasePath });
+    await store.appendEvent({
+      schemaVersion: 1,
+      streamType: "run",
+      streamId: "event-only-run",
+      runId: "event-only-run",
+      id: "event-only-run:1",
+      sequence: 1,
+      timestamp: new Date().toISOString(),
+      type: "run.started",
+      payload: { projectRoot: root, projectName: "Demo" },
+    });
+
+    const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    const result = await main([
+      "node",
+      "plico",
+      "cancel",
+      "event-only-run",
+      "--db",
+      databasePath,
+      "--json",
+    ]);
+
+    expect(result).toBe(1);
+    expect(JSON.parse(String(log.mock.calls[0]?.[0]))).toEqual({
+      runId: "event-only-run",
+      result: "unknown",
+    });
+  });
+
   it("recovers a killed persistent run on the next CLI start", async () => {
     const root = await mkdtemp(join(tmpdir(), "plico-cli-recover-"));
     await writeValidProject(root);

@@ -31,9 +31,8 @@ export async function cancelCommand(args: string[]): Promise<number> {
       console.log(`Run ${runId} is already finished or cancelled.`);
     } else {
       console.error(`Run ${runId} is not known to the execution engine.`);
-      return 1;
     }
-    return 0;
+    return result === "unknown" ? 1 : 0;
   } catch (error) {
     console.error(errorMessage(error));
     return 1;
