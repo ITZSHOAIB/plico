@@ -67,6 +67,43 @@ describe("run inspection", () => {
     });
   });
 
+  it("requests cancellation for an active run", async () => {
+    const fetchMock = stubApi();
+    render(<App />);
+    await openRun();
+
+    click("Cancel run");
+
+    expect(
+      await screen.findByText("Cancellation requested. Waiting for the run to stop."),
+    ).toBeTruthy();
+    const request = posts(fetchMock).find(([url]) => url === "/v1/runs/run-1234567890ab/cancel");
+    expect(request?.[1]).toMatchObject({ method: "POST" });
+  });
+
+  it("shows the cancel action when switching from a cancelled run to another active run", async () => {
+    stubApi(undefined, { includeOtherRun: true });
+    render(<App />);
+    await openRun();
+
+    click("Cancel run");
+    await screen.findByText("Cancellation requested. Waiting for the run to stop.");
+    fireEvent.click(await screen.findByRole("button", { name: /run-other-12/ }));
+
+    expect(await screen.findByRole("button", { name: "Cancel run" })).toBeTruthy();
+  });
+
+  it("keeps the cancel action available after a cancellation request fails", async () => {
+    stubApi(undefined, { cancelResult: "unknown" });
+    render(<App />);
+    await openRun();
+
+    click("Cancel run");
+
+    expect(await screen.findByText("The execution engine does not know this run.")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Cancel run" })).toBeTruthy();
+  });
+
   it("replays raw events", async () => {
     stubApi();
     render(<App />);

@@ -1,8 +1,9 @@
 import { join } from "node:path";
 import { getProjectPaths, getProjectRelativePaths, type LoadedProject } from "@plico/core";
 import { discoverToolFiles, loadToolFile } from "../../tools/index.js";
-import type { ReadinessDiagnostic } from "../../types/index.js";
+import type { DeclaredTool, ReadinessDiagnostic } from "../../types/index.js";
 import { makeDiagnostic } from "../diagnostic.js";
+import { checkApprovalPolicy } from "./approval-policy.js";
 
 export async function checkTools(project: LoadedProject): Promise<ReadinessDiagnostic[]> {
   const diagnostics: ReadinessDiagnostic[] = [];
@@ -20,6 +21,7 @@ export async function checkTools(project: LoadedProject): Promise<ReadinessDiagn
         "tools/ directory not found. Create tools/ to declare tools.",
         relativePaths.directories.tools,
       ),
+      ...checkApprovalPolicy(project, [], { toolsComplete: false }),
     ];
   }
 
@@ -31,14 +33,16 @@ export async function checkTools(project: LoadedProject): Promise<ReadinessDiagn
         "No tools declared. Add a .tool.ts module to get started.",
       ),
     );
+    diagnostics.push(...checkApprovalPolicy(project, []));
     return diagnostics;
   }
 
   let validCount = 0;
+  const tools: DeclaredTool[] = [];
   for (const entry of toolFiles) {
     const source = `${relativePaths.directories.tools}/${entry}`;
     try {
-      await loadToolFile(join(projectPaths.directories.tools, entry), source);
+      tools.push(await loadToolFile(join(projectPaths.directories.tools, entry), source));
       validCount++;
     } catch (error) {
       diagnostics.push(
@@ -57,6 +61,9 @@ export async function checkTools(project: LoadedProject): Promise<ReadinessDiagn
       "tools.discovery",
       `${validCount}/${toolFiles.length} tool(s) valid`,
     ),
+  );
+  diagnostics.push(
+    ...checkApprovalPolicy(project, tools, { toolsComplete: validCount === toolFiles.length }),
   );
   return diagnostics;
 }
