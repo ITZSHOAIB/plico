@@ -34,3 +34,6 @@ approval requirement.
 Cancel an active persisted run from the command line with
 `plico cancel <run-id> <project>`, or send `POST /v1/runs/<run-id>/cancel` to the
 server. Pressing Ctrl+C during `plico run` also cancels that run.
+
+Use `plico validate --help` to show validation usage. Unknown flags are reported
+as errors, and `plico runs` clearly reports when a project has no saved runs.

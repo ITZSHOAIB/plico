@@ -122,6 +122,21 @@ describe("serve", () => {
     errorSpy.mockRestore();
   });
 
+  it("prints a bracketed IPv6 host URL", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-cli-ipv6-"));
+    await writeValidProject(root);
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    servePlicoMock.mockResolvedValue({
+      address: () => ({ family: "IPv6", address: "::1", port: 4321 }),
+      close: vi.fn(),
+    });
+
+    expect(await main(["node", "plico", "serve", "--host", "::1", root])).toBe(0);
+    expect(logSpy).toHaveBeenCalledWith("Serving Plico at http://[::1]:4321");
+    expect(errorSpy).not.toHaveBeenCalled();
+  });
+
   it("passes --studio flag by resolving the studio dist path", async () => {
     const root = await mkdtemp(join(tmpdir(), "plico-cli-"));
     await writeValidProject(root);

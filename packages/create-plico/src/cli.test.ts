@@ -1,4 +1,4 @@
-import { mkdtemp, readFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
@@ -7,14 +7,18 @@ import type { ScaffoldPrompts } from "./prompts.js";
 
 describe("create-plico main", () => {
   it("creates a scaffold in the target directory", async () => {
-    const root = await mkdtemp(join(tmpdir(), "plico-create-cli-"));
+    const parent = await mkdtemp(join(tmpdir(), "plico-create-cli-"));
+    const root = join(parent, "support-tools");
+    await mkdir(root);
     const logSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
 
     const exitCode = await main(["node", "create-plico", root]);
 
     expect(exitCode).toBe(0);
     expect(logSpy).toHaveBeenCalledWith(`Created Plico scaffold in ${root}`);
-    expect(await readFile(join(root, "agent.md"), "utf8")).toContain("Internal Ops Agent");
+    expect(await readFile(join(root, "plico.config.ts"), "utf8")).toContain(
+      'name: "Support Tools"',
+    );
 
     logSpy.mockRestore();
   });

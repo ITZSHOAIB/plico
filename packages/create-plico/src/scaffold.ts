@@ -42,20 +42,12 @@ export async function createInternalOpsScaffold(options: ScaffoldOptions): Promi
 }
 
 async function ensureEmptyTarget(root: string): Promise<void> {
+  let entries: string[];
   try {
-    const entries = await readdir(root);
-    if (entries.length > 0) {
-      throw new Error(`Target directory is not empty: ${root}`);
-    }
+    entries = await readdir(root);
   } catch (error) {
-    if (error instanceof Error && error.message.includes("ENOENT")) {
-      return;
-    }
-
-    if (error instanceof Error && error.message.startsWith("Target directory is not empty")) {
-      throw error;
-    }
-
+    if (error && typeof error === "object" && "code" in error && error.code === "ENOENT") return;
     throw error;
   }
+  if (entries.length > 0) throw new Error(`Target directory is not empty: ${root}`);
 }

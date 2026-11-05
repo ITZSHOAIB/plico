@@ -26,6 +26,7 @@ export {
 } from "./providers/openai-compatible.js";
 export { checkReadiness } from "./readiness/index.js";
 export { recoverRuns, runProject } from "./run/index.js";
+export { normalizeScript, ScriptValidationError } from "./script.js";
 export { createSqliteEventStore } from "./storage/index.js";
 export {
   createSqliteThreadStore,
