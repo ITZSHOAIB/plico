@@ -9,6 +9,7 @@ CLI entrypoints for validating Plico projects and running the deterministic dry 
 - `plico run --dry [path]`
 - `plico run --dry --json [path]`
 - `plico run --dry --script <file> [path]`
+- `plico cancel <runId> [--db <path>] [--json] [path]`
 
 `plico validate` keeps its current behavior. `plico run` is dry-run only in this release and uses the local runtime package for deterministic instruction composition, tool discovery, scripted tool execution, and approval blocking.
 
@@ -28,3 +29,8 @@ export default {
 ```
 
 The lease defaults to 30,000 ms and must be a positive integer. The host's setting applies to every run it recovers from its database. A short lease increases the chance that a stalled step runs again; side-effecting tools should use their idempotency key.
+
+`plico cancel <runId> [path]` requests durable cancellation of a persisted run. The
+run's worker records the terminal cancellation event; if no worker is active, the
+next recovery pass finalizes it. `--db <path>` selects a non-default database and
+`--json` prints the cancellation result.

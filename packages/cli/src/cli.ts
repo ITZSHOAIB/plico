@@ -1,5 +1,6 @@
 import { createRequire } from "node:module";
 import { pathToFileURL } from "node:url";
+import { cancelCommand } from "./commands/cancel.js";
 import { evalCommand } from "./commands/eval.js";
 import { eventsCommand } from "./commands/events.js";
 import { readinessCommand } from "./commands/readiness.js";
@@ -19,6 +20,7 @@ type Command = (args: string[]) => Promise<number>;
 const commands: Readonly<Record<string, Command>> = {
   validate: validateCommand,
   run: runCommand,
+  cancel: cancelCommand,
   runs: runsCommand,
   events: eventsCommand,
   serve: serveCommand,

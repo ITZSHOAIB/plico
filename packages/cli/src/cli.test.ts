@@ -44,6 +44,46 @@ async function writeValidProject(root: string) {
 }
 
 describe("main", () => {
+  it("cancels a persisted run by ID", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-cli-cancel-"));
+    await writeValidProject(root);
+    const databasePath = join(root, "state.sqlite");
+    const { createSqliteEngine } = await import("@plico/runtime");
+    const engine = createSqliteEngine({ databasePath });
+    const store = createSqliteEventStore({ databasePath });
+    await store.appendEvent({
+      schemaVersion: 1,
+      streamType: "run",
+      streamId: "waiting-run",
+      runId: "waiting-run",
+      id: "waiting-run:1",
+      sequence: 1,
+      timestamp: new Date().toISOString(),
+      type: "run.started",
+      payload: { projectRoot: root, projectName: "Demo" },
+    });
+    await engine.run(
+      "waiting-run",
+      async (ctx) => {
+        await ctx.wait("approval");
+      },
+      {},
+    );
+
+    const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const result = await main(["node", "plico", "cancel", "waiting-run", "--db", databasePath]);
+
+    expect(result).toBe(0);
+    expect(log).toHaveBeenCalledWith("Cancellation requested for run waiting-run.");
+    expect(error).not.toHaveBeenCalled();
+    await engine.recover(() => async (ctx) => {
+      await ctx.wait("approval");
+      return undefined;
+    });
+    expect(await engine.status("waiting-run")).toEqual({ state: "cancelled" });
+  });
+
   it("recovers a killed persistent run on the next CLI start", async () => {
     const root = await mkdtemp(join(tmpdir(), "plico-cli-recover-"));
     await writeValidProject(root);

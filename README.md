@@ -16,7 +16,7 @@ See the milestones in GitHub Issues for the remaining planned capabilities.
 ## Repo Layout
 
 - `packages/core` contains the project loader and validator
-- `packages/cli` contains `plico validate [path]`, `plico run --dry`, `plico runs`, `plico events`, and `plico serve`
+- `packages/cli` contains `plico validate [path]`, `plico run --dry`, `plico cancel <runId>`, `plico runs`, `plico events`, and `plico serve`
 - `packages/create-plico` contains the scaffold generator
 - `examples/internal-ops-agent` is the canonical internal-ops starter project
 
