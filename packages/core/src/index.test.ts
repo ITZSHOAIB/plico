@@ -186,6 +186,15 @@ describe("validateProject", () => {
     );
   });
 
+  it("preserves multiline config load errors in validation diagnostics", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-core-config-lines-"));
+    await writeValidProject(root, { configBody: 'throw new Error("a\\nb at line 3");' });
+
+    const result = await validateProject(root);
+
+    expect(result.errors[0]?.message).toContain("b at line 3");
+  });
+
   it("accepts a valid internal-ops project", async () => {
     const root = await mkdtemp(join(tmpdir(), "plico-core-"));
     await writeValidProject(root);

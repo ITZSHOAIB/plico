@@ -1,11 +1,10 @@
 import { validateProject } from "@plico/core";
 import { lastPositional, type ParsedArgs, parseArgs } from "../args.js";
 import { errorMessage } from "../errors.js";
-import { usageCommand } from "./usage.js";
 
 export async function validateCommand(args: string[]): Promise<number> {
   if (args.includes("--help") || args.includes("-h")) {
-    usageCommand();
+    console.log("Usage: plico validate [path]");
     return 0;
   }
   let parsed: ParsedArgs;

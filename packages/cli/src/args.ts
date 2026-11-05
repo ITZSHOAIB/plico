@@ -28,7 +28,7 @@ export function parseArgs(args: readonly string[], spec: ArgSpec): ParsedArgs {
 
   for (const arg of args) {
     if (pending !== undefined) {
-      if (arg.startsWith("-")) {
+      if (spec.flags.includes(arg) || Object.hasOwn(spec.values, arg)) {
         throw new Error(spec.values[pending]?.missing ?? `Missing value after ${pending}`);
       }
       const option = spec.values[pending];

@@ -1,13 +1,15 @@
-import { mkdtemp, readFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { basename, join } from "node:path";
+import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { main } from "./cli.js";
 import type { ScaffoldPrompts } from "./prompts.js";
 
 describe("create-plico main", () => {
   it("creates a scaffold in the target directory", async () => {
-    const root = await mkdtemp(join(tmpdir(), "plico-create-cli-"));
+    const parent = await mkdtemp(join(tmpdir(), "plico-create-cli-"));
+    const root = join(parent, "support-tools");
+    await mkdir(root);
     const logSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
 
     const exitCode = await main(["node", "create-plico", root]);
@@ -15,23 +17,10 @@ describe("create-plico main", () => {
     expect(exitCode).toBe(0);
     expect(logSpy).toHaveBeenCalledWith(`Created Plico scaffold in ${root}`);
     expect(await readFile(join(root, "plico.config.ts"), "utf8")).toContain(
-      `name: "${basename(root)
-        .replace(/[-_]+/g, " ")
-        .replace(/\b\w/g, (c) => c.toUpperCase())}"`,
+      'name: "Support Tools"',
     );
 
     logSpy.mockRestore();
-  });
-
-  it("derives the default project name from the supplied target directory", async () => {
-    const parent = await mkdtemp(join(tmpdir(), "plico-create-name-"));
-    const target = join(parent, "support_tools");
-    const exitCode = await main(["node", "create-plico", target]);
-
-    expect(exitCode).toBe(0);
-    expect(await readFile(join(target, "plico.config.ts"), "utf8")).toContain(
-      'name: "Support Tools"',
-    );
   });
 
   it("runs an interactive scaffold flow when no target directory is provided", async () => {

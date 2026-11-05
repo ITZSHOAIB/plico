@@ -14,13 +14,15 @@ export async function runsCommand(args: string[]): Promise<number> {
     });
     const json = parsed.flags.has("--json");
     const target = lastPositional(parsed, process.cwd());
-    const databasePath = resolveDatabasePath(target, readStringOption(parsed, "--db"));
+    const dbPath = readStringOption(parsed, "--db");
+    const databasePath = resolveDatabasePath(target, dbPath);
     try {
       await access(databasePath);
     } catch (error) {
       if (!(error && typeof error === "object" && "code" in error && error.code === "ENOENT")) {
         throw error;
       }
+      if (dbPath !== undefined) throw new Error(`Missing database: ${databasePath}`);
       if (parsed.flags.has("--json")) console.log("[]");
       else console.log("No saved runs found.");
       return 0;

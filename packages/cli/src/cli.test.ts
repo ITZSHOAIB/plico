@@ -53,7 +53,21 @@ describe("main", () => {
     errorSpy.mockClear();
     expect(await main(["node", "plico", "validate", "--help"])).toBe(0);
     expect(logSpy).toHaveBeenCalledWith("Usage: plico validate [path]");
+    expect(logSpy).toHaveBeenCalledTimes(1);
     expect(errorSpy).not.toHaveBeenCalled();
+  });
+
+  it("accepts a negative-looking message value and passes it to the dry run", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-cli-negative-message-"));
+    await writeValidProject(root);
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    expect(
+      await main(["node", "plico", "run", "--dry", "--json", "--message", "-5 degrees", root]),
+    ).toBe(0);
+    expect(errorSpy).not.toHaveBeenCalled();
+    expect(JSON.parse(String(logSpy.mock.calls[0]?.[0])).output).toContain("-5 degrees");
   });
 
   it("accepts artifact.write scripts through the CLI dry-run entry point", async () => {
@@ -815,6 +829,18 @@ describe("main", () => {
     expect(runsExitCode).toBe(0);
     expect(logSpy).toHaveBeenCalledWith("No saved runs found.");
     expect(errorSpy).not.toHaveBeenCalled();
+
+    const explicitDatabase = join(root, "nope.sqlite");
+    const explicitDbExitCode = await main([
+      "node",
+      "plico",
+      "runs",
+      "--db",
+      explicitDatabase,
+      root,
+    ]);
+    expect(explicitDbExitCode).toBe(1);
+    expect(errorSpy).toHaveBeenCalledWith(`Missing database: ${explicitDatabase}`);
 
     const persistedRunExitCode = await main(["node", "plico", "run", "--dry", "--persist", root]);
     expect(persistedRunExitCode).toBe(0);
