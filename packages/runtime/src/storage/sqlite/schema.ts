@@ -76,6 +76,11 @@ const migrations: ReadonlyArray<{ from: number; to: number; sql: string }> = [
       CREATE UNIQUE INDEX thread_assistant_run ON thread_messages(run_id) WHERE role = 'assistant';
     `,
   },
+  {
+    from: 9,
+    to: 10,
+    sql: `CREATE TABLE artifact_content (content_hash TEXT PRIMARY KEY, content TEXT NOT NULL);`,
+  },
 ];
 
 function readSchemaVersion(

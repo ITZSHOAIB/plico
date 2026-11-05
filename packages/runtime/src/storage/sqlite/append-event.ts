@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
 import type { PlicoEvent } from "@plico/contracts";
 import { acquireOwner } from "./owner-lock.js";
@@ -9,6 +10,7 @@ export function appendEventRecord(database: DatabaseSync, event: PlicoEvent): vo
   }
   database.exec("BEGIN IMMEDIATE");
   try {
+    const payload = compactArtifactPayload(database, event);
     const existing = database
       .prepare(
         "SELECT event_id, type, timestamp, payload_json FROM events WHERE stream_type = ? AND stream_id = ? AND sequence = ?",
@@ -19,7 +21,7 @@ export function appendEventRecord(database: DatabaseSync, event: PlicoEvent): vo
         existing.event_id !== event.id ||
         existing.type !== event.type ||
         existing.timestamp !== event.timestamp ||
-        existing.payload_json !== JSON.stringify(event.payload)
+        existing.payload_json !== JSON.stringify(payload)
       ) {
         throw new Error(`Conflicting event at sequence ${event.sequence}.`);
       }
@@ -110,7 +112,7 @@ export function appendEventRecord(database: DatabaseSync, event: PlicoEvent): vo
         event.schemaVersion,
         event.type,
         event.timestamp,
-        JSON.stringify(event.payload),
+        JSON.stringify(payload),
       );
     projectThreadEvent(database, event);
     database.exec("COMMIT");
@@ -118,4 +120,22 @@ export function appendEventRecord(database: DatabaseSync, event: PlicoEvent): vo
     database.exec("ROLLBACK");
     throw error;
   }
+}
+
+function compactArtifactPayload(database: DatabaseSync, event: PlicoEvent): unknown {
+  if (event.type !== "artifact.file.written" || !("contentHash" in event.payload)) {
+    return event.payload;
+  }
+  const { content, contentHash, ...receipt } = event.payload;
+  const actualHash = createHash("sha256").update(content, "utf8").digest("hex");
+  if (actualHash !== contentHash)
+    throw new Error("Artifact content hash does not match its content.");
+  database
+    .prepare("INSERT OR IGNORE INTO artifact_content (content_hash, content) VALUES (?, ?)")
+    .run(contentHash, content);
+  const stored = database
+    .prepare("SELECT content FROM artifact_content WHERE content_hash = ?")
+    .get(contentHash) as { content: string } | undefined;
+  if (stored?.content !== content) throw new Error("Artifact content hash collision.");
+  return { ...receipt, contentHash };
 }

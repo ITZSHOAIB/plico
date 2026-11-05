@@ -38,8 +38,10 @@ export function readEvents(
   const rows = database
     .prepare(
       `
-        SELECT stream_id, sequence, event_id, schema_version, type, timestamp, payload_json
+        SELECT events.stream_id, events.sequence, events.event_id, events.schema_version,
+          events.type, events.timestamp, events.payload_json, artifact_content.content AS artifact_content
         FROM events
+        LEFT JOIN artifact_content ON artifact_content.content_hash = json_extract(events.payload_json, '$.contentHash')
         WHERE stream_type = ? AND stream_id = ? AND sequence > ?
         ORDER BY sequence ASC
       `,
@@ -86,6 +88,13 @@ function rowToRunSummary(row: Record<string, unknown>): RunSummary {
 
 function rowToEvent(row: Record<string, unknown>): PlicoEvent {
   // Stored rows are trusted, not validated; pre-publication rows may have status and lack requestId and are not migrated.
+  const payload = JSON.parse(String(row.payload_json)) as Record<string, unknown>;
+  if (row.type === "artifact.file.written" && typeof payload.contentHash === "string") {
+    if (typeof row.artifact_content !== "string") {
+      throw new Error(`Artifact content ${payload.contentHash} is missing from storage.`);
+    }
+    payload.content = row.artifact_content;
+  }
   return {
     schemaVersion: 1,
     streamType: runStreamType,
@@ -95,6 +104,6 @@ function rowToEvent(row: Record<string, unknown>): PlicoEvent {
     sequence: Number(row.sequence),
     timestamp: String(row.timestamp),
     type: row.type as PlicoEvent["type"],
-    payload: JSON.parse(String(row.payload_json)),
+    payload,
   } as PlicoEvent;
 }

@@ -62,7 +62,13 @@ export interface PlicoEventPayloads {
   };
   "approval.decided": { requestId: string; approved: boolean };
   "artifact.workspace.created": { workspaceId: string };
-  "artifact.file.written": { path: string; content: string; mimeType: string };
+  "artifact.file.written": {
+    path: string;
+    content: string;
+    mimeType: string;
+    contentHash: string;
+    version: number;
+  };
   "artifact.snapshot.created": { snapshotId: string; fileCount: number };
   "run.completed": { output?: string };
   "run.waiting": { requestId: string; toolName: string; output?: string };

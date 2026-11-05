@@ -72,7 +72,13 @@ describe("artifact reads", () => {
 
     expect(file).toEqual({
       status: 200,
-      body: { path: "docs/a.md", content: "two", mimeType: "text/plain", version: 2 },
+      body: {
+        path: "docs/a.md",
+        content: "two",
+        mimeType: "text/plain",
+        version: 2,
+        contentHash: "3fc4ccfe745870e2c0d99f71f30ff0656c8dedd41cc1d7d3d376b0dbe685e2f3",
+      },
     });
   });
 
@@ -88,7 +94,13 @@ describe("artifact reads", () => {
 
     expect(snapshot.status).toBe(200);
     expect(snapshot.body.files).toEqual([
-      { path: "docs/a.md", content: "one", mimeType: "text/plain", version: 1 },
+      {
+        path: "docs/a.md",
+        content: "one",
+        mimeType: "text/plain",
+        version: 1,
+        contentHash: "7692c3ad3540bb803c020b3aee66cd8887123234ea0c6e7143c0add73ff431ed",
+      },
     ]);
   });
 
