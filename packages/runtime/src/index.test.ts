@@ -908,6 +908,68 @@ describe("runProject", () => {
     expect(callCount).toBe(2);
   });
 
+  it("reports scripted unknown tool calls as structured tool validation failures", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-runtime-"));
+    await writeValidProject(root);
+
+    const result = await runProject(root, {
+      script: [{ type: "tool.call", toolName: "missing_tool", arguments: {} }],
+    });
+
+    expect(result.status).toBe("failed");
+    expect(result.events.map((event) => event.type)).toEqual([
+      "run.started",
+      "instructions.composed",
+      "tools.discovered",
+      "run.error",
+      "run.failed",
+    ]);
+    expect(result.events[3]?.payload).toMatchObject({
+      phase: "tool.validation",
+      toolName: "missing_tool",
+      message: "Unknown tool: missing_tool",
+    });
+  });
+
+  it("includes the tool name when a scripted tool handler throws", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-runtime-"));
+    await writeValidProject(root);
+    await writeFile(
+      join(root, "tools", "failing.tool.ts"),
+      [
+        "export default {",
+        '  name: "failing_tool",',
+        '  description: "A tool that always fails.",',
+        '  inputSchema: { type: "object", properties: {}, additionalProperties: false },',
+        '  capabilities: ["test"],',
+        "  approval: { required: false },",
+        '  handler: async () => { throw new Error("tool crashed"); },',
+        "} as const;",
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+
+    const result = await runProject(root, {
+      script: [{ type: "tool.call", toolName: "failing_tool", arguments: {} }],
+    });
+
+    expect(result.status).toBe("failed");
+    expect(result.events.map((event) => event.type)).toEqual([
+      "run.started",
+      "instructions.composed",
+      "tools.discovered",
+      "tool.call",
+      "run.error",
+      "run.failed",
+    ]);
+    expect(result.events[4]?.payload).toMatchObject({
+      phase: "runtime",
+      toolName: "failing_tool",
+      message: "tool crashed",
+    });
+  });
+
   it("rejects provider-requested tool call with invalid arguments via native error event", async () => {
     const root = await mkdtemp(join(tmpdir(), "plico-runtime-"));
     await writeValidProject(root);
@@ -1011,6 +1073,7 @@ describe("runProject", () => {
     ]);
     expect(withoutDeltas(result.events)[7]?.payload).toMatchObject({
       phase: "runtime",
+      toolName: "failing_tool",
       message: "tool crashed",
     });
   });
