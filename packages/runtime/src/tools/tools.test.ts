@@ -1,6 +1,8 @@
+import { spawnSync } from "node:child_process";
 import { mkdir, mkdtemp, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { loadProject } from "@plico/core";
 import { describe, expect, it } from "vitest";
 import { discoverTools } from "../index.js";
@@ -32,6 +34,53 @@ async function scaffold(): Promise<string> {
 }
 
 describe("discoverTools", () => {
+  it("loads a TypeScript tool and sibling import in plain Node without project package.json", async () => {
+    const root = await scaffold();
+    await writeFile(join(root, "tools", "helper.ts"), 'export const toolName = "plain_node";\n');
+    await writeFile(
+      join(root, "tools", "plain-node.tool.ts"),
+      [
+        'import { toolName } from "./helper.ts";',
+        "export default {",
+        "  name: toolName,",
+        '  description: "A tool.",',
+        '  inputSchema: { type: "object", properties: {}, additionalProperties: false },',
+        "  capabilities: [],",
+        "  approval: { required: false },",
+        "  handler: async () => ({}),",
+        "};",
+      ].join("\n"),
+    );
+    const runtimeModule = fileURLToPath(new URL("../../dist/tools/load.js", import.meta.url));
+    const toolPath = join(root, "tools", "plain-node.tool.ts");
+    const script = [
+      `import { loadToolFile } from ${JSON.stringify(pathToFileURL(runtimeModule).href)};`,
+      `const tool = await loadToolFile(${JSON.stringify(toolPath)}, "tools/plain-node.tool.ts");`,
+      'if (tool.name !== "plain_node") throw new Error("Unexpected tool name: " + tool.name);',
+    ].join("\n");
+    const result = spawnSync(process.execPath, ["--input-type=module", "-e", script], {
+      cwd: root,
+      encoding: "utf8",
+    });
+
+    expect(result.status, result.stderr).toBe(0);
+  });
+
+  it("reloads an edited tool when loaded again", async () => {
+    const root = await scaffold();
+    await writeFile(join(root, "package.json"), '{"type":"module"}\n');
+    const toolPath = join(root, "tools", "changing.tool.ts");
+    await writeFile(toolPath, toolSource("before_edit"));
+
+    const project = await loadProject(root);
+    const first = (await discoverTools(project))[0];
+    await writeFile(toolPath, toolSource("after_edit"));
+    const second = (await discoverTools(project))[0];
+
+    expect(first?.name).toBe("before_edit");
+    expect(second?.name).toBe("after_edit");
+  });
+
   it("rejects two tool files that declare the same tool name", async () => {
     const root = await scaffold();
     await writeFile(join(root, "tools", "a.tool.ts"), toolSource("lookup"));
@@ -55,7 +104,7 @@ describe("discoverTools", () => {
   it("loads tools with sibling and npm package imports", async () => {
     const root = await scaffold();
     await symlink(
-      join(process.cwd(), "packages", "runtime", "node_modules"),
+      fileURLToPath(new URL("../../node_modules", import.meta.url)),
       join(root, "node_modules"),
       "junction",
     );
@@ -71,7 +120,7 @@ describe("discoverTools", () => {
         '  inputSchema: { type: "object", properties: {}, additionalProperties: false },',
         "  capabilities: [],",
         "  approval: { required: false },",
-        '  handler: async () => ({ imported: typeof tool === "function" }),',
+        '  handler: async () => ({ imported: await tool({ execute: async () => "called" }).execute() }),',
         "};",
       ].join("\n"),
     );
@@ -81,6 +130,6 @@ describe("discoverTools", () => {
     expect(tools[0]).toMatchObject({ name: "with_imports" });
     await expect(
       tools[0]?.handler({}, { signal: new AbortController().signal, idempotencyKey: "test" }),
-    ).resolves.toEqual({ imported: true });
+    ).resolves.toEqual({ imported: "called" });
   });
 });

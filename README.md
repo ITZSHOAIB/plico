@@ -83,7 +83,8 @@ pnpm --filter @plico/cli exec plico run --dry --script examples/internal-ops-age
 ```
 
 Project tools are loaded from their `.tool.ts` files, so they can import sibling
-TypeScript modules and npm packages installed in the project.
+TypeScript modules and npm packages installed in the project. `create-plico`
+includes a `package.json` with `type: "module"` for ESM tool imports.
 
 Persist the smoke run, list stored runs, replay events, and start the native API server with Studio:
 

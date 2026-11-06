@@ -7,7 +7,8 @@ skills, TypeScript tools, config, evals, memory, and artifacts becomes a runnabl
 inspectable agent app.
 
 Tools are loaded from their `.tool.ts` files. They can import sibling TypeScript
-modules and npm packages installed in the project.
+modules and npm packages installed in the project. `create-plico` includes a
+`package.json` with `type: "module"` for ESM tool imports.
 
 ## Why Plico?
 
