@@ -68,6 +68,38 @@ describe("discoverTools", () => {
     await expect(tool?.validateInput({ title: "valid" })).resolves.toBeUndefined();
   });
 
+  it("converts Zod 4 schemas to JSON Schema", async () => {
+    const root = await scaffold();
+    await writeFile(join(root, "package.json"), '{"type":"module"}\n');
+    await symlink(
+      fileURLToPath(new URL("../../node_modules", import.meta.url)),
+      join(root, "node_modules"),
+      "junction",
+    );
+    await writeFile(
+      join(root, "tools", "zod-v4.tool.ts"),
+      [
+        'import { z } from "zod/v4";',
+        "export default {",
+        '  name: "zod_v4_input",',
+        '  description: "A Zod 4 input tool.",',
+        "  inputSchema: z.object({ title: z.string().min(3) }),",
+        "  capabilities: [],",
+        "  approval: { required: false },",
+        "  handler: async (input) => input,",
+        "};",
+      ].join("\n"),
+    );
+
+    const [tool] = await discoverTools(await loadProject(root));
+
+    expect(tool?.inputSchema).toMatchObject({
+      type: "object",
+      properties: { title: { type: "string", minLength: 3 } },
+      required: ["title"],
+    });
+  });
+
   it("validates keywords from full JSON Schema", async () => {
     const root = await scaffold();
     await writeFile(
@@ -86,6 +118,7 @@ describe("discoverTools", () => {
 
     const [tool] = await discoverTools(await loadProject(root));
 
+    await expect(tool?.validateInput({ title: 5 })).resolves.toMatch(/title/i);
     await expect(tool?.validateInput({ title: "no" })).resolves.toMatch(/title/i);
     await expect(tool?.validateInput({ title: "valid" })).resolves.toBeUndefined();
   });

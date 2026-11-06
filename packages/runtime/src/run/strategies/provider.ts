@@ -143,12 +143,12 @@ export async function runProviderBackedRun(
         arguments: toolCall.arguments,
       });
 
-      const validationError = await tool.validateInput(toolCall.arguments);
-      if (validationError) {
+      const parsedInput = await tool.parseInput(toolCall.arguments);
+      if (!parsedInput.success) {
         throw new RuntimeDiagnosticError({
           phase: "tool.validation",
           toolName: tool.name,
-          message: `Tool ${tool.name} arguments invalid: ${validationError}`,
+          message: `Tool ${tool.name} arguments invalid: ${parsedInput.error}`,
         });
       }
 
@@ -174,7 +174,7 @@ export async function runProviderBackedRun(
         const idempotencyKey = `${ctx.runId}:${turn}:${callIndex}`;
         nameToolStep(ctx, `tool:${turn}:${callIndex}`, tool.name);
         result = await ctx.step(`tool:${turn}:${callIndex}`, ({ signal }) =>
-          tool.handler(toolCall.arguments, { signal, idempotencyKey }),
+          tool.handler(parsedInput.value, { signal, idempotencyKey }),
         );
       } catch (error) {
         if (error instanceof RunCancelled) throw error;

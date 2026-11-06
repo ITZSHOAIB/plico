@@ -13,7 +13,7 @@ Plico owns what makes it a product: the folder contract, the event contract, the
 | Agent loop | Own linear loop (ADR 0001) | accepted |
 | Event storage | Own append-only table, plain SQL behind a store interface; Kysely and Drizzle are fallbacks only | accepted |
 | MCP client | Official MCP client, wrapped in Plico's tool shape (ADR 0003) | accepted |
-| Validation | Zod inside Plico; JSON Schema and other schema libraries are accepted at the tool boundary | accepted |
+| Tool input validation | Zod 3 and 4 schemas convert to JSON Schema; Ajv validates JSON Schema inputs | accepted |
 | HTTP server | Hono with `overrideGlobalObjects: false`, behind the existing `/v1` routes (ADR 0006) | accepted |
 | Tracing | OpenTelemetry API with GenAI conventions; the host picks the SDK and exporter; content off by default | accepted |
 | Frontend protocol | Native events, with AG-UI as the default adapter and an AI SDK UI adapter (ADR 0004) | accepted |
@@ -39,4 +39,8 @@ Proposed picks were shortlisted from package data and not run against Plico. Eac
 
 ## Consequences
 
-Dependencies are pinned to exact versions and upgraded on purpose, because these projects move fast. `tsx` is pinned exactly because its ESM and CommonJS loader behavior is part of tool execution; upgrades are deliberate and checked against the tool-loading integration tests. No dependency type appears in the project contract, the events or the public API. The main vendor risks are the AI SDK, kept behind the model port, and DBOS, kept behind the engine interface; both need the shared tests to stay real. A pick that stops being maintained is replaced by changing one adapter, not the product.
+Dependencies are pinned to exact versions and upgraded on purpose, because these projects move fast. `tsx` is pinned exactly because its ESM and CommonJS loader behavior is part of tool execution; upgrades are deliberate and checked against the tool-loading integration tests. A project that authors Zod tools provides its own Zod dependency; the runtime does not pin Zod as a runtime dependency. Parsed Zod values, including defaults and transforms, are passed to tool handlers.
+
+`ToolDefinition`, `ToolInputSchema`, and `JsonSchema` are public TypeScript authoring contracts from `@plico/runtime`. They describe the accepted tool boundary and the normalized schema sent to the model. Changes to those types require deliberate API review; they do not alter the event or wire contracts by themselves.
+
+No dependency type appears in the project contract, the events or the public API. The main vendor risks are the AI SDK, kept behind the model port, and DBOS, kept behind the engine interface; both need the shared tests to stay real. A pick that stops being maintained is replaced by changing one adapter, not the product.

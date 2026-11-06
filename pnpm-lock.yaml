@@ -98,9 +98,6 @@ importers:
       tsx:
         specifier: 4.22.4
         version: 4.22.4
-      zod:
-        specifier: 3.25.76
-        version: 3.25.76
       zod-to-json-schema:
         specifier: 3.25.2
         version: 3.25.2(zod@3.25.76)
@@ -111,6 +108,9 @@ importers:
       '@opentelemetry/sdk-trace-base':
         specifier: 2.0.1
         version: 2.0.1(@opentelemetry/api@1.9.0)
+      zod:
+        specifier: 3.25.76
+        version: 3.25.76
 
   packages/server:
     dependencies:

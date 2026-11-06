@@ -53,7 +53,6 @@ export type {
   EvalSummary,
   EventStore,
   JsonSchema,
-  JsonSchemaSubset,
   ModelChunk,
   ModelProvider,
   ModelRequest,
@@ -73,5 +72,8 @@ export type {
   ToolApprovalPolicy,
   ToolDefinition,
   ToolHandlerContext,
+  ToolInputParseResult,
   ToolInputSchema,
+  ZodInputParseResult,
+  ZodInputSchema,
 } from "./types/index.js";

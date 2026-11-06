@@ -57,8 +57,9 @@ export function toolsReadmeFile(): string {
     "the tool call that was in flight, so pass `idempotencyKey` to any API that takes one. The key is",
     "stable for a call, and `signal` aborts when the run is cancelled.",
     "",
-    "Set `inputSchema` to a JSON Schema object or a Zod schema. Plico validates each call and sends",
-    "JSON Schema to the model. Add `zod` to this project's dependencies before importing it in a tool.",
+    "Set `inputSchema` to a JSON Schema object or a Zod 3 or 4 schema. Plico validates each call and",
+    "sends JSON Schema to the model. Parsed Zod values, including defaults, reach the handler. Add",
+    "`zod` to this project's dependencies before importing it in a tool.",
     "",
   ].join("\n");
 }

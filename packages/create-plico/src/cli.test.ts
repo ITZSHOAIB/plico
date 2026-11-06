@@ -23,7 +23,7 @@ describe("create-plico main", () => {
       type: "module",
     });
     expect(await readFile(join(root, "tools", "readme.md"), "utf8")).toContain(
-      "JSON Schema object or a Zod schema",
+      "JSON Schema object or a Zod 3 or 4 schema",
     );
 
     logSpy.mockRestore();

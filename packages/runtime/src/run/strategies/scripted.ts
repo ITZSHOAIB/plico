@@ -64,12 +64,12 @@ export async function runScriptedDryRun(
       toolName: tool.name,
       arguments: step.arguments,
     });
-    const validationError = await tool.validateInput(step.arguments);
-    if (validationError) {
+    const parsedInput = await tool.parseInput(step.arguments);
+    if (!parsedInput.success) {
       throw new RuntimeDiagnosticError({
         phase: "tool.validation",
         toolName: tool.name,
-        message: `Tool ${tool.name} arguments invalid: ${validationError}`,
+        message: `Tool ${tool.name} arguments invalid: ${parsedInput.error}`,
       });
     }
 
@@ -93,7 +93,7 @@ export async function runScriptedDryRun(
     const idempotencyKey = `${ctx.runId}:${index}`;
     nameToolStep(ctx, `tool:${index}`, tool.name);
     const result = await ctx.step(`tool:${index}`, ({ signal }) =>
-      tool.handler(step.arguments, { signal, idempotencyKey }),
+      tool.handler(parsedInput.value, { signal, idempotencyKey }),
     );
     await events.append("tool.result", {
       toolName: tool.name,

@@ -17,7 +17,7 @@ export async function loadToolFile(toolPath: string, source: string): Promise<De
     ? await importToolModule(toolPath)
     : importCommonJsTool(toolPath);
   const exportedTool = readDefaultExport(module, source);
-  return normalizeDeclaredTool(exportedTool, source);
+  return normalizeDeclaredTool(exportedTool, source, toolPath);
 }
 
 async function importToolModule(toolPath: string): Promise<unknown> {

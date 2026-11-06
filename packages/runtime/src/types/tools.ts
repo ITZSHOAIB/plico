@@ -1,12 +1,26 @@
 import type { JsonValue } from "@plico/contracts";
-import type { ZodTypeAny } from "zod";
 
-export interface JsonSchemaSubset {
+export interface JsonSchemaObject {
   [keyword: string]: JsonValue | undefined;
 }
 
-export type JsonSchema = JsonSchemaSubset | boolean;
-export type ToolInputSchema = JsonSchema | ZodTypeAny;
+export type JsonSchema = JsonSchemaObject | boolean;
+
+export interface ZodInputSchema {
+  safeParseAsync(input: unknown): Promise<ZodInputParseResult>;
+}
+
+export type ZodInputParseResult =
+  | { success: true; data: unknown }
+  | {
+      success: false;
+      error: { issues: Array<{ path: Array<string | number | symbol>; message: string }> };
+    };
+
+export type ToolInputSchema = JsonSchema | ZodInputSchema;
+export type ToolInputParseResult =
+  | { success: true; value: unknown }
+  | { success: false; error: string };
 
 export interface ToolApprovalPolicy {
   required: boolean;
@@ -36,4 +50,5 @@ export interface DeclaredTool extends Omit<ToolDefinition, "inputSchema"> {
   source: string;
   inputSchema: JsonSchema;
   validateInput(input: unknown): Promise<string | undefined>;
+  parseInput(input: unknown): Promise<ToolInputParseResult>;
 }
