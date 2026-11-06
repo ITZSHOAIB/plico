@@ -130,13 +130,14 @@ export const artifactRoutes: Route[] = [
         throw new HttpError(404, "artifact.not_found", `Unknown artifact file: ${path}`);
       }
 
-      const filename = path.split("/").at(-1) ?? "artifact";
+      const filename = path.split("/").at(-1) || "artifact";
       const encodedFilename = encodeURIComponent(filename).replace(
         /[!'()*]/g,
         (character) => `%${character.charCodeAt(0).toString(16).toUpperCase()}`,
       );
       context.response.statusCode = 200;
-      context.response.setHeader("content-type", safeMediaType(file.mimeType));
+      context.response.setHeader("x-content-type-options", "nosniff");
+      context.response.setHeader("content-type", exportMediaType(file.mimeType));
       context.response.setHeader(
         "content-disposition",
         `attachment; filename*=UTF-8''${encodedFilename}`,
@@ -161,8 +162,17 @@ export const artifactRoutes: Route[] = [
   },
 ];
 
-function safeMediaType(mimeType: string): string {
+function exportMediaType(mimeType: string): string {
   const mediaType = mimeType.split(";", 1)[0]?.trim().toLowerCase() ?? "";
+  if (
+    mediaType === "text/html" ||
+    mediaType === "application/xhtml+xml" ||
+    mediaType === "image/svg+xml" ||
+    /\/(?:x-)?(?:java|ecma)script$/.test(mediaType) ||
+    /\+(?:java|ecma)script$/.test(mediaType)
+  ) {
+    return "application/octet-stream";
+  }
   return /^[a-z0-9][a-z0-9!#$&^_.+-]*\/[a-z0-9][a-z0-9!#$&^_.+-]*$/.test(mediaType)
     ? mediaType
     : "application/octet-stream";
