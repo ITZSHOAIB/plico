@@ -147,7 +147,16 @@ export function fetchArtifactDiff(
     fromVersion: String(fromVersion),
     toVersion: String(toVersion),
   });
-  return getJson(`/v1/runs/${encodeURIComponent(runId)}/workspace/diffs?${query.toString()}`);
+  const url = `/v1/runs/${encodeURIComponent(runId)}/workspace/diffs?${query.toString()}`;
+  return fetch(url, undefined).then(async (response) => {
+    if (!response.ok) {
+      const body = (await response.json().catch(() => null)) as {
+        error?: { message?: string };
+      } | null;
+      throw new Error(body?.error?.message ?? "");
+    }
+    return (await response.json()) as ArtifactDiff;
+  });
 }
 
 export function artifactExportUrl(runId: string, path: string): string {

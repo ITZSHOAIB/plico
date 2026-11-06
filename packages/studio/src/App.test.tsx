@@ -189,6 +189,36 @@ describe("artifacts", () => {
       undefined,
     );
   });
+
+  it("does not offer current version comparisons from a snapshot preview", async () => {
+    await openArtifacts();
+    click(/snapshot-1/);
+    await screen.findByRole("button", { name: /summary\.md/ });
+    click(/summary\.md/);
+
+    expect(screen.queryByRole("button", { name: "Compare versions" })).toBeNull();
+  });
+
+  it.each([
+    [413, "Artifact versions are too large to compare."],
+    [415, "This artifact type cannot be compared."],
+  ])("shows the server's diff error for status %s", async (status, message) => {
+    stubApi(undefined, {
+      diffError: {
+        status,
+        code: status === 413 ? "artifact.diff_too_large" : "artifact.diff_unsupported_media_type",
+        message,
+      },
+    });
+    render(<App />);
+    await openRun();
+    click("Artifacts");
+    await screen.findByText(/Artifact Workspace/);
+    click(/summary\.md/);
+    click("Compare versions");
+
+    expect(await screen.findByText(message)).toBeTruthy();
+  });
 });
 
 describe("evals", () => {

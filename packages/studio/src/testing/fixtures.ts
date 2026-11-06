@@ -1,6 +1,7 @@
 import { fireEvent, screen } from "@testing-library/react";
 import { vi } from "vitest";
 import type {
+  ArtifactSnapshotDetail,
   ArtifactWorkspace,
   ComposedInstructions,
   EvalReport,
@@ -125,6 +126,13 @@ const workspace: ArtifactWorkspace = {
   snapshots: [{ snapshotId: "snapshot-1", fileCount: 3, createdAt: run.startedAt }],
 };
 
+const snapshot: ArtifactSnapshotDetail = {
+  snapshotId: "snapshot-1",
+  fileCount: workspace.files.length,
+  createdAt: run.startedAt,
+  files: workspace.files,
+};
+
 const evalReport: EvalReport = {
   schemaVersion: 1,
   total: 2,
@@ -168,6 +176,7 @@ export function stubApi(
     waitingApproval?: boolean;
     includeOtherRun?: boolean;
     cancelResult?: "accepted" | "ignored" | "unknown";
+    diffError?: { status: number; code: string; message: string };
   } = {},
 ) {
   window.history.replaceState(null, "", "/");
@@ -192,13 +201,22 @@ export function stubApi(
     if (path === `/v1/runs/${run.runId}/cancel` && method === "POST")
       return json({ result: options.cancelResult ?? "accepted" });
     if (path === `/v1/runs/${run.runId}/workspace`) return json(workspace);
-    if (path === `/v1/runs/${run.runId}/workspace/diffs?path=summary.md&fromVersion=1&toVersion=2`)
+    if (path === `/v1/runs/${run.runId}/workspace/snapshots/snapshot-1`) return json(snapshot);
+    if (
+      path === `/v1/runs/${run.runId}/workspace/diffs?path=summary.md&fromVersion=1&toVersion=2`
+    ) {
+      if (options.diffError)
+        return json(
+          { error: { code: options.diffError.code, message: options.diffError.message } },
+          options.diffError.status,
+        );
       return json({
         path: "summary.md",
         fromVersion: 1,
         toVersion: 2,
         diff: "--- summary.md\n+++ summary.md\n-# Previous summary\n+# Weekly summary\n",
       });
+    }
     if (path === "/v1/eval" && method === "POST") {
       state.report = evalReport;
       return json(evalReport);

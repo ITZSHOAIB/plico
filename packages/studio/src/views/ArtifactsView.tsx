@@ -88,12 +88,14 @@ export function ArtifactsView({
         backLabel="Back to files"
       >
         <FilePreview file={previewFile} />
-        <ArtifactVersionReview
-          key={`${selectedRun.runId}:${previewFile.path}`}
-          runId={selectedRun.runId}
-          path={previewFile.path}
-          versions={workspace.versions}
-        />
+        {snapshot === null && (
+          <ArtifactVersionReview
+            key={`${selectedRun.runId}:${previewFile.path}`}
+            runId={selectedRun.runId}
+            path={previewFile.path}
+            versions={workspace.versions}
+          />
+        )}
       </Page>
     );
   }

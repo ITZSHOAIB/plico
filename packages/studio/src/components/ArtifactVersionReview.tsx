@@ -16,8 +16,14 @@ export function ArtifactVersionReview({
   const history = versions.filter((version) => version.path === path);
   const firstVersion = history[0]?.version ?? 1;
   const latestVersion = history.at(-1)?.version ?? firstVersion;
-  const [fromVersion, setFromVersion] = useState(firstVersion);
-  const [toVersion, setToVersion] = useState(latestVersion);
+  const [fromVersionOverride, setFromVersionOverride] = useState<number | null>(null);
+  const [toVersionOverride, setToVersionOverride] = useState<number | null>(null);
+  const fromVersion = history.some((version) => version.version === fromVersionOverride)
+    ? (fromVersionOverride ?? firstVersion)
+    : firstVersion;
+  const toVersion = history.some((version) => version.version === toVersionOverride)
+    ? (toVersionOverride ?? latestVersion)
+    : latestVersion;
   const [diff, setDiff] = useState<ArtifactDiff | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -34,9 +40,13 @@ export function ArtifactVersionReview({
     try {
       const result = await fetchArtifactDiff(runId, path, fromVersion, toVersion);
       if (currentRequest === request.current) setDiff(result);
-    } catch {
+    } catch (error) {
       if (currentRequest === request.current)
-        setError("Could not compare these artifact versions.");
+        setError(
+          error instanceof Error && error.message
+            ? error.message
+            : "Could not compare these artifact versions.",
+        );
     } finally {
       if (currentRequest === request.current) setLoading(false);
     }
@@ -50,7 +60,7 @@ export function ArtifactVersionReview({
           From version
           <select
             value={fromVersion}
-            onChange={(event) => setFromVersion(Number(event.currentTarget.value))}
+            onChange={(event) => setFromVersionOverride(Number(event.currentTarget.value))}
             className="min-h-9 rounded-control border border-line bg-surface px-2 text-small text-fg"
           >
             {history.map((version) => (
@@ -64,7 +74,7 @@ export function ArtifactVersionReview({
           To version
           <select
             value={toVersion}
-            onChange={(event) => setToVersion(Number(event.currentTarget.value))}
+            onChange={(event) => setToVersionOverride(Number(event.currentTarget.value))}
             className="min-h-9 rounded-control border border-line bg-surface px-2 text-small text-fg"
           >
             {history.map((version) => (
