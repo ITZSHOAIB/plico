@@ -1,5 +1,5 @@
 import type { ProjectConfig } from "@plico/contracts";
-import type { RunContext } from "../../engine/index.js";
+import { RunCancelled, type RunContext } from "../../engine/index.js";
 import { RuntimeDiagnosticError } from "../../errors.js";
 import type { InMemoryEventLog } from "../../events.js";
 import { approvalTimeoutMs, decideApproval } from "../../policy/approval.js";
@@ -57,7 +57,11 @@ export async function runScriptedDryRun(
 
     const tool = toolsByName.get(step.toolName);
     if (!tool) {
-      throw new Error(`Unknown tool: ${step.toolName}`);
+      throw new RuntimeDiagnosticError({
+        phase: "tool.validation",
+        toolName: step.toolName,
+        message: `Unknown tool: ${step.toolName}`,
+      });
     }
 
     await events.append("tool.call", {
@@ -92,9 +96,19 @@ export async function runScriptedDryRun(
 
     const idempotencyKey = `${ctx.runId}:${index}`;
     nameToolStep(ctx, `tool:${index}`, tool.name);
-    const result = await ctx.step(`tool:${index}`, ({ signal }) =>
-      tool.handler(parsedInput.value, { signal, idempotencyKey }),
-    );
+    let result: unknown;
+    try {
+      result = await ctx.step(`tool:${index}`, ({ signal }) =>
+        tool.handler(parsedInput.value, { signal, idempotencyKey }),
+      );
+    } catch (error) {
+      if (error instanceof RunCancelled) throw error;
+      throw new RuntimeDiagnosticError({
+        phase: "runtime",
+        toolName: tool.name,
+        message: error instanceof Error ? error.message : String(error),
+      });
+    }
     await events.append("tool.result", {
       toolName: tool.name,
       result,
