@@ -113,6 +113,39 @@ export const artifactRoutes: Route[] = [
   },
   {
     method: "GET",
+    pattern: /^\/v1\/runs\/([^/]+)\/workspace\/exports$/,
+    handler: async (context) => {
+      const [runId = ""] = context.params;
+      const workspace = await readWorkspace(context, runId);
+      const path = context.url.searchParams.get("path");
+      if (!path) {
+        throw new HttpError(
+          400,
+          "artifact.path_required",
+          "A path is required to export an artifact.",
+        );
+      }
+      const file = workspace.files.find((candidate) => candidate.path === path);
+      if (!file) {
+        throw new HttpError(404, "artifact.not_found", `Unknown artifact file: ${path}`);
+      }
+
+      const filename = path.split("/").at(-1) ?? "artifact";
+      const encodedFilename = encodeURIComponent(filename).replace(
+        /[!'()*]/g,
+        (character) => `%${character.charCodeAt(0).toString(16).toUpperCase()}`,
+      );
+      context.response.statusCode = 200;
+      context.response.setHeader("content-type", safeMediaType(file.mimeType));
+      context.response.setHeader(
+        "content-disposition",
+        `attachment; filename*=UTF-8''${encodedFilename}`,
+      );
+      context.response.end(file.content, "utf8");
+    },
+  },
+  {
+    method: "GET",
     pattern: /^\/v1\/runs\/([^/]+)\/workspace\/snapshots\/([^/]+)$/,
     handler: async (context) => {
       const [runId = "", snapshotId = ""] = context.params;
@@ -127,6 +160,13 @@ export const artifactRoutes: Route[] = [
     },
   },
 ];
+
+function safeMediaType(mimeType: string): string {
+  const mediaType = mimeType.split(";", 1)[0]?.trim().toLowerCase() ?? "";
+  return /^[a-z0-9][a-z0-9!#$&^_.+-]*\/[a-z0-9][a-z0-9!#$&^_.+-]*$/.test(mediaType)
+    ? mediaType
+    : "application/octet-stream";
+}
 
 function readVersionQuery(url: URL, name: "fromVersion" | "toVersion"): number {
   const value = url.searchParams.get(name);

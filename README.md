@@ -11,6 +11,7 @@ Today this repo can:
 - persist artifact content by SHA-256 hash and expose ordered write receipts in run workspaces
 - compare artifact versions with `GET /v1/runs/<run-id>/workspace/diffs?path=<path>&fromVersion=1&toVersion=2`
 - diff text, JSON, and XML artifacts up to 1 MiB per version; binary and larger versions return errors
+- export a run artifact with `GET /v1/runs/<run-id>/workspace/exports?path=<path>` as a file download
 - run provider-backed conversations, review approvals, and cancel active runs in Studio
 - check approval policy references and conflicts through readiness diagnostics
 - generate the internal-ops starter with `create-plico`
