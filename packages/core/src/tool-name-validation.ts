@@ -6,6 +6,11 @@ import type { ValidationIssue } from "./types.js";
 
 const require = createRequire(import.meta.url);
 
+type ToolNameResolution =
+  | { kind: "known"; name: string }
+  | { kind: "absent" }
+  | { kind: "unknown" };
+
 export async function validateToolNames(root: string): Promise<ValidationIssue[]> {
   const paths = getProjectPaths(root);
   const relativePaths = getProjectRelativePaths();
@@ -62,18 +67,38 @@ function readToolName(text: string, fileName: string): string | undefined {
 
   const object = resolveObject(defaultExpression, declarations);
   if (!object) return undefined;
-  for (const property of object.properties) {
-    if (!ts.isPropertyAssignment(property)) continue;
-    const propertyName =
-      ts.isIdentifier(property.name) || ts.isStringLiteral(property.name)
-        ? property.name.text
-        : undefined;
-    if (propertyName === "name") {
-      const name = resolveString(property.initializer, declarations);
-      if (name !== undefined) return name;
+  const result = resolveObjectName(object, declarations);
+  return result.kind === "known" ? result.name : undefined;
+}
+
+function resolveObjectName(
+  object: import("typescript").ObjectLiteralExpression,
+  declarations: Map<string, import("typescript").Expression>,
+): ToolNameResolution {
+  const ts = require("typescript") as typeof import("typescript");
+  for (const property of [...object.properties].reverse()) {
+    if (ts.isPropertyAssignment(property)) {
+      const propertyName =
+        ts.isIdentifier(property.name) || ts.isStringLiteral(property.name)
+          ? property.name.text
+          : undefined;
+      if (propertyName === "name") {
+        const name = resolveString(property.initializer, declarations);
+        return name === undefined ? { kind: "unknown" } : { kind: "known", name };
+      }
+    }
+    if (ts.isShorthandPropertyAssignment(property) && property.name.text === "name") {
+      const name = resolveString(property.name, declarations);
+      return name === undefined ? { kind: "unknown" } : { kind: "known", name };
+    }
+    if (ts.isSpreadAssignment(property)) {
+      const spreadObject = resolveObject(property.expression, declarations);
+      if (!spreadObject) return { kind: "unknown" };
+      const spreadName = resolveObjectName(spreadObject, declarations);
+      if (spreadName.kind !== "absent") return spreadName;
     }
   }
-  return undefined;
+  return { kind: "absent" };
 }
 
 function resolveString(
@@ -82,7 +107,10 @@ function resolveString(
 ): string | undefined {
   const ts = require("typescript") as typeof import("typescript");
   let current = unwrap(expression);
+  const visited = new Set<string>();
   while (ts.isIdentifier(current)) {
+    if (visited.has(current.text)) return undefined;
+    visited.add(current.text);
     const declaration = declarations.get(current.text);
     if (!declaration) return undefined;
     current = unwrap(declaration);
@@ -96,10 +124,13 @@ function resolveObject(
 ): import("typescript").ObjectLiteralExpression | undefined {
   const ts = require("typescript") as typeof import("typescript");
   let current = expression;
+  const visited = new Set<string>();
   while (current) {
     current = unwrap(current);
     if (ts.isObjectLiteralExpression(current)) return current;
     if (!ts.isIdentifier(current)) return undefined;
+    if (visited.has(current.text)) return undefined;
+    visited.add(current.text);
     current = declarations.get(current.text);
   }
   return undefined;
@@ -119,5 +150,10 @@ function unwrap(expression: import("typescript").Expression): import("typescript
 }
 
 function isMissingDirectory(error: unknown): boolean {
-  return typeof error === "object" && error !== null && "code" in error && error.code === "ENOENT";
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error.code === "ENOENT" || error.code === "ENOTDIR")
+  );
 }
