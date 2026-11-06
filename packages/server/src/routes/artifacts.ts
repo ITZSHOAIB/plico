@@ -1,4 +1,10 @@
-import { buildArtifactWorkspace, type PlicoEvent, readArtifactSnapshot } from "@plico/runtime";
+import {
+  buildArtifactWorkspace,
+  type PlicoEvent,
+  readArtifactSnapshot,
+  readArtifactVersion,
+} from "@plico/runtime";
+import { createTwoFilesPatch } from "diff";
 import { HttpError } from "../errors.js";
 import { sendJson } from "../responses.js";
 import type { Route, RouteContext } from "./types.js";
@@ -26,6 +32,64 @@ async function readWorkspace(context: RouteContext, runId: string) {
 }
 
 export const artifactRoutes: Route[] = [
+  {
+    method: "GET",
+    pattern: /^\/v1\/runs\/([^/]+)\/workspace\/diffs$/,
+    handler: async (context) => {
+      const [runId = ""] = context.params;
+      const events = await readRunEvents(context, runId);
+      const workspace = requireWorkspace(runId, events);
+      const path = context.url.searchParams.get("path");
+      if (!path) {
+        throw new HttpError(400, "artifact.path_required", "A path is required to diff artifacts.");
+      }
+      if (!workspace.files.some((file) => file.path === path)) {
+        throw new HttpError(404, "artifact.not_found", `Unknown artifact file: ${path}`);
+      }
+      const fromVersion = readVersionQuery(context.url, "fromVersion");
+      const toVersion = readVersionQuery(context.url, "toVersion");
+      const from = readArtifactVersion(events, path, fromVersion);
+      const to = readArtifactVersion(events, path, toVersion);
+      if (!from || !to) {
+        throw new HttpError(
+          404,
+          "artifact.version_not_found",
+          `Unknown artifact version for ${path}: ${!from ? fromVersion : toVersion}`,
+        );
+      }
+      if (!isDiffableMimeType(from.mimeType) || !isDiffableMimeType(to.mimeType)) {
+        throw new HttpError(
+          415,
+          "artifact.diff_unsupported_media_type",
+          "Artifact diffs support text, JSON, and XML content.",
+        );
+      }
+      if (
+        Buffer.byteLength(from.content, "utf8") > maxDiffContentBytes ||
+        Buffer.byteLength(to.content, "utf8") > maxDiffContentBytes
+      ) {
+        throw new HttpError(
+          413,
+          "artifact.diff_too_large",
+          `Artifact versions must be at most ${maxDiffContentBytes} bytes to diff.`,
+        );
+      }
+
+      sendJson(context.response, 200, {
+        path,
+        fromVersion,
+        toVersion,
+        diff: createTwoFilesPatch(
+          path,
+          path,
+          from.content,
+          to.content,
+          `version ${fromVersion}`,
+          `version ${toVersion}`,
+        ),
+      });
+    },
+  },
   {
     method: "GET",
     pattern: /^\/v1\/runs\/([^/]+)\/workspace$/,
@@ -63,3 +127,24 @@ export const artifactRoutes: Route[] = [
     },
   },
 ];
+
+function readVersionQuery(url: URL, name: "fromVersion" | "toVersion"): number {
+  const value = url.searchParams.get(name);
+  if (!value || !/^[1-9]\d*$/.test(value) || !Number.isSafeInteger(Number(value))) {
+    throw new HttpError(400, "artifact.invalid_version", `${name} must be a positive integer.`);
+  }
+  return Number(value);
+}
+
+const maxDiffContentBytes = 1024 * 1024;
+
+function isDiffableMimeType(mimeType: string): boolean {
+  const mediaType = mimeType.split(";", 1)[0]?.trim().toLowerCase() ?? "";
+  return (
+    mediaType.startsWith("text/") ||
+    mediaType === "application/json" ||
+    mediaType.endsWith("+json") ||
+    mediaType === "application/xml" ||
+    mediaType.endsWith("+xml")
+  );
+}

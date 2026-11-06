@@ -12,7 +12,7 @@ function applyFileWritten(
   files: Map<string, ArtifactFile>,
   versions: ArtifactVersion[],
   event: PlicoEvent<"artifact.file.written">,
-): void {
+): ArtifactFile {
   const path = event.payload.path;
   const version = event.payload.version ?? (files.get(path)?.version ?? 0) + 1;
   const contentHash =
@@ -33,6 +33,23 @@ function applyFileWritten(
     contentHash,
     createdAt: event.timestamp,
   });
+  return file;
+}
+
+/** Returns a historical file version using the same replay rules as the workspace projection. */
+export function readArtifactVersion(
+  events: PlicoEvent[],
+  path: string,
+  targetVersion: number,
+): ArtifactFile | undefined {
+  const files = new Map<string, ArtifactFile>();
+  const versions: ArtifactVersion[] = [];
+  for (const event of events) {
+    if (event.type !== "artifact.file.written") continue;
+    const file = applyFileWritten(files, versions, event);
+    if (file.path === path && file.version === targetVersion) return file;
+  }
+  return undefined;
 }
 
 function toSnapshot(event: PlicoEvent<"artifact.snapshot.created">): ArtifactSnapshot {

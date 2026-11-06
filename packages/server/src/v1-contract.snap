@@ -312,6 +312,12 @@
     "path": "string",
     "version": "number"
   },
+  "GET /v1/runs/:id/workspace/diffs": {
+    "diff": "string",
+    "fromVersion": "number",
+    "path": "string",
+    "toVersion": "number"
+  },
   "GET /v1/runs/:id/workspace/snapshots/:id": {
     "createdAt": "string",
     "fileCount": "number",

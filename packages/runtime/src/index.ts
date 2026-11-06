@@ -1,4 +1,4 @@
-export { buildArtifactWorkspace, readArtifactSnapshot } from "./artifacts.js";
+export { buildArtifactWorkspace, readArtifactSnapshot, readArtifactVersion } from "./artifacts.js";
 export {
   createEngine,
   createMemoryJournal,
