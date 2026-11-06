@@ -97,4 +97,31 @@ describe("checkReadiness", () => {
 
     expect(policy.some((diagnostic) => diagnostic.message.includes("undeclared tool"))).toBe(false);
   });
+
+  it("reports duplicate tool names with the same message as project validation", async () => {
+    const root = await scaffold();
+    const tool = (name: string) =>
+      [
+        "export default {",
+        `  name: "${name}",`,
+        '  description: "A test tool.",',
+        '  inputSchema: { type: "object" },',
+        "  capabilities: [],",
+        "  approval: { required: false },",
+        "  handler: async () => ({}),",
+        "} as const;",
+        "",
+      ].join("\n");
+    await writeFile(join(root, "tools", "a.tool.ts"), tool("lookup"));
+    await writeFile(join(root, "tools", "b.tool.ts"), tool("lookup"));
+
+    const report = await checkReadiness(root);
+
+    expect(report.diagnostics).toContainEqual({
+      severity: "error",
+      subsystem: "tools.discovery",
+      path: "tools/b.tool.ts",
+      message: 'Duplicate tool name "lookup" declared in tools/a.tool.ts and tools/b.tool.ts',
+    });
+  });
 });

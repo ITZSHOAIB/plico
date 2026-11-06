@@ -208,6 +208,34 @@ describe("validateProject", () => {
     expect(result.project?.config.name).toBe("Internal Ops Agent");
   });
 
+  it("rejects tool modules that declare the same name", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-core-"));
+    await writeValidProject(root);
+    const tool = (name: string) =>
+      [
+        "export default {",
+        `  name: "${name}",`,
+        '  description: "A test tool.",',
+        '  inputSchema: { type: "object" },',
+        "  capabilities: [],",
+        "  approval: { required: false },",
+        "  handler: async () => ({}),",
+        "} as const;",
+        "",
+      ].join("\n");
+    await writeFile(join(root, "tools", "a.tool.ts"), tool("lookup"));
+    await writeFile(join(root, "tools", "b.tool.ts"), tool("lookup"));
+
+    const result = await validateProject(root);
+
+    expect(result.ok).toBe(false);
+    expect(result.errors).toContainEqual({
+      path: "tools/b.tool.ts",
+      message: 'Duplicate tool name "lookup" declared in tools/a.tool.ts and tools/b.tool.ts',
+      severity: "error",
+    });
+  });
+
   it("rejects a project without plico.config.ts", async () => {
     const root = await mkdtemp(join(tmpdir(), "plico-core-"));
     await mkdir(join(root, "skills"), { recursive: true });
