@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { loadProject } from "@plico/core";
@@ -50,5 +50,37 @@ describe("discoverTools", () => {
     const tools = await discoverTools(await loadProject(root));
 
     expect(tools.map((tool) => tool.name)).toEqual(["real"]);
+  });
+
+  it("loads tools with sibling and npm package imports", async () => {
+    const root = await scaffold();
+    await symlink(
+      join(process.cwd(), "packages", "runtime", "node_modules"),
+      join(root, "node_modules"),
+      "junction",
+    );
+    await writeFile(join(root, "tools", "helper.ts"), 'export const toolName = "with_imports";\n');
+    await writeFile(
+      join(root, "tools", "with-imports.tool.ts"),
+      [
+        'import { toolName } from "./helper.ts";',
+        'import { tool } from "ai";',
+        "export default {",
+        "  name: toolName,",
+        '  description: "A tool.",',
+        '  inputSchema: { type: "object", properties: {}, additionalProperties: false },',
+        "  capabilities: [],",
+        "  approval: { required: false },",
+        '  handler: async () => ({ imported: typeof tool === "function" }),',
+        "};",
+      ].join("\n"),
+    );
+
+    const tools = await discoverTools(await loadProject(root));
+
+    expect(tools[0]).toMatchObject({ name: "with_imports" });
+    await expect(
+      tools[0]?.handler({}, { signal: new AbortController().signal, idempotencyKey: "test" }),
+    ).resolves.toEqual({ imported: true });
   });
 });

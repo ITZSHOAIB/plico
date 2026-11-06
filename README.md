@@ -82,6 +82,9 @@ Run the dry runtime with the checked-in example tool:
 pnpm --filter @plico/cli exec plico run --dry --script examples/internal-ops-agent/evals/smoke.script.json examples/internal-ops-agent
 ```
 
+Project tools are loaded from their `.tool.ts` files, so they can import sibling
+TypeScript modules and npm packages installed in the project.
+
 Persist the smoke run, list stored runs, replay events, and start the native API server with Studio:
 
 ```sh

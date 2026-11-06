@@ -89,9 +89,9 @@ importers:
       ai:
         specifier: ^7.0.162
         version: 7.0.162(zod@3.25.76)
-      typescript:
-        specifier: ^6.0.3
-        version: 6.0.3
+      tsx:
+        specifier: 4.22.4
+        version: 4.22.4
     devDependencies:
       '@opentelemetry/context-async-hooks':
         specifier: 2.0.1
