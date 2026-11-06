@@ -39,4 +39,4 @@ Proposed picks were shortlisted from package data and not run against Plico. Eac
 
 ## Consequences
 
-Dependencies are pinned to exact versions and upgraded on purpose, because these projects move fast. No dependency type appears in the project contract, the events or the public API. The main vendor risks are the AI SDK, kept behind the model port, and DBOS, kept behind the engine interface; both need the shared tests to stay real. A pick that stops being maintained is replaced by changing one adapter, not the product.
+Dependencies are pinned to exact versions and upgraded on purpose, because these projects move fast. `tsx` is pinned exactly because its ESM and CommonJS loader behavior is part of tool execution; upgrades are deliberate and checked against the tool-loading integration tests. No dependency type appears in the project contract, the events or the public API. The main vendor risks are the AI SDK, kept behind the model port, and DBOS, kept behind the engine interface; both need the shared tests to stay real. A pick that stops being maintained is replaced by changing one adapter, not the product.

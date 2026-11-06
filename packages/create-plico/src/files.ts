@@ -9,6 +9,10 @@ export function configFile(projectName: string): string {
   ].join("\n");
 }
 
+export function packageFile(): string {
+  return `${JSON.stringify({ private: true, type: "module" }, null, 2)}\n`;
+}
+
 export function agentFile(projectName: string): string {
   return [
     `# ${projectName}`,

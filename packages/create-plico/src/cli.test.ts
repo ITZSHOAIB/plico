@@ -19,6 +19,9 @@ describe("create-plico main", () => {
     expect(await readFile(join(root, "plico.config.ts"), "utf8")).toContain(
       'name: "Support Tools"',
     );
+    expect(JSON.parse(await readFile(join(root, "package.json"), "utf8"))).toMatchObject({
+      type: "module",
+    });
 
     logSpy.mockRestore();
   });
