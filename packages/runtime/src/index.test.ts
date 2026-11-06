@@ -1,6 +1,7 @@
 import { mkdir, mkdtemp, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { loadProject } from "@plico/core";
 import { describe, expect, it } from "vitest";
 import {
@@ -347,6 +348,39 @@ describe("runProject", () => {
     });
   });
 
+  it("passes Zod parsed defaults to the tool handler", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-runtime-zod-"));
+    await writeValidProject(root);
+    await writeFile(join(root, "package.json"), '{"type":"module"}\n');
+    await symlink(
+      fileURLToPath(new URL("../node_modules", import.meta.url)),
+      join(root, "node_modules"),
+      "junction",
+    );
+    await writeFile(
+      join(root, "tools", "with-default.tool.ts"),
+      [
+        'import { z } from "zod";',
+        "export default {",
+        '  name: "with_default",',
+        '  description: "Uses a Zod default.",',
+        "  inputSchema: z.object({ n: z.number().default(5) }),",
+        "  capabilities: [],",
+        "  approval: { required: false },",
+        "  handler: async (input) => input,",
+        "};",
+      ].join("\n"),
+    );
+
+    const result = await runProject(root, {
+      script: [{ type: "tool.call", toolName: "with_default", arguments: {} }],
+    });
+
+    expect(result.events.find((event) => event.type === "tool.result")?.payload).toMatchObject({
+      result: { n: 5 },
+    });
+  });
+
   it("fails scripted tool calls before the handler runs when arguments do not match the schema", async () => {
     const root = await mkdtemp(join(tmpdir(), "plico-runtime-"));
     await writeValidProject(root);
@@ -389,7 +423,7 @@ describe("runProject", () => {
     expect(result.events[4]?.payload).toMatchObject({
       phase: "tool.validation",
       toolName: "create_ticket",
-      message: "Tool create_ticket arguments invalid: missing required property title",
+      message: "Tool create_ticket arguments invalid: title: missing required property title",
     });
   });
 

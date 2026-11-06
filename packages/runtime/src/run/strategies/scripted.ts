@@ -3,7 +3,6 @@ import type { RunContext } from "../../engine/index.js";
 import { RuntimeDiagnosticError } from "../../errors.js";
 import type { InMemoryEventLog } from "../../events.js";
 import { approvalTimeoutMs, decideApproval } from "../../policy/approval.js";
-import { validateJsonSchemaSubset } from "../../tools/schema.js";
 import type { DeclaredTool, DryRunScriptStep } from "../../types/index.js";
 import { nameToolStep } from "../tracing.js";
 import { awaitApproval } from "./approval.js";
@@ -65,12 +64,12 @@ export async function runScriptedDryRun(
       toolName: tool.name,
       arguments: step.arguments,
     });
-    const validationError = validateJsonSchemaSubset(step.arguments, tool.inputSchema);
-    if (validationError) {
+    const parsedInput = await tool.parseInput(step.arguments);
+    if (!parsedInput.success) {
       throw new RuntimeDiagnosticError({
         phase: "tool.validation",
         toolName: tool.name,
-        message: `Tool ${tool.name} arguments invalid: ${validationError}`,
+        message: `Tool ${tool.name} arguments invalid: ${parsedInput.error}`,
       });
     }
 
@@ -94,7 +93,7 @@ export async function runScriptedDryRun(
     const idempotencyKey = `${ctx.runId}:${index}`;
     nameToolStep(ctx, `tool:${index}`, tool.name);
     const result = await ctx.step(`tool:${index}`, ({ signal }) =>
-      tool.handler(step.arguments, { signal, idempotencyKey }),
+      tool.handler(parsedInput.value, { signal, idempotencyKey }),
     );
     await events.append("tool.result", {
       toolName: tool.name,

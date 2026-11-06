@@ -1,8 +1,12 @@
 import { isRecord } from "../guards.js";
 import type { DeclaredTool } from "../types/index.js";
-import { isJsonSchemaSubset } from "./schema.js";
+import { normalizeInputSchema } from "./schema.js";
 
-export function normalizeDeclaredTool(value: unknown, source: string): DeclaredTool {
+export async function normalizeDeclaredTool(
+  value: unknown,
+  source: string,
+  toolPath: string,
+): Promise<DeclaredTool> {
   if (!isRecord(value)) {
     throw new Error(`${source} must default export a declared tool object`);
   }
@@ -17,9 +21,7 @@ export function normalizeDeclaredTool(value: unknown, source: string): DeclaredT
   if (typeof description !== "string") {
     throw new Error(`${source} tool description must be a string`);
   }
-  if (!isJsonSchemaSubset(inputSchema)) {
-    throw new Error(`${source} inputSchema must be a supported JSON Schema subset`);
-  }
+  const normalizedInputSchema = await normalizeInputSchema(inputSchema, source, toolPath);
   if (
     !Array.isArray(capabilities) ||
     !capabilities.every((capability) => typeof capability === "string")
@@ -37,7 +39,12 @@ export function normalizeDeclaredTool(value: unknown, source: string): DeclaredT
     source,
     name,
     description,
-    inputSchema,
+    inputSchema: normalizedInputSchema.jsonSchema,
+    async validateInput(input) {
+      const result = await normalizedInputSchema.parse(input);
+      return result.success ? undefined : result.error;
+    },
+    parseInput: normalizedInputSchema.parse,
     capabilities,
     approval: {
       required: approval.required,

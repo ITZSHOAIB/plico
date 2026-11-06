@@ -1,10 +1,26 @@
-export interface JsonSchemaSubset {
-  type: "object" | "string" | "number" | "integer" | "boolean" | "array";
-  properties?: Record<string, JsonSchemaSubset>;
-  required?: string[];
-  additionalProperties?: boolean;
-  items?: JsonSchemaSubset;
+import type { JsonValue } from "@plico/contracts";
+
+export interface JsonSchemaObject {
+  [keyword: string]: JsonValue | undefined;
 }
+
+export type JsonSchema = JsonSchemaObject | boolean;
+
+export interface ZodInputSchema {
+  safeParseAsync(input: unknown): Promise<ZodInputParseResult>;
+}
+
+export type ZodInputParseResult =
+  | { success: true; data: unknown }
+  | {
+      success: false;
+      error: { issues: Array<{ path: Array<string | number | symbol>; message: string }> };
+    };
+
+export type ToolInputSchema = JsonSchema | ZodInputSchema;
+export type ToolInputParseResult =
+  | { success: true; value: unknown }
+  | { success: false; error: string };
 
 export interface ToolApprovalPolicy {
   required: boolean;
@@ -21,12 +37,18 @@ export interface ToolHandlerContext {
   idempotencyKey: string;
 }
 
-export interface DeclaredTool {
-  source: string;
+export interface ToolDefinition {
   name: string;
   description: string;
-  inputSchema: JsonSchemaSubset;
+  inputSchema: ToolInputSchema;
   capabilities: string[];
   approval: ToolApprovalPolicy;
   handler: (input: unknown, context: ToolHandlerContext) => unknown | Promise<unknown>;
+}
+
+export interface DeclaredTool extends Omit<ToolDefinition, "inputSchema"> {
+  source: string;
+  inputSchema: JsonSchema;
+  validateInput(input: unknown): Promise<string | undefined>;
+  parseInput(input: unknown): Promise<ToolInputParseResult>;
 }

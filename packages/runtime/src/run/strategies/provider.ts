@@ -5,7 +5,6 @@ import { RunCancelled, type RunContext } from "../../engine/index.js";
 import { ModelProviderError, RuntimeDiagnosticError } from "../../errors.js";
 import type { InMemoryEventLog } from "../../events.js";
 import { approvalTimeoutMs, decideApproval } from "../../policy/approval.js";
-import { validateJsonSchemaSubset } from "../../tools/schema.js";
 import type { DeclaredTool, ModelProvider, ModelRequest } from "../../types/index.js";
 import { nameToolStep } from "../tracing.js";
 import { awaitApproval } from "./approval.js";
@@ -144,12 +143,12 @@ export async function runProviderBackedRun(
         arguments: toolCall.arguments,
       });
 
-      const validationError = validateJsonSchemaSubset(toolCall.arguments, tool.inputSchema);
-      if (validationError) {
+      const parsedInput = await tool.parseInput(toolCall.arguments);
+      if (!parsedInput.success) {
         throw new RuntimeDiagnosticError({
           phase: "tool.validation",
           toolName: tool.name,
-          message: `Tool ${tool.name} arguments invalid: ${validationError}`,
+          message: `Tool ${tool.name} arguments invalid: ${parsedInput.error}`,
         });
       }
 
@@ -175,7 +174,7 @@ export async function runProviderBackedRun(
         const idempotencyKey = `${ctx.runId}:${turn}:${callIndex}`;
         nameToolStep(ctx, `tool:${turn}:${callIndex}`, tool.name);
         result = await ctx.step(`tool:${turn}:${callIndex}`, ({ signal }) =>
-          tool.handler(toolCall.arguments, { signal, idempotencyKey }),
+          tool.handler(parsedInput.value, { signal, idempotencyKey }),
         );
       } catch (error) {
         if (error instanceof RunCancelled) throw error;
