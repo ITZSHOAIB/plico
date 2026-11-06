@@ -1,4 +1,5 @@
 import type {
+  ArtifactDiff,
   ArtifactSnapshotDetail,
   ArtifactWorkspace,
   ComposedInstructions,
@@ -133,6 +134,25 @@ export function fetchArtifactSnapshot(
   return getJson(
     `/v1/runs/${encodeURIComponent(runId)}/workspace/snapshots/${encodeURIComponent(snapshotId)}`,
   );
+}
+
+export function fetchArtifactDiff(
+  runId: string,
+  path: string,
+  fromVersion: number,
+  toVersion: number,
+): Promise<ArtifactDiff> {
+  const query = new URLSearchParams({
+    path,
+    fromVersion: String(fromVersion),
+    toVersion: String(toVersion),
+  });
+  return getJson(`/v1/runs/${encodeURIComponent(runId)}/workspace/diffs?${query.toString()}`);
+}
+
+export function artifactExportUrl(runId: string, path: string): string {
+  const query = new URLSearchParams({ path });
+  return `/v1/runs/${encodeURIComponent(runId)}/workspace/exports?${query.toString()}`;
 }
 
 export function fetchLatestEvalReport(): Promise<EvalReport | null> {

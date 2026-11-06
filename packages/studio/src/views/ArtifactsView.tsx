@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
-import { fetchArtifactSnapshot } from "../api";
+import { artifactExportUrl, fetchArtifactSnapshot } from "../api";
+import { ArtifactVersionReview } from "../components/ArtifactVersionReview";
 import { FilePreview } from "../components/FilePreview";
 import type { ArtifactFile, ArtifactSnapshotDetail, ArtifactWorkspace, RunSummary } from "../types";
 import { Icon } from "../ui/Icon";
@@ -63,6 +64,18 @@ export function ArtifactsView({
     return (
       <Page
         title={previewFile.path}
+        actions={
+          snapshot ? undefined : (
+            <a
+              href={artifactExportUrl(selectedRun.runId, previewFile.path)}
+              download
+              aria-label={`Download ${previewFile.path}`}
+              className="inline-flex min-h-9 items-center rounded-control border border-line bg-raised px-3 text-small font-medium text-fg hover:border-faint focus-visible:outline-2 focus-visible:outline-accent"
+            >
+              Download
+            </a>
+          )
+        }
         subtitle={
           <>
             <div>{snapshot ? `Snapshot: ${snapshot.snapshotId}` : currentWorkspaceNotice}</div>
@@ -75,6 +88,12 @@ export function ArtifactsView({
         backLabel="Back to files"
       >
         <FilePreview file={previewFile} />
+        <ArtifactVersionReview
+          key={`${selectedRun.runId}:${previewFile.path}`}
+          runId={selectedRun.runId}
+          path={previewFile.path}
+          versions={workspace.versions}
+        />
       </Page>
     );
   }

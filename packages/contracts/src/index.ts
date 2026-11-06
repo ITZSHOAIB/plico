@@ -1,4 +1,5 @@
 export type {
+  ArtifactDiff,
   ArtifactFile,
   ArtifactSnapshot,
   ArtifactSnapshotDetail,

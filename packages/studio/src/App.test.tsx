@@ -165,6 +165,30 @@ describe("artifacts", () => {
     click(/notes\.txt/);
     expect(screen.getByText("plain note")).toBeTruthy();
   });
+
+  it("compares artifact versions and exposes the exported file download", async () => {
+    const fetchMock = stubApi();
+    render(<App />);
+    await openRun();
+    click("Artifacts");
+    await screen.findByText(/Artifact Workspace/);
+    click(/summary\.md/);
+
+    const download = screen.getByRole("link", { name: "Download summary.md" });
+    expect(download.getAttribute("href")).toBe(
+      "/v1/runs/run-1234567890ab/workspace/exports?path=summary.md",
+    );
+
+    click("Compare versions");
+
+    expect(await screen.findByRole("region", { name: "Version diff" })).toBeTruthy();
+    expect(screen.getByText(/-# Previous summary/)).toBeTruthy();
+    expect(screen.getByText(/\+# Weekly summary/)).toBeTruthy();
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/v1/runs/run-1234567890ab/workspace/diffs?path=summary.md&fromVersion=1&toVersion=2",
+      undefined,
+    );
+  });
 });
 
 describe("evals", () => {

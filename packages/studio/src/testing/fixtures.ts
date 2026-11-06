@@ -96,6 +96,13 @@ const workspace: ArtifactWorkspace = {
     {
       path: "summary.md",
       mimeType: "text/markdown",
+      version: 1,
+      contentHash: "summary-hash-old",
+      createdAt: run.startedAt,
+    },
+    {
+      path: "summary.md",
+      mimeType: "text/markdown",
       version: 2,
       contentHash: "summary-hash",
       createdAt: run.startedAt,
@@ -185,6 +192,13 @@ export function stubApi(
     if (path === `/v1/runs/${run.runId}/cancel` && method === "POST")
       return json({ result: options.cancelResult ?? "accepted" });
     if (path === `/v1/runs/${run.runId}/workspace`) return json(workspace);
+    if (path === `/v1/runs/${run.runId}/workspace/diffs?path=summary.md&fromVersion=1&toVersion=2`)
+      return json({
+        path: "summary.md",
+        fromVersion: 1,
+        toVersion: 2,
+        diff: "--- summary.md\n+++ summary.md\n-# Previous summary\n+# Weekly summary\n",
+      });
     if (path === "/v1/eval" && method === "POST") {
       state.report = evalReport;
       return json(evalReport);
