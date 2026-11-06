@@ -6,7 +6,6 @@ import {
   getProjectRelativePaths,
   REQUIRED_PROJECT_DIRECTORIES,
 } from "./layout.js";
-import { validateToolNames } from "./tool-name-validation.js";
 import type { LoadedProject, ValidationIssue, ValidationResult } from "./types.js";
 
 export async function validateProject(root: string): Promise<ValidationResult> {
@@ -102,8 +101,6 @@ export async function validateProject(root: string): Promise<ValidationResult> {
       severity: "error",
     });
   }
-
-  errors.push(...(await validateToolNames(root)));
 
   return {
     ok: errors.length === 0,

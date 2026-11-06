@@ -13,8 +13,7 @@ export async function checkProject(projectRoot: string): Promise<ProjectCheck> {
 
   if (!validation.ok || !validation.project) {
     for (const issue of validation.errors ?? []) {
-      const subsystem = issue.path.startsWith("tools/") ? "tools.discovery" : "project.structure";
-      diagnostics.push(makeDiagnostic("error", subsystem, issue.message, issue.path));
+      diagnostics.push(makeDiagnostic("error", "project.structure", issue.message, issue.path));
     }
     for (const issue of validation.warnings ?? []) {
       diagnostics.push(makeDiagnostic("warning", "project.structure", issue.message, issue.path));
