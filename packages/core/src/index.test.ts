@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rmdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -208,13 +208,14 @@ describe("validateProject", () => {
     expect(result.project?.config.name).toBe("Internal Ops Agent");
   });
 
-  it("rejects tool modules that declare the same name", async () => {
+  it("rejects tool modules that declare the same shorthand name", async () => {
     const root = await mkdtemp(join(tmpdir(), "plico-core-"));
     await writeValidProject(root);
     const tool = (name: string) =>
       [
+        `const name = "${name}";`,
         "export default {",
-        `  name: "${name}",`,
+        "  name,",
         '  description: "A test tool.",',
         '  inputSchema: { type: "object" },',
         "  capabilities: [],",
@@ -234,6 +235,91 @@ describe("validateProject", () => {
       message: 'Duplicate tool name "lookup" declared in tools/a.tool.ts and tools/b.tool.ts',
       severity: "error",
     });
+  });
+
+  it("reports a tools path that is a file without aborting validation", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-core-"));
+    await writeValidProject(root);
+    await rmdir(join(root, "tools"));
+    await writeFile(join(root, "tools"), "not a directory");
+
+    const result = await validateProject(root);
+
+    expect(result.errors).toContainEqual({
+      path: "tools",
+      message: "Expected tools to be a directory",
+      severity: "error",
+    });
+  });
+
+  it("uses a later object spread when checking effective tool names", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-core-"));
+    await writeValidProject(root);
+    await writeFile(
+      join(root, "tools", "a.tool.ts"),
+      [
+        'const overrides = { name: "resolve" };',
+        "export default {",
+        '  name: "lookup",',
+        "  ...overrides,",
+        '  description: "A test tool.",',
+        '  inputSchema: { type: "object" },',
+        "  capabilities: [],",
+        "  approval: { required: false },",
+        "  handler: async () => ({}),",
+        "} as const;",
+        "",
+      ].join("\n"),
+    );
+    await writeFile(
+      join(root, "tools", "b.tool.ts"),
+      [
+        "export default {",
+        '  name: "lookup",',
+        '  description: "A test tool.",',
+        '  inputSchema: { type: "object" },',
+        "  capabilities: [],",
+        "  approval: { required: false },",
+        "  handler: async () => ({}),",
+        "} as const;",
+        "",
+      ].join("\n"),
+    );
+
+    const result = await validateProject(root);
+
+    expect(result.errors.some((issue) => issue.message.includes("Duplicate tool name"))).toBe(
+      false,
+    );
+  });
+
+  it("finishes validation when tool object and name aliases are circular", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-core-"));
+    await writeValidProject(root);
+    await writeFile(
+      join(root, "tools", "object-cycle.tool.ts"),
+      ["const tool = otherTool;", "const otherTool = tool;", "export default tool;", ""].join("\n"),
+    );
+    await writeFile(
+      join(root, "tools", "name-cycle.tool.ts"),
+      [
+        "const name = otherName;",
+        "const otherName = name;",
+        "export default {",
+        "  name,",
+        '  description: "A test tool.",',
+        '  inputSchema: { type: "object" },',
+        "  capabilities: [],",
+        "  approval: { required: false },",
+        "  handler: async () => ({}),",
+        "} as const;",
+        "",
+      ].join("\n"),
+    );
+
+    const result = await validateProject(root);
+
+    expect(result.project?.config.name).toBe("Internal Ops Agent");
   });
 
   it("rejects a project without plico.config.ts", async () => {
