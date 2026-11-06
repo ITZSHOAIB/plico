@@ -102,8 +102,9 @@ describe("checkReadiness", () => {
     const root = await scaffold();
     const tool = (name: string) =>
       [
+        `const name = "${name}";`,
         "export default {",
-        `  name: "${name}",`,
+        "  name,",
         '  description: "A test tool.",',
         '  inputSchema: { type: "object" },',
         "  capabilities: [],",
