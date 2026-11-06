@@ -1,7 +1,9 @@
 export type {
+  ArtifactDiff,
   ArtifactFile,
   ArtifactSnapshot,
   ArtifactSnapshotDetail,
+  ArtifactVersion,
   ArtifactWorkspace,
   ComposedInstructions,
   EvalCaseResult,

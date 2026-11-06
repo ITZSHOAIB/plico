@@ -165,6 +165,60 @@ describe("artifacts", () => {
     click(/notes\.txt/);
     expect(screen.getByText("plain note")).toBeTruthy();
   });
+
+  it("compares artifact versions and exposes the exported file download", async () => {
+    const fetchMock = stubApi();
+    render(<App />);
+    await openRun();
+    click("Artifacts");
+    await screen.findByText(/Artifact Workspace/);
+    click(/summary\.md/);
+
+    const download = screen.getByRole("link", { name: "Download summary.md" });
+    expect(download.getAttribute("href")).toBe(
+      "/v1/runs/run-1234567890ab/workspace/exports?path=summary.md",
+    );
+
+    click("Compare versions");
+
+    expect(await screen.findByRole("region", { name: "Version diff" })).toBeTruthy();
+    expect(screen.getByText(/-# Previous summary/)).toBeTruthy();
+    expect(screen.getByText(/\+# Weekly summary/)).toBeTruthy();
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/v1/runs/run-1234567890ab/workspace/diffs?path=summary.md&fromVersion=1&toVersion=2",
+      undefined,
+    );
+  });
+
+  it("does not offer current version comparisons from a snapshot preview", async () => {
+    await openArtifacts();
+    click(/snapshot-1/);
+    await screen.findByRole("button", { name: /summary\.md/ });
+    click(/summary\.md/);
+
+    expect(screen.queryByRole("button", { name: "Compare versions" })).toBeNull();
+  });
+
+  it.each([
+    [413, "Artifact versions are too large to compare."],
+    [415, "This artifact type cannot be compared."],
+  ])("shows the server's diff error for status %s", async (status, message) => {
+    stubApi(undefined, {
+      diffError: {
+        status,
+        code: status === 413 ? "artifact.diff_too_large" : "artifact.diff_unsupported_media_type",
+        message,
+      },
+    });
+    render(<App />);
+    await openRun();
+    click("Artifacts");
+    await screen.findByText(/Artifact Workspace/);
+    click(/summary\.md/);
+    click("Compare versions");
+
+    expect(await screen.findByText(message)).toBeTruthy();
+  });
 });
 
 describe("evals", () => {

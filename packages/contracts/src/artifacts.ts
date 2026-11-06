@@ -15,6 +15,13 @@ export interface ArtifactVersion {
   createdAt: string;
 }
 
+export interface ArtifactDiff {
+  path: string;
+  fromVersion: number;
+  toVersion: number;
+  diff: string;
+}
+
 export interface ArtifactSnapshot {
   snapshotId: string;
   fileCount: number;
