@@ -261,8 +261,8 @@ it("keeps the /v1 response shapes stable", async () => {
     "GET /v1/runs/:id/events": await shape(`${runPath}/events`),
     "GET /v1/runs/:id/workspace": await shape(`${runPath}/workspace`),
     "GET /v1/runs/:id/workspace/files/:path": await shape(`${runPath}/workspace/files/a.md`),
-    "GET /v1/runs/:id/workspace/files/:path/diff": await shape(
-      `${runPath}/workspace/files/a.md/diff?fromVersion=1&toVersion=2`,
+    "GET /v1/runs/:id/workspace/diffs": await shape(
+      `${runPath}/workspace/diffs?path=a.md&fromVersion=1&toVersion=2`,
     ),
     "GET /v1/runs/:id/workspace/snapshots/:id": await shape(
       `${runPath}/workspace/snapshots/${workspace.snapshots[0]?.snapshotId}`,

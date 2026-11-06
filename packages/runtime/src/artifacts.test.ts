@@ -7,6 +7,7 @@ import {
   buildArtifactWorkspace,
   createSqliteEventStore,
   readArtifactSnapshot,
+  readArtifactVersion,
   runProject,
 } from "./index.js";
 
@@ -83,6 +84,32 @@ describe("artifact workspace", () => {
       },
     ]);
     expect(readArtifactSnapshot(result.events, "missing")).toBeUndefined();
+  });
+
+  it("uses workspace version rules when a write receipt omits its version", async () => {
+    const result = await runTwoWrites();
+    const mixedEvents = result.events.map((event) => {
+      if (
+        event.type !== "artifact.file.written" ||
+        event.payload.path !== "a.md" ||
+        event.payload.version !== 1
+      ) {
+        return event;
+      }
+      const { version: _version, ...payload } = event.payload;
+      return { ...event, payload };
+    });
+
+    const workspace = buildArtifactWorkspace(result.runId, mixedEvents);
+
+    expect(
+      workspace?.versions.filter((version) => version.path === "a.md").map((v) => v.version),
+    ).toEqual([1, 2]);
+    expect(readArtifactVersion(mixedEvents, "a.md", 2)).toMatchObject({
+      path: "a.md",
+      content: "two",
+      version: 2,
+    });
   });
 
   it("persists content-addressed versions and replays their ordered history", async () => {

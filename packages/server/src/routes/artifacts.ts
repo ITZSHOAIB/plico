@@ -1,4 +1,9 @@
-import { buildArtifactWorkspace, type PlicoEvent, readArtifactSnapshot } from "@plico/runtime";
+import {
+  buildArtifactWorkspace,
+  type PlicoEvent,
+  readArtifactSnapshot,
+  readArtifactVersion,
+} from "@plico/runtime";
 import { createTwoFilesPatch } from "diff";
 import { HttpError } from "../errors.js";
 import { sendJson } from "../responses.js";
@@ -29,16 +34,20 @@ async function readWorkspace(context: RouteContext, runId: string) {
 export const artifactRoutes: Route[] = [
   {
     method: "GET",
-    pattern: /^\/v1\/runs\/([^/]+)\/workspace\/files\/(.+)\/diff$/,
+    pattern: /^\/v1\/runs\/([^/]+)\/workspace\/diffs$/,
     handler: async (context) => {
-      const [runId = "", path = ""] = context.params;
-      const fromVersion = readVersionQuery(context.url, "fromVersion");
-      const toVersion = readVersionQuery(context.url, "toVersion");
+      const [runId = ""] = context.params;
       const events = await readRunEvents(context, runId);
       const workspace = requireWorkspace(runId, events);
+      const path = context.url.searchParams.get("path");
+      if (!path) {
+        throw new HttpError(400, "artifact.path_required", "A path is required to diff artifacts.");
+      }
       if (!workspace.files.some((file) => file.path === path)) {
         throw new HttpError(404, "artifact.not_found", `Unknown artifact file: ${path}`);
       }
+      const fromVersion = readVersionQuery(context.url, "fromVersion");
+      const toVersion = readVersionQuery(context.url, "toVersion");
       const from = readArtifactVersion(events, path, fromVersion);
       const to = readArtifactVersion(events, path, toVersion);
       if (!from || !to) {
@@ -46,6 +55,23 @@ export const artifactRoutes: Route[] = [
           404,
           "artifact.version_not_found",
           `Unknown artifact version for ${path}: ${!from ? fromVersion : toVersion}`,
+        );
+      }
+      if (!isDiffableMimeType(from.mimeType) || !isDiffableMimeType(to.mimeType)) {
+        throw new HttpError(
+          415,
+          "artifact.diff_unsupported_media_type",
+          "Artifact diffs support text, JSON, and XML content.",
+        );
+      }
+      if (
+        Buffer.byteLength(from.content, "utf8") > maxDiffContentBytes ||
+        Buffer.byteLength(to.content, "utf8") > maxDiffContentBytes
+      ) {
+        throw new HttpError(
+          413,
+          "artifact.diff_too_large",
+          `Artifact versions must be at most ${maxDiffContentBytes} bytes to diff.`,
         );
       }
 
@@ -110,16 +136,15 @@ function readVersionQuery(url: URL, name: "fromVersion" | "toVersion"): number {
   return Number(value);
 }
 
-function readArtifactVersion(
-  events: PlicoEvent[],
-  path: string,
-  targetVersion: number,
-): { content: string } | undefined {
-  let currentVersion = 0;
-  for (const event of events) {
-    if (event.type !== "artifact.file.written" || event.payload.path !== path) continue;
-    currentVersion = event.payload.version ?? currentVersion + 1;
-    if (currentVersion === targetVersion) return { content: event.payload.content };
-  }
-  return undefined;
+const maxDiffContentBytes = 1024 * 1024;
+
+function isDiffableMimeType(mimeType: string): boolean {
+  const mediaType = mimeType.split(";", 1)[0]?.trim().toLowerCase() ?? "";
+  return (
+    mediaType.startsWith("text/") ||
+    mediaType === "application/json" ||
+    mediaType.endsWith("+json") ||
+    mediaType === "application/xml" ||
+    mediaType.endsWith("+xml")
+  );
 }

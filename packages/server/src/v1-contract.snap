@@ -312,7 +312,7 @@
     "path": "string",
     "version": "number"
   },
-  "GET /v1/runs/:id/workspace/files/:path/diff": {
+  "GET /v1/runs/:id/workspace/diffs": {
     "diff": "string",
     "fromVersion": "number",
     "path": "string",

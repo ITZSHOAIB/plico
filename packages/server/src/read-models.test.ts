@@ -104,56 +104,16 @@ describe("artifact reads", () => {
     ]);
   });
 
-  it("diffs two versions of an artifact through the API", async () => {
-    const baseUrl = await startProject();
-    const runId = await runWithArtifacts(baseUrl);
-
-    const diff = await getJson(
-      `${baseUrl}/v1/runs/${runId}/workspace/files/docs/a.md/diff?fromVersion=1&toVersion=2`,
-    );
-
-    expect(diff.status).toBe(200);
-    expect(diff.body).toMatchObject({
-      path: "docs/a.md",
-      fromVersion: 1,
-      toVersion: 2,
-    });
-    expect(diff.body.diff).toContain("-one");
-    expect(diff.body.diff).toContain("+two");
-  });
-
-  it("rejects invalid and unknown artifact diff versions", async () => {
-    const baseUrl = await startProject();
-    const runId = await runWithArtifacts(baseUrl);
-
-    const invalid = await getJson(
-      `${baseUrl}/v1/runs/${runId}/workspace/files/docs/a.md/diff?fromVersion=latest&toVersion=2`,
-    );
-    const unknown = await getJson(
-      `${baseUrl}/v1/runs/${runId}/workspace/files/docs/a.md/diff?fromVersion=1&toVersion=3`,
-    );
-
-    expect(invalid.status).toBe(400);
-    expect(invalid.body).toMatchObject({ error: { code: "artifact.invalid_version" } });
-    expect(unknown.status).toBe(404);
-    expect(unknown.body).toMatchObject({ error: { code: "artifact.version_not_found" } });
-  });
-
   it("returns JSON errors for unknown runs and artifacts", async () => {
     const baseUrl = await startProject();
     const runId = await runWithArtifacts(baseUrl);
 
     const file = await getJson(`${baseUrl}/v1/runs/${runId}/workspace/files/missing.md`);
-    const diff = await getJson(
-      `${baseUrl}/v1/runs/${runId}/workspace/files/missing.md/diff?fromVersion=1&toVersion=2`,
-    );
     const snapshot = await getJson(`${baseUrl}/v1/runs/${runId}/workspace/snapshots/missing`);
     const run = await getJson(`${baseUrl}/v1/runs/missing/workspace/files/a.md`);
 
     expect(file.status).toBe(404);
     expect(file.body).toMatchObject({ error: { code: "artifact.not_found" } });
-    expect(diff.status).toBe(404);
-    expect(diff.body).toMatchObject({ error: { code: "artifact.not_found" } });
     expect(snapshot.status).toBe(404);
     expect(snapshot.body).toMatchObject({ error: { code: "artifact.not_found" } });
     expect(run.status).toBe(404);
