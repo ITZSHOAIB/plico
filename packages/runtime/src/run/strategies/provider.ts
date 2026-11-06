@@ -5,7 +5,6 @@ import { RunCancelled, type RunContext } from "../../engine/index.js";
 import { ModelProviderError, RuntimeDiagnosticError } from "../../errors.js";
 import type { InMemoryEventLog } from "../../events.js";
 import { approvalTimeoutMs, decideApproval } from "../../policy/approval.js";
-import { validateJsonSchemaSubset } from "../../tools/schema.js";
 import type { DeclaredTool, ModelProvider, ModelRequest } from "../../types/index.js";
 import { nameToolStep } from "../tracing.js";
 import { awaitApproval } from "./approval.js";
@@ -144,7 +143,7 @@ export async function runProviderBackedRun(
         arguments: toolCall.arguments,
       });
 
-      const validationError = validateJsonSchemaSubset(toolCall.arguments, tool.inputSchema);
+      const validationError = await tool.validateInput(toolCall.arguments);
       if (validationError) {
         throw new RuntimeDiagnosticError({
           phase: "tool.validation",

@@ -1,10 +1,12 @@
+import type { JsonValue } from "@plico/contracts";
+import type { ZodTypeAny } from "zod";
+
 export interface JsonSchemaSubset {
-  type: "object" | "string" | "number" | "integer" | "boolean" | "array";
-  properties?: Record<string, JsonSchemaSubset>;
-  required?: string[];
-  additionalProperties?: boolean;
-  items?: JsonSchemaSubset;
+  [keyword: string]: JsonValue | undefined;
 }
+
+export type JsonSchema = JsonSchemaSubset | boolean;
+export type ToolInputSchema = JsonSchema | ZodTypeAny;
 
 export interface ToolApprovalPolicy {
   required: boolean;
@@ -21,12 +23,17 @@ export interface ToolHandlerContext {
   idempotencyKey: string;
 }
 
-export interface DeclaredTool {
-  source: string;
+export interface ToolDefinition {
   name: string;
   description: string;
-  inputSchema: JsonSchemaSubset;
+  inputSchema: ToolInputSchema;
   capabilities: string[];
   approval: ToolApprovalPolicy;
   handler: (input: unknown, context: ToolHandlerContext) => unknown | Promise<unknown>;
+}
+
+export interface DeclaredTool extends Omit<ToolDefinition, "inputSchema"> {
+  source: string;
+  inputSchema: JsonSchema;
+  validateInput(input: unknown): Promise<string | undefined>;
 }

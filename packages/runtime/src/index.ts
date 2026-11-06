@@ -52,6 +52,7 @@ export type {
   EvalReport,
   EvalSummary,
   EventStore,
+  JsonSchema,
   JsonSchemaSubset,
   ModelChunk,
   ModelProvider,
@@ -70,5 +71,7 @@ export type {
   RunStatus,
   RunSummary,
   ToolApprovalPolicy,
+  ToolDefinition,
   ToolHandlerContext,
+  ToolInputSchema,
 } from "./types/index.js";

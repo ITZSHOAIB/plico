@@ -19,7 +19,11 @@
     "@plico/contracts": "workspace:*",
     "@plico/core": "workspace:*",
     "ai": "^7.0.162",
-    "tsx": "4.22.4"
+    "ajv": "8.17.1",
+    "ajv-formats": "3.0.1",
+    "tsx": "4.22.4",
+    "zod": "3.25.76",
+    "zod-to-json-schema": "3.25.2"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --noEmit",

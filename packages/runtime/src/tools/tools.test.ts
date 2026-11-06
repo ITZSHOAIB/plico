@@ -34,6 +34,62 @@ async function scaffold(): Promise<string> {
 }
 
 describe("discoverTools", () => {
+  it("normalizes Zod inputs to JSON Schema and validates with the declared schema", async () => {
+    const root = await scaffold();
+    await writeFile(join(root, "package.json"), '{"type":"module"}\n');
+    await symlink(
+      fileURLToPath(new URL("../../node_modules", import.meta.url)),
+      join(root, "node_modules"),
+      "junction",
+    );
+    await writeFile(
+      join(root, "tools", "zod.tool.ts"),
+      [
+        'import { z } from "zod";',
+        "export default {",
+        '  name: "zod_input",',
+        '  description: "A Zod input tool.",',
+        "  inputSchema: z.object({ title: z.string().min(3) }),",
+        "  capabilities: [],",
+        "  approval: { required: false },",
+        "  handler: async (input) => input,",
+        "};",
+      ].join("\n"),
+    );
+
+    const [tool] = await discoverTools(await loadProject(root));
+
+    expect(tool?.inputSchema).toMatchObject({
+      type: "object",
+      properties: { title: { type: "string", minLength: 3 } },
+      required: ["title"],
+    });
+    await expect(tool?.validateInput({ title: "no" })).resolves.toMatch(/title/i);
+    await expect(tool?.validateInput({ title: "valid" })).resolves.toBeUndefined();
+  });
+
+  it("validates keywords from full JSON Schema", async () => {
+    const root = await scaffold();
+    await writeFile(
+      join(root, "tools", "json-schema.tool.ts"),
+      [
+        "export default {",
+        '  name: "json_schema_input",',
+        '  description: "A JSON Schema input tool.",',
+        '  inputSchema: { type: "object", properties: { title: { type: "string", minLength: 3 } }, required: ["title"], additionalProperties: false },',
+        "  capabilities: [],",
+        "  approval: { required: false },",
+        "  handler: async (input) => input,",
+        "};",
+      ].join("\n"),
+    );
+
+    const [tool] = await discoverTools(await loadProject(root));
+
+    await expect(tool?.validateInput({ title: "no" })).resolves.toMatch(/title/i);
+    await expect(tool?.validateInput({ title: "valid" })).resolves.toBeUndefined();
+  });
+
   it("loads a TypeScript tool and sibling import in plain Node without project package.json", async () => {
     const root = await scaffold();
     await writeFile(join(root, "tools", "helper.ts"), 'export const toolName = "plain_node";\n');

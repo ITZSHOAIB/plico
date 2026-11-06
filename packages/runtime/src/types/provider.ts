@@ -1,5 +1,5 @@
 import type { JsonValue, ModelToolCall } from "@plico/contracts";
-import type { JsonSchemaSubset } from "./tools.js";
+import type { JsonSchema } from "./tools.js";
 
 export interface ProviderMessage {
   role: "system" | "user" | "assistant" | "tool";
@@ -18,7 +18,7 @@ export interface ModelRequest {
   tools?: Array<{
     name: string;
     description: string;
-    inputSchema: JsonSchemaSubset;
+    inputSchema: JsonSchema;
   }>;
 }
 

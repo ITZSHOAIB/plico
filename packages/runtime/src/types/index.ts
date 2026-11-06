@@ -34,9 +34,12 @@ export type { DryRunScriptStep } from "./script.js";
 export type { CreateSqliteEventStoreOptions, EventStore } from "./store.js";
 export type {
   DeclaredTool,
+  JsonSchema,
   JsonSchemaSubset,
   ToolApprovalPolicy,
+  ToolDefinition,
   ToolHandlerContext,
+  ToolInputSchema,
 } from "./tools.js";
 export type {
   ArtifactFile,

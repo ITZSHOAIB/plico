@@ -3,7 +3,6 @@ import type { RunContext } from "../../engine/index.js";
 import { RuntimeDiagnosticError } from "../../errors.js";
 import type { InMemoryEventLog } from "../../events.js";
 import { approvalTimeoutMs, decideApproval } from "../../policy/approval.js";
-import { validateJsonSchemaSubset } from "../../tools/schema.js";
 import type { DeclaredTool, DryRunScriptStep } from "../../types/index.js";
 import { nameToolStep } from "../tracing.js";
 import { awaitApproval } from "./approval.js";
@@ -65,7 +64,7 @@ export async function runScriptedDryRun(
       toolName: tool.name,
       arguments: step.arguments,
     });
-    const validationError = validateJsonSchemaSubset(step.arguments, tool.inputSchema);
+    const validationError = await tool.validateInput(step.arguments);
     if (validationError) {
       throw new RuntimeDiagnosticError({
         phase: "tool.validation",

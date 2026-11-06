@@ -22,6 +22,9 @@ describe("create-plico main", () => {
     expect(JSON.parse(await readFile(join(root, "package.json"), "utf8"))).toMatchObject({
       type: "module",
     });
+    expect(await readFile(join(root, "tools", "readme.md"), "utf8")).toContain(
+      "JSON Schema object or a Zod schema",
+    );
 
     logSpy.mockRestore();
   });
