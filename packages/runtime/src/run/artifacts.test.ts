@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { promisify } from "node:util";
-import { expect, it } from "vitest";
+import { expect, it, vi } from "vitest";
 import {
   createSqliteEngine,
   createSqliteEventStore,
@@ -123,6 +123,134 @@ it("keeps artifact reads and versions in a thread workspace across runs", async 
     content: "First version",
     files: [{ path: "reports/daily.txt", version: 1, sizeBytes: 13 }],
   });
+});
+
+it("does not load thread artifact history for a tool that does not use artifacts", async () => {
+  const root = await mkdtemp(join(tmpdir(), "plico-tool-no-artifacts-"));
+  for (const dir of ["skills", "tools", "evals", "artifacts", "memory"])
+    await mkdir(join(root, dir));
+  await writeFile(
+    join(root, "plico.config.ts"),
+    'export default { schemaVersion: 1, name: "Demo" };',
+  );
+  await writeFile(join(root, "agent.md"), "# Demo");
+  await writeFile(
+    join(root, "tools", "plain.tool.ts"),
+    `export default {
+    name: "plain", description: "Ignore artifacts",
+    inputSchema: { type: "object", properties: {}, additionalProperties: false },
+    capabilities: [], approval: { required: false }, handler: async () => "ok",
+  };`,
+  );
+  const databasePath = join(root, "state.sqlite");
+  const baseStore = createSqliteEventStore({ databasePath });
+  const thread = await createSqliteThreadStore({ databasePath }).createThread();
+  const getThreadRunEvents = vi.spyOn(baseStore, "getThreadRunEvents");
+
+  const run = await runProject(root, {
+    runId: "run-tool-no-artifacts",
+    threadId: thread.id,
+    eventStore: baseStore,
+    script: [{ type: "tool.call", toolName: "plain", arguments: {} }],
+  });
+
+  expect(run.status).toBe("completed");
+  expect(getThreadRunEvents).not.toHaveBeenCalled();
+});
+
+it.each([
+  ["traversal path", "../x", "Uint8Array.from([1])"],
+  ["oversized bytes", "large.bin", "new Uint8Array(1024 * 1024 + 1)"],
+])("rejects artifact writes with a %s without appending a write event", async (_label, path, contentExpression) => {
+  const root = await mkdtemp(join(tmpdir(), "plico-invalid-artifact-"));
+  for (const dir of ["skills", "tools", "evals", "artifacts", "memory"])
+    await mkdir(join(root, dir));
+  await writeFile(
+    join(root, "plico.config.ts"),
+    'export default { schemaVersion: 1, name: "Demo" };',
+  );
+  await writeFile(join(root, "agent.md"), "# Demo");
+  await writeFile(
+    join(root, "tools", "invalid.tool.ts"),
+    `export default {
+    name: "invalid", description: "Try invalid write",
+    inputSchema: { type: "object", properties: {}, additionalProperties: false },
+    capabilities: [], approval: { required: false },
+    handler: async (_input, { artifacts }) => artifacts.write(${JSON.stringify(path)}, ${contentExpression}),
+  };`,
+  );
+  const run = await runProject(root, {
+    runId: `run-invalid-${String(path).replace(/[^a-z]/g, "")}`,
+    script: [{ type: "tool.call", toolName: "invalid", arguments: {} }],
+  });
+
+  expect(run.status).toBe("failed");
+  expect(run.events.some((event) => event.type === "artifact.file.written")).toBe(false);
+  expect(run.events.find((event) => event.type === "run.error")).toMatchObject({
+    payload: { message: expect.stringMatching(/artifact path|artifact content.*1 MiB/i) },
+  });
+});
+
+it("encodes a Uint8Array returned by a tool as a tagged artifact value", async () => {
+  const root = await mkdtemp(join(tmpdir(), "plico-tool-binary-result-"));
+  for (const dir of ["skills", "tools", "evals", "artifacts", "memory"])
+    await mkdir(join(root, dir));
+  await writeFile(
+    join(root, "plico.config.ts"),
+    'export default { schemaVersion: 1, name: "Demo" };',
+  );
+  await writeFile(join(root, "agent.md"), "# Demo");
+  await writeFile(
+    join(root, "tools", "binary.tool.ts"),
+    `export default {
+    name: "binary", description: "Return bytes",
+    inputSchema: { type: "object", properties: {}, additionalProperties: false },
+    capabilities: [], approval: { required: false }, handler: async () => Uint8Array.from([0, 255, 10]),
+  };`,
+  );
+  const run = await runProject(root, {
+    runId: "run-binary-tool-result",
+    script: [{ type: "tool.call", toolName: "binary", arguments: {} }],
+  });
+  const result = run.events.find((event) => event.type === "tool.result");
+
+  expect(run.status).toBe("completed");
+  expect(result?.type === "tool.result" ? result.payload.result : undefined).toEqual({
+    encoding: "base64",
+    data: "AP8K",
+  });
+});
+
+it("discards staged writes when a tool fails after reading them", async () => {
+  const root = await mkdtemp(join(tmpdir(), "plico-tool-artifact-failure-"));
+  for (const dir of ["skills", "tools", "evals", "artifacts", "memory"])
+    await mkdir(join(root, dir));
+  await writeFile(
+    join(root, "plico.config.ts"),
+    'export default { schemaVersion: 1, name: "Demo" };',
+  );
+  await writeFile(join(root, "agent.md"), "# Demo");
+  await writeFile(
+    join(root, "tools", "fail.tool.ts"),
+    `export default {
+    name: "fail", description: "Fail after staged read",
+    inputSchema: { type: "object", properties: {}, additionalProperties: false },
+    capabilities: [], approval: { required: false },
+    handler: async (_input, { artifacts }) => {
+      await artifacts.write("reports/staged.txt", "visible inside step");
+      const read = await artifacts.read("reports/staged.txt");
+      if (read?.content !== "visible inside step") throw new Error("staged write was not readable");
+      throw new Error("stop after read");
+    },
+  };`,
+  );
+  const run = await runProject(root, {
+    runId: "run-tool-artifact-failure",
+    script: [{ type: "tool.call", toolName: "fail", arguments: {} }],
+  });
+
+  expect(run.status).toBe("failed");
+  expect(run.events.some((event) => event.type === "artifact.file.written")).toBe(false);
 });
 
 it("replays staged artifact writes after a crash without rerunning the completed tool step", {

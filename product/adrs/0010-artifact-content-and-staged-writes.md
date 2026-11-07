@@ -23,6 +23,7 @@ The tool context offers three operations: `read(path)` returns the current file 
 Artifact writes made through a tool context are buffered for the duration of its durable tool step. The durable step records the tool result and the buffered write receipts together. After the step result is recorded, Plico appends the `tool.result` event followed by the staged `artifact.file.written` events. Each write receipt includes the path, MIME type, content hash, content representation, and version.
 
 On recovery, the engine returns the recorded step result without invoking the handler again. The recorded buffered writes are then appended in the same order and with the same payloads, so replay does not duplicate a write or depend on the handler's current output. Reads and lists within the tool context include earlier committed writes and writes staged earlier in the same step.
+If a handler fails or is cancelled, its staged writes are discarded; the handler may have read those staged values before failing.
 
 ## Consequences
 

@@ -14,6 +14,9 @@ import {
 } from "../artifacts.js";
 import type { ToolArtifactContext, ToolArtifactFile } from "../types/index.js";
 
+const maxArtifactContentBytes = 1024 * 1024;
+const maxArtifactPathLength = 1024;
+
 export interface StagedArtifactWrite {
   path: string;
   content: ArtifactContent;
@@ -48,6 +51,7 @@ export function createStagedArtifactContext(
       return { ...file, content: decodeArtifactContent(file.content) };
     },
     async write(path, content, options): Promise<{ path: string; version: number }> {
+      validateArtifactWrite(path, content);
       const encoded = encodeArtifactContent(content);
       const file: ArtifactFile = {
         path,
@@ -79,6 +83,26 @@ export function createStagedArtifactContext(
     workspaceCreated: () => initialWorkspace === undefined && writesList.length > 0,
     workspaceId,
   };
+}
+
+function validateArtifactWrite(path: string, content: string | Uint8Array): void {
+  const segments = path.split(/[\\/]/);
+  if (
+    path.length === 0 ||
+    path.length > maxArtifactPathLength ||
+    path.startsWith("/") ||
+    path.startsWith("\\") ||
+    /^[a-zA-Z]:/.test(path) ||
+    segments.some((segment) => segment === ".." || segment === "")
+  ) {
+    throw new Error(
+      `Invalid artifact path: expected a non-empty relative path without '..' and at most ${maxArtifactPathLength} characters.`,
+    );
+  }
+  const sizeBytes =
+    typeof content === "string" ? Buffer.byteLength(content, "utf8") : content.byteLength;
+  if (sizeBytes > maxArtifactContentBytes)
+    throw new Error("Artifact content exceeds the 1 MiB write limit.");
 }
 
 export function artifactWriteEventPayload(

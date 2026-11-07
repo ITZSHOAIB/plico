@@ -49,6 +49,9 @@ text or `Uint8Array` content and are staged with the durable tool step, so a
 recovered run reuses its recorded write rather than executing it twice. Plico
 stores content bytes once per SHA-256 hash in SQLite; text remains readable as
 text, and binary event content uses a tagged base64 value on JSON surfaces.
+Write paths must be relative, contain no `..`, and be at most 1,024 characters;
+each write is limited to 1 MiB. A `Uint8Array` returned from a tool is encoded
+as tagged base64 in its result event.
 Workspace responses expose the latest files and an ordered version receipt
 history for each run.
 Compare two writes with

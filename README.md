@@ -100,8 +100,11 @@ text or `Uint8Array` content, `artifacts.read(path)` to read the current file,
 and `artifacts.list()` to get current file metadata. Reads return text as a
 string and binary content as a `Uint8Array`; list results include byte size,
 MIME type, version, and content hash. Writes are recorded after the durable tool
-step completes, so recovery reuses the recorded write. Runs in a thread share
-its artifact workspace across turns; standalone runs use their own workspace.
+step completes, so recovery reuses the recorded write. Paths must be relative,
+must not contain `..`, and are limited to 1,024 characters; each write is limited
+to 1 MiB. A `Uint8Array` returned as the tool result is encoded as tagged base64
+in the event log. Runs in a thread share its artifact workspace across turns;
+standalone runs use their own workspace.
 
 Persist the smoke run, list stored runs, replay events, and start the native API server with Studio:
 
