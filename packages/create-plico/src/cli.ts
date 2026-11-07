@@ -1,5 +1,6 @@
+#!/usr/bin/env node
 import { basename } from "node:path";
-import { pathToFileURL } from "node:url";
+import { isDirectRun } from "./direct-run.js";
 import { createInternalOpsScaffold } from "./index.js";
 import { defaultScaffoldPrompts, type ScaffoldPrompts } from "./prompts.js";
 
@@ -92,7 +93,7 @@ export async function main(
   }
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (isDirectRun(import.meta.url, process.argv[1])) {
   main(process.argv).then((code) => {
     process.exitCode = code;
   });

@@ -1,5 +1,5 @@
+#!/usr/bin/env node
 import { createRequire } from "node:module";
-import { pathToFileURL } from "node:url";
 import { cancelCommand } from "./commands/cancel.js";
 import { evalCommand } from "./commands/eval.js";
 import { eventsCommand } from "./commands/events.js";
@@ -9,6 +9,7 @@ import { runsCommand } from "./commands/runs.js";
 import { serveCommand } from "./commands/serve.js";
 import { usageCommand } from "./commands/usage.js";
 import { validateCommand } from "./commands/validate.js";
+import { isDirectRun } from "./direct-run.js";
 
 function readVersion(): string {
   const pkg = createRequire(import.meta.url)("../package.json") as { version: string };
@@ -51,7 +52,7 @@ export async function main(argv: string[]): Promise<number> {
   return command(argv.slice(3));
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (isDirectRun(import.meta.url, process.argv[1])) {
   main(process.argv).then((code) => {
     process.exitCode = code;
   });
