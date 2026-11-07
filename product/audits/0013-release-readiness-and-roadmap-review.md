@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-07
 **Question:** Are the open epics enough for Plico's first public release and for what Plico aims to be? What should be cut, added or reordered?
-**Status:** Proposal. No issue changes have been made from this audit.
+**Status:** Accepted 2026-11-07. All nine decisions are approved, with the upgrade policy (A5) as option (ii). Epics updated: #75, #76, #77, #78, #79, #80, #81, #82, #99, #141. New M2 epics: [#143](https://github.com/ITZSHOAIB/plico/issues/143) context compaction (N1), [#144](https://github.com/ITZSHOAIB/plico/issues/144) typed run input and output (N2), [#145](https://github.com/ITZSHOAIB/plico/issues/145) eval scorers (N3). "Needs a decision" labels below record the original proposal.
 
 ## Summary
 
