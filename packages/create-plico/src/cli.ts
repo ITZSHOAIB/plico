@@ -3,6 +3,7 @@ import { basename } from "node:path";
 import { isDirectRun } from "./direct-run.js";
 import { createInternalOpsScaffold } from "./index.js";
 import { defaultScaffoldPrompts, type ScaffoldPrompts } from "./prompts.js";
+import { readVersion, USAGE } from "./usage.js";
 
 function deriveProjectName(targetDir: string): string {
   const baseName = basename(targetDir).trim();
@@ -40,8 +41,26 @@ export async function main(
   argv: string[],
   prompts: ScaffoldPrompts = defaultScaffoldPrompts,
 ): Promise<number> {
-  const targetDir = argv[2];
-  const projectName = argv[3];
+  const args = argv.slice(2);
+
+  if (args.some((arg) => arg === "--help" || arg === "-h")) {
+    console.log(USAGE);
+    return 0;
+  }
+
+  if (args.some((arg) => arg === "--version" || arg === "-v")) {
+    console.log(readVersion());
+    return 0;
+  }
+
+  const unknownOption = args.find((arg) => arg.startsWith("-"));
+  if (unknownOption !== undefined) {
+    console.error(`Unknown option: ${unknownOption}`);
+    console.error(USAGE);
+    return 1;
+  }
+
+  const [targetDir, projectName] = args;
 
   if (targetDir) {
     try {
