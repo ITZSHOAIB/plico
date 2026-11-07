@@ -44,6 +44,7 @@ importers:
       '@plico/server':
         specifier: workspace:*
         version: link:../server
+    devDependencies:
       '@plico/studio':
         specifier: workspace:*
         version: link:../studio

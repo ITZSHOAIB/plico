@@ -60,7 +60,7 @@ function resolveStudioPath(): string {
   const studioPath = findStudioPath();
   if (studioPath === undefined) {
     throw new Error(
-      "Cannot resolve @plico/studio. Build it first with: pnpm --filter @plico/studio build",
+      "Cannot find the Studio assets. From a source checkout, build them with: pnpm --filter @plico/studio build",
     );
   }
 
