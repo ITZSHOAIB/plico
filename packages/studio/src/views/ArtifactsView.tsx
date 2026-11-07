@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { artifactExportUrl, fetchArtifactSnapshot } from "../api";
 import { ArtifactVersionReview } from "../components/ArtifactVersionReview";
 import { FilePreview } from "../components/FilePreview";
+import { formatRunId } from "../format-run-id";
 import type { ArtifactFile, ArtifactSnapshotDetail, ArtifactWorkspace, RunSummary } from "../types";
 import { Icon } from "../ui/Icon";
 import { EmptyState, listRowClass, Notice, Page } from "../ui/Page";
@@ -37,7 +38,9 @@ function FileRow({
         {"mimeType" in file && (
           <span className="shrink-0 text-caption text-faint">
             {file.mimeType} v{file.version}
-            {writerRunId ? ` · run ${writerRunId}` : ""}
+            {writerRunId && (
+              <span title={`Writing run ${writerRunId}`}> · run {formatRunId(writerRunId)}</span>
+            )}
           </span>
         )}
       </button>
@@ -177,7 +180,7 @@ export function ArtifactsView({
               onClick={() => {
                 const request = ++snapshotRequest.current;
                 setSnapshotError(null);
-                void fetchArtifactSnapshot(selectedRun.runId, item.snapshotId)
+                void fetchArtifactSnapshot(item.runId, item.snapshotId)
                   .then((result) => {
                     if (request === snapshotRequest.current) setSnapshot(result);
                   })

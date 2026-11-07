@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { fetchArtifactDiff } from "../api";
+import { formatRunId } from "../format-run-id";
 import type { ArtifactDiff, ArtifactVersion } from "../types";
 import { Button } from "../ui/Button";
 import { CodeBlock, Notice, sectionHeadingClass } from "../ui/Page";
@@ -64,8 +65,12 @@ export function ArtifactVersionReview({
             className="min-h-9 rounded-control border border-line bg-surface px-2 text-small text-fg"
           >
             {history.map((version) => (
-              <option key={version.version} value={version.version}>
-                v{version.version} · run {version.runId} · {version.createdAt}
+              <option
+                key={version.version}
+                value={version.version}
+                title={`Run ID ${version.runId}`}
+              >
+                v{version.version} · run {formatRunId(version.runId)} · {version.createdAt}
               </option>
             ))}
           </select>
@@ -78,8 +83,12 @@ export function ArtifactVersionReview({
             className="min-h-9 rounded-control border border-line bg-surface px-2 text-small text-fg"
           >
             {history.map((version) => (
-              <option key={version.version} value={version.version}>
-                v{version.version} · run {version.runId} · {version.createdAt}
+              <option
+                key={version.version}
+                value={version.version}
+                title={`Run ID ${version.runId}`}
+              >
+                v{version.version} · run {formatRunId(version.runId)} · {version.createdAt}
               </option>
             ))}
           </select>

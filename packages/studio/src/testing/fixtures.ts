@@ -128,11 +128,14 @@ const workspace: ArtifactWorkspace = {
       createdAt: run.startedAt,
     },
   ],
-  snapshots: [{ snapshotId: "snapshot-1", fileCount: 3, createdAt: run.startedAt }],
+  snapshots: [
+    { snapshotId: "snapshot-1", runId: run.runId, fileCount: 3, createdAt: run.startedAt },
+  ],
 };
 
 const snapshot: ArtifactSnapshotDetail = {
   snapshotId: "snapshot-1",
+  runId: run.runId,
   fileCount: workspace.files.length,
   createdAt: run.startedAt,
   files: workspace.files,

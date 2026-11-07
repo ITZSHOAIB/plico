@@ -17,6 +17,7 @@ it("opens a snapshot and previews its historical files", async () => {
     input === "/v1/runs/run-1234567890ab/workspace/snapshots/snapshot-1"
       ? json({
           snapshotId: "snapshot-1",
+          runId: "run-1234567890ab",
           fileCount: 1,
           createdAt: "2026-01-01",
           files: [{ path: "old.txt", content: "Past content", mimeType: "text/plain", version: 1 }],
@@ -44,7 +45,13 @@ it("shows the current workspace after returning from events", async () => {
   const original = required(fetchMock.getMockImplementation());
   fetchMock.mockImplementation(async (input, init) =>
     input === "/v1/runs/run-1234567890ab/workspace/snapshots/snapshot-1"
-      ? json({ snapshotId: "snapshot-1", fileCount: 0, createdAt: "2026-01-01", files: [] })
+      ? json({
+          snapshotId: "snapshot-1",
+          runId: "run-1234567890ab",
+          fileCount: 0,
+          createdAt: "2026-01-01",
+          files: [],
+        })
       : original(input, init),
   );
   render(<App />);
@@ -67,7 +74,13 @@ it("shows the current workspace when artifacts are reloaded from a snapshot", as
   const original = required(fetchMock.getMockImplementation());
   fetchMock.mockImplementation(async (input, init) =>
     input === "/v1/runs/run-1234567890ab/workspace/snapshots/snapshot-1"
-      ? json({ snapshotId: "snapshot-1", fileCount: 0, createdAt: "2026-01-01", files: [] })
+      ? json({
+          snapshotId: "snapshot-1",
+          runId: "run-1234567890ab",
+          fileCount: 0,
+          createdAt: "2026-01-01",
+          files: [],
+        })
       : original(input, init),
   );
   render(<App />);

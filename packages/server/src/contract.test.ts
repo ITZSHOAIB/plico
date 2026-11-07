@@ -261,6 +261,9 @@ it("keeps the /v1 response shapes stable", async () => {
     "GET /v1/threads": await shape("/v1/threads"),
     "GET /v1/threads/:id": await shape(threadPath),
     "GET /v1/threads/:id/workspace": await shape(`${threadPath}/workspace`),
+    "GET /v1/runs/:id/workspace (thread)": await shape(
+      `/v1/runs/${threadArtifactRun.runId}/workspace`,
+    ),
     "GET /v1/threads/:id/messages": await shape(`${threadPath}/messages`),
     "GET /v1/runs/:id/events (provider)": providerShapes,
     "GET /v1/runs/:id/events (approval)": approvalEvents

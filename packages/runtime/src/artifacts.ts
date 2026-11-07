@@ -92,6 +92,7 @@ export function readArtifactVersion(
 function toSnapshot(event: PlicoEvent<"artifact.snapshot.created">): ArtifactSnapshot {
   return {
     snapshotId: event.payload.snapshotId,
+    runId: event.runId,
     fileCount: event.payload.fileCount,
     createdAt: event.timestamp,
   };

@@ -4,7 +4,7 @@ import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createSqliteEventStore, createSqliteThreadStore, runProject } from "@plico/runtime";
-import { afterEach, expect, it } from "vitest";
+import { afterEach, expect, it, vi } from "vitest";
 import { createPlicoServer } from "./index.js";
 
 const servers: Server[] = [];
@@ -36,13 +36,14 @@ it("projects thread files, inherited run workspaces, versions, diffs, and export
 
   const databasePath = join(root, "state.sqlite");
   const eventStore = createSqliteEventStore({ databasePath });
+  const getThreadRunEventsThrough = vi.spyOn(eventStore, "getThreadRunEventsThrough");
   const threadStore = createSqliteThreadStore({ databasePath });
   const thread = await threadStore.createThread();
   const first = await runProject(root, {
     runId: "artifact-thread-run-1",
     threadId: thread.id,
     eventStore,
-    script: [{ type: "tool.call", toolName: "write_report", arguments: { content: "Draft" } }],
+    script: [{ type: "artifact.write", files: [{ path: "reports/status.txt", content: "Draft" }] }],
   });
   const second = await runProject(root, {
     runId: "artifact-thread-run-2",
@@ -72,6 +73,7 @@ it("projects thread files, inherited run workspaces, versions, diffs, and export
     workspaceId: string;
     files: Array<{ path: string; content: string; version: number }>;
     versions: Array<{ path: string; version: number; runId: string }>;
+    snapshots: Array<{ snapshotId: string; runId: string }>;
   };
   const runResponse = await fetch(`${baseUrl}/v1/runs/${second.runId}/workspace`);
   const runWorkspace = (await runResponse.json()) as {
@@ -85,11 +87,17 @@ it("projects thread files, inherited run workspaces, versions, diffs, and export
   const download = await fetch(
     `${baseUrl}/v1/runs/${second.runId}/workspace/exports?path=reports%2Fstatus.txt`,
   );
+  const firstSnapshot = threadWorkspace.snapshots.find(
+    (snapshot) => snapshot.runId === first.runId,
+  );
+  const snapshotResponse = await fetch(
+    `${baseUrl}/v1/runs/${first.runId}/workspace/snapshots/${firstSnapshot?.snapshotId}`,
+  );
 
   expect(threadResponse.status).toBe(200);
   expect(threadWorkspace).toMatchObject({
     threadId: thread.id,
-    workspaceId: `${thread.id}:workspace`,
+    workspaceId: `${first.runId}:workspace`,
     files: [{ path: "reports/status.txt", content: "Later", version: 3 }],
     versions: [
       { path: "reports/status.txt", version: 1, runId: first.runId },
@@ -97,6 +105,9 @@ it("projects thread files, inherited run workspaces, versions, diffs, and export
       { path: "reports/status.txt", version: 3, runId: third.runId },
     ],
   });
+  expect(firstSnapshot).toBeDefined();
+  expect(snapshotResponse.status).toBe(200);
+  expect(await snapshotResponse.json()).toMatchObject({ runId: first.runId });
   expect(runWorkspace).toMatchObject({
     runId: second.runId,
     files: [{ path: "reports/status.txt", content: "Final", version: 2 }],
@@ -109,4 +120,5 @@ it("projects thread files, inherited run workspaces, versions, diffs, and export
   expect(await diff.json()).toMatchObject({ diff: expect.stringContaining("+Final") });
   expect(download.status).toBe(200);
   expect(await download.text()).toBe("Final");
+  expect(getThreadRunEventsThrough).toHaveBeenCalledWith(thread.id, second.runId);
 });

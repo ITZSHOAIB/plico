@@ -45,6 +45,40 @@
       {
         "createdAt": "string",
         "fileCount": "number",
+        "runId": "string",
+        "snapshotId": "string"
+      }
+    ],
+    "threadId": "string",
+    "versions": [
+      {
+        "contentHash": "string",
+        "createdAt": "string",
+        "mimeType": "string",
+        "path": "string",
+        "runId": "string",
+        "version": "number"
+      }
+    ],
+    "workspaceId": "string"
+  },
+  "GET /v1/runs/:id/workspace (thread)": {
+    "createdAt": "string",
+    "files": [
+      {
+        "content": "string",
+        "contentHash": "string",
+        "mimeType": "string",
+        "path": "string",
+        "version": "number"
+      }
+    ],
+    "runId": "string",
+    "snapshots": [
+      {
+        "createdAt": "string",
+        "fileCount": "number",
+        "runId": "string",
         "snapshotId": "string"
       }
     ],
@@ -371,6 +405,7 @@
       {
         "createdAt": "string",
         "fileCount": "number",
+        "runId": "string",
         "snapshotId": "string"
       }
     ],
@@ -411,6 +446,7 @@
         "version": "number"
       }
     ],
+    "runId": "string",
     "snapshotId": "string"
   },
   "POST /v1/eval": {

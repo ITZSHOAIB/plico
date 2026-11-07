@@ -18,6 +18,8 @@ async function readRunEvents(context: RouteContext, runId: string) {
 
   const threadId = await threadStore?.getThreadForRun(runId);
   if (!threadId) return eventStore.getEvents(runId);
+  if (eventStore.getThreadRunEventsThrough)
+    return eventStore.getThreadRunEventsThrough(threadId, runId);
   if (!eventStore.getThreadRunEvents)
     throw new HttpError(
       503,

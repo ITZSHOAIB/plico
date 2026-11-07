@@ -35,6 +35,7 @@ export interface ArtifactDiff {
 
 export interface ArtifactSnapshot {
   snapshotId: string;
+  runId: string;
   fileCount: number;
   createdAt: string;
 }
