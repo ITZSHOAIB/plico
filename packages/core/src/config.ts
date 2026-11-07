@@ -96,6 +96,7 @@ function normalizeProjectConfig(value: unknown, configPath: string): ProjectConf
   const normalized: ProjectConfig = {
     schemaVersion: config.schemaVersion,
     name: config.name,
+    artifacts: { access: config.artifacts?.access ?? "read-write" },
   };
 
   if (typeof config.description === "string") {
@@ -186,6 +187,21 @@ function validateProjectConfigShape(value: unknown): ValidationIssue[] {
     issues.push({
       path: relativePaths.configFile,
       message: "Expected template to be a string",
+      severity: "error",
+    });
+  }
+
+  if (
+    Object.hasOwn(value, "artifacts") &&
+    (!isRecord(value.artifacts) ||
+      Array.isArray(value.artifacts) ||
+      (value.artifacts.access !== "read-write" &&
+        value.artifacts.access !== "read-only" &&
+        value.artifacts.access !== "off"))
+  ) {
+    issues.push({
+      path: relativePaths.configFile,
+      message: 'Expected artifacts.access to be "read-write", "read-only", or "off"',
       severity: "error",
     });
   }

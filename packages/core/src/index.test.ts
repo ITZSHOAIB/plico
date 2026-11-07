@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
+  ARTIFACT_TOOL_NAMES,
   getProjectPaths,
   getProjectRelativePaths,
   loadProject,
@@ -88,6 +89,46 @@ describe("Project Layout", () => {
 });
 
 describe("validateProject", () => {
+  it("defaults artifact access to read-write and retains explicit access settings", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-artifact-access-"));
+    await writeValidProject(root);
+
+    expect((await loadProject(root)).config.artifacts).toEqual({ access: "read-write" });
+
+    await writeValidProject(root, {
+      configBody:
+        'export default { schemaVersion: 1, name: "Demo", artifacts: { access: "read-only" } };',
+    });
+    expect((await loadProject(root)).config.artifacts).toEqual({ access: "read-only" });
+
+    await writeValidProject(root, {
+      configBody:
+        'export default { schemaVersion: 1, name: "Demo", artifacts: { access: "unknown" } };',
+    });
+    expect((await validateProject(root)).errors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ message: expect.stringContaining("Expected artifacts.access") }),
+      ]),
+    );
+  });
+
+  it.each(
+    ARTIFACT_TOOL_NAMES,
+  )("reserves built-in artifact tool name %s for Plico", async (name) => {
+    const root = await mkdtemp(join(tmpdir(), "plico-reserved-artifact-tool-"));
+    await writeValidProject(root);
+    await writeFile(
+      join(root, "tools", "conflict.tool.ts"),
+      `export default { name: ${JSON.stringify(name)}, description: "Project tool", inputSchema: { type: "object" }, capabilities: [], approval: { required: false }, handler: () => [] };`,
+    );
+
+    expect((await validateProject(root)).errors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ message: expect.stringContaining(`"${name}" is reserved`) }),
+      ]),
+    );
+  });
+
   it("validates and retains the execution lease setting", async () => {
     const root = await mkdtemp(join(tmpdir(), "plico-core-"));
     await writeValidProject(root, {

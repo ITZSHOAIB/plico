@@ -75,6 +75,48 @@
             {
               "description": "string",
               "inputSchema": {
+                "additionalProperties": "boolean",
+                "properties": {
+                  "content": {
+                    "type": "string"
+                  },
+                  "glob": {
+                    "maxLength": "number",
+                    "minLength": "number",
+                    "type": "string"
+                  },
+                  "limit": {
+                    "maximum": "number",
+                    "minimum": "number",
+                    "type": "string"
+                  },
+                  "mimeType": {
+                    "minLength": "number",
+                    "type": "string"
+                  },
+                  "new": {
+                    "type": "string"
+                  },
+                  "offset": {
+                    "minimum": "number",
+                    "type": "string"
+                  },
+                  "old": {
+                    "minLength": "number",
+                    "type": "string"
+                  },
+                  "path": {
+                    "maxLength": "number",
+                    "minLength": "number",
+                    "type": "string"
+                  },
+                  "replaceAll": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "string"
+                ],
                 "type": "string"
               },
               "name": "string"
@@ -213,6 +255,9 @@
   "GET /v1/project": {
     "project": {
       "config": {
+        "artifacts": {
+          "access": "string"
+        },
         "execution": {
           "leaseMs": "number"
         },

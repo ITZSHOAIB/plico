@@ -11,6 +11,7 @@ export interface ProjectConfig {
   name: string;
   description?: string;
   template?: string;
+  artifacts?: { access: "read-write" | "read-only" | "off" };
   model?: {
     provider: string;
     name: string;

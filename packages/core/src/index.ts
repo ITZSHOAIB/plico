@@ -5,6 +5,7 @@ export {
   PROJECT_LAYOUT,
   REQUIRED_PROJECT_DIRECTORIES,
 } from "./layout.js";
+export { ARTIFACT_TOOL_NAMES } from "./tool-name-validation.js";
 export type {
   LoadedProject,
   ProjectConfig,

@@ -1,6 +1,11 @@
 import { readdir } from "node:fs/promises";
 import { join } from "node:path";
-import { getProjectPaths, getProjectRelativePaths, type LoadedProject } from "@plico/core";
+import {
+  ARTIFACT_TOOL_NAMES,
+  getProjectPaths,
+  getProjectRelativePaths,
+  type LoadedProject,
+} from "@plico/core";
 import type { DeclaredTool } from "../types/index.js";
 import { loadToolFile } from "./load.js";
 
@@ -23,6 +28,8 @@ export async function discoverTools(project: LoadedProject): Promise<DeclaredToo
   for (const entry of entries) {
     const source = `${relativePaths.directories.tools}/${entry}`;
     const tool = await loadToolFile(join(projectPaths.directories.tools, entry), source);
+    if (ARTIFACT_TOOL_NAMES.includes(tool.name as (typeof ARTIFACT_TOOL_NAMES)[number]))
+      throw new Error(`Tool name "${tool.name}" is reserved by Plico's artifact tools`);
     const first = sources.get(tool.name);
     if (first) {
       throw new Error(`Duplicate tool name "${tool.name}" declared in ${first} and ${source}`);

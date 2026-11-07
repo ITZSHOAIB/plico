@@ -6,6 +6,8 @@ import type { ValidationIssue } from "./types.js";
 
 const require = createRequire(import.meta.url);
 
+export const ARTIFACT_TOOL_NAMES = ["list_files", "read_file", "write_file", "edit_file"] as const;
+
 type ToolNameResolution =
   | { kind: "known"; name: string }
   | { kind: "absent" }
@@ -32,6 +34,15 @@ export async function validateToolNames(root: string): Promise<ValidationIssue[]
     const text = await readFile(join(paths.directories.tools, entry), "utf8");
     const name = readToolName(text, source);
     if (name === undefined) continue;
+
+    if (ARTIFACT_TOOL_NAMES.includes(name as (typeof ARTIFACT_TOOL_NAMES)[number])) {
+      issues.push({
+        path: source,
+        message: `Tool name "${name}" is reserved by Plico's artifact tools`,
+        severity: "error",
+      });
+      continue;
+    }
 
     const first = names.get(name);
     if (first) {
