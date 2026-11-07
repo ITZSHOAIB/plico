@@ -141,6 +141,8 @@ pnpm --filter @plico/cli exec plico events <run-id> examples/internal-ops-agent
 pnpm --filter @plico/cli exec plico serve --studio --db examples/internal-ops-agent/.plico/plico.sqlite examples/internal-ops-agent
 ```
 
+The server has no authentication, so it listens on loopback only and refuses requests a web page could send: a foreign `Host` header (DNS rebinding) gets 421, a cross-origin `Origin` gets 403, and a JSON body sent with another content type gets 415. Send `Content-Type: application/json` on requests with a body. `--allow-remote` exposes the server on another host and skips the `Host` check; `Origin` is still checked. Hosts that mount `createPlicoServer` under their own name pass `allowRemote: true` and own authentication.
+
 ## Scaffold
 
 Generate a new internal-ops starter:

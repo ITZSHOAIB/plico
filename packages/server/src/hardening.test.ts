@@ -56,6 +56,7 @@ describe("server hardening", () => {
 
     const response = await fetch(`${base}/v1/runs/dry`, {
       method: "POST",
+      headers: { "content-type": "application/json" },
       body: JSON.stringify({ script: [], padding: "x".repeat(2 * 1024 * 1024) }),
     });
 

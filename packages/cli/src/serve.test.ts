@@ -84,6 +84,7 @@ describe("serve", () => {
       databasePath,
       host: "0.0.0.0",
       port: 4321,
+      allowRemote: true,
     });
     expect(logSpy.mock.calls.map(([line]) => String(line))).toEqual([
       "Serving Plico at http://127.0.0.1:4321",

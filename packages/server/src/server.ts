@@ -10,6 +10,8 @@ import {
   modelProviderAccountKey,
   modelProviderRecoveryKey,
 } from "@plico/runtime";
+import { HttpError, sendError } from "./errors.js";
+import { assertTrustedRequest } from "./origin-guard.js";
 import { recoverPlicoState, resumeQueuedRuns } from "./recovery.js";
 import { handleRequest } from "./routes/index.js";
 import { serveStaticFile } from "./serve-static.js";
@@ -43,6 +45,13 @@ export async function createPlicoServer(options: CreatePlicoServerOptions): Prom
 
   return {
     requestListener: async (request, response) => {
+      try {
+        assertTrustedRequest(request, options.allowRemote === true);
+      } catch (error) {
+        if (!(error instanceof HttpError)) throw error;
+        sendError(response, error.status, error.code, error.message);
+        return;
+      }
       const url = new URL(request.url ?? "/", "http://127.0.0.1");
       const isApiPath = url.pathname === "/health" || url.pathname.startsWith("/v1/");
       const context = {
@@ -131,6 +140,7 @@ export async function servePlico(options: ServePlicoOptions): Promise<Server> {
         ...(providerAccountKey ? { providerAccountKey } : {}),
         engine,
         ...(options.studioPath === undefined ? {} : { studioPath: options.studioPath }),
+        ...(options.allowRemote === undefined ? {} : { allowRemote: options.allowRemote }),
       })
     ).requestListener,
   );
