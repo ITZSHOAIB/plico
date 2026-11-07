@@ -69,6 +69,37 @@ export function readThreadRunEvents(database: DatabaseSync, threadId: string): P
   return rows.map((row) => rowToEvent(row));
 }
 
+export function readThreadRunEventsThrough(
+  database: DatabaseSync,
+  threadId: string,
+  runId: string,
+): PlicoEvent[] {
+  const rows = database
+    .prepare(
+      `
+        WITH selected_run_position AS (
+          SELECT MAX(target_events.position) AS position
+          FROM events AS target_events
+          JOIN thread_runs AS target_runs ON target_runs.run_id = target_events.stream_id
+          WHERE target_events.stream_type = 'run'
+            AND target_runs.thread_id = ?
+            AND target_events.stream_id = ?
+        )
+        SELECT events.stream_id, events.sequence, events.event_id, events.schema_version,
+          events.type, events.timestamp, events.payload_json, artifact_content.content AS artifact_content
+        FROM events
+        JOIN thread_runs ON thread_runs.run_id = events.stream_id
+        LEFT JOIN artifact_content ON artifact_content.content_hash = json_extract(events.payload_json, '$.contentHash')
+        WHERE events.stream_type = 'run' AND thread_runs.thread_id = ?
+          AND events.position <= (SELECT position FROM selected_run_position)
+        ORDER BY events.position ASC
+      `,
+    )
+    .all(threadId, runId, threadId) as Array<Record<string, unknown>>;
+
+  return rows.map((row) => rowToEvent(row));
+}
+
 export function persistEvalReportRecord(database: DatabaseSync, report: EvalReport): void {
   database
     .prepare("INSERT INTO eval_reports (evaluated_at, report_json) VALUES (?, ?)")

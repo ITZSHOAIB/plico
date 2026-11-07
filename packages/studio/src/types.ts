@@ -16,5 +16,6 @@ export type {
   RunStatus,
   RunSummary,
   Thread,
+  ThreadArtifactWorkspace,
   ThreadMessage,
 } from "@plico/contracts";

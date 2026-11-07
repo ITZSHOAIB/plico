@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { artifactExportUrl, fetchArtifactSnapshot } from "../api";
 import { ArtifactVersionReview } from "../components/ArtifactVersionReview";
 import { FilePreview } from "../components/FilePreview";
+import { formatRunId } from "../format-run-id";
 import type { ArtifactFile, ArtifactSnapshotDetail, ArtifactWorkspace, RunSummary } from "../types";
 import { Icon } from "../ui/Icon";
 import { EmptyState, listRowClass, Notice, Page } from "../ui/Page";
@@ -18,7 +19,15 @@ interface ArtifactsViewProps {
   onPreviewFile: (file: ArtifactFile | null) => void;
 }
 
-function FileRow({ file, onOpen }: { file: ArtifactFile; onOpen: () => void }) {
+function FileRow({
+  file,
+  writerRunId,
+  onOpen,
+}: {
+  file: ArtifactFile;
+  writerRunId?: string | undefined;
+  onOpen: () => void;
+}) {
   return (
     <li>
       <button type="button" onClick={onOpen} className={listRowClass}>
@@ -29,6 +38,9 @@ function FileRow({ file, onOpen }: { file: ArtifactFile; onOpen: () => void }) {
         {"mimeType" in file && (
           <span className="shrink-0 text-caption text-faint">
             {file.mimeType} v{file.version}
+            {writerRunId && (
+              <span title={`Writing run ${writerRunId}`}> · run {formatRunId(writerRunId)}</span>
+            )}
           </span>
         )}
       </button>
@@ -112,7 +124,16 @@ export function ArtifactsView({
       >
         <ul className={listClass}>
           {snapshot.files.map((file) => (
-            <FileRow key={file.path} file={file} onOpen={() => onPreviewFile(file)} />
+            <FileRow
+              key={file.path}
+              file={file}
+              writerRunId={
+                workspace.versions.find(
+                  (version) => version.path === file.path && version.version === file.version,
+                )?.runId
+              }
+              onOpen={() => onPreviewFile(file)}
+            />
           ))}
         </ul>
       </Page>
@@ -121,10 +142,11 @@ export function ArtifactsView({
 
   return (
     <Page
-      title={`Artifact Workspace: ${workspace.workspaceId}`}
+      title={`${workspace.threadId ? "Thread Artifact Workspace" : "Artifact Workspace"}: ${workspace.workspaceId}`}
       subtitle={
         <>
           <div>{currentWorkspaceNotice}</div>
+          {workspace.threadId && <div>Thread: {workspace.threadId}</div>}
           <div>
             {workspace.files.length} file(s) &middot; {workspace.snapshots.length} snapshot(s)
           </div>
@@ -137,6 +159,11 @@ export function ArtifactsView({
           <FileRow
             key={file.path}
             file={file}
+            writerRunId={
+              workspace.versions.find(
+                (version) => version.path === file.path && version.version === file.version,
+              )?.runId
+            }
             onOpen={() => {
               snapshotRequest.current++;
               onPreviewFile(file);
@@ -153,7 +180,7 @@ export function ArtifactsView({
               onClick={() => {
                 const request = ++snapshotRequest.current;
                 setSnapshotError(null);
-                void fetchArtifactSnapshot(selectedRun.runId, item.snapshotId)
+                void fetchArtifactSnapshot(item.runId, item.snapshotId)
                   .then((result) => {
                     if (request === snapshotRequest.current) setSnapshot(result);
                   })

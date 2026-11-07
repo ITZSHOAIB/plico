@@ -9,13 +9,29 @@ import { HttpError } from "../errors.js";
 import { sendJson } from "../responses.js";
 import type { Route, RouteContext } from "./types.js";
 
-async function readRunEvents({ eventStore }: RouteContext, runId: string) {
+async function readRunEvents(context: RouteContext, runId: string) {
+  const { eventStore, threadStore } = context;
   const run = await eventStore.getRun(runId);
   if (!run) {
     throw new HttpError(404, "run.not_found", `Unknown run ID: ${runId}`);
   }
 
-  return eventStore.getEvents(runId);
+  const threadId = await threadStore?.getThreadForRun(runId);
+  if (!threadId) return eventStore.getEvents(runId);
+  if (eventStore.getThreadRunEventsThrough)
+    return eventStore.getThreadRunEventsThrough(threadId, runId);
+  if (!eventStore.getThreadRunEvents)
+    throw new HttpError(
+      503,
+      "workspace.unavailable",
+      "Thread workspace projection is unavailable.",
+    );
+  const events = await eventStore.getThreadRunEvents(threadId);
+  let lastRunEvent = -1;
+  events.forEach((event, index) => {
+    if (event.runId === runId) lastRunEvent = index;
+  });
+  return lastRunEvent < 0 ? [] : events.slice(0, lastRunEvent + 1);
 }
 
 function requireWorkspace(runId: string, events: PlicoEvent[]) {
@@ -99,7 +115,10 @@ export const artifactRoutes: Route[] = [
     method: "GET",
     pattern: /^\/v1\/runs\/([^/]+)\/workspace$/,
     handler: async (context) => {
-      sendJson(context.response, 200, await readWorkspace(context, context.params[0] ?? ""));
+      const runId = context.params[0] ?? "";
+      const workspace = await readWorkspace(context, runId);
+      const threadId = await context.threadStore?.getThreadForRun(runId);
+      sendJson(context.response, 200, threadId ? { ...workspace, threadId } : workspace);
     },
   },
   {

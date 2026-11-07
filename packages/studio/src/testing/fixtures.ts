@@ -69,6 +69,7 @@ const instructions: ComposedInstructions = {
 const workspace: ArtifactWorkspace = {
   workspaceId: "workspace-1",
   runId: run.runId,
+  threadId: "thread-123",
   createdAt: run.startedAt,
   files: [
     {
@@ -99,6 +100,7 @@ const workspace: ArtifactWorkspace = {
       mimeType: "text/markdown",
       version: 1,
       contentHash: "summary-hash-old",
+      runId: "run-writer-1",
       createdAt: run.startedAt,
     },
     {
@@ -106,6 +108,7 @@ const workspace: ArtifactWorkspace = {
       mimeType: "text/markdown",
       version: 2,
       contentHash: "summary-hash",
+      runId: run.runId,
       createdAt: run.startedAt,
     },
     {
@@ -113,6 +116,7 @@ const workspace: ArtifactWorkspace = {
       mimeType: "application/json",
       version: 1,
       contentHash: "data-hash",
+      runId: run.runId,
       createdAt: run.startedAt,
     },
     {
@@ -120,14 +124,18 @@ const workspace: ArtifactWorkspace = {
       mimeType: "text/plain",
       version: 1,
       contentHash: "notes-hash",
+      runId: run.runId,
       createdAt: run.startedAt,
     },
   ],
-  snapshots: [{ snapshotId: "snapshot-1", fileCount: 3, createdAt: run.startedAt }],
+  snapshots: [
+    { snapshotId: "snapshot-1", runId: run.runId, fileCount: 3, createdAt: run.startedAt },
+  ],
 };
 
 const snapshot: ArtifactSnapshotDetail = {
   snapshotId: "snapshot-1",
+  runId: run.runId,
   fileCount: workspace.files.length,
   createdAt: run.startedAt,
   files: workspace.files,

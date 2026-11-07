@@ -107,6 +107,12 @@ to 1 MiB. A `Uint8Array` returned as the tool result is encoded as tagged base64
 in the event log. Runs in a thread share its artifact workspace across turns;
 standalone runs use their own workspace.
 
+`GET /v1/threads/<thread-id>/workspace` returns the current thread workspace.
+Each artifact version includes the run that wrote it. A run workspace includes
+files inherited from earlier turns and its state as of that run; diffs and
+exports work across inherited versions. In Studio, the Artifacts view labels
+thread workspaces and shows the writing run for each version.
+
 Provider-backed runs also offer Plico's four built-in artifact tools:
 `list_files`, `read_file`, `write_file`, and `edit_file`. Configure their access
 in `plico.config.ts` with `artifacts: { access: "read-write" | "read-only" | "off" }`;

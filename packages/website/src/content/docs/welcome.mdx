@@ -64,6 +64,12 @@ with the stored artifact content and media type.
 In Studio, open a run's **Artifacts** view to preview files, compare stored versions,
 and download the current workspace file.
 
+Thread runs share one ordered artifact workspace. `GET /v1/threads/<thread-id>/workspace`
+returns its current files and versions; every version identifies the writing run.
+A run workspace includes files inherited from earlier turns and shows the state
+as of that run. Diffs and exports work across those thread versions, and Studio's
+Artifacts view labels thread workspaces and shows each version's writing run.
+
 Provider-backed runs have four built-in tools for this workspace: `list_files`,
 `read_file`, `write_file`, and `edit_file`. Set `artifacts.access` in
 `plico.config.ts` to `read-write`, `read-only`, or `off`; it defaults to

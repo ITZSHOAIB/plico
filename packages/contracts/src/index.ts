@@ -7,6 +7,7 @@ export type {
   ArtifactSnapshotDetail,
   ArtifactVersion,
   ArtifactWorkspace,
+  ThreadArtifactWorkspace,
 } from "./artifacts.js";
 export type { EvalCaseResult, EvalReport, EvalSummary } from "./evals.js";
 export type {

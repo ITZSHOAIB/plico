@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+﻿// @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "./App";
@@ -146,6 +146,29 @@ describe("artifacts", () => {
     expect(
       screen.getByText(/Showing the current workspace, not the workspace at the selected event/i),
     ).toBeTruthy();
+  });
+
+  it("shows the thread workspace and the run that wrote each version", async () => {
+    await openArtifacts();
+
+    expect(screen.getByText("Thread: thread-123")).toBeTruthy();
+    const summary = screen.getByRole("button", { name: /summary/ });
+    expect(summary).toBeTruthy();
+    expect(summary.querySelector("[title]")?.getAttribute("title")).toContain("run-1234567890ab");
+    click(/summary\.md/);
+
+    expect(screen.getByRole("combobox", { name: "From version" }).textContent).toContain(
+      "run-writer-1",
+    );
+    expect(screen.getByRole("combobox", { name: "To version" }).textContent).toContain(
+      "run-12345678…",
+    );
+    expect(
+      screen
+        .getByRole("combobox", { name: "To version" })
+        .querySelector('option[value="2"]')
+        ?.getAttribute("title"),
+    ).toContain("run-1234567890ab");
   });
 
   it("previews Markdown, JSON, and text", async () => {

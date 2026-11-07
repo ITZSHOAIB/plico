@@ -55,6 +55,7 @@ let baseUrl: string;
 let root: string;
 let providerRunId: string;
 let eventStore: ReturnType<typeof createSqliteEventStore>;
+let threadStore: ReturnType<typeof createSqliteThreadStore>;
 let engine: ReturnType<typeof createSqliteEngine>;
 
 beforeAll(async () => {
@@ -79,6 +80,7 @@ beforeAll(async () => {
 
   const databasePath = join(root, "state.sqlite");
   eventStore = createSqliteEventStore({ databasePath });
+  threadStore = createSqliteThreadStore({ databasePath });
   await writeFile(
     join(root, "plico.config.ts"),
     'export default { schemaVersion: 1, name: "Demo", execution: { leaseMs: 30000 }, model: { provider: "fake", name: "test" } } as const;\n',
@@ -128,7 +130,7 @@ beforeAll(async () => {
     projectRoot: root,
     eventStore,
     engine,
-    threadStore: createSqliteThreadStore({ databasePath: join(root, "state.sqlite") }),
+    threadStore,
     provider: {
       async *stream() {
         yield { type: "text", text: "Hello" };
@@ -209,6 +211,16 @@ it("keeps the /v1 response shapes stable", async () => {
   const createdThread = (await (
     await fetch(`${baseUrl}/v1/threads`, { method: "POST" })
   ).json()) as { id: string };
+  const threadArtifactRun = await runProject(root, {
+    runId: "thread-artifact-contract",
+    threadId: createdThread.id,
+    eventStore,
+    script: [
+      { type: "artifact.write", files: [{ path: "thread.md", content: "Thread artifact" }] },
+    ],
+  });
+  if (threadArtifactRun.status !== "completed")
+    throw new Error("Thread artifact fixture did not complete");
   const threadPath = `/v1/threads/${createdThread.id}`;
   const posted = (await (
     await fetch(`${baseUrl}${threadPath}/messages`, post({ content: "Hello" }))
@@ -248,6 +260,10 @@ it("keeps the /v1 response shapes stable", async () => {
     "POST /v1/threads/:id/messages": shapeOf(posted),
     "GET /v1/threads": await shape("/v1/threads"),
     "GET /v1/threads/:id": await shape(threadPath),
+    "GET /v1/threads/:id/workspace": await shape(`${threadPath}/workspace`),
+    "GET /v1/runs/:id/workspace (thread)": await shape(
+      `/v1/runs/${threadArtifactRun.runId}/workspace`,
+    ),
     "GET /v1/threads/:id/messages": await shape(`${threadPath}/messages`),
     "GET /v1/runs/:id/events (provider)": providerShapes,
     "GET /v1/runs/:id/events (approval)": approvalEvents

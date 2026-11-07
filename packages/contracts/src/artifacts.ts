@@ -22,6 +22,7 @@ export interface ArtifactVersion {
   mimeType: string;
   version: number;
   contentHash: string;
+  runId: string;
   createdAt: string;
 }
 
@@ -34,6 +35,7 @@ export interface ArtifactDiff {
 
 export interface ArtifactSnapshot {
   snapshotId: string;
+  runId: string;
   fileCount: number;
   createdAt: string;
 }
@@ -45,6 +47,16 @@ export interface ArtifactSnapshotDetail extends ArtifactSnapshot {
 export interface ArtifactWorkspace {
   workspaceId: string;
   runId: string;
+  threadId?: string;
+  files: ArtifactFile[];
+  versions: ArtifactVersion[];
+  snapshots: ArtifactSnapshot[];
+  createdAt: string;
+}
+
+export interface ThreadArtifactWorkspace {
+  workspaceId: string;
+  threadId: string;
   files: ArtifactFile[];
   versions: ArtifactVersion[];
   snapshots: ArtifactSnapshot[];

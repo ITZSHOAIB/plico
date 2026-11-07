@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { resolve } from "node:path";
-import { runProject, ThreadBusyError } from "@plico/runtime";
+import { buildArtifactWorkspace, runProject, ThreadBusyError } from "@plico/runtime";
 import { readJsonBody } from "../body.js";
 import { HttpError } from "../errors.js";
 import { sendJson } from "../responses.js";
@@ -36,6 +36,29 @@ export const threadRoutes: Route[] = [
     method: "GET",
     pattern: /^\/v1\/threads\/([^/]+)$/,
     handler: async (ctx) => sendJson(ctx.response, 200, (await existing(ctx)).thread),
+  },
+  {
+    method: "GET",
+    pattern: /^\/v1\/threads\/([^/]+)\/workspace$/,
+    handler: async (ctx) => {
+      const { thread } = await existing(ctx);
+      if (!ctx.eventStore.getThreadRunEvents)
+        throw new HttpError(
+          503,
+          "workspace.unavailable",
+          "Thread workspace projection is unavailable.",
+        );
+      const events = await ctx.eventStore.getThreadRunEvents(thread.id);
+      const workspace = buildArtifactWorkspace(thread.id, events);
+      if (!workspace)
+        throw new HttpError(
+          404,
+          "workspace.not_found",
+          `No artifact workspace for thread: ${thread.id}`,
+        );
+      const { runId: _runId, ...threadWorkspace } = workspace;
+      sendJson(ctx.response, 200, { ...threadWorkspace, threadId: thread.id });
+    },
   },
   {
     method: "GET",
