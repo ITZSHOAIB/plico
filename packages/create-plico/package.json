@@ -1,6 +1,22 @@
 {
   "name": "create-plico",
   "version": "0.0.0",
+  "description": "Scaffold a Plico agent project",
+  "homepage": "https://plico.sohab.dev",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ITZSHOAIB/plico.git",
+    "directory": "packages/create-plico"
+  },
+  "keywords": [
+    "plico",
+    "agent",
+    "scaffold",
+    "create"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "type": "module",
   "bin": {
     "create-plico": "./dist/cli.js"
@@ -26,7 +42,7 @@
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "build": "tsc -p tsconfig.build.json",
+    "build": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\" && tsc -p tsconfig.build.json",
     "test": "vitest run"
   },
   "devDependencies": {

@@ -3,31 +3,13 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import { packagesDir, workspaceManifests } from "./testing/workspace.js";
 
 // These check what npm would publish. `pnpm build` comes before `pnpm test`.
 const cliDir = fileURLToPath(new URL("..", import.meta.url));
-const packagesDir = join(cliDir, "..");
 const exampleProject = join(packagesDir, "..", "examples", "internal-ops-agent");
 const CHILD_TIMEOUT_MS = 20_000;
 const TEST_TIMEOUT_MS = 30_000;
-
-interface Manifest {
-  name: string;
-  private?: boolean;
-  dependencies?: Record<string, string>;
-}
-
-function workspaceManifests(): Manifest[] {
-  return readdirSync(packagesDir, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory())
-    .flatMap((entry) => {
-      try {
-        return [JSON.parse(readFileSync(join(packagesDir, entry.name, "package.json"), "utf8"))];
-      } catch {
-        return [];
-      }
-    });
-}
 
 describe("publishable CLI", () => {
   it("never depends on a private workspace package at runtime", () => {

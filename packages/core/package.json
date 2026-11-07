@@ -1,6 +1,21 @@
 {
   "name": "@plico/core",
   "version": "0.0.0",
+  "description": "Plico project model: load and validate agent projects from files",
+  "homepage": "https://plico.sohab.dev",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ITZSHOAIB/plico.git",
+    "directory": "packages/core"
+  },
+  "keywords": [
+    "plico",
+    "agent",
+    "validation"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -15,7 +30,7 @@
   ],
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "build": "tsc -p tsconfig.build.json",
+    "build": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\" && tsc -p tsconfig.build.json",
     "test": "vitest run"
   },
   "dependencies": {

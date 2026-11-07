@@ -1,6 +1,22 @@
 {
   "name": "@plico/server",
   "version": "0.0.0",
+  "description": "Plico native HTTP API over the runtime and event store",
+  "homepage": "https://plico.sohab.dev",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ITZSHOAIB/plico.git",
+    "directory": "packages/server"
+  },
+  "keywords": [
+    "plico",
+    "agent",
+    "http",
+    "api"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -21,7 +37,7 @@
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "build": "tsc -p tsconfig.build.json",
+    "build": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\" && tsc -p tsconfig.build.json",
     "test": "vitest run"
   },
   "engines": {
