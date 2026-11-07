@@ -114,6 +114,45 @@ it("lets a provider list, read, write, and exact-edit text artifacts", async () 
   });
 });
 
+it("returns built-in artifact tool errors to the model so it can retry", async () => {
+  const root = await scaffold('export default { schemaVersion: 1, name: "Demo" };');
+  const calls = [
+    { name: "write_file", arguments: { path: "report.md", content: "draft" } },
+    { name: "edit_file", arguments: { path: "report.md", old: "missing", new: "final" } },
+    { name: "edit_file", arguments: { path: "report.md", old: "draft", new: "final" } },
+  ];
+  const toolMessages: string[][] = [];
+  let turn = 0;
+  const run = await runProject(root, {
+    runId: "provider-artifact-tool-retry",
+    message: "Update the report",
+    provider: {
+      async *stream(request) {
+        toolMessages.push(
+          request.messages
+            .filter((message) => message.role === "tool")
+            .map((message) => message.content),
+        );
+        const call = calls[turn++];
+        if (call) yield { type: "tool.call", call };
+        else yield { type: "text", text: "Updated" };
+        yield { type: "finish", usage: { inputTokens: 1, outputTokens: 1 } };
+      },
+    },
+  });
+  const writes = run.events.filter((event) => event.type === "artifact.file.written");
+
+  expect(run.status).toBe("completed");
+  expect(toolMessages[2]?.at(-1)).toContain(
+    '"error":"Text to replace was not found in report.md."',
+  );
+  expect(writes).toHaveLength(2);
+  expect(writes.at(-1)).toMatchObject({
+    type: "artifact.file.written",
+    payload: { path: "report.md", content: "final", version: 2 },
+  });
+});
+
 it("refuses a provider call to an artifact tool hidden by read-only access", async () => {
   const root = await scaffold(
     'export default { schemaVersion: 1, name: "Demo", artifacts: { access: "read-only" } };',
@@ -199,10 +238,13 @@ it("requires replaceAll when an exact edit matches multiple times", async () => 
       },
     },
   });
+  const results = run.events
+    .filter((event) => event.type === "tool.result")
+    .map((event) => (event.type === "tool.result" ? event.payload.result : undefined));
 
-  expect(run.status).toBe("failed");
-  expect(run.events.find((event) => event.type === "run.error")?.payload).toMatchObject({
-    message: expect.stringContaining("occurs 2 times"),
+  expect(run.status).toBe("completed");
+  expect(results[1]).toEqual({
+    error: "Text to replace occurs 2 times in report.txt; set replaceAll to true.",
   });
   expect(run.events.filter((event) => event.type === "artifact.file.written")).toHaveLength(1);
 });

@@ -73,6 +73,31 @@ it("paginates filtered artifact paths in stable order", async () => {
   expect(results[2]).toMatchObject({ files: [{ path: "reports/c.md" }], offset: 2 });
 });
 
+it("includes dotfiles in recursive glob listings", async () => {
+  const root = await scaffold();
+  await writeFile(
+    join(root, "tools", "seed.tool.ts"),
+    `export default {
+      name: "seed", description: "Seed files",
+      inputSchema: { type: "object", properties: {}, additionalProperties: false },
+      capabilities: [], approval: { required: false },
+      handler: async (_input, { artifacts }) => {
+        await artifacts.write(".notes/plan.md", "plan");
+        await artifacts.write("docs/a.md", "doc");
+      },
+    };`,
+  );
+  const run = await runCalls(root, "provider-artifact-dotfiles", [
+    { name: "seed", arguments: {} },
+    { name: "list_files", arguments: { glob: "**/*.md" } },
+  ]);
+
+  expect(run.status).toBe("completed");
+  expect(toolResults(run)[1]).toMatchObject({
+    files: [{ path: ".notes/plan.md" }, { path: "docs/a.md" }],
+  });
+});
+
 it("returns metadata without content when read_file sees a binary artifact", async () => {
   const root = await scaffold();
   await writeFile(

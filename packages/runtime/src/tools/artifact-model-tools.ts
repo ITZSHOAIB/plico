@@ -24,7 +24,8 @@ export async function createArtifactModelTools(): Promise<DeclaredTool[]> {
       },
       capabilities: ["artifacts:read"],
       approval: { required: false },
-      handler: async (input, { artifacts }) => listFiles(input, artifacts),
+      handler: async (input, { artifacts }) =>
+        handleArtifactTool(() => listFiles(input, artifacts)),
     }),
     createDeclaredTool({
       name: "read_file",
@@ -42,7 +43,7 @@ export async function createArtifactModelTools(): Promise<DeclaredTool[]> {
       },
       capabilities: ["artifacts:read"],
       approval: { required: false },
-      handler: async (input, { artifacts }) => readFile(input, artifacts),
+      handler: async (input, { artifacts }) => handleArtifactTool(() => readFile(input, artifacts)),
     }),
     createDeclaredTool({
       name: "write_file",
@@ -60,7 +61,8 @@ export async function createArtifactModelTools(): Promise<DeclaredTool[]> {
       },
       capabilities: ["artifacts:write"],
       approval: { required: false },
-      handler: async (input, { artifacts }) => writeFile(input, artifacts),
+      handler: async (input, { artifacts }) =>
+        handleArtifactTool(() => writeFile(input, artifacts)),
     }),
     createDeclaredTool({
       name: "edit_file",
@@ -79,9 +81,17 @@ export async function createArtifactModelTools(): Promise<DeclaredTool[]> {
       },
       capabilities: ["artifacts:write"],
       approval: { required: false },
-      handler: async (input, { artifacts }) => editFile(input, artifacts),
+      handler: async (input, { artifacts }) => handleArtifactTool(() => editFile(input, artifacts)),
     }),
   ]);
+}
+
+async function handleArtifactTool(operation: () => Promise<unknown>): Promise<unknown> {
+  try {
+    return await operation();
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : String(error) };
+  }
 }
 
 async function createDeclaredTool(definition: ToolDefinition): Promise<DeclaredTool> {

@@ -7,7 +7,6 @@ import type { ToolArtifactContext, ToolArtifactFile } from "../types/index.js";
 const defaultListLimit = 100;
 const defaultReadLimit = 200;
 const maxReadBytes = 32 * 1024;
-const maxArtifactContentBytes = 1024 * 1024;
 type ListedArtifact = Pick<ArtifactFileMetadata, "path" | "sizeBytes" | "mimeType" | "version">;
 
 export async function listFiles(
@@ -21,7 +20,7 @@ export async function listFiles(
   if (value.glob !== undefined) {
     let match: (path: string) => boolean;
     try {
-      match = picomatch(value.glob, { strictBrackets: true, maxLength: 1024 });
+      match = picomatch(value.glob, { strictBrackets: true, maxLength: 1024, dot: true });
     } catch (error) {
       throw new Error(
         `Invalid file glob: ${error instanceof Error ? error.message : String(error)}`,
@@ -29,7 +28,7 @@ export async function listFiles(
     }
     matches = matches.filter((file) => match(file.path));
   }
-  matches.sort((left, right) => left.path.localeCompare(right.path));
+  matches.sort((left, right) => (left.path < right.path ? -1 : left.path > right.path ? 1 : 0));
   const files = matches
     .slice(offset, offset + limit)
     .map(({ path, sizeBytes, mimeType, version }) => ({
@@ -100,9 +99,6 @@ export async function writeFile(
   artifacts: ToolArtifactContext,
 ): Promise<{ path: string; version: number }> {
   const value = input as { path: string; content: string; mimeType?: string };
-  const sizeBytes = Buffer.byteLength(value.content, "utf8");
-  if (sizeBytes > maxArtifactContentBytes)
-    throw new Error("Artifact content exceeds the 1 MiB write limit.");
   const mimeType = value.mimeType ?? mime.getType(value.path) ?? "text/plain";
   return artifacts.write(value.path, value.content, { mimeType });
 }
@@ -130,8 +126,6 @@ export async function editFile(
   const content = value.replaceAll
     ? file.content.replaceAll(value.old, () => value.new)
     : replaceFirst(file.content, value.old, value.new);
-  if (Buffer.byteLength(content, "utf8") > maxArtifactContentBytes)
-    throw new Error("Artifact content exceeds the 1 MiB write limit.");
   const write = await artifacts.write(value.path, content, { mimeType: file.mimeType });
   return { ...write, replacementCount: value.replaceAll ? occurrences : 1 };
 }
