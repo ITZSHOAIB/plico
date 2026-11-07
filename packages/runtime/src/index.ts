@@ -35,8 +35,10 @@ export {
 } from "./storage/sqlite/threads.js";
 export { discoverTools } from "./tools/index.js";
 export type {
+  ArtifactContent,
   ArtifactFile,
   ArtifactFileInput,
+  ArtifactFileMetadata,
   ArtifactSnapshot,
   ArtifactSnapshotDetail,
   ArtifactVersion,
@@ -70,6 +72,8 @@ export type {
   RunStatus,
   RunSummary,
   ToolApprovalPolicy,
+  ToolArtifactContext,
+  ToolArtifactFile,
   ToolDefinition,
   ToolHandlerContext,
   ToolInputParseResult,

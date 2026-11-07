@@ -1,5 +1,7 @@
 import type {
+  ArtifactContent,
   ArtifactFile,
+  ArtifactFileMetadata,
   ArtifactSnapshot,
   ArtifactSnapshotDetail,
   ArtifactVersion,
@@ -36,6 +38,8 @@ export type {
   DeclaredTool,
   JsonSchema,
   ToolApprovalPolicy,
+  ToolArtifactContext,
+  ToolArtifactFile,
   ToolDefinition,
   ToolHandlerContext,
   ToolInputParseResult,
@@ -44,7 +48,9 @@ export type {
   ZodInputSchema,
 } from "./tools.js";
 export type {
+  ArtifactContent,
   ArtifactFile,
+  ArtifactFileMetadata,
   ArtifactSnapshot,
   ArtifactSnapshotDetail,
   ArtifactVersion,

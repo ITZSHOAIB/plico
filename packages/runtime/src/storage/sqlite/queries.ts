@@ -51,6 +51,24 @@ export function readEvents(
   return rows.map((row) => rowToEvent(row));
 }
 
+export function readThreadRunEvents(database: DatabaseSync, threadId: string): PlicoEvent[] {
+  const rows = database
+    .prepare(
+      `
+        SELECT events.stream_id, events.sequence, events.event_id, events.schema_version,
+          events.type, events.timestamp, events.payload_json, artifact_content.content AS artifact_content
+        FROM events
+        JOIN thread_runs ON thread_runs.run_id = events.stream_id
+        LEFT JOIN artifact_content ON artifact_content.content_hash = json_extract(events.payload_json, '$.contentHash')
+        WHERE events.stream_type = 'run' AND thread_runs.thread_id = ?
+        ORDER BY events.position ASC
+      `,
+    )
+    .all(threadId) as Array<Record<string, unknown>>;
+
+  return rows.map((row) => rowToEvent(row));
+}
+
 export function persistEvalReportRecord(database: DatabaseSync, report: EvalReport): void {
   database
     .prepare("INSERT INTO eval_reports (evaluated_at, report_json) VALUES (?, ?)")
@@ -90,12 +108,17 @@ function rowToEvent(row: Record<string, unknown>): PlicoEvent {
   // Stored rows are trusted, not validated; pre-publication rows may have status and lack requestId and are not migrated.
   const payload = JSON.parse(String(row.payload_json)) as Record<string, unknown>;
   if (row.type === "artifact.file.written" && typeof payload.contentHash === "string") {
-    if (typeof row.artifact_content !== "string") {
+    if (!(row.artifact_content instanceof Uint8Array)) {
       // Missing artifact bodies make the canonical event log incomplete, so fail the read instead
       // of returning a workspace that looks complete but silently omits an artifact version.
       throw new Error(`Artifact content ${payload.contentHash} is missing from storage.`);
     }
-    payload.content = row.artifact_content;
+    const bytes = Buffer.from(row.artifact_content);
+    payload.content =
+      payload.contentEncoding === "base64"
+        ? { encoding: "base64", data: bytes.toString("base64") }
+        : bytes.toString("utf8");
+    delete payload.contentEncoding;
   }
   return {
     schemaVersion: 1,

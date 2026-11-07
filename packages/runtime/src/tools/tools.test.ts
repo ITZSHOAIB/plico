@@ -218,7 +218,24 @@ describe("discoverTools", () => {
 
     expect(tools[0]).toMatchObject({ name: "with_imports" });
     await expect(
-      tools[0]?.handler({}, { signal: new AbortController().signal, idempotencyKey: "test" }),
+      tools[0]?.handler(
+        {},
+        {
+          signal: new AbortController().signal,
+          idempotencyKey: "test",
+          artifacts: {
+            async read() {
+              return undefined;
+            },
+            async write(path) {
+              return { path, version: 1 };
+            },
+            async list() {
+              return [];
+            },
+          },
+        },
+      ),
     ).resolves.toEqual({ imported: "called" });
   });
 });

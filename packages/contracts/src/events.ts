@@ -1,3 +1,4 @@
+import type { ArtifactContent } from "./artifacts.js";
 import type { ValidationIssue } from "./project.js";
 
 export type JsonValue =
@@ -64,7 +65,7 @@ export interface PlicoEventPayloads {
   "artifact.workspace.created": { workspaceId: string };
   "artifact.file.written": {
     path: string;
-    content: string;
+    content: ArtifactContent;
     mimeType: string;
     contentHash?: string;
     version?: number;

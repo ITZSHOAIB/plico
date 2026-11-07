@@ -3,7 +3,8 @@ import { RunCancelled, type RunContext } from "../../engine/index.js";
 import { RuntimeDiagnosticError } from "../../errors.js";
 import type { InMemoryEventLog } from "../../events.js";
 import { approvalTimeoutMs, decideApproval } from "../../policy/approval.js";
-import type { DeclaredTool, DryRunScriptStep } from "../../types/index.js";
+import type { DeclaredTool, DryRunScriptStep, EventStore } from "../../types/index.js";
+import { runToolStep } from "../tool-step.js";
 import { nameToolStep } from "../tracing.js";
 import { awaitApproval } from "./approval.js";
 
@@ -12,6 +13,7 @@ export async function runScriptedDryRun(
   script: DryRunScriptStep[],
   tools: DeclaredTool[],
   events: InMemoryEventLog,
+  eventStore: EventStore | undefined,
   config: ProjectConfig,
 ): Promise<string | undefined> {
   const toolsByName = new Map(tools.map((tool) => [tool.name, tool]));
@@ -96,10 +98,15 @@ export async function runScriptedDryRun(
 
     const idempotencyKey = `${ctx.runId}:${index}`;
     nameToolStep(ctx, `tool:${index}`, tool.name);
-    let result: unknown;
     try {
-      result = await ctx.step(`tool:${index}`, ({ signal }) =>
-        tool.handler(parsedInput.value, { signal, idempotencyKey }),
+      await runToolStep(
+        ctx,
+        events,
+        eventStore,
+        tool,
+        parsedInput.value,
+        `tool:${index}`,
+        idempotencyKey,
       );
     } catch (error) {
       if (error instanceof RunCancelled) throw error;
@@ -109,10 +116,6 @@ export async function runScriptedDryRun(
         message: error instanceof Error ? error.message : String(error),
       });
     }
-    await events.append("tool.result", {
-      toolName: tool.name,
-      result,
-    });
   }
 
   return output;

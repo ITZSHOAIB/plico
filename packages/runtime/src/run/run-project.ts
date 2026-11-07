@@ -251,13 +251,21 @@ async function runLoop(
             instructions.content,
             tools,
             events,
+            options.eventStore,
             project.config.model,
             project.config,
             input.history,
           )
         : input.script === undefined
           ? await runDefaultDryRun(project, events)
-          : await runScriptedDryRun(ctx, input.script, tools, events, project.config);
+          : await runScriptedDryRun(
+              ctx,
+              input.script,
+              tools,
+              events,
+              options.eventStore,
+              project.config,
+            );
     await events.append("run.completed", {
       ...(output === undefined ? {} : { output }),
     });

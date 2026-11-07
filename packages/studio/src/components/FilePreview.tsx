@@ -36,6 +36,17 @@ function Markdown({ content }: { content: string }) {
 }
 
 export function FilePreview({ file }: { file: ArtifactFile }) {
+  if (typeof file.content !== "string") {
+    return (
+      <div
+        role="status"
+        className="rounded-panel border border-line bg-surface p-4 text-small text-muted"
+      >
+        Binary preview is unavailable for this file.
+      </div>
+    );
+  }
+
   if (file.mimeType === "application/json") {
     try {
       return <CodeBlock>{JSON.stringify(JSON.parse(file.content), null, 2)}</CodeBlock>;

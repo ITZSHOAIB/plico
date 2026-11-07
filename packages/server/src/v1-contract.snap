@@ -4,6 +4,10 @@
     "mimeType": "string",
     "path": "string"
   },
+  "Binary artifact content": {
+    "data": "string",
+    "encoding": "string"
+  },
   "POST /v1/threads": {
     "createdAt": "string",
     "id": "string"

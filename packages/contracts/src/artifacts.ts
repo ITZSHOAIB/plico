@@ -1,6 +1,16 @@
+export type ArtifactContent = string | { encoding: "base64"; data: string };
+
+export interface ArtifactFileMetadata {
+  path: string;
+  sizeBytes: number;
+  mimeType: string;
+  version: number;
+  contentHash: string;
+}
+
 export interface ArtifactFile {
   path: string;
-  content: string;
+  content: ArtifactContent;
   mimeType: string;
   /** Starts at 1 and increments each time the path is rewritten. */
   version: number;

@@ -1,4 +1,22 @@
-import type { JsonValue } from "@plico/contracts";
+import type { ArtifactFileMetadata, JsonValue } from "@plico/contracts";
+
+export interface ToolArtifactFile {
+  path: string;
+  content: string | Uint8Array;
+  mimeType: string;
+  version: number;
+  contentHash: string;
+}
+
+export interface ToolArtifactContext {
+  read(path: string): Promise<ToolArtifactFile | undefined>;
+  write(
+    path: string,
+    content: string | Uint8Array,
+    options?: { mimeType?: string },
+  ): Promise<{ path: string; version: number }>;
+  list(): Promise<ArtifactFileMetadata[]>;
+}
 
 export interface JsonSchemaObject {
   [keyword: string]: JsonValue | undefined;
@@ -35,6 +53,7 @@ export interface ToolHandlerContext {
    * an API that accepts an idempotency key so a repeat does not act twice.
    */
   idempotencyKey: string;
+  artifacts: ToolArtifactContext;
 }
 
 export interface ToolDefinition {

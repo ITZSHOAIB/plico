@@ -81,6 +81,20 @@ const migrations: ReadonlyArray<{ from: number; to: number; sql: string }> = [
     to: 10,
     sql: `CREATE TABLE artifact_content (content_hash TEXT PRIMARY KEY, content TEXT NOT NULL);`,
   },
+  {
+    from: 10,
+    to: 11,
+    sql: `
+      ALTER TABLE artifact_content RENAME TO artifact_content_text;
+      CREATE TABLE artifact_content (
+        content_hash TEXT PRIMARY KEY,
+        content BLOB NOT NULL
+      );
+      INSERT INTO artifact_content (content_hash, content)
+        SELECT content_hash, CAST(content AS BLOB) FROM artifact_content_text;
+      DROP TABLE artifact_content_text;
+    `,
+  },
 ];
 
 function readSchemaVersion(

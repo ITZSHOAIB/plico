@@ -1,12 +1,50 @@
 import { createHash } from "node:crypto";
 import type {
+  ArtifactContent,
   ArtifactFile,
+  ArtifactFileMetadata,
   ArtifactSnapshot,
   ArtifactSnapshotDetail,
   ArtifactVersion,
   ArtifactWorkspace,
   PlicoEvent,
 } from "./types/index.js";
+
+export function encodeArtifactContent(content: string | Uint8Array): ArtifactContent {
+  return typeof content === "string"
+    ? content
+    : { encoding: "base64", data: Buffer.from(content).toString("base64") };
+}
+
+export function decodeArtifactContent(content: ArtifactContent): string | Uint8Array {
+  if (typeof content === "string") return content;
+  return decodeBase64(content.data);
+}
+
+export function artifactContentBytes(content: ArtifactContent): Uint8Array {
+  return typeof content === "string" ? Buffer.from(content, "utf8") : decodeBase64(content.data);
+}
+
+function decodeBase64(data: string): Buffer {
+  const bytes = Buffer.from(data, "base64");
+  if (bytes.toString("base64") !== data)
+    throw new Error("Artifact content has invalid base64 data.");
+  return bytes;
+}
+
+export function hashArtifactContent(content: ArtifactContent): string {
+  return createHash("sha256").update(artifactContentBytes(content)).digest("hex");
+}
+
+export function artifactFileMetadata(file: ArtifactFile): ArtifactFileMetadata {
+  return {
+    path: file.path,
+    sizeBytes: artifactContentBytes(file.content).byteLength,
+    mimeType: file.mimeType,
+    version: file.version,
+    contentHash: file.contentHash,
+  };
+}
 
 function applyFileWritten(
   files: Map<string, ArtifactFile>,
@@ -15,9 +53,7 @@ function applyFileWritten(
 ): ArtifactFile {
   const path = event.payload.path;
   const version = event.payload.version ?? (files.get(path)?.version ?? 0) + 1;
-  const contentHash =
-    event.payload.contentHash ??
-    createHash("sha256").update(event.payload.content, "utf8").digest("hex");
+  const contentHash = event.payload.contentHash ?? hashArtifactContent(event.payload.content);
   const file = {
     path,
     content: event.payload.content,

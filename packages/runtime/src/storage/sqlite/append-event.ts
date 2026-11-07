@@ -1,6 +1,6 @@
-import { createHash } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
 import type { PlicoEvent } from "@plico/contracts";
+import { artifactContentBytes, hashArtifactContent } from "../../artifacts.js";
 import { acquireOwner } from "./owner-lock.js";
 import { projectThreadEvent } from "./project-thread.js";
 
@@ -125,11 +125,15 @@ export function appendEventRecord(database: DatabaseSync, event: PlicoEvent): vo
 function compactArtifactPayload(database: DatabaseSync, event: PlicoEvent): unknown {
   if (event.type !== "artifact.file.written") return event.payload;
   const { content, contentHash: declaredHash, ...receipt } = event.payload;
-  const actualHash = createHash("sha256").update(content, "utf8").digest("hex");
+  const actualHash = hashArtifactContent(content);
   if (declaredHash !== undefined && actualHash !== declaredHash)
     throw new Error("Artifact content hash does not match its content.");
   database
     .prepare("INSERT OR IGNORE INTO artifact_content (content_hash, content) VALUES (?, ?)")
-    .run(actualHash, content);
-  return { ...receipt, contentHash: actualHash };
+    .run(actualHash, Buffer.from(artifactContentBytes(content)));
+  return {
+    ...receipt,
+    ...(typeof content === "string" ? {} : { contentEncoding: "base64" }),
+    contentHash: actualHash,
+  };
 }

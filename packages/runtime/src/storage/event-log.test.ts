@@ -95,6 +95,83 @@ describe("event log streams", () => {
     }
   });
 
+  it("round-trips tagged binary artifact content through SQLite as the original bytes", async () => {
+    const root = await scaffold();
+    const databasePath = join(root, "binary-artifacts.sqlite");
+    const store = createSqliteEventStore({ databasePath });
+    const runId = "run-binary-artifact";
+    const bytes = Uint8Array.from([0, 255, 10, 128, 1]);
+    const content = { encoding: "base64" as const, data: Buffer.from(bytes).toString("base64") };
+    const eventBase = {
+      schemaVersion: 1 as const,
+      streamType: "run" as const,
+      streamId: runId,
+      runId,
+      timestamp: "2026-11-07T00:00:00.000Z",
+    };
+    await store.appendEvent({
+      ...eventBase,
+      id: "evt-0001",
+      sequence: 1,
+      type: "run.started",
+      payload: { projectRoot: root, projectName: "Demo" },
+    });
+    await store.appendEvent({
+      ...eventBase,
+      id: "evt-0002",
+      sequence: 2,
+      type: "artifact.file.written",
+      payload: { path: "reports/data.bin", content, mimeType: "application/octet-stream" },
+    });
+
+    const recovered = (await createSqliteEventStore({ databasePath }).getEvents(runId)).find(
+      (event) => event.type === "artifact.file.written",
+    );
+
+    expect(recovered).toMatchObject({
+      type: "artifact.file.written",
+      payload: { path: "reports/data.bin", content, mimeType: "application/octet-stream" },
+    });
+    if (recovered?.type !== "artifact.file.written") throw new Error("Missing binary artifact");
+    if (typeof recovered.payload.content === "string") throw new Error("Expected binary content");
+    expect(Buffer.from(recovered.payload.content.data, "base64")).toEqual(Buffer.from(bytes));
+  });
+
+  it("migrates text artifact bodies to BLOB storage without changing recorded text events", async () => {
+    const root = await scaffold();
+    const databasePath = join(root, "legacy-artifact.sqlite");
+    const store = createSqliteEventStore({ databasePath });
+    const run = await runProject(root, {
+      runId: "run-legacy-artifact",
+      eventStore: store,
+      script: [{ type: "artifact.write", files: [{ path: "notes.txt", content: "legacy text" }] }],
+    });
+    const database = new DatabaseSync(databasePath);
+    database.exec(`
+      ALTER TABLE artifact_content RENAME TO artifact_content_binary;
+      CREATE TABLE artifact_content (content_hash TEXT PRIMARY KEY, content TEXT NOT NULL);
+      INSERT INTO artifact_content (content_hash, content)
+        SELECT content_hash, CAST(content AS TEXT) FROM artifact_content_binary;
+      DROP TABLE artifact_content_binary;
+      UPDATE plico_meta SET value = '10' WHERE key = 'schema_version';
+    `);
+    database.close();
+
+    const migrated = createSqliteEventStore({ databasePath });
+    const artifact = (await migrated.getEvents(run.runId)).find(
+      (event) => event.type === "artifact.file.written",
+    );
+    const column = new DatabaseSync(databasePath)
+      .prepare("PRAGMA table_info(artifact_content)")
+      .all()
+      .find((row) => (row as { name?: string }).name === "content") as { type: string } | undefined;
+
+    expect(artifact?.type === "artifact.file.written" ? artifact.payload.content : undefined).toBe(
+      "legacy text",
+    );
+    expect(column?.type).toBe("BLOB");
+  });
+
   it("counts sequence separately for each stream", async () => {
     const root = await scaffold();
     const eventStore = createSqliteEventStore({ databasePath: join(root, "state.sqlite") });
