@@ -2,16 +2,23 @@ import type { IncomingMessage } from "node:http";
 import { isIPv4 } from "node:net";
 import { HttpError } from "./errors.js";
 
+export interface GuardOptions {
+  allowRemote: boolean;
+  /** Origin browsers see, such as when TLS ends at a proxy. Defaults to connection scheme plus Host. */
+  publicOrigin?: string | undefined;
+}
+
 /**
  * Keeps a web page in the developer's browser from driving a local Plico server.
  *
  * Plico has no authentication, so a loopback bind is the only protection. A page can still reach
  * it by sending a cross-origin request, or by pointing its own domain at 127.0.0.1 (DNS
  * rebinding). Browsers always send `Origin` on cross-origin requests and a `Host` that names the
- * attacker's domain, so both are checked. Clients that send no `Origin`, such as curl and the CLI,
- * are unaffected.
+ * attacker's domain, so both are checked. `Origin` must match in scheme, host and port. Clients
+ * that send no `Origin`, such as curl and the CLI, are unaffected.
  */
-export function assertTrustedRequest(request: IncomingMessage, allowRemote: boolean): void {
+export function assertTrustedRequest(request: IncomingMessage, options: GuardOptions): void {
+  const { allowRemote, publicOrigin } = options;
   const host = request.headers.host ?? "";
   if (!allowRemote && !isLoopbackHost(hostname(host))) {
     throw new HttpError(
@@ -22,7 +29,10 @@ export function assertTrustedRequest(request: IncomingMessage, allowRemote: bool
   }
 
   const origin = request.headers.origin;
-  if (origin !== undefined && !isSameOrigin(origin, host)) {
+  if (
+    origin !== undefined &&
+    !isSameOrigin(origin, publicOrigin ?? `${connectionScheme(request)}://${host}`)
+  ) {
     throw new HttpError(
       403,
       "request.origin_not_allowed",
@@ -31,9 +41,13 @@ export function assertTrustedRequest(request: IncomingMessage, allowRemote: bool
   }
 }
 
-function isSameOrigin(origin: string, host: string): boolean {
+function connectionScheme(request: IncomingMessage): "http" | "https" {
+  return "encrypted" in request.socket && request.socket.encrypted ? "https" : "http";
+}
+
+function isSameOrigin(origin: string, expected: string): boolean {
   try {
-    return new URL(origin).host.toLowerCase() === host.toLowerCase();
+    return new URL(origin).origin === new URL(expected).origin;
   } catch {
     return false;
   }

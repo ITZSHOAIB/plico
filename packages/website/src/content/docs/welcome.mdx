@@ -47,7 +47,9 @@ requests a web page could send. A foreign `Host` header (DNS rebinding) gets
 the CLI, are unaffected. `plico serve --allow-remote` exposes the server on
 another host and skips the `Host` check; the `Origin` check still applies. A host
 app that mounts `createPlicoServer` under its own name passes
-`allowRemote: true` and owns authentication.
+`allowRemote: true` and owns authentication. `Origin` must match in scheme,
+host and port, so behind a TLS proxy the host app also passes
+`publicOrigin: "https://its.host"`.
 
 Cancel an active persisted run from the command line with
 `plico cancel <run-id> <project>`, or send `POST /v1/runs/<run-id>/cancel` to the

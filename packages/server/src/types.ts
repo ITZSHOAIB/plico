@@ -18,6 +18,12 @@ export interface CreatePlicoServerOptions {
    * name, for example behind a host app's own authentication. Cross-origin requests stay refused.
    */
   allowRemote?: boolean;
+  /**
+   * The origin browsers use to reach this server, such as `https://plico.example` when TLS ends at
+   * a proxy. A request `Origin` must match it exactly, scheme and port included. Without it, the
+   * scheme of the connection and the `Host` header decide.
+   */
+  publicOrigin?: string;
 }
 
 export interface ServePlicoOptions {

@@ -16,7 +16,9 @@ afterEach(async () => {
   }
 });
 
-async function start(options: { allowRemote?: boolean } = {}): Promise<number> {
+async function start(
+  options: { allowRemote?: boolean; publicOrigin?: string } = {},
+): Promise<number> {
   const root = await mkdtemp(join(tmpdir(), "plico-origin-"));
   await mkdir(join(root, "skills"), { recursive: true });
   const plico = await createPlicoServer({
@@ -175,5 +177,42 @@ describe("browser request guard", () => {
 
     expect(same.status).toBe(200);
     expect(foreign.status).toBe(403);
+  });
+
+  it("rejects an https Origin that shares host and port with a plain-HTTP server", async () => {
+    const port = await start();
+    const host = `127.0.0.1:${port}`;
+
+    const reply = await send(port, {
+      method: "POST",
+      path: "/v1/runs/dry",
+      headers: { host, origin: `https://${host}`, "content-type": "application/json" },
+      body: script,
+    });
+
+    expect(reply.status).toBe(403);
+    expect(reply.body.error?.code).toBe("request.origin_not_allowed");
+  });
+
+  it("requires the configured public origin, scheme included, behind a TLS proxy", async () => {
+    const port = await start({ allowRemote: true, publicOrigin: "https://plico.example" });
+    const headers = { host: "plico.example" };
+
+    const sameScheme = await send(port, {
+      path: "/health",
+      headers: { ...headers, origin: "https://plico.example" },
+    });
+    const downgraded = await send(port, {
+      path: "/health",
+      headers: { ...headers, origin: "http://plico.example" },
+    });
+    const otherPort = await send(port, {
+      path: "/health",
+      headers: { ...headers, origin: "https://plico.example:8443" },
+    });
+
+    expect(sameScheme.status).toBe(200);
+    expect(downgraded.status).toBe(403);
+    expect(otherPort.status).toBe(403);
   });
 });

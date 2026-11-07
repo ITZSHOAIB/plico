@@ -46,7 +46,10 @@ export async function createPlicoServer(options: CreatePlicoServerOptions): Prom
   return {
     requestListener: async (request, response) => {
       try {
-        assertTrustedRequest(request, options.allowRemote === true);
+        assertTrustedRequest(request, {
+          allowRemote: options.allowRemote === true,
+          publicOrigin: options.publicOrigin,
+        });
       } catch (error) {
         if (!(error instanceof HttpError)) throw error;
         sendError(response, error.status, error.code, error.message);
