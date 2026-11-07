@@ -14,6 +14,11 @@ and sends JSON Schema to the model. Parsed Zod values, including defaults and
 transforms, reach the handler. Add `zod` to the project dependencies before
 importing it from a tool.
 
+Wrap a tool in `defineTool` and the config in `defineConfig`, both from `plico`,
+to get editor types. `defineTool` infers the handler `input` from `inputSchema`.
+Both helpers return their argument unchanged, and Plico finds them without a
+`node_modules` in the project.
+
 ## Why Plico?
 
 Most agent frameworks lock you into an SDK, a provider, or a runtime. Plico starts

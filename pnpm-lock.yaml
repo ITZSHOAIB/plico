@@ -56,6 +56,9 @@ importers:
       '@plico/contracts':
         specifier: workspace:*
         version: link:../contracts
+      plico:
+        specifier: workspace:*
+        version: link:../plico
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
@@ -72,6 +75,12 @@ importers:
       '@plico/runtime':
         specifier: workspace:*
         version: link:../runtime
+
+  packages/plico:
+    dependencies:
+      '@plico/contracts':
+        specifier: workspace:*
+        version: link:../contracts
 
   packages/runtime:
     dependencies:

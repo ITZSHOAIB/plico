@@ -1,5 +1,6 @@
 import { readFile, stat } from "node:fs/promises";
 import { createRequire } from "node:module";
+import { rewriteAuthoringImports } from "./authoring.js";
 import { configLoadMessage, missingFileMessage, ProjectConfigError } from "./errors.js";
 import { getProjectPaths, getProjectRelativePaths } from "./layout.js";
 import type { LoadedProject, ProjectConfig, ValidationIssue } from "./types.js";
@@ -59,7 +60,8 @@ async function importTranspiledProjectConfig(configPath: string): Promise<unknow
     fileName: configPath,
   });
 
-  const encoded = Buffer.from(transpiled.outputText, "utf8").toString("base64");
+  const code = rewriteAuthoringImports(transpiled.outputText, configPath);
+  const encoded = Buffer.from(code, "utf8").toString("base64");
   const moduleUrl = `data:text/javascript;base64,${encoded}`;
   return import(moduleUrl);
 }

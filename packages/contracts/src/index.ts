@@ -33,3 +33,15 @@ export type {
 } from "./readiness.js";
 export type { RunResult, RunStatus, RunSummary } from "./runs.js";
 export type { Thread, ThreadEvent, ThreadMessage } from "./threads.js";
+export type {
+  JsonSchema,
+  JsonSchemaObject,
+  ToolApprovalPolicy,
+  ToolArtifactContext,
+  ToolArtifactFile,
+  ToolDefinition,
+  ToolHandlerContext,
+  ToolInputSchema,
+  ZodInputParseResult,
+  ZodInputSchema,
+} from "./tools.js";

@@ -150,14 +150,32 @@ function resolveObject(
 function unwrap(expression: import("typescript").Expression): import("typescript").Expression {
   const ts = require("typescript") as typeof import("typescript");
   let current = expression;
-  while (
-    ts.isAsExpression(current) ||
-    ts.isSatisfiesExpression(current) ||
-    ts.isParenthesizedExpression(current)
-  ) {
-    current = current.expression;
+  while (true) {
+    if (
+      ts.isAsExpression(current) ||
+      ts.isSatisfiesExpression(current) ||
+      ts.isParenthesizedExpression(current)
+    ) {
+      current = current.expression;
+    } else if (isDefineToolCall(current)) {
+      current = current.arguments[0] as import("typescript").Expression;
+    } else {
+      return current;
+    }
   }
-  return current;
+}
+
+/** `defineTool(tool)` returns `tool` unchanged, so its name is the argument's name. */
+function isDefineToolCall(
+  expression: import("typescript").Expression,
+): expression is import("typescript").CallExpression {
+  const ts = require("typescript") as typeof import("typescript");
+  return (
+    ts.isCallExpression(expression) &&
+    ts.isIdentifier(expression.expression) &&
+    expression.expression.text === "defineTool" &&
+    expression.arguments.length === 1
+  );
 }
 
 function isMissingDirectory(error: unknown): boolean {

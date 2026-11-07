@@ -35,6 +35,7 @@
   },
   "dependencies": {
     "@plico/contracts": "workspace:*",
+    "plico": "workspace:*",
     "typescript": "^6.0.3"
   },
   "engines": {
