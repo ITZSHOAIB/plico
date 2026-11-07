@@ -132,7 +132,7 @@ Plico's differentiation is not the existence of agents, tools, or workflows. Its
 - LiteLLM, OpenRouter, Vercel AI Gateway, Ollama, and other OpenAI-compatible endpoints should be supported through gateway-style configuration rather than a separate core abstraction.
 - Plico will expose a stable, versioned native event model. Native streams, AG-UI, AI SDK UI compatibility, local Studio, and React components should adapt from this event model.
 - AG-UI will be the default public frontend protocol. Plico's native event stream remains the full-fidelity contract for Studio, persistence, replay, artifacts, audit, and diagnostics.
-- Runs are durable: a run waiting on an approval survives a restart and resumes on a decision. An approval wait has a configurable timeout, reported separately from a denial. Subagents, context compaction and plan tracking are not part of v1.
+- Runs are durable: a run waiting on an approval survives a restart and resumes on a decision. An approval wait has a configurable timeout, reported separately from a denial. Plan tracking is not part of v1. Context compaction (#143) and multi-agent projects (#141) arrive in M2.
 - Plico will implement event IDs, persistent event logs, reconnect replay, cursor-based resume, heartbeats, terminal events, and cancellation support.
 - Native browser EventSource can be supported for simple cases, while a robust fetch-based client should be provided for custom headers, auth, request control, and retry behavior.
 - Chat persistence will be first-class and will not be limited to storing final messages.
@@ -213,7 +213,7 @@ Plico's differentiation is not the existence of agents, tools, or workflows. Its
 - Replacing OpenAI Agents SDK as a provider-native agent SDK is out of scope.
 - Supporting every model provider directly in core is out of scope; broad provider support should come through adapters and compatible provider layers.
 - Building Slack, Discord, Teams, email, or other channel integrations as first-class v1 surfaces is out of scope.
-- Building a general-purpose workflow engine is out of scope. Plico runs its own linear loop on a small engine interface: its own SQLite engine locally and DBOS on Postgres in production (ADR 0008). Users do not write workflows.
+- Building a general-purpose workflow engine is out of scope. Plico runs its own linear loop on a small engine interface: its own SQLite engine locally and DBOS on Postgres in production (ADR 0008). Optional user workflows are plain TypeScript files that call agents durably on the same engine (#141).
 - Building a complex plugin marketplace is out of scope for v1.
 - Building enterprise governance, RBAC, SSO, admin consoles, compliance reporting, and organization management is out of scope for v1.
 - Building browser automation, computer use, or sandboxed code execution as a complete product area is out of scope unless needed for a narrow prototype.
@@ -223,10 +223,10 @@ Plico's differentiation is not the existence of agents, tools, or workflows. Its
 
 The milestones in GitHub Issues carry the detail. Each one has an outcome a user can see.
 
-- **M1, first public release.** A new web developer creates an internal-ops agent, runs it against a real model with streaming, approves a risky tool call that survives a restart, reviews artifacts and versions, replays the run in Studio, and does all of it in under 20 minutes from the published npm packages. It rests on the durable event log, the engine interface (ADR 0008), threads, tools that load real TypeScript imports, trustworthy evals and a hardened CLI and server.
-- **M2, ecosystem.** MCP tools, Markdown memory, AG-UI and AI SDK UI streams with a client transport, and the React kit with an embedding example.
+- **M1, first public release.** A new web developer creates an internal-ops agent, runs it against a real model with streaming, approves a risky tool call that survives a restart, reviews the artifacts the live agent wrote (#142) and their versions, replays the run in Studio, and does all of it in under 20 minutes from the published npm packages. It rests on the durable event log, the engine interface (ADR 0008), threads, tools that load real TypeScript imports, trustworthy evals and a hardened CLI and server.
+- **M2, ecosystem.** In order: MCP tools (#77), AI SDK UI then AG-UI streams with a client transport (#79), the React kit with an embedding example (#80), context compaction (#143), typed run input and output (#144), eval scorers (#145), Markdown memory over the workspace file tools (#78), multi-agent projects and workflows (#141), and the remaining artifact file tools (#140).
 - **M3, production.** Plico mounts inside an existing Node app with host auth, and runs on Postgres storage and the DBOS engine across several workers.
-- **After v1.** Harness capabilities on the loop in this order: compaction, a planning tool, subagents as child durable runs. Sandboxes for skill scripts and generated code, once a real requirement exists. Further engine adapters (Workflow SDK, Temporal) if they pass the shared scenarios. LLM-judged eval scorers. A serverless deployment path. These are direction, not commitments, and each needs its own epic and ADR first.
+- **After v1.** A planning tool on the loop. Engine-level child workflows for parallel multi-agent fan-out. Sandboxes for skill scripts and generated code, once a real requirement exists. Further engine adapters (Workflow SDK, Temporal) if they pass the shared scenarios. A serverless deployment path. These are direction, not commitments, and each needs its own epic and ADR first.
 
 The long-term picture is a Vite-like experience for agents: a folder in Git is the agent, and the same folder runs from the terminal to a multi-worker production deployment without changing shape. Plico stays local-first, open source, and free of a hosted control plane.
 
