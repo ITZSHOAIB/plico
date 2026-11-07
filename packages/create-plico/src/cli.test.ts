@@ -1,9 +1,28 @@
-import { mkdir, mkdtemp, readFile } from "node:fs/promises";
+import { access, mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { main } from "./cli.js";
 import type { ScaffoldPrompts } from "./prompts.js";
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
+function capture() {
+  const out: string[] = [];
+  const err: string[] = [];
+  vi.spyOn(console, "log").mockImplementation((line: string) => void out.push(String(line)));
+  vi.spyOn(console, "error").mockImplementation((line: string) => void err.push(String(line)));
+  return { out, err };
+}
+
+async function exists(path: string): Promise<boolean> {
+  return access(path).then(
+    () => true,
+    () => false,
+  );
+}
 
 describe("create-plico main", () => {
   it("creates a scaffold in the target directory", async () => {
@@ -48,5 +67,58 @@ describe("create-plico main", () => {
     expect(start).toHaveBeenCalledWith("Creating scaffold...");
     expect(stop).toHaveBeenCalledWith(`Created scaffold in ${root}`);
     expect(await readFile(join(root, "README.md"), "utf8")).toContain("# My Project");
+  });
+
+  it("prints usage and exits 0 for --help without creating anything", async () => {
+    const stray = join(process.cwd(), "--help");
+    try {
+      const { out } = capture();
+
+      const exitCode = await main(["node", "create-plico", "--help"]);
+
+      expect(exitCode).toBe(0);
+      expect(out.join("\n")).toContain("Usage: create-plico");
+      expect(await exists(stray)).toBe(false);
+    } finally {
+      await rm(stray, { recursive: true, force: true });
+    }
+  });
+
+  it("prints the package version for --version", async () => {
+    const { out } = capture();
+
+    const exitCode = await main(["node", "create-plico", "--version"]);
+
+    expect(exitCode).toBe(0);
+    expect(out[0]).toMatch(/^\d+\.\d+\.\d+/);
+  });
+
+  it("rejects an unknown option with usage on stderr and creates nothing", async () => {
+    const stray = join(process.cwd(), "--bogus");
+    try {
+      const { out, err } = capture();
+
+      const exitCode = await main(["node", "create-plico", "--bogus"]);
+
+      expect(exitCode).toBe(1);
+      expect(out).toEqual([]);
+      expect(err.join("\n")).toContain("Unknown option: --bogus");
+      expect(err.join("\n")).toContain("Usage: create-plico");
+      expect(await exists(stray)).toBe(false);
+    } finally {
+      await rm(stray, { recursive: true, force: true });
+    }
+  });
+
+  it("prints usage instead of scaffolding when --help follows the directory", async () => {
+    const parent = await mkdtemp(join(tmpdir(), "plico-create-cli-"));
+    const root = join(parent, "app");
+    const { out } = capture();
+
+    const exitCode = await main(["node", "create-plico", root, "--help"]);
+
+    expect(exitCode).toBe(0);
+    expect(out.join("\n")).toContain("Usage: create-plico");
+    expect(await exists(root)).toBe(false);
   });
 });
