@@ -23,12 +23,14 @@
   "dependencies": {
     "@plico/core": "workspace:*",
     "@plico/server": "workspace:*",
-    "@plico/studio": "workspace:*",
     "@plico/runtime": "workspace:*"
+  },
+  "devDependencies": {
+    "@plico/studio": "workspace:*"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "build": "tsc -p tsconfig.build.json",
+    "build": "tsc -p tsconfig.build.json && node scripts/bundle-studio.mjs",
     "test": "vitest run"
   },
   "engines": {
