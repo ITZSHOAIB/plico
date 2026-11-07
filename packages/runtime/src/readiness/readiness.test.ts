@@ -47,6 +47,22 @@ describe("checkReadiness", () => {
     expect(persistence.map((d) => d.severity)).toEqual(["ok"]);
   });
 
+  it("reports the configured model-facing artifact access", async () => {
+    const root = await scaffold({
+      config:
+        'export default { schemaVersion: 1, name: "Demo", artifacts: { access: "read-only" } } as const;\n',
+    });
+
+    const report = await checkReadiness(root);
+
+    expect(report.diagnostics).toContainEqual({
+      severity: "ok",
+      subsystem: "artifacts.access",
+      path: "plico.config.ts",
+      message: 'Model-facing artifact tools access is "read-only".',
+    });
+  });
+
   it("warns when approval policy refers to a tool that is not declared", async () => {
     const root = await scaffold({
       config:

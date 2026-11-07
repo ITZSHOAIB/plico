@@ -37,7 +37,8 @@ arguments. Approve the call to resume the run or deny it to stop the run before
 the tool executes. Each decision is recorded in the run's event log. The run
 inspector also lets you cancel active runs. The Readiness view reports approval
 policy overrides that reference missing tools or conflict with a tool's declared
-approval requirement.
+approval requirement. It also reports whether model-facing artifact tools are
+configured as `read-write`, `read-only`, or `off`.
 
 Cancel an active persisted run from the command line with
 `plico cancel <run-id> <project>`, or send `POST /v1/runs/<run-id>/cancel` to the
