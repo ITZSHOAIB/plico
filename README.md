@@ -10,6 +10,7 @@ Today this repo can:
 - expose persisted runs, replay, and the native HTTP API through `@plico/server`
 - persist artifact content by SHA-256 hash and expose ordered write receipts in run workspaces
 - offer provider runs `list_files`, `read_file`, `write_file`, and `edit_file` over their artifact workspace
+- report the configured model-facing artifact access in readiness diagnostics
 - let provider-invoked TypeScript tools read, write text or bytes, and list staged artifacts with `ctx.artifacts`
 - compare artifact versions with `GET /v1/runs/<run-id>/workspace/diffs?path=<path>&fromVersion=1&toVersion=2`
 - diff text, JSON, and XML artifacts up to 1 MiB per version; binary and larger versions return errors
@@ -79,7 +80,8 @@ Use `plico validate --help` to show the validate usage. Unknown flags such as
 `--jsn` are rejected instead of being treated as a project path. `plico runs`
 prints `No saved runs found.` when the project has not persisted a run yet.
 Validation rejects duplicate names declared across `.tool.ts` files; readiness
-reports the same duplicate under tool discovery.
+reports the same duplicate under tool discovery and shows the configured
+`artifacts.access` mode (`read-write`, `read-only`, or `off`).
 
 Run the dry runtime with the checked-in example tool:
 

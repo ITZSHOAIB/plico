@@ -8,6 +8,7 @@ import {
   createSqliteEventStore,
   runProject,
 } from "../../packages/runtime/src/index.js";
+import type { ModelRequest } from "../../packages/runtime/src/types/index.js";
 
 describe("internal-ops-agent example", () => {
   it("validates as a Plico project", async () => {
@@ -42,7 +43,67 @@ describe("internal-ops-agent example", () => {
       "assistant.output",
       "tool.call",
       "tool.result",
+      "artifact.workspace.created",
+      "artifact.file.written",
       "run.completed",
+    ]);
+  });
+
+  it("writes a ticket artifact during a provider run", async () => {
+    let turn = 0;
+    const requests: ModelRequest[] = [];
+    const databasePath = join(
+      await mkdtemp(join(tmpdir(), "plico-example-provider-artifact-")),
+      "plico.sqlite",
+    );
+    const eventStore = createSqliteEventStore({ databasePath });
+    const result = await runProject("examples/internal-ops-agent", {
+      runId: "internal-ops-provider-artifact",
+      message: "Create a ticket for VPN down",
+      eventStore,
+      provider: {
+        async *stream(request) {
+          requests.push(request);
+          if (turn++ === 0) {
+            yield {
+              type: "tool.call",
+              call: {
+                id: "create-ticket-call",
+                name: "create_ticket",
+                arguments: { title: "VPN down" },
+              },
+            };
+          } else {
+            yield { type: "text", text: "Created ticket TCK-8 and saved its summary." };
+          }
+          yield { type: "finish", usage: { inputTokens: 1, outputTokens: 1 } };
+        },
+      },
+    });
+
+    expect(result.status).toBe("completed");
+    expect(requests[0]?.tools?.map((tool) => tool.name)).toContain("create_ticket");
+    expect(result.events).toContainEqual(
+      expect.objectContaining({
+        type: "artifact.file.written",
+        payload: expect.objectContaining({
+          path: "tickets/TCK-8.md",
+          content: "# TCK-8 - VPN down\n\nCreated by the internal ops agent.",
+          mimeType: "text/markdown",
+        }),
+      }),
+    );
+    const persistedEvents = await eventStore.getEvents(result.runId);
+    const toolResultIndex = persistedEvents.findIndex((event) => event.type === "tool.result");
+    const artifactWriteIndex = persistedEvents.findIndex(
+      (event) => event.type === "artifact.file.written",
+    );
+    expect(artifactWriteIndex).toBeGreaterThan(toolResultIndex);
+    expect(buildArtifactWorkspace(result.runId, persistedEvents)?.files).toMatchObject([
+      {
+        path: "tickets/TCK-8.md",
+        content: "# TCK-8 - VPN down\n\nCreated by the internal ops agent.",
+      },
     ]);
   });
 
@@ -69,7 +130,9 @@ describe("internal-ops-agent example", () => {
       expect.objectContaining({ sequence: 4, type: "assistant.output" }),
       expect.objectContaining({ sequence: 5, type: "tool.call" }),
       expect.objectContaining({ sequence: 6, type: "tool.result" }),
-      expect.objectContaining({ sequence: 7, type: "run.completed" }),
+      expect.objectContaining({ sequence: 7, type: "artifact.workspace.created" }),
+      expect.objectContaining({ sequence: 8, type: "artifact.file.written" }),
+      expect.objectContaining({ sequence: 9, type: "run.completed" }),
     ]);
   });
 
@@ -77,7 +140,6 @@ describe("internal-ops-agent example", () => {
     const result = await runProject("examples/internal-ops-agent", {
       script: [
         { type: "assistant.output", content: "Creating ticket and recording artifacts." },
-        { type: "tool.call", toolName: "create_ticket", arguments: { title: "VPN down" } },
         {
           type: "artifact.write",
           files: [
@@ -97,8 +159,6 @@ describe("internal-ops-agent example", () => {
       "instructions.composed",
       "tools.discovered",
       "assistant.output",
-      "tool.call",
-      "tool.result",
       "artifact.workspace.created",
       "artifact.file.written",
       "artifact.snapshot.created",
@@ -108,7 +168,8 @@ describe("internal-ops-agent example", () => {
     const workspace = buildArtifactWorkspace(result.runId, result.events);
     expect(workspace).toBeDefined();
     expect(workspace?.files).toHaveLength(1);
-    expect(workspace?.files[0]).toMatchObject({
+    expect(workspace?.snapshots).toMatchObject([{ fileCount: 1 }]);
+    expect(workspace?.files.find((file) => file.path === "ticket-summary.md")).toMatchObject({
       path: "ticket-summary.md",
       mimeType: "text/markdown",
     });
