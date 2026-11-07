@@ -1,10 +1,12 @@
 import { randomUUID } from "node:crypto";
 import { setTimeout as delay } from "node:timers/promises";
 import type { ProjectConfig } from "@plico/contracts";
+import { ARTIFACT_TOOL_NAMES } from "@plico/core";
 import { RunCancelled, type RunContext } from "../../engine/index.js";
 import { ModelProviderError, RuntimeDiagnosticError } from "../../errors.js";
 import type { InMemoryEventLog } from "../../events.js";
 import { approvalTimeoutMs, decideApproval } from "../../policy/approval.js";
+import { createArtifactModelTools } from "../../tools/artifact-model-tools.js";
 import type { DeclaredTool, EventStore, ModelProvider, ModelRequest } from "../../types/index.js";
 import { runToolStep } from "../tool-step.js";
 import { nameToolStep } from "../tracing.js";
@@ -33,13 +35,17 @@ export async function runProviderBackedRun(
 
   await events.append("input.received", { content: message });
 
-  const toolsByName = new Map(tools.map((tool) => [tool.name, tool]));
+  const artifactTools = await createArtifactModelTools();
+  const toolsByName = new Map([...tools, ...artifactTools].map((tool) => [tool.name, tool]));
+  const artifactAccess = config.artifacts?.access ?? "read-write";
 
-  const providerTools = tools.map((tool) => ({
-    name: tool.name,
-    description: tool.description,
-    inputSchema: tool.inputSchema,
-  }));
+  const providerTools = [...tools, ...artifactTools]
+    .filter((tool) => isArtifactToolAllowed(tool.name, artifactAccess))
+    .map((tool) => ({
+      name: tool.name,
+      description: tool.description,
+      inputSchema: tool.inputSchema,
+    }));
 
   const messages: ModelRequest["messages"] = [
     { role: "system", content: instructions },
@@ -131,6 +137,13 @@ export async function runProviderBackedRun(
         : { providerMetadata: modelResponse.providerMetadata }),
     });
     for (const [callIndex, toolCall] of modelResponse.toolCalls.entries()) {
+      if (!isArtifactToolAllowed(toolCall.name, artifactAccess)) {
+        throw new RuntimeDiagnosticError({
+          phase: "tool.access",
+          toolName: toolCall.name,
+          message: `Artifact tool ${toolCall.name} is disabled by artifacts.access="${artifactAccess}".`,
+        });
+      }
       const tool = toolsByName.get(toolCall.name);
       if (!tool) {
         throw new RuntimeDiagnosticError({
@@ -206,4 +219,15 @@ export async function runProviderBackedRun(
     phase: "provider",
     message: `Maximum steps reached (${maxSteps}).`,
   });
+}
+
+function isArtifactToolAllowed(
+  toolName: string,
+  access: NonNullable<ProjectConfig["artifacts"]>["access"],
+): boolean {
+  if (!ARTIFACT_TOOL_NAMES.includes(toolName as (typeof ARTIFACT_TOOL_NAMES)[number])) return true;
+  if (access === "off") return false;
+  if (access === "read-only" && (toolName === "write_file" || toolName === "edit_file"))
+    return false;
+  return true;
 }

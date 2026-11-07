@@ -9,6 +9,7 @@ Today this repo can:
 - expose validation and dry runs through `@plico/cli`
 - expose persisted runs, replay, and the native HTTP API through `@plico/server`
 - persist artifact content by SHA-256 hash and expose ordered write receipts in run workspaces
+- offer provider runs `list_files`, `read_file`, `write_file`, and `edit_file` over their artifact workspace
 - let provider-invoked TypeScript tools read, write text or bytes, and list staged artifacts with `ctx.artifacts`
 - compare artifact versions with `GET /v1/runs/<run-id>/workspace/diffs?path=<path>&fromVersion=1&toVersion=2`
 - diff text, JSON, and XML artifacts up to 1 MiB per version; binary and larger versions return errors
@@ -105,6 +106,23 @@ must not contain `..`, and are limited to 1,024 characters; each write is limite
 to 1 MiB. A `Uint8Array` returned as the tool result is encoded as tagged base64
 in the event log. Runs in a thread share its artifact workspace across turns;
 standalone runs use their own workspace.
+
+Provider-backed runs also offer Plico's four built-in artifact tools:
+`list_files`, `read_file`, `write_file`, and `edit_file`. Configure their access
+in `plico.config.ts` with `artifacts: { access: "read-write" | "read-only" | "off" }`;
+the default is `read-write`. `read-only` exposes only listing and reading, while
+`off` hides all four built-ins. This setting does not disable `ctx.artifacts`
+inside project TypeScript tools. The four names are reserved for Plico.
+
+`list_files` accepts an optional glob using `*`, `**`, `?`, and comma-separated
+brace alternatives such as `reports/*.{md,txt}`. Results are sorted by path and
+paged with `offset` and `limit` (100 by default). `read_file` uses a 1-indexed
+line offset, defaults to 200 lines, and caps text content at 32 KiB per result;
+binary artifacts return metadata without their bytes. `write_file` accepts text,
+infers MIME type from the extension (or accepts `mimeType`), and returns the new
+path and version. `edit_file` replaces exact text; it requires one match unless
+`replaceAll` is true, and it edits text artifacts only. Model-facing writes are
+limited to 1 MiB and use the same staged write path as project tools.
 
 Persist the smoke run, list stored runs, replay events, and start the native API server with Studio:
 

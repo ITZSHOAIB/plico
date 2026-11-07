@@ -51,7 +51,8 @@ export function createStagedArtifactContext(
       return { ...file, content: decodeArtifactContent(file.content) };
     },
     async write(path, content, options): Promise<{ path: string; version: number }> {
-      validateArtifactWrite(path, content);
+      validateArtifactPath(path);
+      validateArtifactContent(content);
       const encoded = encodeArtifactContent(content);
       const file: ArtifactFile = {
         path,
@@ -85,7 +86,7 @@ export function createStagedArtifactContext(
   };
 }
 
-function validateArtifactWrite(path: string, content: string | Uint8Array): void {
+export function validateArtifactPath(path: string): void {
   const segments = path.split(/[\\/]/);
   if (
     path.length === 0 ||
@@ -99,6 +100,9 @@ function validateArtifactWrite(path: string, content: string | Uint8Array): void
       `Invalid artifact path: expected a non-empty relative path without '..' and at most ${maxArtifactPathLength} characters.`,
     );
   }
+}
+
+function validateArtifactContent(content: string | Uint8Array): void {
   const sizeBytes =
     typeof content === "string" ? Buffer.byteLength(content, "utf8") : content.byteLength;
   if (sizeBytes > maxArtifactContentBytes)
