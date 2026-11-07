@@ -38,6 +38,7 @@ export async function serveCommand(args: string[]): Promise<number> {
       ...(host === undefined ? {} : { host }),
       ...(port === undefined ? {} : { port }),
       ...(studioPath === undefined ? {} : { studioPath }),
+      ...(parsed.flags.has("--allow-remote") ? { allowRemote: true } : {}),
     });
     const address = server.address();
     if (!address || typeof address === "string") {

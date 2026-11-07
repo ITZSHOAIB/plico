@@ -40,6 +40,17 @@ policy overrides that reference missing tools or conflict with a tool's declared
 approval requirement. It also reports whether model-facing artifact tools are
 configured as `read-write`, `read-only`, or `off`.
 
+The server has no authentication, so it listens on loopback only and refuses
+requests a web page could send. A foreign `Host` header (DNS rebinding) gets
+421, a cross-origin `Origin` gets 403, and a request body that is not
+`application/json` gets 415. Clients that send no `Origin`, such as curl and
+the CLI, are unaffected. `plico serve --allow-remote` exposes the server on
+another host and skips the `Host` check; the `Origin` check still applies. A host
+app that mounts `createPlicoServer` under its own name passes
+`allowRemote: true` and owns authentication. `Origin` must match in scheme,
+host and port, so behind a TLS proxy the host app also passes
+`publicOrigin: "https://its.host"`.
+
 Cancel an active persisted run from the command line with
 `plico cancel <run-id> <project>`, or send `POST /v1/runs/<run-id>/cancel` to the
 server. Pressing Ctrl+C during `plico run` also cancels that run.

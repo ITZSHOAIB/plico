@@ -13,6 +13,17 @@ export interface CreatePlicoServerOptions {
   /** Runs started over HTTP. Defaults to an in-memory engine that does not survive a restart. */
   engine?: Engine;
   studioPath?: string;
+  /**
+   * Skip the loopback `Host` check. Set it when the server is deliberately reachable under another
+   * name, for example behind a host app's own authentication. Cross-origin requests stay refused.
+   */
+  allowRemote?: boolean;
+  /**
+   * The origin browsers use to reach this server, such as `https://plico.example` when TLS ends at
+   * a proxy. A request `Origin` must match it exactly, scheme and port included. Without it, the
+   * scheme of the connection and the `Host` header decide.
+   */
+  publicOrigin?: string;
 }
 
 export interface ServePlicoOptions {
@@ -21,6 +32,8 @@ export interface ServePlicoOptions {
   host?: string;
   port?: number;
   studioPath?: string;
+  /** See {@link CreatePlicoServerOptions.allowRemote}. */
+  allowRemote?: boolean;
 }
 
 export interface PlicoServer {

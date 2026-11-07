@@ -2,6 +2,14 @@ import type { IncomingMessage } from "node:http";
 import { HttpError } from "./errors.js";
 
 export async function readJsonBody(request: IncomingMessage): Promise<Record<string, unknown>> {
+  const mediaType = (request.headers["content-type"] ?? "").split(";")[0]?.trim().toLowerCase();
+  if (mediaType !== "application/json") {
+    throw new HttpError(
+      415,
+      "request.unsupported_media_type",
+      "Send the request body as application/json.",
+    );
+  }
   const raw = await readBody(request);
 
   try {
