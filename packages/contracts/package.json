@@ -2,6 +2,20 @@
   "name": "@plico/contracts",
   "version": "0.0.0",
   "description": "Types-only shared contracts (events, runs, artifacts, evals, readiness) for Plico packages",
+  "homepage": "https://plico.sohab.dev",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ITZSHOAIB/plico.git",
+    "directory": "packages/contracts"
+  },
+  "keywords": [
+    "plico",
+    "agent",
+    "types"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -16,7 +30,7 @@
   ],
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "build": "tsc -p tsconfig.build.json"
+    "build": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\" && tsc -p tsconfig.build.json"
   },
   "engines": {
     "node": ">=22.13.0"

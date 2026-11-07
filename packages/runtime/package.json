@@ -1,6 +1,22 @@
 {
   "name": "@plico/runtime",
   "version": "0.0.0",
+  "description": "Plico runtime: linear agent runs, durable event log, tools, evals and readiness checks",
+  "homepage": "https://plico.sohab.dev",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ITZSHOAIB/plico.git",
+    "directory": "packages/runtime"
+  },
+  "keywords": [
+    "plico",
+    "agent",
+    "runtime",
+    "evals"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -19,7 +35,7 @@
     "@plico/contracts": "workspace:*",
     "@plico/core": "workspace:*",
     "ai": "^7.0.162",
-    "ajv": "8.17.1",
+    "ajv": "8.20.0",
     "ajv-formats": "3.0.1",
     "mime": "4.1.2",
     "picomatch": "4.0.4",
@@ -28,7 +44,7 @@
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "build": "tsc -p tsconfig.build.json",
+    "build": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\" && tsc -p tsconfig.build.json",
     "test": "vitest run"
   },
   "engines": {
