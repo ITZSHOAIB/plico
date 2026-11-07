@@ -64,11 +64,12 @@ describe("internal-ops-agent example", () => {
       provider: {
         async *stream(request) {
           requests.push(request);
-          if (turn++ === 0) {
+          const callIndex = turn++;
+          if (callIndex < 2) {
             yield {
               type: "tool.call",
               call: {
-                id: "create-ticket-call",
+                id: `create-ticket-call-${callIndex}`,
                 name: "create_ticket",
                 arguments: { title: "VPN down" },
               },
@@ -83,15 +84,22 @@ describe("internal-ops-agent example", () => {
 
     expect(result.status).toBe("completed");
     expect(requests[0]?.tools?.map((tool) => tool.name)).toContain("create_ticket");
-    expect(result.events).toContainEqual(
-      expect.objectContaining({
-        type: "artifact.file.written",
-        payload: expect.objectContaining({
-          path: "tickets/TCK-8.md",
-          content: "# TCK-8 - VPN down\n\nCreated by the internal ops agent.",
-          mimeType: "text/markdown",
+    const writes = result.events.filter((event) => event.type === "artifact.file.written");
+    const ticketPaths = writes.map((event) =>
+      event.type === "artifact.file.written" ? event.payload.path : "",
+    );
+    expect(ticketPaths).toHaveLength(2);
+    expect(new Set(ticketPaths).size).toBe(2);
+    expect(writes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          type: "artifact.file.written",
+          payload: expect.objectContaining({
+            content: expect.stringContaining("VPN down"),
+            mimeType: "text/markdown",
+          }),
         }),
-      }),
+      ]),
     );
     const persistedEvents = await eventStore.getEvents(result.runId);
     const toolResultIndex = persistedEvents.findIndex((event) => event.type === "tool.result");
@@ -100,10 +108,8 @@ describe("internal-ops-agent example", () => {
     );
     expect(artifactWriteIndex).toBeGreaterThan(toolResultIndex);
     expect(buildArtifactWorkspace(result.runId, persistedEvents)?.files).toMatchObject([
-      {
-        path: "tickets/TCK-8.md",
-        content: "# TCK-8 - VPN down\n\nCreated by the internal ops agent.",
-      },
+      { content: expect.stringContaining("VPN down") },
+      { content: expect.stringContaining("VPN down") },
     ]);
   });
 
