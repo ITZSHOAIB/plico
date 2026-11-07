@@ -18,7 +18,15 @@ interface ArtifactsViewProps {
   onPreviewFile: (file: ArtifactFile | null) => void;
 }
 
-function FileRow({ file, onOpen }: { file: ArtifactFile; onOpen: () => void }) {
+function FileRow({
+  file,
+  writerRunId,
+  onOpen,
+}: {
+  file: ArtifactFile;
+  writerRunId?: string | undefined;
+  onOpen: () => void;
+}) {
   return (
     <li>
       <button type="button" onClick={onOpen} className={listRowClass}>
@@ -29,6 +37,7 @@ function FileRow({ file, onOpen }: { file: ArtifactFile; onOpen: () => void }) {
         {"mimeType" in file && (
           <span className="shrink-0 text-caption text-faint">
             {file.mimeType} v{file.version}
+            {writerRunId ? ` · run ${writerRunId}` : ""}
           </span>
         )}
       </button>
@@ -112,7 +121,16 @@ export function ArtifactsView({
       >
         <ul className={listClass}>
           {snapshot.files.map((file) => (
-            <FileRow key={file.path} file={file} onOpen={() => onPreviewFile(file)} />
+            <FileRow
+              key={file.path}
+              file={file}
+              writerRunId={
+                workspace.versions.find(
+                  (version) => version.path === file.path && version.version === file.version,
+                )?.runId
+              }
+              onOpen={() => onPreviewFile(file)}
+            />
           ))}
         </ul>
       </Page>
@@ -121,10 +139,11 @@ export function ArtifactsView({
 
   return (
     <Page
-      title={`Artifact Workspace: ${workspace.workspaceId}`}
+      title={`${workspace.threadId ? "Thread Artifact Workspace" : "Artifact Workspace"}: ${workspace.workspaceId}`}
       subtitle={
         <>
           <div>{currentWorkspaceNotice}</div>
+          {workspace.threadId && <div>Thread: {workspace.threadId}</div>}
           <div>
             {workspace.files.length} file(s) &middot; {workspace.snapshots.length} snapshot(s)
           </div>
@@ -137,6 +156,11 @@ export function ArtifactsView({
           <FileRow
             key={file.path}
             file={file}
+            writerRunId={
+              workspace.versions.find(
+                (version) => version.path === file.path && version.version === file.version,
+              )?.runId
+            }
             onOpen={() => {
               snapshotRequest.current++;
               onPreviewFile(file);

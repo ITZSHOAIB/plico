@@ -196,6 +196,7 @@ describe("artifact workspace", () => {
         mimeType: "text/plain",
         version: 1,
         contentHash: "c49fea7425fa7f8699897a97c159c6690267d9003bb78c53fafa8fc15c325d84",
+        runId: result.runId,
         createdAt: event.timestamp,
       },
     ]);

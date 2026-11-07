@@ -148,6 +148,21 @@ describe("artifacts", () => {
     ).toBeTruthy();
   });
 
+  it("shows the thread workspace and the run that wrote each version", async () => {
+    await openArtifacts();
+
+    expect(screen.getByText("Thread: thread-123")).toBeTruthy();
+    expect(screen.getByRole("button", { name: /summary\.md.*run run-1234567890ab/ })).toBeTruthy();
+    click(/summary\.md/);
+
+    expect(screen.getByRole("combobox", { name: "From version" }).textContent).toContain(
+      "run-writer-1",
+    );
+    expect(screen.getByRole("combobox", { name: "To version" }).textContent).toContain(
+      "run-1234567890ab",
+    );
+  });
+
   it("previews Markdown, JSON, and text", async () => {
     await openArtifacts();
 

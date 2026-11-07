@@ -65,7 +65,7 @@ export function ArtifactVersionReview({
           >
             {history.map((version) => (
               <option key={version.version} value={version.version}>
-                v{version.version} · {version.createdAt}
+                v{version.version} · run {version.runId} · {version.createdAt}
               </option>
             ))}
           </select>
@@ -79,7 +79,7 @@ export function ArtifactVersionReview({
           >
             {history.map((version) => (
               <option key={version.version} value={version.version}>
-                v{version.version} · {version.createdAt}
+                v{version.version} · run {version.runId} · {version.createdAt}
               </option>
             ))}
           </select>

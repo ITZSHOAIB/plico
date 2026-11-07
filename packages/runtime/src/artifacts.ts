@@ -67,6 +67,7 @@ function applyFileWritten(
     mimeType: file.mimeType,
     version,
     contentHash,
+    runId: event.runId,
     createdAt: event.timestamp,
   });
   return file;
@@ -97,7 +98,7 @@ function toSnapshot(event: PlicoEvent<"artifact.snapshot.created">): ArtifactSna
 }
 
 export function buildArtifactWorkspace(
-  _runId: string,
+  runId: string,
   events: PlicoEvent[],
 ): ArtifactWorkspace | undefined {
   const created = events.find((event) => event.type === "artifact.workspace.created");
@@ -113,7 +114,7 @@ export function buildArtifactWorkspace(
 
   return {
     workspaceId: created.payload.workspaceId,
-    runId: created.runId,
+    runId,
     files: [...files.values()],
     versions,
     snapshots,

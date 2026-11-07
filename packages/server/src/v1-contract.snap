@@ -30,6 +30,37 @@
     "createdAt": "string",
     "id": "string"
   },
+  "GET /v1/threads/:id/workspace": {
+    "createdAt": "string",
+    "files": [
+      {
+        "content": "string",
+        "contentHash": "string",
+        "mimeType": "string",
+        "path": "string",
+        "version": "number"
+      }
+    ],
+    "snapshots": [
+      {
+        "createdAt": "string",
+        "fileCount": "number",
+        "snapshotId": "string"
+      }
+    ],
+    "threadId": "string",
+    "versions": [
+      {
+        "contentHash": "string",
+        "createdAt": "string",
+        "mimeType": "string",
+        "path": "string",
+        "runId": "string",
+        "version": "number"
+      }
+    ],
+    "workspaceId": "string"
+  },
   "GET /v1/threads/:id/messages": [
     {
       "content": "string",
@@ -349,6 +380,7 @@
         "createdAt": "string",
         "mimeType": "string",
         "path": "string",
+        "runId": "string",
         "version": "number"
       }
     ],

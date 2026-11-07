@@ -9,6 +9,7 @@ const version = (number: number): ArtifactVersion => ({
   mimeType: "text/plain",
   version: number,
   contentHash: `hash-${number}`,
+  runId: `run-${number}`,
   createdAt: `2026-01-0${number}T00:00:00.000Z`,
 });
 
