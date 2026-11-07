@@ -7,6 +7,10 @@ import { describe, expect, it } from "vitest";
 
 // These exercise the built bin, as npm runs it. `pnpm build` comes before `pnpm test`.
 const distDir = fileURLToPath(new URL("../dist", import.meta.url));
+// Starting the CLI loads the runtime and SQLite, which is slow on a cold CI runner. The child limit is
+// shorter than the test limit, so a hung process fails with a null status rather than a timeout.
+const CHILD_TIMEOUT_MS = 20_000;
+const TEST_TIMEOUT_MS = 30_000;
 
 async function linkedBin(): Promise<string> {
   const dir = await mkdtemp(join(tmpdir(), "plico-bin-"));
@@ -23,21 +27,31 @@ describe("published plico bin", () => {
     expect(source.startsWith("#!/usr/bin/env node\n")).toBe(true);
   });
 
-  it("runs when reached through a symlinked install path", async () => {
-    const result = spawnSync(process.execPath, [await linkedBin(), "--version"], {
-      encoding: "utf8",
-    });
+  it(
+    "runs when reached through a symlinked install path",
+    async () => {
+      const result = spawnSync(process.execPath, [await linkedBin(), "--version"], {
+        encoding: "utf8",
+        timeout: CHILD_TIMEOUT_MS,
+      });
 
-    expect(result.stdout).toMatch(/^\d+\.\d+\.\d+/);
-    expect(result.status).toBe(0);
-  });
+      expect(result.stdout).toMatch(/^\d+\.\d+\.\d+/);
+      expect(result.status).toBe(0);
+    },
+    TEST_TIMEOUT_MS,
+  );
 
-  it("reports failure through a symlinked install path instead of exiting silently", async () => {
-    const result = spawnSync(process.execPath, [await linkedBin(), "validate", tmpdir()], {
-      encoding: "utf8",
-    });
+  it(
+    "reports failure through a symlinked install path instead of exiting silently",
+    async () => {
+      const result = spawnSync(process.execPath, [await linkedBin(), "validate", tmpdir()], {
+        encoding: "utf8",
+        timeout: CHILD_TIMEOUT_MS,
+      });
 
-    expect(result.status).not.toBe(0);
-    expect(result.stdout + result.stderr).not.toBe("");
-  });
+      expect(result.status).toBe(1);
+      expect(result.stdout + result.stderr).not.toBe("");
+    },
+    TEST_TIMEOUT_MS,
+  );
 });
