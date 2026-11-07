@@ -1,6 +1,8 @@
 export type {
+  ArtifactContent,
   ArtifactDiff,
   ArtifactFile,
+  ArtifactFileMetadata,
   ArtifactSnapshot,
   ArtifactSnapshotDetail,
   ArtifactVersion,

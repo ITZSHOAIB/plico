@@ -88,7 +88,7 @@ export function ArtifactsView({
         backLabel="Back to files"
       >
         <FilePreview file={previewFile} />
-        {snapshot === null && (
+        {snapshot === null && typeof previewFile.content === "string" && (
           <ArtifactVersionReview
             key={`${selectedRun.runId}:${previewFile.path}`}
             runId={selectedRun.runId}

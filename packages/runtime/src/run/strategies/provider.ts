@@ -5,7 +5,8 @@ import { RunCancelled, type RunContext } from "../../engine/index.js";
 import { ModelProviderError, RuntimeDiagnosticError } from "../../errors.js";
 import type { InMemoryEventLog } from "../../events.js";
 import { approvalTimeoutMs, decideApproval } from "../../policy/approval.js";
-import type { DeclaredTool, ModelProvider, ModelRequest } from "../../types/index.js";
+import type { DeclaredTool, EventStore, ModelProvider, ModelRequest } from "../../types/index.js";
+import { runToolStep } from "../tool-step.js";
 import { nameToolStep } from "../tracing.js";
 import { awaitApproval } from "./approval.js";
 
@@ -16,6 +17,7 @@ export async function runProviderBackedRun(
   instructions: string,
   tools: DeclaredTool[],
   events: InMemoryEventLog,
+  eventStore: EventStore | undefined,
   model: ProjectConfig["model"],
   config: ProjectConfig,
   history: Array<Pick<import("../../types/index.js").ProviderMessage, "role" | "content">> = [],
@@ -173,8 +175,14 @@ export async function runProviderBackedRun(
       try {
         const idempotencyKey = `${ctx.runId}:${turn}:${callIndex}`;
         nameToolStep(ctx, `tool:${turn}:${callIndex}`, tool.name);
-        result = await ctx.step(`tool:${turn}:${callIndex}`, ({ signal }) =>
-          tool.handler(parsedInput.value, { signal, idempotencyKey }),
+        result = await runToolStep(
+          ctx,
+          events,
+          eventStore,
+          tool,
+          parsedInput.value,
+          `tool:${turn}:${callIndex}`,
+          idempotencyKey,
         );
       } catch (error) {
         if (error instanceof RunCancelled) throw error;
@@ -184,11 +192,6 @@ export async function runProviderBackedRun(
           message: error instanceof Error ? error.message : String(error),
         });
       }
-
-      await events.append("tool.result", {
-        toolName: tool.name,
-        result,
-      });
 
       messages.push({
         role: "tool",

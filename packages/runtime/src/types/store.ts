@@ -6,6 +6,8 @@ export interface EventStore {
   listRuns(): Promise<RunSummary[]>;
   getRun(runId: string): Promise<RunSummary | undefined>;
   getEvents(runId: string, options?: { afterSequence?: number }): Promise<PlicoEvent[]>;
+  /** Returns run events in a thread, ordered by their durable insertion order. */
+  getThreadRunEvents?(threadId: string): Promise<PlicoEvent[]>;
   persistEvalReport(report: EvalReport): Promise<void>;
   getLatestEvalReport(): Promise<EvalReport | undefined>;
 }

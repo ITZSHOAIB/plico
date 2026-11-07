@@ -9,6 +9,7 @@ import {
   readLatestEvalReport,
   readRunSummaries,
   readRunSummary,
+  readThreadRunEvents,
 } from "./queries.js";
 import { recoverInterruptedRuns } from "./recover-interrupted.js";
 
@@ -49,6 +50,9 @@ export function createSqliteEventStore({
       options: { afterSequence?: number } = {},
     ): Promise<PlicoEvent[]> {
       return readEvents(database, runId, options.afterSequence);
+    },
+    async getThreadRunEvents(threadId: string): Promise<PlicoEvent[]> {
+      return readThreadRunEvents(database, threadId);
     },
     async persistEvalReport(report: EvalReport): Promise<void> {
       persistEvalReportRecord(database, report);

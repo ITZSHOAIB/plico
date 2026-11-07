@@ -9,9 +9,10 @@ Today this repo can:
 - expose validation and dry runs through `@plico/cli`
 - expose persisted runs, replay, and the native HTTP API through `@plico/server`
 - persist artifact content by SHA-256 hash and expose ordered write receipts in run workspaces
+- let provider-invoked TypeScript tools read, write text or bytes, and list staged artifacts with `ctx.artifacts`
 - compare artifact versions with `GET /v1/runs/<run-id>/workspace/diffs?path=<path>&fromVersion=1&toVersion=2`
 - diff text, JSON, and XML artifacts up to 1 MiB per version; binary and larger versions return errors
-- export a run artifact with `GET /v1/runs/<run-id>/workspace/exports?path=<path>` as a file download
+- export text and binary run artifacts with `GET /v1/runs/<run-id>/workspace/exports?path=<path>` as file downloads
 - review artifact previews, compare versions, and download files in Studio
 - run provider-backed conversations, review approvals, and cancel active runs in Studio
 - check approval policy references and conflicts through readiness diagnostics
@@ -92,6 +93,18 @@ includes a `package.json` with `type: "module"` for ESM tool imports. Declare
 that schema and sends JSON Schema to the model. Parsed Zod values, including
 defaults and transforms, reach the handler. Add `zod` to the project dependencies
 before importing it from a tool.
+
+Each tool handler receives `artifacts` alongside its abort signal and
+idempotency key. Use `artifacts.write(path, content, { mimeType })` to stage
+text or `Uint8Array` content, `artifacts.read(path)` to read the current file,
+and `artifacts.list()` to get current file metadata. Reads return text as a
+string and binary content as a `Uint8Array`; list results include byte size,
+MIME type, version, and content hash. Writes are recorded after the durable tool
+step completes, so recovery reuses the recorded write. Paths must be relative,
+must not contain `..`, and are limited to 1,024 characters; each write is limited
+to 1 MiB. A `Uint8Array` returned as the tool result is encoded as tagged base64
+in the event log. Runs in a thread share its artifact workspace across turns;
+standalone runs use their own workspace.
 
 Persist the smoke run, list stored runs, replay events, and start the native API server with Studio:
 

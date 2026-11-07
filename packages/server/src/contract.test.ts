@@ -243,6 +243,7 @@ it("keeps the /v1 response shapes stable", async () => {
       content: "body",
       mimeType: "text/plain",
     }),
+    "Binary artifact content": shapeOf({ encoding: "base64", data: "AP8K" }),
     "POST /v1/threads": shapeOf(createdThread),
     "POST /v1/threads/:id/messages": shapeOf(posted),
     "GET /v1/threads": await shape("/v1/threads"),

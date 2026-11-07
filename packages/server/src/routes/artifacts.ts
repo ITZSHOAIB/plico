@@ -57,7 +57,12 @@ export const artifactRoutes: Route[] = [
           `Unknown artifact version for ${path}: ${!from ? fromVersion : toVersion}`,
         );
       }
-      if (!isDiffableMimeType(from.mimeType) || !isDiffableMimeType(to.mimeType)) {
+      if (
+        typeof from.content !== "string" ||
+        typeof to.content !== "string" ||
+        !isDiffableMimeType(from.mimeType) ||
+        !isDiffableMimeType(to.mimeType)
+      ) {
         throw new HttpError(
           415,
           "artifact.diff_unsupported_media_type",
@@ -142,7 +147,9 @@ export const artifactRoutes: Route[] = [
         "content-disposition",
         `attachment; filename*=UTF-8''${encodedFilename}`,
       );
-      context.response.end(file.content, "utf8");
+      context.response.end(
+        typeof file.content === "string" ? file.content : Buffer.from(file.content.data, "base64"),
+      );
     },
   },
   {

@@ -71,6 +71,45 @@ describe("artifact exports", () => {
     );
   });
 
+  it("exports binary artifact bytes without changing them", async () => {
+    const project = await startArtifactProject();
+    await writeFile(
+      join(project.root, "tools", "binary.tool.ts"),
+      `export default {
+        name: "binary", description: "Write a binary file",
+        inputSchema: { type: "object", properties: {}, additionalProperties: false },
+        capabilities: [], approval: { required: false },
+        handler: async (_input, { artifacts }) => artifacts.write(
+          "reports/raw.bin", Uint8Array.from([0, 255, 10, 128]),
+          { mimeType: "application/octet-stream" },
+        ),
+      };`,
+    );
+    const run = await runProject(project.root, {
+      eventStore: project.eventStore,
+      script: [{ type: "tool.call", toolName: "binary", arguments: {} }],
+    });
+    const url = new URL(`/v1/runs/${run.runId}/workspace/exports`, project.baseUrl);
+    url.searchParams.set("path", "reports/raw.bin");
+
+    const response = await fetch(url);
+    const workspaceResponse = await fetch(
+      new URL(`/v1/runs/${run.runId}/workspace`, project.baseUrl),
+    );
+    const workspace = (await workspaceResponse.json()) as {
+      files: Array<{ path: string; content: unknown }>;
+    };
+
+    expect(response.status).toBe(200);
+    expect(new Uint8Array(await response.arrayBuffer())).toEqual(
+      Uint8Array.from([0, 255, 10, 128]),
+    );
+    expect(workspace.files.find((file) => file.path === "reports/raw.bin")?.content).toEqual({
+      encoding: "base64",
+      data: "AP8KgA==",
+    });
+  });
+
   it("returns 404 for unknown runs and files", async () => {
     const project = await startArtifactProject();
     const unknownRun = await fetch(
