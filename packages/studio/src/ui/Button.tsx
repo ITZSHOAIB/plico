@@ -4,7 +4,7 @@ const variants = {
   default:
     "border-line bg-surface text-fg shadow-panel hover:border-faint/60 hover:bg-raised disabled:hover:border-line disabled:hover:bg-surface",
   primary:
-    "border-transparent bg-accent text-on-accent shadow-panel hover:bg-accent-strong disabled:border-line disabled:bg-raised disabled:text-faint disabled:shadow-none",
+    "border-transparent bg-primary text-on-primary shadow-panel hover:bg-primary-hover disabled:border-line disabled:bg-raised disabled:text-faint disabled:shadow-none",
   ghost:
     "border-transparent bg-transparent text-muted hover:bg-raised hover:text-fg disabled:hover:bg-transparent disabled:hover:text-muted",
   danger:

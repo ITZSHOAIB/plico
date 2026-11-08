@@ -102,35 +102,43 @@ export function App() {
 
   return (
     <div className="flex h-dvh flex-col lg:flex-row">
-      <header className="flex shrink-0 items-center justify-between border-b border-line bg-surface px-4 py-2 lg:hidden">
-        <span className="truncate font-semibold">
+      <header className="flex shrink-0 items-center justify-between gap-3 border-b border-line bg-surface px-4 py-2 lg:hidden">
+        <span className="flex min-w-0 items-center gap-2.5 truncate font-semibold">
+          <span
+            aria-hidden="true"
+            className="grid size-6 shrink-0 place-items-center rounded-md bg-primary font-mono text-small font-bold text-on-primary"
+          >
+            P
+          </span>
           {data.project?.config.name ?? "Plico Studio"}
         </span>
         <ThemeToggle />
       </header>
       <NavRail items={navItems} view={view} />
-      {view !== "chat" && (
-        <RunList
-          runs={data.runs}
-          selectedRun={inspector.selectedRun}
-          onSelectRun={selectRun}
-          visibleOnMobile={runListOnMobile}
-        />
-      )}
-      <main
-        className={`min-h-0 min-w-0 flex-1 flex-col lg:flex ${runListOnMobile ? "hidden" : "flex"}`}
-      >
+      <main className="flex min-h-0 min-w-0 flex-1">
         <h1 className="sr-only">Plico Studio</h1>
-        {data.runsError && <Notice>{data.runsError}</Notice>}
-        {openError && view !== "evals" ? <Notice>{openError}</Notice> : null}
-        <MainView
-          view={view}
-          data={data}
-          inspector={inspector}
-          evals={evals}
-          onOpenRun={openRun}
-          onBackToRuns={() => showTopLevelView("runs")}
-        />
+        {view !== "chat" && (
+          <RunList
+            runs={data.runs}
+            selectedRun={inspector.selectedRun}
+            onSelectRun={selectRun}
+            visibleOnMobile={runListOnMobile}
+          />
+        )}
+        <div
+          className={`min-h-0 min-w-0 flex-1 flex-col lg:flex ${runListOnMobile ? "hidden" : "flex"}`}
+        >
+          {data.runsError && <Notice>{data.runsError}</Notice>}
+          {openError && view !== "evals" ? <Notice>{openError}</Notice> : null}
+          <MainView
+            view={view}
+            data={data}
+            inspector={inspector}
+            evals={evals}
+            onOpenRun={openRun}
+            onBackToRuns={() => showTopLevelView("runs")}
+          />
+        </div>
       </main>
     </div>
   );

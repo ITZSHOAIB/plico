@@ -7,58 +7,66 @@
 :root,
 [data-theme="dark"] {
   color-scheme: dark;
-  --bg: #09090b;
-  --surface: #0f1013;
-  --surface-raised: #17181c;
-  --border: #25272d;
-  --border-subtle: #1b1c21;
-  --text: #ececef;
-  --muted: #9b9fa9;
-  --faint: #7f838d;
-  --accent: #8b95ff;
-  --accent-strong: #a5adff;
-  --accent-contrast: #0b0c14;
-  --accent-soft: #1a1d38;
-  --success: #3ecf8e;
-  --success-soft: #0f2a1f;
-  --danger: #ff6b70;
-  --danger-soft: #2e1517;
-  --warning: #f5a524;
-  --warning-soft: #2b2110;
-  --code-key: #8fb0ff;
-  --code-string: #a6dc7c;
-  --code-bg: #0c0d10;
-  --elevation-raised: 0 1px 0 rgb(255 255 255 / 0.04) inset, 0 8px 24px -8px rgb(0 0 0 / 0.6);
-  --elevation-panel: 0 1px 0 rgb(255 255 255 / 0.03) inset, 0 1px 2px rgb(0 0 0 / 0.4);
-  --glow: radial-gradient(60% 50% at 50% 0%, rgb(139 149 255 / 0.12), transparent 70%);
+  /* Graphite neutrals with a faint cool tint, so the indigo accent belongs to the same family. */
+  --bg: #0b0b0d;
+  --surface: #111113;
+  --surface-raised: #19191c;
+  --border: #27272b;
+  --border-subtle: #1d1d21;
+  --text: #ededef;
+  --muted: #a1a1aa;
+  --faint: #85858f;
+  /* One restrained accent for focus, selection, links and live activity. Indigo stays clear of
+     the green / amber / red status hues, so it never reads as a status. */
+  --accent: #949be8;
+  --accent-strong: #b3b8f2;
+  --accent-contrast: #0b0b0d;
+  --accent-soft: #1b1c2e;
+  /* Primary actions use the inverted neutral: the highest-contrast element on the page. */
+  --primary: #ededef;
+  --primary-hover: #ffffff;
+  --primary-contrast: #0b0b0d;
+  --success: #5cc49a;
+  --success-soft: #12251d;
+  --danger: #ec7a7f;
+  --danger-soft: #2b1617;
+  --warning: #dcab5f;
+  --warning-soft: #281f12;
+  --code-key: #a5b4fc;
+  --code-string: #b5d6a7;
+  --code-bg: #0e0e10;
+  --elevation-raised: 0 1px 0 rgb(255 255 255 / 0.035) inset, 0 12px 32px -12px rgb(0 0 0 / 0.7);
+  --elevation-panel: 0 1px 0 rgb(255 255 255 / 0.025) inset;
 }
 
 [data-theme="light"] {
   color-scheme: light;
-  --bg: #f7f7f8;
+  --bg: #fafafa;
   --surface: #ffffff;
-  --surface-raised: #f2f2f4;
-  --border: #e2e3e8;
-  --border-subtle: #ececf0;
-  --text: #17181c;
-  --muted: #565b67;
-  --faint: #656a77;
-  --accent: #4b55d4;
-  --accent-strong: #3a43b8;
+  --surface-raised: #f4f4f5;
+  --border: #e4e4e7;
+  --border-subtle: #efeff1;
+  --text: #18181b;
+  --muted: #52525b;
+  --faint: #6b6b76;
+  --accent: #4e55c4;
+  --accent-strong: #3d43a6;
   --accent-contrast: #ffffff;
-  --accent-soft: #eef0ff;
-  --success: #0f7a37;
-  --success-soft: #e7f6ec;
-  --danger: #c01f1f;
-  --danger-soft: #fdecec;
-  --warning: #a14a06;
-  --warning-soft: #fef3e0;
-  --code-key: #2f4fd1;
-  --code-string: #15803d;
-  --code-bg: #f6f7f9;
-  --elevation-raised: 0 1px 2px rgb(16 18 27 / 0.06), 0 8px 24px -10px rgb(16 18 27 / 0.18);
-  --elevation-panel: 0 1px 2px rgb(16 18 27 / 0.05);
-  --glow: radial-gradient(60% 50% at 50% 0%, rgb(75 85 212 / 0.08), transparent 70%);
+  --accent-soft: #eff0fa;
+  --primary: #18181b;
+  --primary-hover: #2e2e33;
+  --primary-contrast: #fafafa;
+  --success: #17794a;
+  --success-soft: #e9f6ef;
+  --danger: #bf2f36;
+  --danger-soft: #fcefef;
+  --warning: #93560b;
+  --warning-soft: #fcf3e3;
+  --code-key: #3d43a6;
+  --code-string: #2f6b3a;
+  --code-bg: #fafafa;
+  --elevation-raised: 0 1px 2px rgb(24 24 27 / 0.05), 0 12px 32px -14px rgb(24 24 27 / 0.16);
+  --elevation-panel: 0 1px 2px rgb(24 24 27 / 0.04);
 }
 
 @theme inline {
@@ -74,6 +82,9 @@
   --color-accent-strong: var(--accent-strong);
   --color-on-accent: var(--accent-contrast);
   --color-accent-soft: var(--accent-soft);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-on-primary: var(--primary-contrast);
   --color-success: var(--success);
   --color-success-soft: var(--success-soft);
   --color-danger: var(--danger);

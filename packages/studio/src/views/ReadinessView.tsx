@@ -1,5 +1,6 @@
 import { ReadinessDiagnostics } from "../components/ReadinessDiagnostics";
 import { ReadinessError } from "../components/ReadinessError";
+import { ReadinessSummary, readinessSummaryText } from "../components/ReadinessSummary";
 import type { ReadinessReport } from "../types";
 import { EmptyState, Page } from "../ui/Page";
 
@@ -17,10 +18,12 @@ export function ReadinessView({
 
   return (
     <Page
+      label="Readiness"
       title="Local Readiness Report"
-      subtitle={`${report.summary.ok} ok, ${report.summary.warning} warning(s), ${report.summary.error} error(s)`}
+      subtitle={readinessSummaryText(report.summary)}
     >
       {error && <ReadinessError error={error} hasReport />}
+      <ReadinessSummary summary={report.summary} />
       <ReadinessDiagnostics diagnostics={report.diagnostics} />
     </Page>
   );

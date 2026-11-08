@@ -48,7 +48,7 @@ export function ChatFixtures() {
     <div className="flex h-dvh flex-col bg-bg text-fg">
       <header className="flex h-12 shrink-0 items-center justify-between gap-4 border-b border-line bg-surface px-4">
         <div className="flex items-center gap-3">
-          <span className="grid size-7 place-items-center rounded-lg bg-accent font-bold text-on-accent">
+          <span className="grid size-7 place-items-center rounded-lg bg-primary font-mono font-bold text-on-primary">
             P
           </span>
           <span className="font-semibold">Studio chat</span>

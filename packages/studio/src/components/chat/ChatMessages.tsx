@@ -1,15 +1,9 @@
 import { SquareArrowOutUpRight } from "lucide-react";
 import { useSmoothText } from "../../hooks/useSmoothText";
 import { Bubble, BubbleContent } from "../../ui/chat/bubble";
-import {
-  Message,
-  MessageAvatar,
-  MessageContent,
-  MessageFooter,
-  MessageHeader,
-} from "../../ui/chat/message";
+import { Message, MessageContent, MessageFooter, MessageHeader } from "../../ui/chat/message";
 import { CopyButton, Markdown } from "../../ui/Markdown";
-import { AgentMark } from "./AgentMark";
+import { Spinner } from "../../ui/Spinner";
 
 function InspectButton({ runId, onInspect }: { runId: string; onInspect: (id: string) => void }) {
   return (
@@ -67,10 +61,7 @@ export function AssistantMessage({
   const thinking = streaming && !content;
   return (
     <Message aria-label="Agent" className="animate-message-in">
-      <MessageAvatar aria-hidden="true" className="mt-0.5">
-        <AgentMark active={streaming} />
-      </MessageAvatar>
-      <MessageContent className="pt-1">
+      <MessageContent>
         <MessageHeader className="sr-only">Agent</MessageHeader>
         {thinking ? (
           <ThinkingIndicator />
@@ -92,15 +83,11 @@ export function AssistantMessage({
 
 function ThinkingIndicator() {
   return (
-    <div className="flex h-7 items-center gap-2.5 text-muted">
+    <div className="flex h-7 items-center gap-2">
       <span className="sr-only">Agent is thinking</span>
-      <span aria-hidden="true" className="flex items-center gap-1">
-        <span className="thinking-dot" />
-        <span className="thinking-dot [animation-delay:150ms]" />
-        <span className="thinking-dot [animation-delay:300ms]" />
-      </span>
-      <span aria-hidden="true" className="shimmer-text text-small">
-        Thinking
+      <Spinner className="text-title text-accent" />
+      <span aria-hidden="true" className="shimmer-text text-reading font-medium">
+        Thinking…
       </span>
     </div>
   );

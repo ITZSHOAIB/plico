@@ -1,14 +1,13 @@
-import { Plus } from "lucide-react";
+import { MessageSquareText, Plus } from "lucide-react";
 import { Button } from "../../ui/Button";
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "../../ui/chat/empty";
-import { AgentMark } from "./AgentMark";
 
 export function ChatEmpty({ selected, onNew }: { selected: boolean; onNew?: () => void }) {
   return (
     <Empty className="animate-view-in">
       <EmptyHeader>
-        <EmptyMedia className="size-11 overflow-hidden border-0 p-0">
-          <AgentMark />
+        <EmptyMedia>
+          <MessageSquareText size={20} aria-hidden="true" />
         </EmptyMedia>
         <EmptyTitle>
           {selected ? "Start a conversation" : "Your agent, ready to explore"}

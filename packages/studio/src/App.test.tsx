@@ -262,7 +262,7 @@ describe("evals", () => {
     render(<App />);
     await screen.findByRole("region", { name: "Project overview" });
     click("Evals");
-    await screen.findByText("No eval results yet. Run evals to see them here.");
+    await screen.findByText("No eval results yet");
 
     click("Run evals");
 

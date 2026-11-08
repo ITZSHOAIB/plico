@@ -59,7 +59,7 @@ export function ChatComposer({
                 aria-label="Stop response"
                 title="Stop response"
                 onClick={onStop}
-                className={`${roundButton} ml-auto bg-fg text-bg hover:opacity-85`}
+                className={`${roundButton} ml-auto bg-primary text-on-primary hover:bg-primary-hover`}
               >
                 <Square size={11} fill="currentColor" aria-hidden="true" />
               </button>
@@ -69,7 +69,7 @@ export function ChatComposer({
                 aria-label="Send"
                 title="Send"
                 disabled={!canSend}
-                className={`${roundButton} ml-auto bg-accent text-on-accent hover:bg-accent-strong disabled:cursor-not-allowed disabled:bg-raised disabled:text-faint disabled:active:scale-100`}
+                className={`${roundButton} ml-auto bg-primary text-on-primary hover:bg-primary-hover disabled:cursor-not-allowed disabled:bg-raised disabled:text-faint disabled:active:scale-100`}
               >
                 <ArrowUp size={16} strokeWidth={2.25} aria-hidden="true" />
               </button>
