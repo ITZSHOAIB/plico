@@ -15,6 +15,7 @@ const sizes = {
   sm: "h-8 px-2.5",
   md: "min-h-9 px-3",
   icon: "size-9",
+  "icon-sm": "size-8",
 };
 
 export function Button({

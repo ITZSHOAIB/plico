@@ -14,7 +14,7 @@ function ReplayButton(props: {
       disabled={props.disabled}
       aria-label={props.label}
       title={props.label}
-      size="icon"
+      size="icon-sm"
     >
       <Icon name={props.icon} />
     </Button>
@@ -36,7 +36,7 @@ export function ReplayControls({
   return (
     <section
       aria-label="Run replay"
-      className="flex flex-wrap items-center gap-2 border-t border-line bg-surface px-4 py-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] lg:pb-2.5"
+      className="flex flex-wrap items-center gap-2 border-t border-line bg-surface px-4 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] lg:py-2.5 lg:pb-2.5"
     >
       <ReplayButton
         icon="previous"

@@ -56,19 +56,20 @@ function SelectedRunView({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <header className="border-b border-line px-4 pt-3 pb-3.5">
-        {onBack && (
-          <Button
-            variant="ghost"
-            onClick={onBack}
-            aria-label="Back to runs"
-            className="-ml-2 mb-1 lg:hidden"
-          >
-            <Icon name="back" size="sm" />
-            Runs
-          </Button>
-        )}
-        <div className="mb-3 flex min-w-0 items-center gap-2.5">
+      <header className="border-b border-line px-4 pt-2.5 pb-3 lg:pt-3 lg:pb-3.5">
+        <div className="mb-2 flex min-w-0 items-center gap-2 lg:mb-3 lg:gap-2.5">
+          {onBack && (
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={onBack}
+              aria-label="Back to runs"
+              title="Back to runs"
+              className="-ml-2 shrink-0 lg:hidden"
+            >
+              <Icon name="back" size="sm" />
+            </Button>
+          )}
           <h2
             className={`${titleClass} min-w-0 truncate font-mono text-body`}
             title={selectedRun.runId}
@@ -77,7 +78,7 @@ function SelectedRunView({
           </h2>
           <StatusBadge status={shownRun.status} />
         </div>
-        <dl className="m-0 grid grid-cols-2 gap-x-4 gap-y-2 text-small sm:grid-cols-[repeat(auto-fit,minmax(7.5rem,1fr))]">
+        <dl className="m-0 flex flex-wrap gap-x-4 gap-y-1 text-small lg:grid lg:grid-cols-[repeat(auto-fit,minmax(7.5rem,1fr))] lg:gap-y-2">
           <MetaItem
             label="Started"
             value={dateTime(shownRun.startedAt)}
@@ -167,7 +168,7 @@ function MetaItem({
   title?: string | undefined;
 }) {
   return (
-    <div className="min-w-0">
+    <div className="flex min-w-0 items-baseline gap-1.5 lg:block">
       <dt className="text-caption text-faint">{label}</dt>
       <dd className="m-0 truncate text-fg tabular-nums" title={title}>
         {value}

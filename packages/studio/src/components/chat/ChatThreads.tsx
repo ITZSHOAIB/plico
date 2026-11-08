@@ -14,21 +14,24 @@ export function ChatThreads({
   onNew,
   onSelect,
   labelForThread,
+  hiddenOnMobile = false,
 }: {
   threads: Thread[];
   selected: string | null;
   onNew: () => void;
   onSelect: (id: string) => void;
   labelForThread?: (thread: Thread) => string;
+  /** On small screens the run inspector takes the whole screen, so the thread list steps aside. */
+  hiddenOnMobile?: boolean;
 }) {
   // Newest first: the conversation you just started sits at the top.
   const ordered = [...threads].reverse();
   return (
     <aside
       aria-label="Threads"
-      className="flex shrink-0 flex-col border-b border-line bg-surface lg:w-72 lg:border-r lg:border-b-0"
+      className={`${hiddenOnMobile ? "hidden lg:flex" : "flex"} shrink-0 flex-col border-b border-line bg-surface lg:w-72 lg:border-r lg:border-b-0`}
     >
-      <div className="flex h-14 shrink-0 items-center justify-between gap-2 px-4 lg:border-b lg:border-line">
+      <div className="flex h-12 shrink-0 items-center justify-between gap-2 px-4 lg:h-14 lg:border-b lg:border-line">
         <h2 className="m-0 flex min-w-0 items-center gap-2 text-body font-semibold">
           Conversations
           <span className="rounded-full bg-raised px-1.5 text-caption font-medium text-muted tabular-nums">
@@ -42,7 +45,7 @@ export function ChatThreads({
           New thread
         </Button>
       </div>
-      <ul className="m-0 flex min-h-0 list-none gap-1 overflow-x-auto p-2 lg:flex-1 lg:flex-col lg:overflow-y-auto">
+      <ul className="m-0 flex min-h-0 list-none gap-1 overflow-x-auto px-2 pb-2 lg:flex-1 lg:p-2 lg:flex-col lg:overflow-y-auto">
         {ordered.map((thread) => {
           const label = labelForThread ? labelForThread(thread) : `Thread ${thread.id.slice(0, 8)}`;
           const dateId = `thread-date-${thread.id}`;

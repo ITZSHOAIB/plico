@@ -88,6 +88,7 @@ export function ChatView({ inspector }: { inspector: RunInspector }) {
   return (
     <section aria-label="Chat" className="flex min-h-0 min-w-0 flex-1 flex-col lg:flex-row">
       <ChatThreads
+        hiddenOnMobile={showInspector}
         threads={chat.threads}
         selected={chat.selected}
         onNew={() => {
