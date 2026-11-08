@@ -13,7 +13,7 @@ export interface NavItem {
   alert?: boolean;
 }
 
-/** Desktop: a slim icon rail on the left. Mobile: a bottom tab bar with labels. */
+/** Desktop: a slim icon rail on the left. Mobile: a bottom tab bar that labels the selected tab. */
 export function NavRail({ items, view }: { items: NavItem[]; view: View }) {
   return (
     <nav
@@ -28,14 +28,14 @@ export function NavRail({ items, view }: { items: NavItem[]; view: View }) {
           onClick={item.onSelect}
           disabled={item.disabled}
           aria-current={view === item.view ? "page" : undefined}
-          className="group relative flex min-w-0 flex-1 cursor-pointer flex-col items-center justify-center gap-1 rounded-control border-0 bg-transparent px-0.5 py-2 text-faint transition-colors hover:text-fg focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:text-faint aria-[current=page]:text-fg lg:size-10 lg:flex-none lg:p-0 lg:hover:bg-raised lg:aria-[current=page]:bg-raised"
+          className="group relative flex min-w-0 flex-1 cursor-pointer flex-col items-center justify-center gap-1 rounded-control border-0 bg-transparent px-0.5 py-2 text-faint transition-colors hover:text-fg focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:text-faint aria-[current=page]:text-fg max-lg:h-14 max-lg:aria-[current=page]:flex-[1.8] lg:size-10 lg:flex-none lg:p-0 lg:hover:bg-raised lg:aria-[current=page]:bg-raised"
         >
           <span
             aria-hidden="true"
             className="absolute top-0 h-0.5 w-6 rounded-full bg-accent opacity-0 transition-opacity group-aria-[current=page]:opacity-100 lg:top-1/2 lg:-left-2 lg:h-5 lg:w-0.5 lg:-translate-y-1/2"
           />
           <Icon name={item.icon} />
-          <span className="max-w-full truncate text-caption leading-none font-medium lg:sr-only">
+          <span className="sr-only max-w-full truncate text-caption leading-none font-medium max-lg:group-aria-[current=page]:not-sr-only">
             {item.label}
           </span>
           {item.count !== undefined && <span className="sr-only"> ({item.count})</span>}
@@ -53,7 +53,9 @@ export function NavRail({ items, view }: { items: NavItem[]; view: View }) {
           </span>
         </button>
       ))}
-      <ThemeToggle className="hidden lg:mt-auto lg:grid" />
+      <div className="hidden lg:mt-auto lg:block">
+        <ThemeToggle />
+      </div>
     </nav>
   );
 }
