@@ -5,9 +5,10 @@ import { ChatHeader } from "./ChatHeader";
 
 afterEach(cleanup);
 
-function header(onRename: (title: string) => Promise<void>) {
+function header(onRename: (title: string) => Promise<void>, threadId = "t1") {
   return (
     <ChatHeader
+      threadId={threadId}
       title="VPN token · Berlin office"
       subtitle="Started Nov 8"
       run={null}
@@ -72,4 +73,18 @@ it("does not offer renaming when the host gives no handler", () => {
   );
 
   expect(screen.queryByRole("button", { name: "Rename conversation" })).toBeNull();
+});
+
+it("drops a half-typed rename when another thread is selected", () => {
+  const onRename = vi.fn(async () => undefined);
+  const { rerender } = render(header(onRename, "t1"));
+  fireEvent.click(screen.getByRole("button", { name: "Rename conversation" }));
+  fireEvent.change(screen.getByRole("textbox", { name: "Conversation title" }), {
+    target: { value: "Meant for the first thread" },
+  });
+
+  rerender(header(onRename, "t2"));
+
+  expect(screen.queryByRole("textbox")).toBeNull();
+  expect(onRename).not.toHaveBeenCalled();
 });

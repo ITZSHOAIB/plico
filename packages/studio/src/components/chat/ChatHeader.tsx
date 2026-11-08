@@ -7,6 +7,7 @@ import { chatInspectorId } from "./ChatInspector";
 import { TitleEditor } from "./TitleEditor";
 
 export function ChatHeader({
+  threadId,
   title,
   subtitle,
   run,
@@ -15,6 +16,8 @@ export function ChatHeader({
   onOpenInspector,
   onRename,
 }: {
+  /** Selecting another thread starts the title editor over, so a draft never follows the selection. */
+  threadId?: string | undefined;
   title: string;
   subtitle: string;
   run: RunSummary | null;
@@ -28,7 +31,7 @@ export function ChatHeader({
     <header className="flex h-14 shrink-0 items-center justify-between gap-3 border-b border-line px-4 sm:px-5">
       <div className="min-w-0">
         {onRename ? (
-          <TitleEditor title={title} onRename={onRename} />
+          <TitleEditor key={threadId} title={title} onRename={onRename} />
         ) : (
           <h2 className="m-0 truncate text-body font-semibold">{title}</h2>
         )}
