@@ -54,4 +54,22 @@ describe("published plico bin", () => {
     },
     TEST_TIMEOUT_MS,
   );
+
+  it(
+    "prints no experimental warning for --version, validate, or a command that opens the database",
+    async () => {
+      const example = fileURLToPath(
+        new URL("../../../examples/internal-ops-agent", import.meta.url),
+      );
+      for (const args of [["--version"], ["validate", example], ["runs", example]]) {
+        const result = spawnSync(process.execPath, [join(distDir, "cli.js"), ...args], {
+          encoding: "utf8",
+          timeout: CHILD_TIMEOUT_MS,
+        });
+
+        expect(result.stderr, args.join(" ")).not.toContain("ExperimentalWarning");
+      }
+    },
+    TEST_TIMEOUT_MS * 2,
+  );
 });

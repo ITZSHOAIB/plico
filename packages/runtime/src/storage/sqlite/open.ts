@@ -1,13 +1,14 @@
 import { existsSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
-import { DatabaseSync } from "node:sqlite";
+import type { DatabaseSync } from "node:sqlite";
 import { pathToFileURL } from "node:url";
+import { createDatabase } from "./driver.js";
 import { checkReadOnlySchema, initializeSchema } from "./schema.js";
 
 /** Opens the database with the pragma order and migrator every Plico store shares. */
 export function openDatabase(databasePath: string, readOnly = false): DatabaseSync {
   if (!readOnly) mkdirSync(dirname(databasePath), { recursive: true });
-  const database = new DatabaseSync(readOnly ? readOnlySource(databasePath) : databasePath, {
+  const database = createDatabase(readOnly ? readOnlySource(databasePath) : databasePath, {
     readOnly,
   });
   try {

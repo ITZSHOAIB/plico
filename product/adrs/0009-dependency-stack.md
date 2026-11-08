@@ -26,8 +26,11 @@ Plico owns what makes it a product: the folder contract, the event contract, the
 | Studio styling and components | Own semantic CSS-variable theme tokens (dark default, light via `data-theme`); Tailwind v4 mapped onto them; Radix for accessible primitives; `lucide-react` behind one `Icon` wrapper; fonts bundled with Fontsource | proposed, to be proven by the Studio redesign epic |
 | Eval scorers | `autoevals` behind a Plico scorer interface, optional | proposed |
 | Skills format | Agent Skills layout and progressive loading, added next to flat files | proposed, see the skills epic |
+| Node baseline | Node `>=22.18.0`, tested on 22.18.0 and 24 in CI. `node:sqlite` is loaded lazily so only commands that open a database load it, and the CLI hides its experimental warning | accepted |
 | Host auth | Host-supplied context; no Plico users | accepted (ADR 0005) |
 | Sandboxes | Deferred until a requirement exists | deferred |
+
+The Node floor is the oldest release the full suite passes on. 22.13 and 22.14 lack `node:sqlite` URL paths, which the read-only event store needs. 22.18 also ships type stripping unflagged. Node 22 reaches end of life on 2027-04-30; raise the floor to 24 then. The CLI filters only the SQLite warning; the runtime and server never touch the host's warning settings.
 
 Proposed picks were shortlisted from package data and not run against Plico. Each epic that adopts one writes the check that proves it, and falls back to the audit's next option if the check fails.
 

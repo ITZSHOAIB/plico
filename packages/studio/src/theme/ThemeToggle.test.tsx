@@ -1,8 +1,21 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, expect, it } from "vitest";
+import { afterEach, beforeEach, expect, it } from "vitest";
 import { ThemeToggle } from "./ThemeToggle";
 import { initTheme } from "./theme";
+
+// Node 26 ships its own `localStorage` global, which hides jsdom's; give the tests a plain one.
+beforeEach(() => {
+  const items = new Map<string, string>();
+  Object.defineProperty(window, "localStorage", {
+    configurable: true,
+    value: {
+      getItem: (key: string) => items.get(key) ?? null,
+      setItem: (key: string, value: string) => void items.set(key, value),
+      clear: () => items.clear(),
+    },
+  });
+});
 
 afterEach(() => {
   cleanup();
