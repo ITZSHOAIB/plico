@@ -33,6 +33,7 @@ export function ChatView({ inspector }: { inspector: RunInspector }) {
   const [historical, setHistorical] = useState(false);
   const [inspectError, setInspectError] = useState<string | null>(null);
   const [inspecting, setInspecting] = useState(false);
+  const [stopError, setStopError] = useState<string | null>(null);
   const inspectRequest = useRef(0);
   const visibleInspector = historical ? inspector : active;
   const runId = active.selectedRun?.runId;
@@ -46,6 +47,7 @@ export function ChatView({ inspector }: { inspector: RunInspector }) {
   function resetSelection() {
     inspectRequest.current++;
     setInspectError(null);
+    setStopError(null);
     setInspecting(false);
     setDraft("");
     setHistorical(false);
@@ -83,7 +85,16 @@ export function ChatView({ inspector }: { inspector: RunInspector }) {
 
   const thread = chat.threads.find((item) => item.id === chat.selected);
   const stop =
-    running && runId ? () => void requestRunCancellation(runId).catch(() => {}) : undefined;
+    running && runId
+      ? () => {
+          setStopError(null);
+          requestRunCancellation(runId).catch((cause) =>
+            setStopError(
+              cause instanceof Error ? cause.message : "Could not request run cancellation.",
+            ),
+          );
+        }
+      : undefined;
 
   return (
     <section aria-label="Chat" className="flex min-h-0 min-w-0 flex-1 flex-col lg:flex-row">
@@ -116,9 +127,9 @@ export function ChatView({ inspector }: { inspector: RunInspector }) {
           onOpenInspector={() => setShowInspector(true)}
         />
         <ChatAnnouncer running={running} />
-        {(chat.error || inspectError) && (
+        {(chat.error || inspectError || stopError) && (
           <div className="mx-auto w-full max-w-3xl px-5 pt-4">
-            <Notice>{chat.error ?? inspectError}</Notice>
+            <Notice>{chat.error ?? inspectError ?? stopError}</Notice>
           </div>
         )}
         {!chat.selected ? (
