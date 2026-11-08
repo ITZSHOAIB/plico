@@ -5,34 +5,57 @@ import { getProjectPaths, getProjectRelativePaths } from "./layout.js";
 import type { ValidationIssue } from "./types.js";
 
 export interface Skill {
-  /** The file name without `.md`. The agent loads the skill by this name. */
+  /** The folder name. The agent loads the skill by this name. */
   name: string;
   description: string;
-  /** Project-relative path, such as `skills/triage.md`. */
+  /** Project-relative path, such as `skills/triage/SKILL.md`. */
   source: string;
   /** The skill text without its frontmatter. */
   body: string;
 }
 
 export interface SkillsResult {
-  /** Skills that have a description, sorted by file name. */
+  /** Skills that have a description, sorted by folder name. */
   skills: Skill[];
   issues: ValidationIssue[];
 }
 
-/** Reads every `skills/*.md` file. A file that cannot be read throws. */
+const SKILL_FILE = "SKILL.md";
+
+/** Reads every `skills/<name>/SKILL.md` file. A file that cannot be read throws. */
 export async function readSkills(root: string): Promise<SkillsResult> {
   const directory = getProjectPaths(root).directories.skills;
   const relative = getProjectRelativePaths().directories.skills;
-  const files = (await readdir(directory))
-    .filter((entry) => entry.endsWith(".md"))
-    .sort((left, right) => left.localeCompare(right));
+  const entries = (await readdir(directory, { withFileTypes: true })).sort((left, right) =>
+    left.name.localeCompare(right.name),
+  );
 
   const skills: Skill[] = [];
   const issues: ValidationIssue[] = [];
-  for (const file of files) {
-    const source = `${relative}/${file}`;
-    const { data, body } = parseFrontmatter(await readFile(join(directory, file), "utf8"));
+  for (const entry of entries) {
+    if (entry.isFile() && entry.name.endsWith(".md")) {
+      const name = entry.name.slice(0, -".md".length);
+      issues.push({
+        path: `${relative}/${entry.name}`,
+        message: `Skills are folders. Move ${relative}/${entry.name} to ${relative}/${name}/${SKILL_FILE}.`,
+        severity: "error",
+      });
+      continue;
+    }
+    if (!entry.isDirectory() || entry.name.startsWith(".")) continue;
+
+    const folder = `${relative}/${entry.name}`;
+    const source = `${folder}/${SKILL_FILE}`;
+    if (!(await readdir(join(directory, entry.name))).includes(SKILL_FILE)) {
+      issues.push({
+        path: folder,
+        message: `Skill folder ${folder} needs a ${SKILL_FILE} file.`,
+        severity: "error",
+      });
+      continue;
+    }
+    const text = await readFile(join(directory, entry.name, SKILL_FILE), "utf8");
+    const { data, body } = parseFrontmatter(text);
     const description = data.description?.trim();
     if (!description) {
       issues.push({
@@ -42,7 +65,7 @@ export async function readSkills(root: string): Promise<SkillsResult> {
       });
       continue;
     }
-    skills.push({ name: file.slice(0, -".md".length), description, source, body });
+    skills.push({ name: entry.name, description, source, body });
   }
   return { skills, issues };
 }

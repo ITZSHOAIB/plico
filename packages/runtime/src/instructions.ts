@@ -3,6 +3,7 @@ import {
   getProjectPaths,
   getProjectRelativePaths,
   type LoadedProject,
+  parseAgentFile,
   readSkills,
   SKILL_TOOL_NAME,
   type Skill,
@@ -16,7 +17,7 @@ export async function composeInstructions(
 ): Promise<ComposedInstructions> {
   const projectPaths = getProjectPaths(project.root);
   const sources = [getProjectRelativePaths().agentFile];
-  const parts = [await readFile(projectPaths.agentFile, "utf8")];
+  const parts = [parseAgentFile(await readFile(projectPaths.agentFile, "utf8")).body];
   const skills = loaded ?? (await readSkills(project.root)).skills;
 
   if (skills.length > 0) {

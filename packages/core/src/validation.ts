@@ -1,4 +1,5 @@
 import { readFile, stat } from "node:fs/promises";
+import { parseAgentFile, unknownAgentKeyWarnings } from "./agent-file.js";
 import { loadProject } from "./config.js";
 import { missingFileMessage, missingFileMessageFor, ProjectConfigError } from "./errors.js";
 import {
@@ -49,6 +50,9 @@ export async function validateProject(root: string): Promise<ValidationResult> {
   }
 
   if (typeof agentText === "string") {
+    const agent = parseAgentFile(agentText);
+    warnings.push(...unknownAgentKeyWarnings(relativePaths.agentFile, agent.data));
+    agentText = agent.body;
     if (agentText.trim().length === 0) {
       errors.push({
         path: relativePaths.agentFile,

@@ -135,13 +135,15 @@ describe("runProject", () => {
   it("lists skills after the agent instructions and loads them on demand", async () => {
     const root = await mkdtemp(join(tmpdir(), "plico-runtime-"));
     await writeValidProject(root);
+    await mkdir(join(root, "skills", "triage"));
+    await mkdir(join(root, "skills", "intake"));
     await writeFile(
-      join(root, "skills", "triage.md"),
+      join(root, "skills", "triage", "SKILL.md"),
       "---\ndescription: Sort urgent work.\n---\n# Triage\n\nSort urgent work.",
       "utf8",
     );
     await writeFile(
-      join(root, "skills", "intake.md"),
+      join(root, "skills", "intake", "SKILL.md"),
       "---\ndescription: Capture the request.\n---\n# Intake",
       "utf8",
     );
@@ -152,7 +154,7 @@ describe("runProject", () => {
     expect(
       result.events.find((event) => event.type === "instructions.composed")?.payload,
     ).toMatchObject({
-      sources: ["agent.md", "skills/intake.md", "skills/triage.md"],
+      sources: ["agent.md", "skills/intake/SKILL.md", "skills/triage/SKILL.md"],
       content: [
         "# Internal Ops Agent",
         "",
@@ -171,7 +173,7 @@ describe("runProject", () => {
   it("records runtime failures as error and terminal failed events", async () => {
     const root = await mkdtemp(join(tmpdir(), "plico-runtime-"));
     await writeValidProject(root);
-    await mkdir(join(root, "skills", "broken.md"));
+    await mkdir(join(root, "skills", "broken", "SKILL.md"), { recursive: true });
 
     const result = await runProject(root);
 
@@ -594,7 +596,12 @@ describe("runProject", () => {
   it("persists a failed dry run and reads back its terminal events after reopening", async (context) => {
     const root = await mkdtemp(join(tmpdir(), "plico-runtime-"));
     await writeValidProject(root);
-    await symlinkOrSkip(context, join(root, "missing.md"), join(root, "skills", "broken.md"));
+    await mkdir(join(root, "skills", "broken"));
+    await symlinkOrSkip(
+      context,
+      join(root, "missing.md"),
+      join(root, "skills", "broken", "SKILL.md"),
+    );
 
     const databasePath = join(root, ".plico", "plico.sqlite");
     const eventStore = createSqliteEventStore({ databasePath });

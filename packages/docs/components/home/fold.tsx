@@ -11,7 +11,7 @@ const panels = [
   },
   {
     side: "middle",
-    path: "skills/triage.md",
+    path: "skills/triage/SKILL.md",
     lines: [
       "# Triage a request",
       "",
