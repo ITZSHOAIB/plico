@@ -2,6 +2,7 @@ import { useCallback, useState } from "react";
 import { type NavItem, NavRail } from "./components/NavRail";
 import { RunList } from "./components/RunList";
 import { useEvals } from "./hooks/useEvals";
+import { InspectionContext, inspectionReason, useInspectionMode } from "./hooks/useInspection";
 import { useProjectData } from "./hooks/useProjectData";
 import { useRunInspector } from "./hooks/useRunInspector";
 import { useRunUrl } from "./hooks/useRunUrl";
@@ -12,6 +13,7 @@ import type { View } from "./view";
 import { MainView } from "./views/MainView";
 
 export function App() {
+  const inspecting = useInspectionMode();
   const data = useProjectData();
   const { loadRuns, loadReadiness } = data;
   const onEvalsFinished = useCallback(
@@ -41,7 +43,13 @@ export function App() {
   };
 
   const navItems: NavItem[] = [
-    { view: "chat", label: "Chat", icon: "chat", onSelect: () => showTopLevelView("chat") },
+    {
+      view: "chat",
+      label: "Chat",
+      icon: "chat",
+      disabled: inspecting,
+      onSelect: () => showTopLevelView("chat"),
+    },
     {
       view: "overview",
       label: "Overview",
@@ -102,40 +110,43 @@ export function App() {
   const runListOnMobile = view === "runs" && !inspector.selectedRun;
 
   return (
-    <div className="flex h-dvh flex-col lg:flex-row">
-      <header className="flex shrink-0 items-center justify-between gap-3 border-b border-line bg-surface px-4 py-2 lg:hidden">
-        <span className="flex min-w-0 items-center gap-2.5 truncate font-semibold">
-          <Logo className="size-6" />
-          {data.project?.config.name ?? "Plico Studio"}
-        </span>
-        <ThemeToggle />
-      </header>
-      <NavRail items={navItems} view={view} />
-      <main className="flex min-h-0 min-w-0 flex-1">
-        <h1 className="sr-only">Plico Studio</h1>
-        {view !== "chat" && (
-          <RunList
-            runs={data.runs}
-            selectedRun={inspector.selectedRun}
-            onSelectRun={selectRun}
-            visibleOnMobile={runListOnMobile}
-          />
-        )}
-        <div
-          className={`min-h-0 min-w-0 flex-1 flex-col lg:flex ${runListOnMobile ? "hidden" : "flex"}`}
-        >
-          {data.runsError && <Notice>{data.runsError}</Notice>}
-          {openError && view !== "evals" ? <Notice>{openError}</Notice> : null}
-          <MainView
-            view={view}
-            data={data}
-            inspector={inspector}
-            evals={evals}
-            onOpenRun={openRun}
-            onBackToRuns={() => showTopLevelView("runs")}
-          />
-        </div>
-      </main>
-    </div>
+    <InspectionContext.Provider value={inspecting}>
+      <div className="flex h-dvh flex-col lg:flex-row">
+        <header className="flex shrink-0 items-center justify-between gap-3 border-b border-line bg-surface px-4 py-2 lg:hidden">
+          <span className="flex min-w-0 items-center gap-2.5 truncate font-semibold">
+            <Logo className="size-6" />
+            {data.project?.config.name ?? "Plico Studio"}
+          </span>
+          <ThemeToggle />
+        </header>
+        <NavRail items={navItems} view={view} />
+        <main className="flex min-h-0 min-w-0 flex-1">
+          <h1 className="sr-only">Plico Studio</h1>
+          {view !== "chat" && (
+            <RunList
+              runs={data.runs}
+              selectedRun={inspector.selectedRun}
+              onSelectRun={selectRun}
+              visibleOnMobile={runListOnMobile}
+            />
+          )}
+          <div
+            className={`min-h-0 min-w-0 flex-1 flex-col lg:flex ${runListOnMobile ? "hidden" : "flex"}`}
+          >
+            {inspecting && <Notice>{inspectionReason}</Notice>}
+            {data.runsError && <Notice>{data.runsError}</Notice>}
+            {openError && view !== "evals" ? <Notice>{openError}</Notice> : null}
+            <MainView
+              view={view}
+              data={data}
+              inspector={inspector}
+              evals={evals}
+              onOpenRun={openRun}
+              onBackToRuns={() => showTopLevelView("runs")}
+            />
+          </div>
+        </main>
+      </div>
+    </InspectionContext.Provider>
   );
 }

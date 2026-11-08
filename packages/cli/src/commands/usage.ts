@@ -7,7 +7,7 @@ const USAGE_LINES: readonly string[] = [
   "Usage: plico events <runId> [--after <sequence>] [--db <path>] [--json] [path]",
   "Usage: plico eval [--json] [--db <path>] [path]",
   "Usage: plico readiness [--json] [--db <path>] [path]",
-  "Usage: plico serve [--host <host>] [--port <port>] [--db <path>] [--studio] [--allow-remote] [--allow-script] [path]",
+  "Usage: plico serve [--host <host>] [--port <port>] [--db <path>] [--studio] [--allow-remote] [--allow-script] [--inspect] [path]",
 ];
 
 export function usageCommand(stream: "stdout" | "stderr" = "stdout"): number {

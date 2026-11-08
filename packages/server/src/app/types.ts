@@ -25,6 +25,8 @@ export interface AppDeps {
    * every read and action refuses what it does not match.
    */
   scope?: Metadata;
+  /** Inspection only: the HTTP API answers reads and refuses every change. */
+  inspect?: true;
   /** Set by a mounted handler for one request: host data for the runs and decisions it causes. */
   context?: Metadata;
 }

@@ -12,7 +12,7 @@ import { findStudioPath, normalizeDisplayHost, resolveDatabasePath } from "../pa
 export async function serveCommand(args: string[]): Promise<number> {
   try {
     const parsed = parseArgs(args, {
-      flags: ["--studio", "--allow-remote", "--allow-script"],
+      flags: ["--studio", "--allow-remote", "--allow-script", "--inspect"],
       values: {
         "--host": { missing: "Missing host after --host" },
         "--port": { missing: "Missing port after --port", parse: parsePort },
@@ -40,6 +40,7 @@ export async function serveCommand(args: string[]): Promise<number> {
       ...(studioPath === undefined ? {} : { studioPath }),
       ...(parsed.flags.has("--allow-remote") ? { allowRemote: true } : {}),
       ...(parsed.flags.has("--allow-script") ? { allowScript: true } : {}),
+      ...(parsed.flags.has("--inspect") ? { inspect: true } : {}),
     });
     const address = server.address();
     if (!address || typeof address === "string") {

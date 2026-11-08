@@ -23,7 +23,15 @@ export interface CreatePlicoOptions {
  * and the database path. Runs a dead process left behind continue in the background, and queued
  * runs are resumed before this returns. Call `close()` before the process exits.
  */
-export async function createPlico(options: CreatePlicoOptions): Promise<Plico> {
+export function createPlico(options: CreatePlicoOptions): Promise<Plico> {
+  return openPlico(options, false);
+}
+
+/**
+ * `createPlico`, or with `inspect` a Plico that only reads: it recovers and resumes nothing, so a
+ * second process on a host's database cannot act on the host's runs.
+ */
+export async function openPlico(options: CreatePlicoOptions, inspect: boolean): Promise<Plico> {
   const unknown = Object.keys(options).filter(
     (key) => key !== "projectRoot" && key !== "databasePath",
   );
@@ -54,18 +62,22 @@ export async function createPlico(options: CreatePlicoOptions): Promise<Plico> {
     ...(providerRecoveryKey ? { providerRecoveryKey } : {}),
     isClosed: () => closing,
   };
-  void recoverPlicoState(recoveryOptions).catch((error: unknown) =>
-    console.error(`Recovery incomplete: ${error instanceof Error ? error.message : String(error)}`),
-  );
-  try {
-    await resumeQueuedRuns({
-      ...recoveryOptions,
-      ...(providerAccountKey ? { providerAccountKey } : {}),
-    });
-  } catch (error) {
-    closing = true;
-    threadStore.close();
-    throw error;
+  if (!inspect) {
+    void recoverPlicoState(recoveryOptions).catch((error: unknown) =>
+      console.error(
+        `Recovery incomplete: ${error instanceof Error ? error.message : String(error)}`,
+      ),
+    );
+    try {
+      await resumeQueuedRuns({
+        ...recoveryOptions,
+        ...(providerAccountKey ? { providerAccountKey } : {}),
+      });
+    } catch (error) {
+      closing = true;
+      threadStore.close();
+      throw error;
+    }
   }
   return assemblePlico(
     {
@@ -76,6 +88,7 @@ export async function createPlico(options: CreatePlicoOptions): Promise<Plico> {
       ...(provider ? { provider } : {}),
       ...(providerRecoveryKey ? { providerRecoveryKey } : {}),
       ...(providerAccountKey ? { providerAccountKey } : {}),
+      ...(inspect ? { inspect: true as const } : {}),
     },
     () => {
       closing = true;

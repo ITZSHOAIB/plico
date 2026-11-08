@@ -42,3 +42,8 @@ A `script` in a run request calls project tools with arguments the caller picks 
 skips the model. For that reason the API answers 403 `run.script_disabled` unless the
 server starts with `plico serve --allow-script` (`allowScript: true` for
 `servePlico`). `plico run --dry --script` on the command line is unaffected.
+
+With `plico serve --inspect` (`inspect: true` for `servePlico`) the server only reads: it recovers
+nothing, `GET /health` returns `{ "ok": true, "inspection": true }`, and every request other than
+`GET` or `HEAD` is refused with 403 `inspection.read_only`. See
+[Use Plico from your backend](/docs/backend).

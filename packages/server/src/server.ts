@@ -1,14 +1,14 @@
 import { createServer, type Server } from "node:http";
-import { createPlico } from "./create-plico.js";
+import { openPlico } from "./create-plico.js";
 import { createRequestListener } from "./listener.js";
 import type { ServePlicoOptions } from "./types.js";
 
 /** `createPlico` plus an HTTP listener over its `/v1` API. Closing the server closes Plico. */
 export async function servePlico(options: ServePlicoOptions): Promise<Server> {
-  const plico = await createPlico({
-    projectRoot: options.projectRoot,
-    databasePath: options.databasePath,
-  });
+  const plico = await openPlico(
+    { projectRoot: options.projectRoot, databasePath: options.databasePath },
+    options.inspect === true,
+  );
   const server = createServer(
     createRequestListener(plico, {
       ...(options.studioPath === undefined ? {} : { studioPath: options.studioPath }),

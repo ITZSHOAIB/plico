@@ -1,0 +1,66 @@
+---
+title: Use Plico from your backend
+description: Run an agent inside your own server, one user at a time.
+icon: Server
+---
+
+Plico is a library your Node backend imports. Your files define the agent; your code only runs it. Your app owns users, login and permissions. Plico owns the agent's threads, runs, events and artifacts, and filters them by the `scope` you give it.
+
+```ts
+import { createPlico } from "@plico/server";
+
+const plico = await createPlico({ projectRoot: "./agent", databasePath: "./plico.sqlite" });
+
+const thread = await plico.threads.create({ metadata: { userId: "u-1" } });
+await plico.threads.send(thread.id, "Summarise my open tickets", { context: { actor: "u-1" } });
+```
+
+Call `await plico.close()` before the process exits. See [Threads](/docs/threads) for the programmatic API.
+
+## Mount the API in your server
+
+`plico.node()` returns an `(req, res)` handler and `plico.fetch()` returns a `(request) => Response` handler. Run your own authentication first, then pass `scope`:
+
+**Express**
+
+```ts
+app.use(express.json());
+app.use("/plico", requireLogin, plico.node({
+  scope: (request) => ({ userId: request.headers.get("x-user-id") ?? "" }),
+  context: (request) => ({ actor: request.headers.get("x-user-id") ?? "" }),
+}));
+```
+
+**Hono**
+
+```ts
+const handler = plico.fetch({ scope, context, basePath: "/plico" });
+app.all("/plico/*", requireLogin, (c) => handler(c.req.raw));
+```
+
+**Next.js**
+
+```ts
+// app/plico/[...path]/route.ts
+const handler = plico.fetch({ scope, context, basePath: "/plico" });
+export const GET = handler;
+export const POST = handler;
+export const PATCH = handler;
+```
+
+- **`scope`** is a JSON object you compute per request. Plico stamps it on new threads and runs as their `metadata`, and answers `404` for anything it does not match: threads, runs, events, artifacts, cancel and approvals. A client cannot widen it or set its own `metadata`. A `scope` function that throws or returns anything but an object fails the request with a `500`.
+- **`context`** is host data for the runs a request causes. Tools read it as `ctx.context`, and `run.started` and `approval.decided` record it. Keep secrets out of it.
+- A scoped mount does not serve `/v1/project`, `/v1/instructions`, `/v1/eval`, `/v1/readiness` or `/v1/runs/dry`.
+- `basePath` removes a mount path when your framework does not. A body your framework already parsed into `req.body` is used as is.
+
+A complete Express app is in `examples/express-host`.
+
+## Run Studio beside your app
+
+Studio is a local development tool. Point it at the same database with `--inspect` and it reads without acting:
+
+```sh
+plico serve --studio --inspect --db ./plico.sqlite ./agent
+```
+
+An inspecting server does not recover or resume runs, so it cannot interfere with the runs your app owns. Every request that would change state, such as sending a message, cancelling a run or deciding an approval, is refused with `403 inspection.read_only`. `GET /health` reports `"inspection": true`, and Studio disables Chat, Run evals and approvals with that reason.
