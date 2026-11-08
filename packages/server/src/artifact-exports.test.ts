@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createSqliteEventStore, runProject } from "@plico/runtime";
 import { afterEach, describe, expect, it } from "vitest";
-import { createPlicoServer } from "./index.js";
+import { createTestServer } from "./testing/test-server.js";
 
 const servers: Server[] = [];
 
@@ -26,7 +26,7 @@ async function startArtifactProject() {
   );
   await writeFile(join(root, "agent.md"), "# Demo\n");
   const eventStore = createSqliteEventStore({ databasePath: join(root, "state.sqlite") });
-  const api = await createPlicoServer({ projectRoot: root, eventStore });
+  const api = await createTestServer({ projectRoot: root, eventStore });
   const server = createServer(api.requestListener);
   servers.push(server);
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));

@@ -4,7 +4,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createSqliteEventStore, runProject } from "@plico/runtime";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createPlicoServer, servePlico } from "./index.js";
+import { servePlico } from "./index.js";
+import { createTestServer } from "./testing/test-server.js";
 
 interface SSEMessage {
   event?: string;
@@ -124,7 +125,7 @@ async function jsonRequest(
   };
 }
 
-describe("createPlicoServer", () => {
+describe("createTestServer", () => {
   it("returns a running run immediately and exposes events while a tool executes", async () => {
     const root = await mkdtemp(join(tmpdir(), "plico-live-api-"));
     await writeValidProject(root);
@@ -137,7 +138,7 @@ describe("createPlicoServer", () => {
     };`,
     );
     const eventStore = createSqliteEventStore({ databasePath: join(root, "state.sqlite") });
-    const serverApi = await createPlicoServer({ allowScript: true, projectRoot: root, eventStore });
+    const serverApi = await createTestServer({ allowScript: true, projectRoot: root, eventStore });
     const { baseUrl, server } = await startTestServer(serverApi.requestListener);
     let release!: () => void;
     const gate = new Promise<void>((resolve) => {
@@ -194,7 +195,7 @@ describe("createPlicoServer", () => {
     const eventStore = createSqliteEventStore({
       databasePath: join(root, ".plico", "plico.sqlite"),
     });
-    const serverApi = await createPlicoServer({ allowScript: true, projectRoot: root, eventStore });
+    const serverApi = await createTestServer({ allowScript: true, projectRoot: root, eventStore });
     const { baseUrl, server } = await startTestServer(serverApi.requestListener);
 
     const health = await jsonRequest(baseUrl, "/health");
@@ -240,7 +241,7 @@ describe("createPlicoServer", () => {
     const eventStore = createSqliteEventStore({
       databasePath: join(root, ".plico", "plico.sqlite"),
     });
-    const serverApi = await createPlicoServer({ allowScript: true, projectRoot: root, eventStore });
+    const serverApi = await createTestServer({ allowScript: true, projectRoot: root, eventStore });
     const { baseUrl, server } = await startTestServer(serverApi.requestListener);
 
     const run = await jsonRequest(baseUrl, "/v1/runs/dry", {
@@ -309,7 +310,7 @@ describe("createPlicoServer", () => {
     const eventStore = createSqliteEventStore({
       databasePath: join(root, ".plico", "plico.sqlite"),
     });
-    const serverApi = await createPlicoServer({ allowScript: true, projectRoot: root, eventStore });
+    const serverApi = await createTestServer({ allowScript: true, projectRoot: root, eventStore });
     const { baseUrl, server } = await startTestServer(serverApi.requestListener);
 
     const malformed = await fetch(`${baseUrl}/v1/runs/dry`, {
@@ -365,7 +366,7 @@ describe("createPlicoServer", () => {
     const eventStore = createSqliteEventStore({
       databasePath: join(root, ".plico", "plico.sqlite"),
     });
-    const serverApi = await createPlicoServer({ allowScript: true, projectRoot: root, eventStore });
+    const serverApi = await createTestServer({ allowScript: true, projectRoot: root, eventStore });
     const { baseUrl, server } = await startTestServer(serverApi.requestListener);
 
     const response = await jsonRequest(baseUrl, "/v1/project");
@@ -416,7 +417,7 @@ describe("Studio", () => {
     const eventStore = createSqliteEventStore({
       databasePath: join(root, ".plico", "plico.sqlite"),
     });
-    const serverApi = await createPlicoServer({
+    const serverApi = await createTestServer({
       allowScript: true,
       projectRoot: root,
       eventStore,
@@ -447,7 +448,7 @@ describe("Studio", () => {
     const eventStore = createSqliteEventStore({
       databasePath: join(root, ".plico", "plico.sqlite"),
     });
-    const serverApi = await createPlicoServer({ allowScript: true, projectRoot: root, eventStore });
+    const serverApi = await createTestServer({ allowScript: true, projectRoot: root, eventStore });
     const { baseUrl, server } = await startTestServer(serverApi.requestListener);
 
     const notFound = await jsonRequest(baseUrl, "/some/route");
@@ -467,7 +468,7 @@ describe("Instructions", () => {
     const eventStore = createSqliteEventStore({
       databasePath: join(root, ".plico", "plico.sqlite"),
     });
-    const serverApi = await createPlicoServer({ allowScript: true, projectRoot: root, eventStore });
+    const serverApi = await createTestServer({ allowScript: true, projectRoot: root, eventStore });
     const { baseUrl, server } = await startTestServer(serverApi.requestListener);
 
     const response = await jsonRequest(baseUrl, "/v1/instructions");
@@ -525,7 +526,7 @@ describe("SSE stream", () => {
         return events;
       },
     };
-    const api = await createPlicoServer({ allowScript: true, projectRoot: root, eventStore });
+    const api = await createTestServer({ allowScript: true, projectRoot: root, eventStore });
     const { baseUrl, server } = await startTestServer(api.requestListener);
     try {
       const messages = await readSSEStream(
@@ -560,7 +561,7 @@ describe("SSE stream", () => {
     const eventStore = createSqliteEventStore({
       databasePath: join(root, ".plico", "plico.sqlite"),
     });
-    const serverApi = await createPlicoServer({ allowScript: true, projectRoot: root, eventStore });
+    const serverApi = await createTestServer({ allowScript: true, projectRoot: root, eventStore });
     const { baseUrl, server } = await startTestServer(serverApi.requestListener);
 
     const runId = await persistDryRun(baseUrl);
@@ -589,7 +590,7 @@ describe("SSE stream", () => {
     const eventStore = createSqliteEventStore({
       databasePath: join(root, ".plico", "plico.sqlite"),
     });
-    const api = await createPlicoServer({ allowScript: true, projectRoot: root, eventStore });
+    const api = await createTestServer({ allowScript: true, projectRoot: root, eventStore });
     const { baseUrl, server } = await startTestServer(api.requestListener);
     try {
       const runId = await persistDryRun(baseUrl);
@@ -612,7 +613,7 @@ describe("SSE stream", () => {
     const eventStore = createSqliteEventStore({
       databasePath: join(root, ".plico", "plico.sqlite"),
     });
-    const serverApi = await createPlicoServer({ allowScript: true, projectRoot: root, eventStore });
+    const serverApi = await createTestServer({ allowScript: true, projectRoot: root, eventStore });
     const { baseUrl, server } = await startTestServer(serverApi.requestListener);
 
     const response = await jsonRequest(baseUrl, "/v1/runs/no-such-run/events/stream");
@@ -630,7 +631,7 @@ describe("SSE stream", () => {
     const eventStore = createSqliteEventStore({
       databasePath: join(root, ".plico", "plico.sqlite"),
     });
-    const serverApi = await createPlicoServer({ allowScript: true, projectRoot: root, eventStore });
+    const serverApi = await createTestServer({ allowScript: true, projectRoot: root, eventStore });
     const { baseUrl, server } = await startTestServer(serverApi.requestListener);
 
     const response = await jsonRequest(baseUrl, "/v1/runs/any-run/events/stream?after=nope");
@@ -653,7 +654,7 @@ describe("SSE stream", () => {
     const eventStore = createSqliteEventStore({
       databasePath: join(root, ".plico", "plico.sqlite"),
     });
-    const serverApi = await createPlicoServer({ allowScript: true, projectRoot: root, eventStore });
+    const serverApi = await createTestServer({ allowScript: true, projectRoot: root, eventStore });
     const { baseUrl, server } = await startTestServer(serverApi.requestListener);
 
     const runId = await persistDryRun(baseUrl);
@@ -679,7 +680,7 @@ describe("SSE stream", () => {
     const eventStore = createSqliteEventStore({
       databasePath: join(root, ".plico", "plico.sqlite"),
     });
-    const serverApi = await createPlicoServer({ allowScript: true, projectRoot: root, eventStore });
+    const serverApi = await createTestServer({ allowScript: true, projectRoot: root, eventStore });
     const { baseUrl, server } = await startTestServer(serverApi.requestListener);
 
     const runId = await persistDryRun(baseUrl);
@@ -722,7 +723,7 @@ describe("SSE stream", () => {
       eventStore,
       script: [{ type: "tool.call", toolName: "gated", arguments: {} }],
     });
-    const serverApi = await createPlicoServer({ allowScript: true, projectRoot: root, eventStore });
+    const serverApi = await createTestServer({ allowScript: true, projectRoot: root, eventStore });
     const { baseUrl, server } = await startTestServer(serverApi.requestListener);
     const controller = new AbortController();
     try {
@@ -757,7 +758,7 @@ describe("SSE stream", () => {
     const eventStore = createSqliteEventStore({
       databasePath: join(root, ".plico", "plico.sqlite"),
     });
-    const serverApi = await createPlicoServer({ allowScript: true, projectRoot: root, eventStore });
+    const serverApi = await createTestServer({ allowScript: true, projectRoot: root, eventStore });
     const { baseUrl, server } = await startTestServer(serverApi.requestListener);
 
     const runId = await persistDryRun(baseUrl);
@@ -787,7 +788,7 @@ describe("Artifact workspace", () => {
     const eventStore = createSqliteEventStore({
       databasePath: join(root, ".plico", "plico.sqlite"),
     });
-    const serverApi = await createPlicoServer({ allowScript: true, projectRoot: root, eventStore });
+    const serverApi = await createTestServer({ allowScript: true, projectRoot: root, eventStore });
     const { baseUrl, server } = await startTestServer(serverApi.requestListener);
 
     const run = await jsonRequest(baseUrl, "/v1/runs/dry", {
@@ -834,7 +835,7 @@ describe("Artifact workspace", () => {
     const eventStore = createSqliteEventStore({
       databasePath: join(root, ".plico", "plico.sqlite"),
     });
-    const serverApi = await createPlicoServer({ allowScript: true, projectRoot: root, eventStore });
+    const serverApi = await createTestServer({ allowScript: true, projectRoot: root, eventStore });
     const { baseUrl, server } = await startTestServer(serverApi.requestListener);
 
     const run = await jsonRequest(baseUrl, "/v1/runs/dry", {
@@ -861,7 +862,7 @@ describe("Artifact workspace", () => {
     const eventStore = createSqliteEventStore({
       databasePath: join(root, ".plico", "plico.sqlite"),
     });
-    const serverApi = await createPlicoServer({ allowScript: true, projectRoot: root, eventStore });
+    const serverApi = await createTestServer({ allowScript: true, projectRoot: root, eventStore });
     const { baseUrl, server } = await startTestServer(serverApi.requestListener);
 
     const workspace = await jsonRequest(baseUrl, "/v1/runs/no-such-run/workspace");
@@ -881,7 +882,7 @@ describe("Readiness endpoint", () => {
     const eventStore = createSqliteEventStore({
       databasePath: join(root, ".plico", "plico.sqlite"),
     });
-    const serverApi = await createPlicoServer({ allowScript: true, projectRoot: root, eventStore });
+    const serverApi = await createTestServer({ allowScript: true, projectRoot: root, eventStore });
     const { baseUrl, server } = await startTestServer(serverApi.requestListener);
 
     const response = await jsonRequest(baseUrl, "/v1/readiness");
@@ -918,7 +919,7 @@ describe("Eval endpoint", () => {
     const eventStore = createSqliteEventStore({
       databasePath: join(root, ".plico", "plico.sqlite"),
     });
-    const serverApi = await createPlicoServer({ allowScript: true, projectRoot: root, eventStore });
+    const serverApi = await createTestServer({ allowScript: true, projectRoot: root, eventStore });
     const { baseUrl, server } = await startTestServer(serverApi.requestListener);
 
     const response = await jsonRequest(baseUrl, "/v1/eval", {
@@ -960,7 +961,7 @@ describe("Eval endpoint", () => {
     const eventStore = createSqliteEventStore({
       databasePath: join(root, ".plico", "plico.sqlite"),
     });
-    const serverApi = await createPlicoServer({ allowScript: true, projectRoot: root, eventStore });
+    const serverApi = await createTestServer({ allowScript: true, projectRoot: root, eventStore });
     const { baseUrl, server } = await startTestServer(serverApi.requestListener);
 
     const response = await jsonRequest(baseUrl, "/v1/eval", {

@@ -1,5 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import type { Engine, EventStore, ModelProvider, ThreadStore } from "@plico/runtime";
+import { PlicoError, statusForCode } from "../app/errors.js";
+import type { AppDeps } from "../app/types.js";
 import { errorMessage, HttpError, sendError } from "../errors.js";
 import { artifactRoutes } from "./artifacts.js";
 import { evalRoutes } from "./eval.js";
@@ -21,13 +22,9 @@ const routes: readonly Route[] = [
 ];
 
 interface HandleRequestOptions {
-  projectRoot: string;
-  eventStore: EventStore;
-  threadStore: ThreadStore | undefined;
-  provider: ModelProvider | undefined;
-  providerRecoveryKey: string | undefined;
-  providerAccountKey: string | undefined;
-  engine: Engine | undefined;
+  app: AppDeps;
+  /** Aborts when the host closes Plico, so open event streams end. */
+  stop: AbortSignal;
   studioPath: string | undefined;
   allowScript: boolean;
   request: IncomingMessage;
@@ -35,19 +32,7 @@ interface HandleRequestOptions {
 }
 
 export async function handleRequest(options: HandleRequestOptions): Promise<void> {
-  const {
-    projectRoot,
-    eventStore,
-    threadStore,
-    provider,
-    providerRecoveryKey,
-    providerAccountKey,
-    engine,
-    studioPath,
-    allowScript,
-    request,
-    response,
-  } = options;
+  const { app, stop, studioPath, allowScript, request, response } = options;
   const url = new URL(request.url ?? "/", "http://127.0.0.1");
 
   try {
@@ -57,13 +42,15 @@ export async function handleRequest(options: HandleRequestOptions): Promise<void
       const match = route.pattern.exec(url.pathname);
       const params = (match?.slice(1) ?? []).map(decodeParam);
       await route.handler({
-        projectRoot,
-        eventStore,
-        threadStore,
-        provider,
-        providerRecoveryKey,
-        providerAccountKey,
-        engine,
+        app,
+        stop,
+        projectRoot: app.projectRoot,
+        eventStore: app.eventStore,
+        threadStore: app.threadStore,
+        provider: app.provider,
+        providerRecoveryKey: app.providerRecoveryKey,
+        providerAccountKey: app.providerAccountKey,
+        engine: app.engine,
         studioPath,
         allowScript,
         request,
@@ -84,6 +71,10 @@ export async function handleRequest(options: HandleRequestOptions): Promise<void
   } catch (error) {
     if (error instanceof HttpError) {
       sendError(response, error.status, error.code, error.message);
+      return;
+    }
+    if (error instanceof PlicoError) {
+      sendError(response, statusForCode(error.code), error.code, error.message);
       return;
     }
 

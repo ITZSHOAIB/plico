@@ -43,10 +43,12 @@ its content to a different account.
 
 ## Embedding
 
-Hosts using `createPlicoServer` enable thread routes by passing a `threadStore` from
-`createSqliteThreadStore({ databasePath })`. Without one, thread routes return a
-`threads.unavailable` error. The host owns an injected thread store and must call its
-`close()` when it is no longer needed; `servePlico` owns its store and closes it on
-shutdown. Hosts should also await the returned `recover()` method at startup,
-supplying stable provider recovery and account keys when they use a provider.
-Readiness reports a thread and run store mismatch before a run is started.
+A host that embeds Plico calls `createPlico({ projectRoot, databasePath })` from
+`@plico/server`. It opens the thread store, run store, engine and provider from the
+project and the database path, recovers interrupted runs, resumes queued ones, and
+returns `plico.threads` (create, get, list, rename, messages, send), `plico.runs`
+(start, get, list, cancel, events) and `plico.approvals`. `plico.runs.events(runId, { after })`
+is an async iterator over the run's events. Call `await plico.close()` before the process
+exits; it ends open event iterators and closes the thread store. `servePlico` is
+`createPlico` plus an HTTP listener and closes Plico when the server closes. Readiness
+reports a thread and run store mismatch before a run is started.

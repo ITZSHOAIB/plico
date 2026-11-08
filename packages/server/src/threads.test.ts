@@ -12,7 +12,8 @@ import {
   modelProviderRecoveryKey,
 } from "@plico/runtime";
 import { expect, it, vi } from "vitest";
-import { createPlicoServer, servePlico } from "./index.js";
+import { servePlico } from "./index.js";
+import { createTestServer } from "./testing/test-server.js";
 
 it("closes its owned thread connection when servePlico stops", async () => {
   const root = await mkdtemp(join(tmpdir(), "plico-thread-serve-close-"));
@@ -36,7 +37,7 @@ it("creates and reads a durable thread and its messages through HTTP", async () 
   const root = await mkdtemp(join(tmpdir(), "plico-thread-api-"));
   const databasePath = join(root, "state.sqlite");
   const start = async () => {
-    const api = await createPlicoServer({
+    const api = await createTestServer({
       projectRoot: root,
       eventStore: createSqliteEventStore({ databasePath }),
       threadStore: createSqliteThreadStore({ databasePath }),

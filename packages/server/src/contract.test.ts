@@ -10,7 +10,7 @@ import {
   runProject,
 } from "@plico/runtime";
 import { afterAll, beforeAll, expect, it, vi } from "vitest";
-import { createPlicoServer } from "./index.js";
+import { createTestServer } from "./testing/test-server.js";
 
 type Shape = string | Shape[] | { [key: string]: Shape };
 
@@ -126,7 +126,7 @@ beforeAll(async () => {
   );
   await unlink(join(root, "tools", "lookup.tool.ts"));
   engine = createSqliteEngine({ databasePath });
-  const api = await createPlicoServer({
+  const api = await createTestServer({
     allowScript: true,
     projectRoot: root,
     eventStore,

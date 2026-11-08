@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createSqliteEventStore } from "@plico/runtime";
 import { afterEach, describe, expect, it } from "vitest";
-import { createPlicoServer } from "./index.js";
+import { createTestServer } from "./testing/test-server.js";
 
 const servers: Server[] = [];
 
@@ -19,7 +19,7 @@ afterEach(async () => {
 async function start(allowScript?: boolean): Promise<string> {
   const root = await mkdtemp(join(tmpdir(), "plico-script-gate-"));
   await mkdir(join(root, "skills"), { recursive: true });
-  const plico = await createPlicoServer({
+  const plico = await createTestServer({
     projectRoot: root,
     eventStore: createSqliteEventStore({ databasePath: join(root, "db.sqlite") }),
     ...(allowScript === undefined ? {} : { allowScript }),
