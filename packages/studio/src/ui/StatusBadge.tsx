@@ -13,7 +13,10 @@ export function StatusBadge({ status }: { status: RunSummary["status"] }) {
     <span
       className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-caption font-semibold ${statusTones[status] ?? "bg-raised text-muted"}`}
     >
-      <span aria-hidden="true" className="size-1.5 rounded-full bg-current" />
+      <span
+        aria-hidden="true"
+        className={`size-1.5 rounded-full bg-current ${status === "running" ? "motion-safe:animate-pulse" : ""}`}
+      />
       <span className="sr-only">{`Status: ${status}`}</span>
       <span aria-hidden="true">{status}</span>
     </span>
@@ -25,7 +28,7 @@ const dotTones: Record<string, string> = {
   failed: "bg-danger",
   blocked: "bg-warning",
   waiting: "bg-warning",
-  running: "bg-accent",
+  running: "bg-accent motion-safe:animate-pulse",
 };
 
 export function StatusDot({ status }: { status: RunSummary["status"] }) {

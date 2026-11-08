@@ -7,48 +7,66 @@
 :root,
 [data-theme="dark"] {
   color-scheme: dark;
-  --bg: #0b0c0e;
-  --surface: #101114;
-  --surface-raised: #15171b;
-  --border: #23262c;
-  --border-subtle: #1a1c20;
-  --text: #e6e8eb;
-  --muted: #8a8f98;
-  --faint: #80868f;
-  --accent: #7c8cff;
-  --accent-contrast: #0b0c0e;
-  --accent-soft: #171a30;
-  --success: #3ecf8e;
-  --success-soft: #11291f;
-  --danger: #ff6369;
-  --danger-soft: #2d1416;
-  --warning: #f5a524;
-  --warning-soft: #2b2110;
-  --code-key: #7aa2f7;
-  --code-string: #9ece6a;
+  /* Stone neutrals with a faint green-grey tint, so the verdigris accent belongs to the same family. */
+  --bg: #0b0d0d;
+  --surface: #111414;
+  --surface-raised: #181c1c;
+  --border: #262c2b;
+  --border-subtle: #1c2121;
+  --text: #e7ecea;
+  --muted: #a0aaa7;
+  --faint: #818b88;
+  /* Brand: verdigris, the patina of a durable record. One restrained accent for the mark, focus,
+     links and live activity. Success moves to a yellow-green so "running" and "completed" differ. */
+  --accent: #62bfa8;
+  --accent-strong: #8dd4c2;
+  --accent-contrast: #04140f;
+  --accent-soft: #10261f;
+  /* Primary actions use the inverted neutral: the highest-contrast element on the page. */
+  --primary: #e7ecea;
+  --primary-hover: #ffffff;
+  --primary-contrast: #0b0d0d;
+  --success: #a3cf6e;
+  --success-soft: #1a2412;
+  --danger: #e8737a;
+  --danger-soft: #2b1618;
+  --warning: #e0a95a;
+  --warning-soft: #281f12;
+  --code-key: #8dd4c2;
+  --code-string: #b9d3c9;
+  --code-bg: #0e1111;
+  --elevation-raised: 0 1px 0 rgb(255 255 255 / 0.035) inset, 0 12px 32px -12px rgb(0 0 0 / 0.7);
+  --elevation-panel: 0 1px 0 rgb(255 255 255 / 0.025) inset;
 }
 
 [data-theme="light"] {
   color-scheme: light;
-  --bg: #f6f7f9;
+  --bg: #f7f9f8;
   --surface: #ffffff;
-  --surface-raised: #f1f3f6;
-  --border: #dfe3e8;
-  --border-subtle: #edf0f3;
-  --text: #16191d;
-  --muted: #566072;
-  --faint: #5f6a7b;
-  --accent: #4f5bd5;
+  --surface-raised: #eef2f1;
+  --border: #dbe2e0;
+  --border-subtle: #e8eeec;
+  --text: #141a19;
+  --muted: #4d5856;
+  --faint: #626d6a;
+  --accent: #0f6e5c;
+  --accent-strong: #0a5547;
   --accent-contrast: #ffffff;
-  --accent-soft: #eef0ff;
-  --success: #0f7a37;
-  --success-soft: #e7f6ec;
-  --danger: #c01f1f;
-  --danger-soft: #fdecec;
-  --warning: #b45309;
-  --warning-soft: #fef3e0;
-  --code-key: #2f4fd1;
-  --code-string: #15803d;
+  --accent-soft: #e3f3ee;
+  --primary: #141a19;
+  --primary-hover: #29312f;
+  --primary-contrast: #f7f9f8;
+  --success: #456f19;
+  --success-soft: #eef5e4;
+  --danger: #b8323a;
+  --danger-soft: #fcefef;
+  --warning: #8a5a0e;
+  --warning-soft: #fcf3e3;
+  --code-key: #0a5547;
+  --code-string: #2d4a42;
+  --code-bg: #f7f9f8;
+  --elevation-raised: 0 1px 2px rgb(20 26 25 / 0.05), 0 12px 32px -14px rgb(20 26 25 / 0.16);
+  --elevation-panel: 0 1px 2px rgb(20 26 25 / 0.04);
 }
 
 @theme inline {
@@ -61,8 +79,12 @@
   --color-muted: var(--muted);
   --color-faint: var(--faint);
   --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
   --color-on-accent: var(--accent-contrast);
   --color-accent-soft: var(--accent-soft);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-on-primary: var(--primary-contrast);
   --color-success: var(--success);
   --color-success-soft: var(--success-soft);
   --color-danger: var(--danger);
@@ -71,6 +93,9 @@
   --color-warning-soft: var(--warning-soft);
   --color-code-key: var(--code-key);
   --color-code-string: var(--code-string);
+  --color-code-bg: var(--code-bg);
+  --shadow-elevated: var(--elevation-raised);
+  --shadow-panel: var(--elevation-panel);
 
   /* Type scale: the only font sizes components may use (text-caption … text-display). */
   --text-caption: 11px;
@@ -79,6 +104,8 @@
   --text-small--line-height: 1.45;
   --text-body: 13px;
   --text-body--line-height: 1.45;
+  --text-reading: 14px;
+  --text-reading--line-height: 1.7;
   --text-title: 16px;
   --text-title--line-height: 1.35;
   --text-display: 20px;
@@ -86,6 +113,6 @@
 
   --font-sans: "Inter Variable", system-ui, sans-serif;
   --font-mono: "JetBrains Mono Variable", ui-monospace, Consolas, monospace;
-  --radius-control: 6px;
-  --radius-panel: 8px;
+  --radius-control: 7px;
+  --radius-panel: 10px;
 }

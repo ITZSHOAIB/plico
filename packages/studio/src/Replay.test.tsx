@@ -56,7 +56,7 @@ it("follows new events at the latest position and limits raw output while replay
   expect(screen.getByText(/Event 3 of 3/)).toBeTruthy();
   expect(screen.getByText("run.failed")).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: "Previous event" }));
-  fireEvent.click(screen.getByRole("button", { name: "Raw events" }));
+  fireEvent.click(screen.getByRole("tab", { name: "Raw events" }));
   const raw = JSON.parse(screen.getByLabelText("Raw events").textContent ?? "[]");
   expect(raw.map((event: PlicoEvent) => event.type)).toEqual(["run.started", "run.error"]);
   fireEvent.click(screen.getByRole("button", { name: "Next event" }));

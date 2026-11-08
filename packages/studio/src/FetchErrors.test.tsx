@@ -24,5 +24,5 @@ it("reports errors loading runs, instructions and evals", async () => {
   expect(await screen.findByText("Could not load instructions")).toBeTruthy();
   click("Evals");
   expect(await screen.findByText("Could not load eval results")).toBeTruthy();
-  expect(screen.queryByText("No eval results yet. Run evals to see them here.")).toBeNull();
+  expect(screen.queryByText("No eval results yet")).toBeNull();
 });

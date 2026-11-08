@@ -6,6 +6,7 @@ import { ChatTranscript } from "../components/chat/ChatTranscript";
 import { ThemeToggle } from "../theme/ThemeToggle";
 import type { ThreadMessage } from "../types";
 import { Button } from "../ui/Button";
+import { Logo } from "../ui/Logo";
 import { RunView } from "../views/RunView";
 import { chatFixtures } from "./chat-fixture-data";
 
@@ -48,9 +49,7 @@ export function ChatFixtures() {
     <div className="flex h-dvh flex-col bg-bg text-fg">
       <header className="flex h-12 shrink-0 items-center justify-between gap-4 border-b border-line bg-surface px-4">
         <div className="flex items-center gap-3">
-          <span className="grid size-7 place-items-center rounded-lg bg-accent font-bold text-on-accent">
-            P
-          </span>
+          <Logo />
           <span className="font-semibold">Studio chat</span>
           <span className="rounded-md border border-line px-2 py-1 text-caption text-muted">
             Dev fixtures

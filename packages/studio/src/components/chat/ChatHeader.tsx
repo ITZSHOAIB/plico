@@ -1,0 +1,70 @@
+import { PanelRight, PanelRightOpen } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import type { RunSummary } from "../../types";
+import { Button } from "../../ui/Button";
+import { StatusBadge } from "../../ui/StatusBadge";
+import { chatInspectorId } from "./ChatInspector";
+
+export function ChatHeader({
+  title,
+  subtitle,
+  run,
+  inspectorCollapsed,
+  onExpandInspector,
+  onOpenInspector,
+}: {
+  title: string;
+  subtitle: string;
+  run: RunSummary | null;
+  inspectorCollapsed: boolean;
+  onExpandInspector: () => void;
+  onOpenInspector: () => void;
+}) {
+  return (
+    <header className="flex h-14 shrink-0 items-center justify-between gap-3 border-b border-line px-4 sm:px-5">
+      <div className="min-w-0">
+        <h2 className="m-0 truncate text-body font-semibold">{title}</h2>
+        <p className="m-0 truncate text-caption text-muted">{subtitle}</p>
+      </div>
+      <div className="flex shrink-0 items-center gap-2">
+        {run && <StatusBadge status={run.status} />}
+        {run && (
+          <Button variant="ghost" onClick={onOpenInspector} className="lg:hidden">
+            <PanelRight size={15} aria-hidden="true" />
+            Inspect run
+          </Button>
+        )}
+        {inspectorCollapsed && (
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Show run inspector"
+            title="Show run inspector"
+            aria-expanded="false"
+            aria-controls={chatInspectorId}
+            onClick={onExpandInspector}
+            className="hidden lg:inline-flex"
+          >
+            <PanelRightOpen size={16} aria-hidden="true" />
+          </Button>
+        )}
+      </div>
+    </header>
+  );
+}
+
+/** Tells screen readers when a reply starts and finishes, without reading every token. */
+export function ChatAnnouncer({ running }: { running: boolean }) {
+  const [message, setMessage] = useState("");
+  const wasRunning = useRef(running);
+  useEffect(() => {
+    if (running && !wasRunning.current) setMessage("Agent is responding");
+    if (!running && wasRunning.current) setMessage("Response complete");
+    wasRunning.current = running;
+  }, [running]);
+  return (
+    <p role="status" className="sr-only">
+      {message}
+    </p>
+  );
+}

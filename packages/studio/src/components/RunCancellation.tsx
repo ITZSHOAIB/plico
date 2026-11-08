@@ -24,7 +24,10 @@ export function RunCancellation({ runId }: { runId: string }) {
   }
 
   return (
-    <section aria-label="Run cancellation" className="flex flex-wrap items-center gap-2 px-4 py-3">
+    <section
+      aria-label="Run cancellation"
+      className="flex flex-wrap items-center gap-2 border-b border-line px-4 py-2.5"
+    >
       {requested ? (
         <p role="status" className="m-0 text-small text-muted">
           Cancellation requested. Waiting for the run to stop.
@@ -32,7 +35,7 @@ export function RunCancellation({ runId }: { runId: string }) {
       ) : (
         <>
           {error && <Notice>{error}</Notice>}
-          <Button disabled={submitting} onClick={() => void cancel()}>
+          <Button variant="danger" size="sm" disabled={submitting} onClick={() => void cancel()}>
             {submitting ? "Requesting cancellation…" : "Cancel run"}
           </Button>
         </>

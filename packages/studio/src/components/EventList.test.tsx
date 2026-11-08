@@ -29,3 +29,22 @@ it("lets a user expand and collapse event details", () => {
   expect(row.getAttribute("aria-expanded")).toBe("false");
   expect(screen.queryByText(/"query"/)).toBeNull();
 });
+
+it("groups a run of streamed text chunks into one row", () => {
+  const delta = (sequence: number, text: string): PlicoEvent => ({
+    schemaVersion: 1,
+    streamType: "run",
+    streamId: "run-1",
+    runId: "run-1",
+    id: `evt-${sequence}`,
+    sequence,
+    timestamp: "2026-01-01T00:00:00.000Z",
+    type: "model.delta",
+    payload: { turn: 1, attemptId: "a", text },
+  });
+  render(<EventList events={[delta(1, "Hello"), delta(2, " streamed"), delta(3, " world")]} />);
+  const rows = screen.getAllByRole("button");
+  expect(rows).toHaveLength(1);
+  expect(rows[0]?.textContent).toContain("3 chunks");
+  expect(rows[0]?.textContent).toContain("Hello streamed world");
+});

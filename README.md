@@ -16,7 +16,7 @@ Today this repo can:
 - diff text, JSON, and XML artifacts up to 1 MiB per version; binary and larger versions return errors
 - export text and binary run artifacts with `GET /v1/runs/<run-id>/workspace/exports?path=<path>` as file downloads
 - review artifact previews, compare versions, and download files in Studio
-- run provider-backed conversations, review approvals, and cancel active runs in Studio
+- run provider-backed conversations with streamed Markdown replies, review approvals, and cancel active runs in Studio
 - check approval policy references and conflicts through readiness diagnostics
 - generate the internal-ops starter with `create-plico`
 

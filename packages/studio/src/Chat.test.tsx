@@ -219,3 +219,41 @@ it("keeps the draft and reports the server error when sending fails", async () =
   ).toBeTruthy();
   expect(input.value).toBe("Keep this draft");
 });
+
+it("shows an error when stopping a reply fails", async () => {
+  vi.stubGlobal("EventSource", FakeEventSource);
+  const fetchMock = stubApi();
+  const original = required(fetchMock.getMockImplementation());
+  const thread = { id: "thread-123", createdAt: "2026-01-01T00:00:00Z" };
+  fetchMock.mockImplementation(async (input, init) => {
+    if (input === "/v1/threads" && init?.method === "POST") return json(thread, 201);
+    if (input === "/v1/threads") return json([]);
+    if (input === "/v1/threads/thread-123/messages" && init?.method === "POST")
+      return json(
+        {
+          id: "msg-1",
+          threadId: thread.id,
+          role: "user",
+          content: "Hello",
+          runId: "run-1234567890ab",
+          createdAt: thread.createdAt,
+        },
+        201,
+      );
+    if (input === "/v1/threads/thread-123/messages") return json([]);
+    if (input === "/v1/runs/run-1234567890ab/events") return json([]);
+    if (input === "/v1/runs/run-1234567890ab/cancel")
+      return json({ error: { message: "The engine is unavailable." } }, 503);
+    return original(input, init);
+  });
+  render(<App />);
+  fireEvent.click(await screen.findByRole("button", { name: "Chat" }));
+  fireEvent.click(await screen.findByRole("button", { name: "New thread" }));
+  fireEvent.change(await screen.findByRole("textbox", { name: "Message" }), {
+    target: { value: "Hello" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Send" }));
+  fireEvent.click(await screen.findByRole("button", { name: "Stop response" }));
+  expect(await screen.findByText("The engine is unavailable.")).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Stop response" })).toBeTruthy();
+});

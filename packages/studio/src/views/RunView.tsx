@@ -10,6 +10,7 @@ import { Icon } from "../ui/Icon";
 import { CodeBlock, EmptyState, Notice, titleClass } from "../ui/Page";
 import { StatusBadge } from "../ui/StatusBadge";
 import { ReplayControls } from "./ReplayControls";
+import { type RunTabMode, RunTabs } from "./RunTabs";
 
 interface RunViewProps {
   selectedRun: RunSummary | null;
@@ -40,7 +41,7 @@ function SelectedRunView({
   eventsLoaded = true,
   onBack,
 }: RunViewProps & { selectedRun: RunSummary }) {
-  const [mode, setMode] = useState<"timeline" | "raw">("timeline");
+  const [mode, setMode] = useState<RunTabMode>("timeline");
   const replay = useReplayPosition(selectedRun, events);
   const { visibleEvents, shownRun } = replay;
   const error = [...visibleEvents].reverse().find((event) => event.type === "run.error");
@@ -55,27 +56,39 @@ function SelectedRunView({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <header className="border-b border-line px-4 py-3">
-        {onBack && (
-          <Button
-            variant="ghost"
-            onClick={onBack}
-            aria-label="Back to runs"
-            className="-ml-2 mb-1 lg:hidden"
+      <header className="border-b border-line px-4 pt-2.5 pb-3 lg:pt-3 lg:pb-3.5">
+        <div className="mb-2 flex min-w-0 items-center gap-2 lg:mb-3 lg:gap-2.5">
+          {onBack && (
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={onBack}
+              aria-label="Back to runs"
+              title="Back to runs"
+              className="-ml-2 shrink-0 lg:hidden"
+            >
+              <Icon name="back" size="sm" />
+            </Button>
+          )}
+          <h2
+            className={`${titleClass} min-w-0 truncate font-mono text-body`}
+            title={selectedRun.runId}
           >
-            <Icon name="back" size="sm" />
-            Runs
-          </Button>
-        )}
-        <h2
-          className={`${titleClass} mb-1.5 flex flex-wrap items-center gap-2.5 break-all font-mono`}
-        >
-          {selectedRun.runId}
+            {selectedRun.runId}
+          </h2>
           <StatusBadge status={shownRun.status} />
-        </h2>
-        <dl className="m-0 flex flex-wrap gap-x-5 gap-y-1 text-small text-muted">
-          <MetaItem label="Started" value={shownRun.startedAt} />
-          <MetaItem label="Ended" value={shownRun.endedAt ?? "Not ended"} />
+        </div>
+        <dl className="m-0 flex flex-wrap gap-x-4 gap-y-1 text-small lg:grid lg:grid-cols-[repeat(auto-fit,minmax(7.5rem,1fr))] lg:gap-y-2">
+          <MetaItem
+            label="Started"
+            value={dateTime(shownRun.startedAt)}
+            title={shownRun.startedAt}
+          />
+          <MetaItem
+            label="Ended"
+            value={shownRun.endedAt ? dateTime(shownRun.endedAt) : "Not ended"}
+            title={shownRun.endedAt ?? undefined}
+          />
           {elapsed && <MetaItem label="Duration" value={elapsed} />}
           <MetaItem label="Events" value={String(visibleEvents.length)} />
           <MetaItem label="Tool calls" value={String(toolCalls)} />
@@ -104,21 +117,19 @@ function SelectedRunView({
       {replay.isLatest && ["running", "waiting"].includes(selectedRun.status) && (
         <RunCancellation key={selectedRun.runId} runId={selectedRun.runId} />
       )}
-      <div className="flex gap-0.5 border-b border-line px-2">
-        <ModeTab active={mode === "timeline"} onClick={() => setMode("timeline")}>
-          Timeline
-        </ModeTab>
-        <ModeTab active={mode === "raw"} onClick={() => setMode("raw")}>
-          Raw events
-        </ModeTab>
-      </div>
-      <div className="min-h-0 flex-1 overflow-y-auto">
+      <RunTabs mode={mode} onChange={setMode} />
+      <div
+        role="tabpanel"
+        id={`run-panel-${mode}`}
+        aria-labelledby={`run-tab-${mode}`}
+        className="min-h-0 flex-1 overflow-y-auto"
+      >
         {mode === "timeline" ? (
           <EventList events={visibleEvents} />
         ) : (
-          <section aria-label="Raw events" className="p-4">
+          <div className="p-4">
             <CodeBlock>{JSON.stringify(visibleEvents, null, 2)}</CodeBlock>
-          </section>
+          </div>
         )}
       </div>
       <ReplayControls replay={replay} eventsLoaded={eventsLoaded} />
@@ -147,24 +158,34 @@ function pendingApproval(events: PlicoEvent[]) {
   };
 }
 
-function MetaItem({ label, value }: { label: string; value: string }) {
+function MetaItem({
+  label,
+  value,
+  title,
+}: {
+  label: string;
+  value: string;
+  title?: string | undefined;
+}) {
   return (
-    <div className="flex gap-1.5">
-      <dt>{label}</dt>
-      <dd className="m-0 text-fg">{value}</dd>
+    <div className="flex min-w-0 items-baseline gap-1.5 lg:block">
+      <dt className="text-caption text-faint">{label}</dt>
+      <dd className="m-0 truncate text-fg tabular-nums" title={title}>
+        {value}
+      </dd>
     </div>
   );
 }
 
-function ModeTab(props: { active: boolean; onClick: () => void; children: string }) {
-  return (
-    <button
-      type="button"
-      aria-pressed={props.active}
-      onClick={props.onClick}
-      className="cursor-pointer border-0 border-b-2 border-transparent bg-transparent px-3 h-9 text-muted hover:text-fg focus-visible:outline-2 focus-visible:outline-accent aria-pressed:border-accent aria-pressed:text-fg"
-    >
-      {props.children}
-    </button>
-  );
+function dateTime(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso;
+  return date.toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  });
 }

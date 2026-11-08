@@ -1,16 +1,15 @@
-import { PanelRight, Sparkles } from "lucide-react";
 import { useRef, useState } from "react";
-import { fetchRun } from "../api";
+import { fetchRun, requestRunCancellation } from "../api";
 import { ChatComposer } from "../components/chat/ChatComposer";
 import { ChatEmpty } from "../components/chat/ChatEmpty";
+import { ChatAnnouncer, ChatHeader } from "../components/chat/ChatHeader";
+import { ChatInspector } from "../components/chat/ChatInspector";
 import { ChatThreads } from "../components/chat/ChatThreads";
 import { ChatTranscript } from "../components/chat/ChatTranscript";
 import { useChat } from "../hooks/useChat";
 import { type RunInspector, useRunInspector } from "../hooks/useRunInspector";
 import type { PlicoEvent } from "../types";
-import { Button } from "../ui/Button";
 import { Notice } from "../ui/Page";
-import { RunView } from "./RunView";
 
 function liveText(events: PlicoEvent[]): string {
   const turns = new Map<number, { attempt: string; text: string }>();
@@ -30,9 +29,11 @@ export function ChatView({ inspector }: { inspector: RunInspector }) {
   const chat = useChat(active);
   const [draft, setDraft] = useState("");
   const [showInspector, setShowInspector] = useState(false);
+  const [inspectorCollapsed, setInspectorCollapsed] = useState(false);
   const [historical, setHistorical] = useState(false);
   const [inspectError, setInspectError] = useState<string | null>(null);
   const [inspecting, setInspecting] = useState(false);
+  const [stopError, setStopError] = useState<string | null>(null);
   const inspectRequest = useRef(0);
   const visibleInspector = historical ? inspector : active;
   const runId = active.selectedRun?.runId;
@@ -46,6 +47,7 @@ export function ChatView({ inspector }: { inspector: RunInspector }) {
   function resetSelection() {
     inspectRequest.current++;
     setInspectError(null);
+    setStopError(null);
     setInspecting(false);
     setDraft("");
     setHistorical(false);
@@ -55,6 +57,7 @@ export function ChatView({ inspector }: { inspector: RunInspector }) {
     const request = ++inspectRequest.current;
     setInspectError(null);
     setShowInspector(true);
+    setInspectorCollapsed(false);
     if (id === runId) {
       setHistorical(false);
       if (active.streamState === "disconnected" && active.selectedRun)
@@ -80,9 +83,23 @@ export function ChatView({ inspector }: { inspector: RunInspector }) {
       });
   }
 
+  const thread = chat.threads.find((item) => item.id === chat.selected);
+  const stop =
+    running && runId
+      ? () => {
+          setStopError(null);
+          requestRunCancellation(runId).catch((cause) =>
+            setStopError(
+              cause instanceof Error ? cause.message : "Could not request run cancellation.",
+            ),
+          );
+        }
+      : undefined;
+
   return (
     <section aria-label="Chat" className="flex min-h-0 min-w-0 flex-1 flex-col lg:flex-row">
       <ChatThreads
+        hiddenOnMobile={showInspector}
         threads={chat.threads}
         selected={chat.selected}
         onNew={() => {
@@ -95,40 +112,28 @@ export function ChatView({ inspector }: { inspector: RunInspector }) {
         }}
       />
       <div
-        className={`min-h-0 min-w-0 flex-1 flex-col ${showInspector ? "hidden lg:flex" : "flex"}`}
+        className={`min-h-0 min-w-0 flex-1 flex-col bg-bg ${showInspector ? "hidden lg:flex" : "flex"}`}
       >
-        <header className="flex h-16 shrink-0 items-center justify-between gap-3 border-b border-line px-5 sm:px-6">
-          <div className="flex min-w-0 items-center gap-3">
-            <div className="grid size-9 shrink-0 place-items-center rounded-lg border border-line bg-raised text-accent">
-              <Sparkles size={16} aria-hidden="true" />
-            </div>
-            <div className="min-w-0">
-              <h2 className="m-0 truncate text-body font-semibold">Chat playground</h2>
-              <p className="m-0 mt-0.5 truncate text-caption text-muted">
-                {chat.selected
-                  ? `Thread ${chat.selected.slice(0, 8)}`
-                  : "Your project’s agent workspace"}
-              </p>
-            </div>
-          </div>
-          {visibleInspector.selectedRun && (
-            <Button
-              variant="ghost"
-              onClick={() => setShowInspector(true)}
-              className="gap-2 lg:hidden"
-            >
-              <PanelRight size={15} aria-hidden="true" />
-              Inspect run
-            </Button>
-          )}
-        </header>
-        {(chat.error || inspectError) && (
-          <div className="px-5 pt-4">
-            <Notice>{chat.error ?? inspectError}</Notice>
+        <ChatHeader
+          title={chat.selected ? threadLabel(chat.selected) : "Chat"}
+          subtitle={
+            thread
+              ? `Started ${formatDate(thread.createdAt)}`
+              : "Try your agent and inspect every run"
+          }
+          run={active.selectedRun}
+          inspectorCollapsed={inspectorCollapsed}
+          onExpandInspector={() => setInspectorCollapsed(false)}
+          onOpenInspector={() => setShowInspector(true)}
+        />
+        <ChatAnnouncer running={running} />
+        {(chat.error || inspectError || stopError) && (
+          <div className="mx-auto w-full max-w-3xl px-5 pt-4">
+            <Notice>{chat.error ?? inspectError ?? stopError}</Notice>
           </div>
         )}
         {!chat.selected ? (
-          <ChatEmpty selected={false} />
+          <ChatEmpty selected={false} onNew={() => void chat.newThread()} />
         ) : (
           <>
             <ChatTranscript
@@ -141,12 +146,15 @@ export function ChatView({ inspector }: { inspector: RunInspector }) {
               onInspect={inspect}
             />
             {active.streamState === "reconnecting" && (
-              <p role="status" className="mx-auto w-full max-w-3xl px-6 text-small text-muted">
+              <p
+                role="status"
+                className="mx-auto my-0 w-full max-w-3xl px-6 text-small text-warning"
+              >
                 Reconnecting to run updates…
               </p>
             )}
             {active.streamState === "disconnected" && (
-              <p role="alert" className="mx-auto w-full max-w-3xl px-6 text-small text-danger">
+              <p role="alert" className="mx-auto my-0 w-full max-w-3xl px-6 text-small text-danger">
                 Disconnected. Select the run to retry.
               </p>
             )}
@@ -154,6 +162,7 @@ export function ChatView({ inspector }: { inspector: RunInspector }) {
               draft={draft}
               setDraft={setDraft}
               disabled={chat.sending || chat.loading || running}
+              onStop={stop}
               onSubmit={() => {
                 const text = draft;
                 setHistorical(false);
@@ -165,48 +174,29 @@ export function ChatView({ inspector }: { inspector: RunInspector }) {
           </>
         )}
       </div>
-      <aside
-        aria-label="Run inspector"
-        className={`${showInspector ? "flex" : "hidden"} min-h-0 min-w-0 flex-1 flex-col border-line bg-surface lg:flex lg:w-[38%] lg:flex-none lg:border-l`}
-      >
-        <div className="flex h-16 shrink-0 items-center gap-3 border-b border-line px-4">
-          <Button variant="ghost" onClick={() => setShowInspector(false)} className="lg:hidden">
-            Back to chat
-          </Button>
-          <div className="hidden size-9 place-items-center rounded-lg border border-line bg-raised text-muted lg:grid">
-            <PanelRight size={16} aria-hidden="true" />
-          </div>
-          <div>
-            <h2 className="m-0 text-body font-semibold">Run inspector</h2>
-            <p className="m-0 mt-0.5 text-caption text-muted">Events, tool activity, and output</p>
-          </div>
-        </div>
-        {inspecting && (
-          <p role="status" className="px-4 py-2 text-small text-muted">
-            Loading run…
-          </p>
-        )}
-        {visibleInspector.selectedRun ? (
-          <RunView
-            key={visibleInspector.selectionKey}
-            selectedRun={visibleInspector.selectedRun}
-            events={visibleInspector.events}
-            streamState={visibleInspector.streamState}
-            eventsError={visibleInspector.eventsError}
-            eventsLoaded={visibleInspector.eventsLoaded}
-          />
-        ) : (
-          <div className="flex flex-1 flex-col items-center justify-center px-8 text-center">
-            <div className="mb-4 grid size-12 place-items-center rounded-xl border border-line bg-raised text-muted">
-              <PanelRight size={20} aria-hidden="true" />
-            </div>
-            <p className="m-0 text-body font-semibold">Inspect a run</p>
-            <p className="mt-2 max-w-56 text-small leading-relaxed text-muted">
-              Send a message or select a run from the conversation to see its activity.
-            </p>
-          </div>
-        )}
-      </aside>
+      <ChatInspector
+        inspector={visibleInspector}
+        inspecting={inspecting}
+        mobileOpen={showInspector}
+        collapsed={inspectorCollapsed}
+        onClose={() => setShowInspector(false)}
+        onCollapse={() => setInspectorCollapsed(true)}
+      />
     </section>
   );
+}
+
+function threadLabel(id: string): string {
+  return `Thread ${id.slice(0, 8)}`;
+}
+
+function formatDate(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso;
+  return date.toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
 }

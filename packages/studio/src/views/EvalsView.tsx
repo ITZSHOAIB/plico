@@ -2,7 +2,7 @@ import type { EvalsState } from "../hooks/useEvals";
 import type { EvalCaseResult } from "../types";
 import { Button } from "../ui/Button";
 import { Icon } from "../ui/Icon";
-import { CodeBlock, listRowClass, Notice, Page, sectionHeadingClass } from "../ui/Page";
+import { CodeBlock, listRowClass, Notice, Page, panelClass, sectionHeadingClass } from "../ui/Page";
 
 interface EvalsViewProps {
   evals: EvalsState;
@@ -33,13 +33,13 @@ export function EvalsView({ evals, onOpenRun }: EvalsViewProps) {
         {error && <Notice>{error}</Notice>}
         {selected.output && (
           <div className="mb-4">
-            <h3 className={sectionHeadingClass}>Output:</h3>
+            <h3 className={sectionHeadingClass}>Output</h3>
             <CodeBlock className="text-fg">{selected.output}</CodeBlock>
           </div>
         )}
         {selected.diagnostics?.length ? (
           <div>
-            <h3 className={sectionHeadingClass}>Diagnostics:</h3>
+            <h3 className={sectionHeadingClass}>Diagnostics</h3>
             <ul className="m-0 grid list-none gap-1.5 p-0">
               {selected.diagnostics.map((d) => (
                 <li
@@ -63,7 +63,9 @@ export function EvalsView({ evals, onOpenRun }: EvalsViewProps) {
         report ? (
           <>
             {report.passed}/{report.total} passed, {report.failed} failed &middot;{" "}
-            {report.evaluatedAt}
+            <time dateTime={report.evaluatedAt} title={report.evaluatedAt}>
+              {readableTime(report.evaluatedAt)}
+            </time>
           </>
         ) : undefined
       }
@@ -75,7 +77,7 @@ export function EvalsView({ evals, onOpenRun }: EvalsViewProps) {
     >
       {error && <Notice>{error}</Notice>}
       {report ? (
-        <ul className="m-0 list-none overflow-hidden rounded-panel border border-line bg-surface p-0">
+        <ul className={`m-0 list-none overflow-hidden p-0 ${panelClass}`}>
           {report.results.map((result) => {
             const { label, tone, icon } = statusStyle[result.status];
             return (
@@ -85,20 +87,36 @@ export function EvalsView({ evals, onOpenRun }: EvalsViewProps) {
                     <Icon name={icon} />
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="font-medium">{result.name}</span>
-                    <span className={`ml-2 text-caption font-semibold ${tone}`}>{label}</span>
+                    <span className="block font-medium">{result.name}</span>
                     <span className="block truncate font-mono text-caption text-faint">
                       {result.runId}
                     </span>
                   </span>
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-caption font-semibold ${result.status === "pass" ? "bg-success-soft" : "bg-danger-soft"} ${tone}`}
+                  >
+                    {label}
+                  </span>
+                  <Icon name="next" size="sm" className="text-faint" />
                 </button>
               </li>
             );
           })}
         </ul>
       ) : !error ? (
-        <div className="text-muted">No eval results yet. Run evals to see them here.</div>
+        <div className={`px-6 py-12 text-center ${panelClass}`}>
+          <p className="m-0 text-body font-semibold">No eval results yet</p>
+          <p className="mt-1 mb-0 text-small text-muted">
+            Run evals to check your agent against the cases in <code>evals/</code>.
+          </p>
+        </div>
       ) : null}
     </Page>
   );
+}
+
+function readableTime(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso;
+  return date.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
 }

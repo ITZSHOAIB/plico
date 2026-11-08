@@ -1,3 +1,7 @@
+Plico Studio third-party notices
+
+Components in src/ui/chat are adapted from shadcn/ui:
+
 MIT License
 
 Copyright (c) 2023 shadcn

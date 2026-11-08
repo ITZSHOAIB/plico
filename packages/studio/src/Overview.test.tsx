@@ -17,11 +17,12 @@ describe("overview", () => {
 
     expect(within(overview).getByText("Internal Ops")).toBeTruthy();
     expect(within(overview).getByText(/current project and readiness/i)).toBeTruthy();
-    expect(await within(overview).findByText("1 ok, 1 warning(s), 0 error(s)")).toBeTruthy();
+    expect(await within(overview).findByText("1 warning · 1 ok")).toBeTruthy();
     expect(await within(overview).findByText("Add more evals")).toBeTruthy();
     expect(within(overview).getByText("Checked at Oct 31, 2026, 10:00 AM UTC")).toBeTruthy();
-    expect(await within(overview).findByText("1/2 passed, 1 failed")).toBeTruthy();
-    expect(await within(overview).findByText(/1 run\(s\)/)).toBeTruthy();
+    expect(await within(overview).findByText("1/2 passed")).toBeTruthy();
+    expect(within(overview).getByText("1 failed")).toBeTruthy();
+    expect(await within(overview).findByText(/^Latest /)).toBeTruthy();
     expect(await within(overview).findByText("agent.md, skills/triage.md")).toBeTruthy();
     expect(
       within(overview)

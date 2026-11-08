@@ -6,9 +6,9 @@ export function Message({
   className = "",
   align = "start",
   ...props
-}: ComponentProps<"div"> & { align?: "start" | "end" }) {
+}: ComponentProps<"article"> & { align?: "start" | "end" }) {
   return (
-    <div
+    <article
       data-slot="message"
       data-align={align}
       className={`group/message relative flex w-full min-w-0 gap-3 text-body data-[align=end]:flex-row-reverse ${className}`}
