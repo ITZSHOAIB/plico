@@ -2,10 +2,12 @@
   "pages": [
     "index",
     "quickstart",
+    "---Build---",
     "project-layout",
     "tools",
-    "studio",
     "artifacts",
+    "---Run---",
+    "studio",
     "threads",
     "http-api",
     "cli"

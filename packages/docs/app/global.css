@@ -2,24 +2,67 @@
 @import "fumadocs-ui/css/neutral.css";
 @import "fumadocs-ui/css/preset.css";
 
-/* Verdigris, the same accent as Studio (packages/studio/src/theme/tokens.css). */
+/*
+ * Plico brand: verdigris on stone neutrals with a faint green-grey tint. These are the same
+ * values as Studio (packages/studio/src/theme/tokens.css); change them together.
+ */
 :root {
   --font-sans: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "Geist Mono Variable", ui-monospace, SFMono-Regular, Consolas, monospace;
+
+  --plico-accent: #0f6e5c;
+  --plico-accent-strong: #0a5547;
+  --plico-accent-soft: #e3f3ee;
+  --plico-accent-line: color-mix(in srgb, #0f6e5c 32%, transparent);
+
+  --color-fd-background: #f7f9f8;
+  --color-fd-foreground: #141a19;
+  --color-fd-muted: #eef2f1;
+  --color-fd-muted-foreground: #4d5856;
+  --color-fd-popover: #ffffff;
+  --color-fd-popover-foreground: #141a19;
+  --color-fd-card: #ffffff;
+  --color-fd-card-foreground: #141a19;
+  --color-fd-border: #dbe2e0;
   --color-fd-primary: #0f6e5c;
   --color-fd-primary-foreground: #ffffff;
+  --color-fd-secondary: #e3f3ee;
+  --color-fd-secondary-foreground: #0a5547;
   --color-fd-accent: #e3f3ee;
   --color-fd-accent-foreground: #0a5547;
   --color-fd-ring: #0f6e5c;
+  --color-fd-info: #0f6e5c;
+  --color-fd-success: #456f19;
+  --color-fd-warning: #8a5a0e;
+  --color-fd-error: #b8323a;
 }
 
 .dark {
+  --plico-accent: #62bfa8;
+  --plico-accent-strong: #8dd4c2;
+  --plico-accent-soft: #10261f;
+  --plico-accent-line: color-mix(in srgb, #62bfa8 36%, transparent);
+
   --color-fd-background: #0b0d0d;
+  --color-fd-foreground: #e7ecea;
+  --color-fd-muted: #181c1c;
+  --color-fd-muted-foreground: #a0aaa7;
+  --color-fd-popover: #111414;
+  --color-fd-popover-foreground: #e7ecea;
+  --color-fd-card: #111414;
+  --color-fd-card-foreground: #e7ecea;
+  --color-fd-border: #262c2b;
   --color-fd-primary: #62bfa8;
   --color-fd-primary-foreground: #04140f;
+  --color-fd-secondary: #10261f;
+  --color-fd-secondary-foreground: #8dd4c2;
   --color-fd-accent: #10261f;
   --color-fd-accent-foreground: #8dd4c2;
   --color-fd-ring: #62bfa8;
+  --color-fd-info: #62bfa8;
+  --color-fd-success: #a3cf6e;
+  --color-fd-warning: #e0a95a;
+  --color-fd-error: #e8737a;
 }
 
 html {
@@ -30,4 +73,78 @@ html {
 code,
 pre {
   font-family: var(--font-mono);
+}
+
+::selection {
+  background: var(--plico-accent-line);
+}
+
+/* A verdigris rule across the top of every page. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0 0 auto 0;
+  z-index: 60;
+  height: 3px;
+  background: linear-gradient(90deg, var(--plico-accent), var(--plico-accent-strong));
+}
+
+/* Body copy: links, headings, inline code and quotes carry the brand. */
+.prose a:not([data-card]) {
+  color: var(--plico-accent);
+  text-decoration-color: var(--plico-accent-line);
+  text-underline-offset: 3px;
+}
+.prose a:not([data-card]):hover {
+  color: var(--plico-accent-strong);
+  text-decoration-color: currentColor;
+}
+.prose :is(h2, h3, h4) a {
+  color: inherit;
+}
+.prose h2 {
+  border-bottom: 1px solid var(--plico-accent-line);
+  padding-bottom: 0.35em;
+}
+.prose :not(pre) > code {
+  background: var(--plico-accent-soft);
+  border: 1px solid var(--plico-accent-line);
+  color: var(--plico-accent-strong);
+}
+.prose blockquote {
+  border-inline-start-color: var(--plico-accent);
+}
+.prose :is(th) {
+  background: var(--plico-accent-soft);
+  color: var(--plico-accent-strong);
+}
+
+/* Code blocks: a verdigris edge and a tinted title bar. */
+figure.shiki {
+  border-color: var(--plico-accent-line);
+  box-shadow: inset 3px 0 0 var(--plico-accent);
+}
+
+/* Navigation: the active page and the on-this-page marker. */
+#nd-sidebar a[data-active="true"] {
+  background: var(--plico-accent-soft);
+  color: var(--plico-accent-strong);
+  font-weight: 600;
+}
+#nd-sidebar a[data-active="false"]:hover {
+  color: var(--plico-accent);
+}
+#nd-toc a[data-active="true"] {
+  color: var(--plico-accent);
+}
+
+/* Cards lift toward the brand on hover. */
+a[data-card] {
+  transition:
+    border-color 150ms,
+    background-color 150ms;
+}
+a[data-card]:hover {
+  border-color: var(--plico-accent);
+  background: var(--plico-accent-soft);
 }

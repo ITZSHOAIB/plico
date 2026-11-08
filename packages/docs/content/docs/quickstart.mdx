@@ -1,6 +1,7 @@
 ---
 title: Quickstart
 description: Scaffold a project, validate it, and run it.
+icon: Rocket
 ---
 
 `create-plico` generates the internal-ops starter, and the `plico` CLI validates
@@ -12,28 +13,34 @@ and runs it.
   and `packages/cli/dist/cli.js`.
 </Callout>
 
-## Create and check a project
+<Steps>
+  <Step>
+    ### Create and check a project
 
-```bash
-create-plico my-agent
-plico validate my-agent
-plico run --dry my-agent
-```
+    ```bash
+    create-plico my-agent
+    plico validate my-agent
+    plico run --dry my-agent
+    ```
 
-`plico validate` reports diagnostics for missing files, duplicate tool names, and
-invalid config. `plico run --dry` runs the project with a scripted model, so it
-needs no API key.
+    `plico validate` reports diagnostics for missing files, duplicate tool names, and
+    invalid config. `plico run --dry` runs the project with a scripted model, so it
+    needs no API key.
+  </Step>
+  <Step>
+    ### Open Studio
 
-## Open Studio
+    ```bash
+    plico serve --studio my-agent
+    ```
 
-```bash
-plico serve --studio my-agent
-```
+    Studio shows the run's event history and lets you chat, approve tool calls, and
+    browse artifacts. See [Studio](/docs/studio).
+  </Step>
+  <Step>
+    ### Use `--help`
 
-Studio shows the run's event history and lets you chat, approve tool calls, and
-browse artifacts. See [Studio](/docs/studio).
-
-## Use `--help`
-
-`plico validate --help` shows validation usage. Unknown flags are reported as
-errors, and `plico runs` reports clearly when a project has no saved runs.
+    `plico validate --help` shows validation usage. Unknown flags are reported as
+    errors, and `plico runs` reports clearly when a project has no saved runs.
+  </Step>
+</Steps>
