@@ -27,6 +27,9 @@ authentication passes `allowRemote: true` to `servePlico` and owns authenticatio
 match in scheme, host and port, so behind a TLS proxy the host app also passes
 `publicOrigin: "https://its.host"`.
 
+Approval signals sent to `POST /v1/runs/<run-id>/signal` have any `context` dropped, so a client
+cannot say who decided. See [Threads](/docs/threads#host-data-metadata-and-context).
+
 ## Cancel a run
 
 Cancel an active persisted run with `POST /v1/runs/<run-id>/cancel` or

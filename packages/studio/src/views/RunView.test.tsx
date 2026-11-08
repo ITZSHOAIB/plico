@@ -72,3 +72,19 @@ it("renders older model events when usage or model metadata is unavailable", () 
   render(<RunView selectedRun={run} events={[event]} />);
   expect(screen.getByText("model.response")).toBeTruthy();
 });
+
+it("shows the host metadata a run was started with", () => {
+  render(
+    <RunView
+      selectedRun={{ ...run, metadata: { tenant: "acme", plan: { tier: 1 } } }}
+      events={[]}
+    />,
+  );
+  expect(screen.getByText("Metadata")).toBeTruthy();
+  expect(screen.getByText('tenant=acme, plan={"tier":1}')).toBeTruthy();
+});
+
+it("shows no metadata row for a run without metadata", () => {
+  render(<RunView selectedRun={run} events={[]} />);
+  expect(screen.queryByText("Metadata")).toBeNull();
+});

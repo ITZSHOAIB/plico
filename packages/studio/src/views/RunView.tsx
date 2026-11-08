@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ApprovalDecision } from "../components/ApprovalDecision";
 import { EventList } from "../components/EventList";
 import { RunCancellation } from "../components/RunCancellation";
+import { formatMetadata } from "../format-metadata";
 import { useReplayPosition } from "../hooks/useReplayPosition";
 import type { StreamState } from "../hooks/useRunStream";
 import type { PlicoEvent, RunSummary } from "../types";
@@ -92,6 +93,9 @@ function SelectedRunView({
           {elapsed && <MetaItem label="Duration" value={elapsed} />}
           <MetaItem label="Events" value={String(visibleEvents.length)} />
           <MetaItem label="Tool calls" value={String(toolCalls)} />
+          {shownRun.metadata && (
+            <MetaItem label="Metadata" value={formatMetadata(shownRun.metadata)} />
+          )}
         </dl>
       </header>
       {(eventsError ||

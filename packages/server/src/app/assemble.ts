@@ -1,5 +1,5 @@
 import { followEvents } from "./events.js";
-import { cancelRun, decideApproval, startRun } from "./runs.js";
+import { cancelRun, decideApproval, listRuns, startRun } from "./runs.js";
 import {
   createThread,
   getThread,
@@ -34,9 +34,9 @@ export function assemblePlico(
   let closing: Promise<void> | undefined;
   const plico: Plico = {
     threads: {
-      create: () => createThread(deps),
+      create: (options) => createThread(deps, options),
       get: (threadId) => getThread(deps, threadId),
-      list: () => listThreads(deps),
+      list: (filter) => listThreads(deps, filter),
       rename: (threadId, title) => renameThread(deps, threadId, title),
       messages: (threadId) => threadMessages(deps, threadId),
       send: (threadId, content, options) => sendMessage(deps, threadId, content, options),
@@ -44,12 +44,13 @@ export function assemblePlico(
     runs: {
       start: (options) => startRun(deps, options),
       get: (runId) => deps.eventStore.getRun(runId),
-      list: () => deps.eventStore.listRuns(),
+      list: (filter) => listRuns(deps, filter),
       cancel: (runId) => cancelRun(deps, runId),
       events: (runId, options) => followEvents(deps, runId, { ...options, stop: stopper.signal }),
     },
     approvals: {
-      decide: (runId, requestId, approved) => decideApproval(deps, runId, requestId, approved),
+      decide: (runId, requestId, approved, options) =>
+        decideApproval(deps, runId, requestId, approved, options),
     },
     close() {
       closing ??= (async () => {

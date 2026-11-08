@@ -1,4 +1,5 @@
 import { type Engine, type EventStore, runFailureEvents } from "@plico/runtime";
+import type { Metadata } from "./app/metadata.js";
 
 /**
  * Persist a terminal outcome after the engine confirms no worker is still running. A run whose
@@ -11,6 +12,7 @@ export async function finishFailedThreadRun(
   engine: Engine,
   eventStore: EventStore,
   error?: unknown,
+  metadata?: Metadata,
 ): Promise<void> {
   const state = await engine.status(runId);
   if (state && state.state !== "failed") return;
@@ -25,7 +27,12 @@ export async function finishFailedThreadRun(
       sequence: 1,
       timestamp: new Date().toISOString(),
       type: "run.started",
-      payload: { projectRoot, projectName: "", threadId },
+      payload: {
+        projectRoot,
+        projectName: "",
+        threadId,
+        ...(metadata === undefined ? {} : { metadata }),
+      },
     });
     run = await eventStore.getRun(runId);
   }

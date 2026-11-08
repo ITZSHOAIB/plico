@@ -34,3 +34,21 @@ returns `plico.threads` (create, get, list, rename, messages, send), `plico.runs
 before the process exits; it stops open event iterators and closes the thread store.
 `servePlico` is `createPlico` plus an HTTP listener and closes Plico when the server
 closes. Readiness reports a thread and run store mismatch before a run is started.
+
+## Host data: metadata and context
+
+Plico has no user model; a host that serves users passes data and enforces access.
+
+`metadata` is a JSON object set at creation and never changed:
+`plico.threads.create({ metadata })`, `plico.runs.start({ metadata })`, or the `metadata`
+body field of `POST /v1/threads` and `POST /v1/runs`. A thread's runs carry its metadata.
+Lists filter by exact match on top-level keys: `plico.threads.list({ metadata })`,
+`plico.runs.list({ metadata })`, or `?metadata=<url-encoded JSON>` on `GET /v1/threads` and
+`GET /v1/runs`. A value that is not a JSON object is rejected with `request.invalid`.
+
+`context` is JSON for one run, passed to tools as `ctx.context` and recorded on `run.started`,
+so recovered and queued runs reuse it. Set it with `plico.threads.send(..., { context })` or
+`plico.runs.start({ context })`; the HTTP API does not accept it. It lives in the event log, so
+it must not carry secrets. `plico.approvals.decide(runId, requestId, approved, { context })`
+records the deciding context on `approval.decided`; approval signals sent over HTTP have any
+`context` dropped.

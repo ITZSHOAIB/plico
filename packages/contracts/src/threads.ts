@@ -1,8 +1,12 @@
+import type { JsonValue } from "./events.js";
+
 export interface Thread {
   id: string;
   createdAt: string;
   /** Absent until the conversation has a topic or the user names it. */
   title?: string;
+  /** Host data set at creation and never changed. */
+  metadata?: Record<string, JsonValue>;
 }
 
 export interface ThreadMessage {

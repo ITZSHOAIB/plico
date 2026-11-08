@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { ARTIFACT_TOOL_NAMES, validateProject } from "@plico/core";
+import { ARTIFACT_TOOL_NAMES, SKILL_TOOL_NAME, validateProject } from "@plico/core";
 import {
   createSqliteEngine,
   createSqliteEventStore,
@@ -149,7 +149,9 @@ function createFakeProvider(): ModelProvider {
       const lastUserMessage = [...request.messages].reverse().find((m) => m.role === "user");
       const lastToolMessage = [...request.messages].reverse().find((m) => m.role === "tool");
       const tool = request.tools?.find(
-        ({ name }) => !ARTIFACT_TOOL_NAMES.includes(name as (typeof ARTIFACT_TOOL_NAMES)[number]),
+        ({ name }) =>
+          name !== SKILL_TOOL_NAME &&
+          !ARTIFACT_TOOL_NAMES.includes(name as (typeof ARTIFACT_TOOL_NAMES)[number]),
       );
       if (!lastToolMessage && tool) {
         yield { type: "tool.call", call: { name: tool.name, arguments: { title: "Test ticket" } } };

@@ -1,8 +1,17 @@
-import { cancelRun, listRunEvents, requireRun, runDry, signalRun, startRun } from "../app/runs.js";
+import {
+  cancelRun,
+  listRunEvents,
+  listRuns,
+  requireRun,
+  runDry,
+  signalRun,
+  startRun,
+} from "../app/runs.js";
 import { readJsonBody } from "../body.js";
 import { sendJson } from "../responses.js";
 import { readScript } from "../script.js";
 import { handleEventStream, parseAfterCursor } from "../stream.js";
+import { readMetadataFilter } from "./metadata-query.js";
 import type { Route } from "./types.js";
 
 function readAfterCursor(url: URL): number | undefined {
@@ -15,8 +24,16 @@ export const runRoutes: Route[] = [
     method: "POST",
     pattern: /^\/v1\/runs$/,
     handler: async ({ app, allowScript, request, response }) => {
-      const script = readScript(await readJsonBody(request), allowScript);
-      sendJson(response, 202, await startRun(app, script === undefined ? {} : { script }));
+      const body = await readJsonBody(request);
+      const script = readScript(body, allowScript);
+      sendJson(
+        response,
+        202,
+        await startRun(app, {
+          ...(script === undefined ? {} : { script }),
+          metadata: body.metadata,
+        }),
+      );
     },
   },
   {
@@ -30,8 +47,8 @@ export const runRoutes: Route[] = [
   {
     method: "GET",
     pattern: /^\/v1\/runs$/,
-    handler: async ({ eventStore, response }) => {
-      sendJson(response, 200, await eventStore.listRuns());
+    handler: async ({ app, url, response }) => {
+      sendJson(response, 200, await listRuns(app, readMetadataFilter(url)));
     },
   },
   {

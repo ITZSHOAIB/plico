@@ -12,6 +12,7 @@ Today this repo can:
 - offer provider runs `list_files`, `read_file`, `write_file`, and `edit_file` over their artifact workspace
 - report the configured model-facing artifact access in readiness diagnostics
 - let provider-invoked TypeScript tools read, write text or bytes, and list staged artifacts with `ctx.artifacts`
+- embed Plico in your backend with `createPlico`, tagging threads and runs with host `metadata` and passing a per-run `context` to tools as `ctx.context`
 - compare artifact versions with `GET /v1/runs/<run-id>/workspace/diffs?path=<path>&fromVersion=1&toVersion=2`
 - diff text, JSON, and XML artifacts up to 1 MiB per version; binary and larger versions return errors
 - export text and binary run artifacts with `GET /v1/runs/<run-id>/workspace/exports?path=<path>` as file downloads

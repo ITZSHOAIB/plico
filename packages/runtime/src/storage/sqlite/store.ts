@@ -1,6 +1,7 @@
 import { resolve } from "node:path";
 import type { EvalReport, PlicoEvent, RunSummary } from "@plico/contracts";
 import type { CreateSqliteEventStoreOptions, EventStore } from "../../types/index.js";
+import { matchesMetadata } from "../metadata.js";
 import { appendEventRecord } from "./append-event.js";
 import { openDatabase } from "./open.js";
 import {
@@ -40,8 +41,10 @@ export function createSqliteEventStore({
     async appendEvent(event: PlicoEvent): Promise<void> {
       appendEventRecord(database, event);
     },
-    async listRuns(): Promise<RunSummary[]> {
-      return readRunSummaries(database);
+    async listRuns(filter): Promise<RunSummary[]> {
+      return readRunSummaries(database).filter((run) =>
+        matchesMetadata(run.metadata, filter?.metadata),
+      );
     },
     async getRun(runId: string): Promise<RunSummary | undefined> {
       return readRunSummary(database, runId);

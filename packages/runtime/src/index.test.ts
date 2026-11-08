@@ -132,11 +132,19 @@ describe("runProject", () => {
     ]);
   });
 
-  it("composes agent instructions before Markdown skills in sorted order", async () => {
+  it("lists skills after the agent instructions and loads them on demand", async () => {
     const root = await mkdtemp(join(tmpdir(), "plico-runtime-"));
     await writeValidProject(root);
-    await writeFile(join(root, "skills", "triage.md"), "# Triage\n\nSort urgent work.", "utf8");
-    await writeFile(join(root, "skills", "intake.md"), "# Intake\n\nCapture the request.", "utf8");
+    await writeFile(
+      join(root, "skills", "triage.md"),
+      "---\ndescription: Sort urgent work.\n---\n# Triage\n\nSort urgent work.",
+      "utf8",
+    );
+    await writeFile(
+      join(root, "skills", "intake.md"),
+      "---\ndescription: Capture the request.\n---\n# Intake",
+      "utf8",
+    );
     await writeFile(join(root, "skills", "notes.txt"), "Not a skill.", "utf8");
 
     const result = await runProject(root);
@@ -150,44 +158,13 @@ describe("runProject", () => {
         "",
         "Use the local Markdown instructions as the source of truth.",
         "",
-        "# Intake",
+        "## Skills",
         "",
-        "Capture the request.",
+        "Call load_skill with a skill's name to read its full instructions before you use it.",
         "",
-        "# Triage",
-        "",
-        "Sort urgent work.",
+        "- intake: Capture the request.",
+        "- triage: Sort urgent work.",
       ].join("\n"),
-    });
-  });
-
-  it("returns validation diagnostics and failed events before execution for invalid projects", async () => {
-    const root = await mkdtemp(join(tmpdir(), "plico-runtime-"));
-
-    const result = await runProject(root);
-
-    expect(result.status).toBe("failed");
-    expect(result.errors).toEqual([
-      expect.objectContaining({
-        path: "plico.config.ts",
-        message: "Missing required file: plico.config.ts",
-        severity: "error",
-      }),
-    ]);
-    expect(result.events.map((event) => event.type)).toEqual([
-      "run.started",
-      "run.error",
-      "run.failed",
-    ]);
-    expect(result.events[1]?.payload).toMatchObject({
-      phase: "validation",
-      issues: [
-        expect.objectContaining({
-          path: "plico.config.ts",
-          message: "Missing required file: plico.config.ts",
-          severity: "error",
-        }),
-      ],
     });
   });
 

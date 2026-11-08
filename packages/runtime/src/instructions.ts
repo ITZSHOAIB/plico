@@ -1,21 +1,35 @@
-import { readdir, readFile } from "node:fs/promises";
-import { join } from "node:path";
-import { getProjectPaths, getProjectRelativePaths, type LoadedProject } from "@plico/core";
+import { readFile } from "node:fs/promises";
+import {
+  getProjectPaths,
+  getProjectRelativePaths,
+  type LoadedProject,
+  readSkills,
+  SKILL_TOOL_NAME,
+  type Skill,
+} from "@plico/core";
 import type { ComposedInstructions } from "./types/index.js";
 
-export async function composeInstructions(project: LoadedProject): Promise<ComposedInstructions> {
-  const relativePaths = getProjectRelativePaths();
+/** The agent's instructions plus a list of skills. A skill's full text loads on demand. */
+export async function composeInstructions(
+  project: LoadedProject,
+  loaded?: Skill[],
+): Promise<ComposedInstructions> {
   const projectPaths = getProjectPaths(project.root);
-  const sources = [relativePaths.agentFile];
+  const sources = [getProjectRelativePaths().agentFile];
   const parts = [await readFile(projectPaths.agentFile, "utf8")];
-  const skillNames = (await readdir(projectPaths.directories.skills))
-    .filter((entry) => entry.endsWith(".md"))
-    .sort((left, right) => left.localeCompare(right));
+  const skills = loaded ?? (await readSkills(project.root)).skills;
 
-  for (const skillName of skillNames) {
-    const source = `${relativePaths.directories.skills}/${skillName}`;
-    sources.push(source);
-    parts.push(await readFile(join(projectPaths.directories.skills, skillName), "utf8"));
+  if (skills.length > 0) {
+    sources.push(...skills.map((skill) => skill.source));
+    parts.push(
+      [
+        "## Skills",
+        "",
+        `Call ${SKILL_TOOL_NAME} with a skill's name to read its full instructions before you use it.`,
+        "",
+        ...skills.map((skill) => `- ${skill.name}: ${skill.description}`),
+      ].join("\n"),
+    );
   }
 
   return {

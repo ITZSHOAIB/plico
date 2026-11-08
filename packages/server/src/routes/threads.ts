@@ -7,21 +7,26 @@ import {
   threadMessages,
   threadWorkspace,
 } from "../app/threads.js";
-import { readJsonBody } from "../body.js";
+import { readJsonBody, readOptionalJsonBody } from "../body.js";
 import { HttpError } from "../errors.js";
 import { sendJson } from "../responses.js";
+import { readMetadataFilter } from "./metadata-query.js";
 import type { Route } from "./types.js";
 
 export const threadRoutes: Route[] = [
   {
     method: "POST",
     pattern: /^\/v1\/threads$/,
-    handler: async (ctx) => sendJson(ctx.response, 201, await createThread(ctx.app)),
+    handler: async (ctx) => {
+      const { metadata } = await readOptionalJsonBody(ctx.request);
+      sendJson(ctx.response, 201, await createThread(ctx.app, { metadata }));
+    },
   },
   {
     method: "GET",
     pattern: /^\/v1\/threads$/,
-    handler: async (ctx) => sendJson(ctx.response, 200, await listThreads(ctx.app)),
+    handler: async (ctx) =>
+      sendJson(ctx.response, 200, await listThreads(ctx.app, readMetadataFilter(ctx.url))),
   },
   {
     method: "GET",

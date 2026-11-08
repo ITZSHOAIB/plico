@@ -10,11 +10,17 @@
   },
   "POST /v1/threads": {
     "createdAt": "string",
-    "id": "string"
+    "id": "string",
+    "metadata": {
+      "tenant": "string"
+    }
   },
   "PATCH /v1/threads/:id": {
     "createdAt": "string",
     "id": "string",
+    "metadata": {
+      "tenant": "string"
+    },
     "title": "string"
   },
   "POST /v1/threads/:id/messages": {
@@ -29,12 +35,18 @@
     {
       "createdAt": "string",
       "id": "string",
+      "metadata": {
+        "tenant": "string"
+      },
       "title": "string"
     }
   ],
   "GET /v1/threads/:id": {
     "createdAt": "string",
     "id": "string",
+    "metadata": {
+      "tenant": "string"
+    },
     "title": "string"
   },
   "GET /v1/threads/:id/workspace": {
@@ -287,6 +299,42 @@
       "type": "string"
     }
   ],
+  "GET /v1/runs/:id/events (context)": [
+    {
+      "id": "string",
+      "payload": {
+        "context": {
+          "userId": "string"
+        },
+        "projectName": "string",
+        "projectRoot": "string"
+      },
+      "runId": "string",
+      "schemaVersion": "number",
+      "sequence": "number",
+      "streamId": "string",
+      "streamType": "string",
+      "timestamp": "string",
+      "type": "string"
+    },
+    {
+      "id": "string",
+      "payload": {
+        "approved": "boolean",
+        "context": {
+          "userId": "string"
+        },
+        "requestId": "string"
+      },
+      "runId": "string",
+      "schemaVersion": "number",
+      "sequence": "number",
+      "streamId": "string",
+      "streamType": "string",
+      "timestamp": "string",
+      "type": "string"
+    }
+  ],
   "POST /v1/runs/:id/signal (approval)": {
     "result": "string"
   },
@@ -349,6 +397,9 @@
   "GET /v1/runs": [
     {
       "endedAt": "string",
+      "metadata": {
+        "tenant": "string"
+      },
       "output": "string",
       "projectName": "string",
       "projectRoot": "string",

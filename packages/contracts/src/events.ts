@@ -17,7 +17,13 @@ export interface ModelToolCall {
 }
 
 export interface PlicoEventPayloads {
-  "run.started": { projectRoot: string; projectName: string; threadId?: string };
+  "run.started": {
+    projectRoot: string;
+    projectName: string;
+    threadId?: string;
+    metadata?: Record<string, JsonValue>;
+    context?: Record<string, JsonValue>;
+  };
   "instructions.composed": { length: number; sources: string[]; content: string };
   "tools.discovered": {
     tools: Array<{
@@ -61,7 +67,12 @@ export interface PlicoEventPayloads {
     arguments: unknown;
     approval: { required: boolean; reason?: string };
   };
-  "approval.decided": { requestId: string; approved: boolean };
+  "approval.decided": {
+    requestId: string;
+    approved: boolean;
+    /** The context of whoever decided, as the host passed it. */
+    context?: Record<string, JsonValue>;
+  };
   "artifact.workspace.created": { workspaceId: string };
   "artifact.file.written": {
     path: string;

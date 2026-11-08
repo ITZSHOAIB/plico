@@ -38,3 +38,10 @@ reports the duplicate under tool discovery.
 
 A tool can read, write, and list artifacts with `ctx.artifacts`: `read(path)`,
 `write(path, content, { mimeType })`, and `list()`. See [Artifacts](/docs/artifacts).
+
+## Host context
+
+When a host app starts a run with a `context` (see [Threads](/docs/threads#host-data-metadata-and-context)),
+the handler receives it as `ctx.context`, such as `{ userId: "u-1" }`. It is `undefined` when
+the host passed none, and it is the same value after a restart. Plico records it in the run's
+event log, so keep secrets out of it and look them up inside the tool.

@@ -1,9 +1,10 @@
-import type { EvalReport, PlicoEvent, RunSummary } from "@plico/contracts";
+import type { EvalReport, JsonValue, PlicoEvent, RunSummary } from "@plico/contracts";
 
 export interface EventStore {
   readonly storageIdentity?: string;
   appendEvent(event: PlicoEvent): Promise<void>;
-  listRuns(): Promise<RunSummary[]>;
+  /** Lists runs, newest first. `metadata` keeps runs whose top-level keys equal every given value. */
+  listRuns(filter?: { metadata?: Record<string, JsonValue> }): Promise<RunSummary[]>;
   getRun(runId: string): Promise<RunSummary | undefined>;
   getEvents(runId: string, options?: { afterSequence?: number }): Promise<PlicoEvent[]>;
   /** Returns run events in a thread, ordered by their durable insertion order. */

@@ -1,7 +1,19 @@
 import type { IncomingMessage } from "node:http";
 import { HttpError } from "./errors.js";
 
+/** Like `readJsonBody`, but an empty body is `{}` so a bare POST still works. */
+export async function readOptionalJsonBody(
+  request: IncomingMessage,
+): Promise<Record<string, unknown>> {
+  const raw = await readBody(request);
+  return raw.trim() === "" ? {} : parseJsonBody(request, raw);
+}
+
 export async function readJsonBody(request: IncomingMessage): Promise<Record<string, unknown>> {
+  return parseJsonBody(request, await readBody(request));
+}
+
+function parseJsonBody(request: IncomingMessage, raw: string): Record<string, unknown> {
   const mediaType = (request.headers["content-type"] ?? "").split(";")[0]?.trim().toLowerCase();
   if (mediaType !== "application/json") {
     throw new HttpError(
@@ -10,8 +22,6 @@ export async function readJsonBody(request: IncomingMessage): Promise<Record<str
       "Send the request body as application/json.",
     );
   }
-  const raw = await readBody(request);
-
   try {
     const parsed = JSON.parse(raw);
     if (!isRecord(parsed) || Array.isArray(parsed)) {
