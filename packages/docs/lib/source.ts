@@ -2,7 +2,8 @@ import { llms, loader } from "fumadocs-core/source";
 import { lucideIconsPlugin } from "fumadocs-core/source/lucide-icons";
 import { metaSchema, pageSchema } from "fumadocs-core/source/schema";
 import { defineDocs } from "fumadocs-mdx/macro";
-import { docsRoute } from "./shared";
+import { toAgentMarkdown } from "./agent-markdown";
+import { docsRoute, getMarkdownUrl } from "./shared";
 
 const docs = defineDocs({
   dir: "content/docs",
@@ -25,7 +26,17 @@ export const source = loader({
 });
 
 export const docsLlms = llms(source, {
-  renderPage: async (page) => `# ${page.data.title} (${page.url})
+  // Point agents at the Markdown version of each page, not the HTML one.
+  renderUrl: (item) => getMarkdownUrl(item.url),
+  renderPage: async (page) => {
+    const description = page.data.description
+      ? `
 
-${await page.data.getText("processed")}`,
+> ${page.data.description}`
+      : "";
+    const body = toAgentMarkdown(await page.data.getText("processed"));
+    return `# ${page.data.title} (${page.url})${description}
+
+${body}`;
+  },
 });

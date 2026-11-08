@@ -35,7 +35,7 @@ Set these environment variables in the Pages project if Cloudflare does not infe
 | `NODE_VERSION` | `22` |
 | `PNPM_VERSION` | `10.12.4` |
 
-The trailing `...` builds the docs package first, then the homepage, whose build copies the docs output into `packages/website/dist`. Old `/docs/welcome` links redirect through `packages/website/public/_redirects`.
+The trailing `...` builds the docs package first, then the homepage, whose build copies the docs output into `packages/website/dist`. Old `/docs/welcome` links redirect through `packages/website/public/_redirects`. `packages/website/public/_worker.js` (Pages advanced mode) serves a docs page as Markdown when the request sends `Accept: text/markdown`, and passes everything else to the static assets.
 
 Cloudflare will install dependencies and deploy again on pushes to `main`.
 

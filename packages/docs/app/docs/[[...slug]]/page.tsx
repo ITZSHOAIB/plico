@@ -10,7 +10,7 @@ import { createRelativeLink } from "fumadocs-ui/mdx";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getMDXComponents } from "@/components/mdx";
-import { getPageImageUrl, getPageMarkdownUrl, gitConfig } from "@/lib/shared";
+import { getPageImageUrl, getPageMarkdownUrl, gitConfig, siteUrl } from "@/lib/shared";
 import { source } from "@/lib/source";
 
 export default async function Page(props: PageProps<"/docs/[[...slug]]">) {
@@ -37,6 +37,20 @@ export default async function Page(props: PageProps<"/docs/[[...slug]]">) {
           githubUrl={`https://github.com/${gitConfig.user}/${gitConfig.repo}/blob/${gitConfig.branch}/content/docs/${page.path}`}
         />
       </div>
+      <script
+        type="application/ld+json"
+        // biome-ignore lint/security/noDangerouslySetInnerHtml: static JSON-LD built from our own content
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "TechArticle",
+            headline: page.data.title,
+            description: page.data.description,
+            url: `${siteUrl}${page.url}`,
+            publisher: { "@type": "Organization", name: "Plico", url: siteUrl },
+          }),
+        }}
+      />
       <DocsBody>
         <MDX
           components={getMDXComponents({
@@ -61,8 +75,15 @@ export async function generateMetadata(props: PageProps<"/docs/[[...slug]]">): P
   return {
     title: page.data.title,
     description: page.data.description,
+    alternates: {
+      canonical: page.url,
+      types: { "text/markdown": getPageMarkdownUrl(page).url },
+    },
     openGraph: {
+      type: "article",
+      url: page.url,
       images: getPageImageUrl(page).url,
     },
+    twitter: { card: "summary_large_image" },
   };
 }

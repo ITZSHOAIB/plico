@@ -12,6 +12,8 @@ export const gitConfig = {
   branch: "main",
 };
 
+export const siteUrl = "https://plico.sohab.dev";
+
 const getContentUrl = createGetUrl(docsContentRoute);
 
 export function getPageMarkdownUrl(page: { slugs: string[]; locale?: string }) {
@@ -26,4 +28,9 @@ export function getPageImageUrl(page: { slugs: string[]; locale?: string }) {
   const segments = [...page.slugs, "image.png"];
 
   return { segments, url: getImageUrl(segments, page.locale) };
+}
+
+/** Markdown URL for a docs page URL such as `/docs/quickstart`. */
+export function getMarkdownUrl(pageUrl: string) {
+  return `${docsContentRoute}${pageUrl.slice(docsRoute.length)}/content.md`;
 }
