@@ -114,6 +114,46 @@ describe("typed authoring helpers", () => {
   );
 
   it(
+    "reports a duplicate name when defineTool is imported under another name",
+    () => {
+      const aliased = (source: string) =>
+        source
+          .replace("import { defineTool }", "import { defineTool as tool }")
+          .replace("export default defineTool(", "export default tool(");
+      const root = project({
+        "a.tool.ts": aliased(tool("echo")),
+        "b.tool.ts": aliased(tool("echo")),
+      });
+
+      const validated = plico("validate", root);
+
+      expect(validated.output).toMatch(/duplicate/i);
+      expect(validated.status).not.toBe(0);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    "reports a duplicate name when defineTool is called through a namespace import",
+    () => {
+      const namespaced = (source: string) =>
+        source
+          .replace("import { defineTool }", "import * as plico")
+          .replace("export default defineTool(", "export default plico.defineTool(");
+      const root = project({
+        "a.tool.ts": namespaced(tool("echo")),
+        "b.tool.ts": tool("echo"),
+      });
+
+      const validated = plico("validate", root);
+
+      expect(validated.output).toMatch(/duplicate/i);
+      expect(validated.status).not.toBe(0);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
     "reports a duplicate tool name declared through defineTool",
     () => {
       const root = project({ "a.tool.ts": tool("echo"), "b.tool.ts": tool("echo") });
