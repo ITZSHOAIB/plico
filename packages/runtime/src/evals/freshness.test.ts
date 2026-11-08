@@ -161,26 +161,44 @@ describe("persistence readiness", () => {
 });
 
 describe("artifact readiness", () => {
-  it.skipIf(process.platform === "win32")(
-    "reports an unwritable artifacts/ directory",
-    async () => {
-      const root = await scaffold({});
-      await chmod(join(root, "artifacts"), 0o555);
-
-      const result = await diagnostic(root, "artifacts.workspace");
-      await chmod(join(root, "artifacts"), 0o755);
-
-      expect(result).toMatchObject({ severity: "error" });
-    },
-  );
-
-  it("confirms a writable artifacts/ directory", async () => {
+  it("explains that run artifacts live in the event log, not in artifacts/", async () => {
     const root = await scaffold({});
 
     const result = await diagnostic(root, "artifacts.workspace");
 
     expect(result).toMatchObject({ severity: "ok" });
-    expect(result?.message).toContain("writable");
+    expect(result?.message).toContain("event log");
+  });
+
+  it("still warns when the reserved artifacts/ folder is missing", async () => {
+    const root = await scaffold({});
+    await rm(join(root, "artifacts"), { recursive: true });
+
+    const result = await diagnostic(root, "artifacts.workspace");
+
+    expect(result).toMatchObject({ severity: "warning" });
+  });
+});
+
+describe("duplicate tool readiness", () => {
+  it("reports two tools with the same name, naming both files", async () => {
+    const root = await scaffold({});
+    const tool =
+      'export default { name: "lookup", description: "d", inputSchema: { type: "object" }, capabilities: [], approval: { required: false }, handler: () => 1 };';
+    await writeFile(join(root, "tools", "a.tool.ts"), tool);
+    await writeFile(join(root, "tools", "b.tool.ts"), tool);
+
+    const report = await checkReadiness(root, {});
+    const duplicate = report.diagnostics.find(
+      (d) =>
+        d.subsystem === "tools.discovery" &&
+        d.severity === "error" &&
+        d.message.includes("Duplicate"),
+    );
+
+    expect(duplicate?.message).toContain("lookup");
+    expect(duplicate?.message).toContain("a.tool.ts");
+    expect(duplicate?.message).toContain("b.tool.ts");
   });
 });
 

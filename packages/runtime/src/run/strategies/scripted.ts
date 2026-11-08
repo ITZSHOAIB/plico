@@ -15,6 +15,7 @@ export async function runScriptedDryRun(
   events: InMemoryEventLog,
   eventStore: EventStore | undefined,
   config: ProjectConfig,
+  mockTools = false,
 ): Promise<string | undefined> {
   const toolsByName = new Map(tools.map((tool) => [tool.name, tool]));
   let output: string | undefined;
@@ -94,6 +95,18 @@ export async function runScriptedDryRun(
         ...(output === undefined ? {} : { output }),
       });
       await awaitApproval(ctx, requestId, tool.name, output, events, approvalTimeoutMs(config));
+    }
+
+    if (mockTools && step.live !== true) {
+      if (!("result" in step)) {
+        throw new RuntimeDiagnosticError({
+          phase: "tool.validation",
+          toolName: tool.name,
+          message: `Tool ${tool.name} has no mocked result. Add "result" to the step, or "live": true to run the real handler.`,
+        });
+      }
+      await events.append("tool.result", { toolName: tool.name, result: step.result });
+      continue;
     }
 
     const idempotencyKey = `${ctx.runId}:${index}`;

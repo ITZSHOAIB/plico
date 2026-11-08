@@ -947,13 +947,13 @@ describe("eval", () => {
     errorSpy.mockRestore();
   });
 
-  it("exits 0 for empty evals directory and returns no eval cases found", async () => {
+  it("exits 0 for an empty evals directory with --allow-empty and returns no eval cases found", async () => {
     const root = await mkdtemp(join(tmpdir(), "plico-cli-"));
     await writeValidProject(root);
     const logSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
-    const exitCode = await main(["node", "plico", "eval", root]);
+    const exitCode = await main(["node", "plico", "eval", "--allow-empty", root]);
 
     expect(exitCode).toBe(0);
     expect(errorSpy).not.toHaveBeenCalled();

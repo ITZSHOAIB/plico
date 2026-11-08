@@ -9,6 +9,10 @@ export type DryRunScriptStep =
       type: "tool.call";
       toolName: string;
       arguments: unknown;
+      /** The output to use instead of running the tool, when the run mocks tools. */
+      result?: unknown;
+      /** Run the real handler even when the run mocks tools. */
+      live?: true;
     }
   | {
       type: "artifact.write";

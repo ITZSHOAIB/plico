@@ -1,5 +1,5 @@
 import { access } from "node:fs/promises";
-import { join } from "node:path";
+import { getProjectPaths, getProjectRelativePaths } from "@plico/core";
 import { digestEvalFixtures, discoverEvalCases } from "../../evals/discover.js";
 import type { EvalCase, EvalReport, EventStore, ReadinessDiagnostic } from "../../types/index.js";
 import { makeDiagnostic } from "../diagnostic.js";
@@ -8,7 +8,8 @@ export async function checkEvals(
   projectRoot: string,
   eventStore: EventStore | undefined,
 ): Promise<ReadinessDiagnostic[]> {
-  const evalsDir = join(projectRoot, "evals");
+  const evalsDir = getProjectPaths(projectRoot).directories.evals;
+  const folder = `${getProjectRelativePaths().directories.evals}/`;
 
   try {
     await access(evalsDir);
@@ -17,7 +18,7 @@ export async function checkEvals(
       makeDiagnostic(
         "warning",
         "evals.fixtures",
-        "evals/ directory not found. Create evals/ to add eval fixtures.",
+        `${folder} directory not found. Create ${folder} to add eval fixtures.`,
       ),
     ];
   }

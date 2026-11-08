@@ -8,6 +8,10 @@
     "toolName": "create_ticket",
     "arguments": {
       "title": "VPN down"
+    },
+    "result": {
+      "ticketId": "T-1",
+      "title": "VPN down"
     }
   }
 ]

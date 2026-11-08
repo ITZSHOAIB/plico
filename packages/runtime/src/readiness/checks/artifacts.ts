@@ -1,37 +1,24 @@
-import { access, constants } from "node:fs/promises";
-import { join } from "node:path";
+import { access } from "node:fs/promises";
+import { getProjectPaths, getProjectRelativePaths } from "@plico/core";
 import type { ReadinessDiagnostic } from "../../types/index.js";
 import { makeDiagnostic } from "../diagnostic.js";
 
-async function canAccess(path: string, mode: number): Promise<boolean> {
-  try {
-    await access(path, mode);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
+/**
+ * Files a run writes are events in the log (ADR 0002), not files in `artifacts/`, so the folder
+ * is only part of the project layout. Its writability says nothing about artifacts and is not checked.
+ */
 export async function checkArtifacts(projectRoot: string): Promise<ReadinessDiagnostic[]> {
-  const directory = join(projectRoot, "artifacts");
+  const directory = getProjectPaths(projectRoot).directories.artifacts;
+  const folder = `${getProjectRelativePaths().directories.artifacts}/`;
 
-  if (!(await canAccess(directory, constants.F_OK))) {
+  try {
+    await access(directory);
+  } catch {
     return [
       makeDiagnostic(
         "warning",
         "artifacts.workspace",
-        "artifacts/ directory not found. Create it to store generated outputs.",
-      ),
-    ];
-  }
-
-  if (!(await canAccess(directory, constants.W_OK))) {
-    return [
-      makeDiagnostic(
-        "error",
-        "artifacts.workspace",
-        "Artifact workspace directory is not writable",
-        "artifacts/",
+        `${folder} directory not found. Create it to keep the project layout complete.`,
       ),
     ];
   }
@@ -40,8 +27,8 @@ export async function checkArtifacts(projectRoot: string): Promise<ReadinessDiag
     makeDiagnostic(
       "ok",
       "artifacts.workspace",
-      "Artifact workspace directory is writable",
-      "artifacts/",
+      "Artifacts a run writes are stored in the event log, not in this folder",
+      folder,
     ),
   ];
 }

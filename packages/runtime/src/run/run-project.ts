@@ -37,6 +37,7 @@ interface RunInput {
   context?: Metadata;
   history?: RunProjectOptions["history"];
   script?: DryRunScriptStep[];
+  mockTools?: boolean;
   providerRecoveryKey?: string;
   traceContext?: StoredSpanContext;
 }
@@ -59,6 +60,7 @@ export async function runProject(
     ...(options.context === undefined ? {} : { context: options.context }),
     ...(options.history === undefined ? {} : { history: options.history }),
     ...(options.script === undefined ? {} : { script: options.script }),
+    ...(options.mockTools === true ? { mockTools: true } : {}),
     ...(options.providerRecoveryKey === undefined
       ? {}
       : { providerRecoveryKey: options.providerRecoveryKey }),
@@ -274,6 +276,7 @@ async function runLoop(
               events,
               options.eventStore,
               project.config,
+              input.mockTools === true,
             );
     await events.append("run.completed", {
       ...(output === undefined ? {} : { output }),

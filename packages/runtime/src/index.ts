@@ -11,7 +11,7 @@ export {
   type Workflow,
 } from "./engine/index.js";
 export { type ModelErrorKind, ModelProviderError } from "./errors.js";
-export { runEvals } from "./evals/index.js";
+export { evalCaseFromRun, runEvals } from "./evals/index.js";
 export { runFailureEvents } from "./events.js";
 export { composeInstructions } from "./instructions.js";
 export {

@@ -23,6 +23,32 @@ icon: Terminal
 - `--allow-script` lets API callers send scripted runs. See [HTTP API](/docs/http-api).
 - `--inspect` serves for inspection beside a backend that owns the database: nothing is recovered or resumed and every change is refused. See [Use Plico from your backend](/docs/backend).
 
+## eval
+
+Each `evals/*.script.json` file is one case: a script of steps and an optional `expect`
+(`status`, `outputContains`). `plico eval` exits 1 when a case fails, and also when there are
+no cases, so a CI gate cannot pass with nothing tested. `--allow-empty` accepts an empty
+`evals/` folder.
+
+Evals never run tool handlers by surprise. A `tool.call` step supplies the tool's output as
+`result`, and the run uses it instead of calling the handler:
+
+```json
+{ "type": "tool.call", "toolName": "create_ticket", "arguments": { "title": "VPN down" },
+  "result": { "ticketId": "T-1" } }
+```
+
+A `tool.call` step without `result` fails the case and names the tool. Add `"live": true` to a
+step to run the real handler on purpose. Approval policy still applies in evals, so a tool that
+requires approval is held exactly as it is in a normal run.
+
+### Turn a run into a case
+
+`plico eval --from-run <run-id> [--name <name>] [path]` writes a stored run to
+`evals/<name>.script.json` (the name defaults to the run id). Each tool call keeps the output it
+produced as `result`, and `expect` records the run's status and final output. It refuses to
+overwrite an existing case and fails on an unknown run id. Files a tool wrote are not carried over.
+
 ## Help and unknown flags
 
 `plico validate --help` shows validation usage. Unknown flags are reported as errors.

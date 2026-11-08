@@ -148,3 +148,66 @@ describe("studio assets readiness", () => {
     expect(report.diagnostics.some((d) => d.subsystem === "studio.assets")).toBe(false);
   });
 });
+
+describe("eval tool mocking", () => {
+  async function withSideEffectTool(evalCase: unknown): Promise<{ root: string; marker: string }> {
+    const root = await scaffold(evalCase);
+    const marker = join(root, "side-effect.txt");
+    await writeFile(
+      join(root, "tools", "charge.tool.ts"),
+      `export default { name: "charge", description: "Charge a card", inputSchema: { type: "object" }, capabilities: [], approval: { required: false }, handler: async () => { const { writeFileSync } = await import("node:fs"); writeFileSync(${JSON.stringify(marker)}, "ran"); return "charged"; } };`,
+    );
+    return { root, marker };
+  }
+  const exists = (path: string) =>
+    import("node:fs/promises").then(({ access }) =>
+      access(path).then(
+        () => true,
+        () => false,
+      ),
+    );
+
+  it("replaces the tool with the step's mocked result and never runs the handler", async () => {
+    const { root, marker } = await withSideEffectTool({
+      name: "mocked",
+      script: [
+        { type: "tool.call", toolName: "charge", arguments: {}, result: "mock-charged" },
+        { type: "assistant.output", content: "done" },
+      ],
+    });
+    const eventStore = createSqliteEventStore({ databasePath: join(root, "state.sqlite") });
+
+    const summary = await runEvals(root, { eventStore });
+
+    expect(summary).toMatchObject({ total: 1, passed: 1, failed: 0 });
+    expect(await exists(marker)).toBe(false);
+    const events = await eventStore.getEvents(summary.results[0]?.runId ?? "");
+    const result = events.find((event) => event.type === "tool.result");
+    expect(result?.type === "tool.result" ? result.payload.result : undefined).toBe("mock-charged");
+  });
+
+  it("fails a case whose tool call has no mocked result, without running the handler", async () => {
+    const { root, marker } = await withSideEffectTool({
+      name: "unmocked",
+      script: [{ type: "tool.call", toolName: "charge", arguments: {} }],
+    });
+
+    const summary = await runEvals(root);
+
+    expect(summary).toMatchObject({ total: 1, passed: 0, failed: 1 });
+    expect(summary.results[0]?.diagnostics?.join("\n")).toContain("mocked result");
+    expect(await exists(marker)).toBe(false);
+  });
+
+  it("runs the real handler only when the step opts in with live", async () => {
+    const { root, marker } = await withSideEffectTool({
+      name: "live",
+      script: [{ type: "tool.call", toolName: "charge", arguments: {}, live: true }],
+    });
+
+    const summary = await runEvals(root);
+
+    expect(summary).toMatchObject({ total: 1, passed: 1, failed: 0 });
+    expect(await exists(marker)).toBe(true);
+  });
+});
