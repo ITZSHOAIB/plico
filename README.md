@@ -63,6 +63,8 @@ pnpm smoke:tarballs
 
 The Astro website lives in `packages/website` and is configured for Cloudflare Pages at `plico.sohab.dev`.
 
+The docs live in `packages/docs` (Fumadocs). Write pages as MDX in `packages/docs/content/docs` and list them in its `meta.json`; run `pnpm --filter @plico/docs dev` to preview them. The website build merges the docs under `/docs`.
+
 See [docs/cloudflare-pages.md](docs/cloudflare-pages.md) for the Pages project settings, custom domain setup, and manual Wrangler deployment commands.
 
 ## Formatting And Linting

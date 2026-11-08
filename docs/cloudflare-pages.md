@@ -1,6 +1,6 @@
 # Cloudflare Pages Deployment
 
-The website package deploys as a static Astro site to:
+The website package deploys as a static site to the URL below. The Astro homepage is served at `/`, and the docs (`@plico/docs`, a Fumadocs Next.js static export) are merged into the same build and served at `/docs`.
 
 - Production URL: `https://plico.sohab.dev`
 - Cloudflare Pages project: `plico`
@@ -25,7 +25,7 @@ Create the Pages project from the Cloudflare dashboard:
 | Production branch | `main` |
 | Root directory | `/` |
 | Framework preset | `Astro` or `None` |
-| Build command | `pnpm --filter @plico/website build` |
+| Build command | `pnpm --filter @plico/website... build` |
 | Build output directory | `packages/website/dist` |
 
 Set these environment variables in the Pages project if Cloudflare does not infer them:
@@ -34,6 +34,8 @@ Set these environment variables in the Pages project if Cloudflare does not infe
 | --- | --- |
 | `NODE_VERSION` | `22` |
 | `PNPM_VERSION` | `10.12.4` |
+
+The trailing `...` builds the docs package first, then the homepage, whose build copies the docs output into `packages/website/dist`. Old `/docs/welcome` links redirect through `packages/website/public/_redirects`.
 
 Cloudflare will install dependencies and deploy again on pushes to `main`.
 
@@ -68,7 +70,7 @@ For a preview deployment:
 pnpm --filter @plico/website deploy:pages:preview
 ```
 
-These commands build `packages/website/dist` and upload it with Wrangler. You must be authenticated with Cloudflare first:
+These commands build the docs and the homepage into `packages/website/dist` and upload it with Wrangler. You must be authenticated with Cloudflare first:
 
 ```sh
 pnpm dlx wrangler@latest login

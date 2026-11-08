@@ -41,6 +41,10 @@ a {
   padding: 22px 0;
   font-size: 14.5px;
 }
+.top .links {
+  display: flex;
+  gap: 22px;
+}
 .top a {
   color: var(--muted);
   text-decoration: none;

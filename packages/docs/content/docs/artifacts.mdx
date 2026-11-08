@@ -1,0 +1,56 @@
+---
+title: Artifacts
+description: The versioned workspace a run reads and writes.
+---
+
+Artifact writes from TypeScript tools use `ctx.artifacts`. A tool can call
+`read(path)`, `write(path, content, { mimeType })`, and `list()`. Writes accept text
+or `Uint8Array` content and are staged with the durable tool step, so a recovered run
+reuses its recorded write rather than executing it twice.
+
+Plico stores content bytes once per SHA-256 hash in SQLite. Text stays readable as
+text, and binary event content uses a tagged base64 value on JSON surfaces. A
+`Uint8Array` returned from a tool is encoded as tagged base64 in its result event.
+
+<Callout>
+  Write paths must be relative, contain no `..`, and be at most 1,024 characters.
+  Each write is limited to 1 MiB.
+</Callout>
+
+## Workspaces and versions
+
+Workspace responses expose the latest files and an ordered version receipt history
+for each run. Thread runs share one ordered workspace: `GET /v1/threads/<thread-id>/workspace`
+returns its current files and versions, and every version identifies the writing run.
+A run workspace includes files inherited from earlier turns and shows the state as of
+that run.
+
+## Diffs and exports
+
+Compare two writes with
+`GET /v1/runs/<run-id>/workspace/diffs?path=<path>&fromVersion=1&toVersion=2`. Diffs
+accept text, JSON, and XML artifacts up to 1 MiB per version; binary or larger versions
+are rejected.
+
+Download a file with `GET /v1/runs/<run-id>/workspace/exports?path=<path>`. The response
+is an attachment with the stored content and media type. Binary files can be written
+and exported byte for byte.
+
+## Model-facing tools
+
+Provider-backed runs have four built-in tools for this workspace: `list_files`,
+`read_file`, `write_file`, and `edit_file`. The names are reserved. Set
+`artifacts.access` in `plico.config.ts` to `read-write`, `read-only`, or `off`; it
+defaults to `read-write`. Read-only mode offers listing and reading. Off hides all four
+tools while leaving `ctx.artifacts` available to trusted project tools.
+
+- `list_files` accepts `*`, `**`, `?`, and comma-separated brace alternatives (for
+  example `reports/*.{md,txt}`). It returns paths in sorted, paginated order, 100 files
+  per page by default.
+- `read_file` uses a 1-indexed line offset, defaults to 200 lines, and limits text
+  output to 32 KiB per call. Binary files return metadata without their bytes.
+- `write_file` creates or overwrites text, infers the MIME type from the extension, and
+  allows an explicit `mimeType` override.
+- `edit_file` replaces exact text and requires one match unless `replaceAll` is true.
+
+Both write tools use the staged workspace path and enforce the 1 MiB content limit.

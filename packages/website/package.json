@@ -5,20 +5,20 @@
   "type": "module",
   "scripts": {
     "dev": "astro dev",
-    "build": "astro build",
+    "build": "astro build && node scripts/merge-docs.mjs",
     "preview": "astro preview",
     "check": "astro check",
-    "deploy:pages": "pnpm run build && pnpm dlx wrangler@latest pages deploy dist --project-name plico",
-    "deploy:pages:preview": "pnpm run build && pnpm dlx wrangler@latest pages deploy dist --project-name plico --branch preview"
+    "deploy:pages": "pnpm --filter @plico/website... build && pnpm dlx wrangler@latest pages deploy dist --project-name plico",
+    "deploy:pages:preview": "pnpm --filter @plico/website... build && pnpm dlx wrangler@latest pages deploy dist --project-name plico --branch preview"
   },
   "dependencies": {
-    "@astrojs/mdx": "^4.2.0",
     "@fontsource-variable/geist": "5.3.0",
     "@fontsource-variable/geist-mono": "5.3.0",
     "astro": "^5.7.0"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.9",
+    "@plico/docs": "workspace:*",
     "typescript": "^6.0.3"
   }
 }

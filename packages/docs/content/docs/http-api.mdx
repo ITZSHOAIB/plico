@@ -1,0 +1,40 @@
+---
+title: HTTP API
+description: The native HTTP API served by plico serve.
+---
+
+`plico serve` exposes a native API over the runtime and event store. This page covers
+the access rules; [Threads](/docs/threads) and [Artifacts](/docs/artifacts) describe
+their endpoints.
+
+## Access and safety
+
+The server has no authentication, so it listens on loopback only and refuses requests
+a web page could send:
+
+| Request | Response |
+| --- | --- |
+| Foreign `Host` header (DNS rebinding) | 421 |
+| Cross-origin `Origin` header | 403 |
+| Body that is not `application/json` | 415 |
+
+Clients that send no `Origin`, such as curl and the CLI, are unaffected.
+
+`plico serve --allow-remote` exposes the server on another host and skips the `Host`
+check; the `Origin` check still applies. A host app that mounts `createPlicoServer`
+under its own name passes `allowRemote: true` and owns authentication. `Origin` must
+match in scheme, host and port, so behind a TLS proxy the host app also passes
+`publicOrigin: "https://its.host"`.
+
+## Cancel a run
+
+Cancel an active persisted run with `POST /v1/runs/<run-id>/cancel` or
+`plico cancel <run-id> <project>`. Pressing Ctrl+C during `plico run` also cancels
+that run.
+
+## Scripted runs
+
+A `script` in a run request calls project tools with arguments the caller picks and
+skips the model. For that reason the API answers 403 `run.script_disabled` unless the
+server starts with `plico serve --allow-script` (`allowScript: true` for
+`createPlicoServer`). `plico run --dry --script` on the command line is unaffected.

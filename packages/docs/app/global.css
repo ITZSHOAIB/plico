@@ -1,0 +1,33 @@
+@import "tailwindcss";
+@import "fumadocs-ui/css/neutral.css";
+@import "fumadocs-ui/css/preset.css";
+
+/* Verdigris, the same accent as Studio (packages/studio/src/theme/tokens.css). */
+:root {
+  --font-sans: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono Variable", ui-monospace, SFMono-Regular, Consolas, monospace;
+  --color-fd-primary: #0f6e5c;
+  --color-fd-primary-foreground: #ffffff;
+  --color-fd-accent: #e3f3ee;
+  --color-fd-accent-foreground: #0a5547;
+  --color-fd-ring: #0f6e5c;
+}
+
+.dark {
+  --color-fd-background: #0b0d0d;
+  --color-fd-primary: #62bfa8;
+  --color-fd-primary-foreground: #04140f;
+  --color-fd-accent: #10261f;
+  --color-fd-accent-foreground: #8dd4c2;
+  --color-fd-ring: #62bfa8;
+}
+
+html {
+  font-family: var(--font-sans);
+  scrollbar-gutter: stable;
+}
+
+code,
+pre {
+  font-family: var(--font-mono);
+}
