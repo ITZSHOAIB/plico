@@ -1,4 +1,5 @@
-import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { existsSync } from "node:fs";
+import { mkdir, mkdtemp, readdir, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createSqliteEventStore, runProject } from "@plico/runtime";
@@ -70,5 +71,21 @@ describe("plico eval --from-run", () => {
     expect(String(error.mock.calls.at(-1)?.[0])).toContain("already exists");
     expect(await main(["node", "plico", "eval", "--from-run", "run-missing", root])).toBe(1);
     expect(String(error.mock.calls.at(-1)?.[0])).toContain("run-missing");
+  });
+
+  it("rejects a case name that would leave the evals folder", async () => {
+    const { root, runId } = await projectWithRun();
+    vi.spyOn(console, "log").mockImplementation(() => undefined);
+    const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    for (const name of ["../escaped", "..", "a/b", "a\\b", "."]) {
+      expect(
+        await main(["node", "plico", "eval", "--from-run", runId, "--name", name, root]),
+        name,
+      ).toBe(1);
+      expect(String(error.mock.calls.at(-1)?.[0])).toContain("--name");
+    }
+    expect(existsSync(join(root, "escaped.script.json"))).toBe(false);
+    expect(await readdir(join(root, "evals"))).toEqual([]);
   });
 });

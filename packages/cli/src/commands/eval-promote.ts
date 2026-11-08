@@ -10,6 +10,8 @@ export async function promoteRun(
   runId: string,
   name: string,
 ): Promise<string> {
+  if (name === "." || name === ".." || /[\\/]/.test(name))
+    throw new Error(`Invalid --name "${name}". Use a plain file name without path separators.`);
   const store = createSqliteEventStore({ databasePath, readOnly: true });
   const run = await store.getRun(runId);
   if (!run) throw new Error(`Run not found: ${runId}`);
