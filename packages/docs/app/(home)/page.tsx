@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
 import { FilesSection } from "@/components/home/files-section";
 import { Hero } from "@/components/home/hero";
+import { KitSection } from "@/components/home/kit-section";
+import { StartSection } from "@/components/home/start-section";
+import { StatusSection } from "@/components/home/status-section";
+import { ViewsSection } from "@/components/home/views-section";
 import { gitConfig, siteUrl } from "@/lib/shared";
 
 const title = "Plico: build AI agents from files";
@@ -36,6 +40,10 @@ export default function HomePage() {
       />
       <Hero />
       <FilesSection />
+      <ViewsSection />
+      <KitSection />
+      <StatusSection />
+      <StartSection />
     </div>
   );
 }
