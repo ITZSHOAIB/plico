@@ -2,14 +2,15 @@ import type { PlicoEvent, RunSummary } from "@plico/contracts";
 import { type DryRunScriptStep, type RunResult, runProject } from "@plico/runtime";
 import { PlicoError } from "./errors.js";
 import { readMetadata } from "./metadata.js";
+import { inScope, scopedFilter, scopedMetadata } from "./scope.js";
 import type { AppDeps } from "./types.js";
 
 export async function startRun(
   deps: AppDeps,
   options: { script?: DryRunScriptStep[]; metadata?: unknown; context?: unknown } = {},
 ): Promise<{ runId: string }> {
-  const metadata = readMetadata(options.metadata);
-  const context = readMetadata(options.context, "context");
+  const metadata = scopedMetadata(deps, readMetadata(options.metadata));
+  const context = readMetadata(options.context, "context") ?? deps.context;
   let resolveStarted!: (runId: string) => void;
   let rejectStarted!: (error: unknown) => void;
   const started = new Promise<string>((resolve, reject) => {
@@ -43,13 +44,14 @@ export async function listRuns(
   deps: AppDeps,
   filter: { metadata?: unknown } = {},
 ): Promise<RunSummary[]> {
-  const metadata = readMetadata(filter.metadata);
+  const metadata = scopedFilter(deps, readMetadata(filter.metadata));
   return deps.eventStore.listRuns(metadata === undefined ? {} : { metadata });
 }
 
 export async function requireRun(deps: AppDeps, runId: string): Promise<RunSummary> {
   const run = await deps.eventStore.getRun(runId);
-  if (!run) throw new PlicoError("run.not_found", `Unknown run ID: ${runId}`);
+  if (!run || !inScope(deps, run.metadata))
+    throw new PlicoError("run.not_found", `Unknown run ID: ${runId}`);
   return run;
 }
 
@@ -59,8 +61,8 @@ export async function cancelRun(deps: AppDeps, runId: string): Promise<string> {
 }
 
 /**
- * Sends a client's signal. An approval signal from a client carries no `context`: only
- * `decideApproval`, which the host calls, may say who decided.
+ * Sends a client's signal. An approval signal from a client carries no `context` of its own: only
+ * the host may say who decided, through `decideApproval` or the `context` of a mounted handler.
  */
 export function signalRun(
   deps: AppDeps,
@@ -73,7 +75,10 @@ export function signalRun(
     typeof value === "object" &&
     value !== null &&
     !Array.isArray(value)
-      ? Object.fromEntries(Object.entries(value).filter(([key]) => key !== "context"))
+      ? {
+          ...Object.fromEntries(Object.entries(value).filter(([key]) => key !== "context")),
+          ...(deps.context === undefined ? {} : { context: deps.context }),
+        }
       : value;
   return sendSignal(deps, runId, name, clean);
 }
@@ -97,7 +102,7 @@ export function decideApproval(
   approved: boolean,
   options: { context?: unknown } = {},
 ): Promise<string> {
-  const context = readMetadata(options.context, "context");
+  const context = readMetadata(options.context, "context") ?? deps.context;
   return sendSignal(deps, runId, `approval:${requestId}`, {
     approved,
     ...(context === undefined ? {} : { context }),

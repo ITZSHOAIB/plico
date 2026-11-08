@@ -1,6 +1,7 @@
 import type { PlicoEvent, RunStatus } from "@plico/contracts";
 import type { PlicoEventType } from "@plico/runtime";
 import { PlicoError } from "./errors.js";
+import { inScope } from "./scope.js";
 import type { AppDeps, EventFollowOptions } from "./types.js";
 
 // Waiting is not terminal: the stream stays open for approval (#69). run.error is followed by
@@ -17,14 +18,15 @@ const terminalStatuses: readonly RunStatus[] = ["completed", "failed", "cancelle
  * on the first `next()`, so callers that need a 404 before writing anything check the run first.
  */
 export async function* followEvents(
-  deps: Pick<AppDeps, "eventStore">,
+  deps: Pick<AppDeps, "eventStore" | "scope">,
   runId: string,
   options: EventFollowOptions & { stop: AbortSignal },
 ): AsyncGenerator<PlicoEvent, void, void> {
   const { eventStore } = deps;
   const stop = options.signal ? AbortSignal.any([options.signal, options.stop]) : options.stop;
   const pollMs = options.pollMs ?? 2000;
-  if (!(await eventStore.getRun(runId)))
+  const first = await eventStore.getRun(runId);
+  if (!first || !inScope(deps, first.metadata))
     throw new PlicoError("run.not_found", `Unknown run ID: ${runId}`);
 
   let cursor = options.after ?? 0;

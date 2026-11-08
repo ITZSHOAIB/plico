@@ -37,6 +37,7 @@ export const runRoutes: Route[] = [
   },
   {
     method: "POST",
+    hostOnly: true,
     pattern: /^\/v1\/runs\/dry$/,
     handler: async ({ app, allowScript, request }) => {
       const script = readScript(await readJsonBody(request), allowScript);

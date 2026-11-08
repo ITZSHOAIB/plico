@@ -15,17 +15,20 @@ async function readLatestReport(eventStore: EventStore): Promise<EvalReport> {
 export const evalRoutes: Route[] = [
   {
     method: "POST",
+    hostOnly: true,
     pattern: /^\/v1\/eval$/,
     handler: async ({ projectRoot, eventStore }) =>
       jsonResponse(200, await runEvals(projectRoot, { eventStore })),
   },
   {
     method: "GET",
+    hostOnly: true,
     pattern: /^\/v1\/eval$/,
     handler: async ({ eventStore }) => jsonResponse(200, await readLatestReport(eventStore)),
   },
   {
     method: "GET",
+    hostOnly: true,
     pattern: /^\/v1\/eval\/([^/]+)$/,
     handler: async ({ eventStore, params }) => {
       const name = params[0] ?? "";

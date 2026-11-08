@@ -35,6 +35,25 @@ before the process exits; it stops open event iterators and closes the thread st
 `servePlico` is `createPlico` plus an HTTP listener and closes Plico when the server
 closes. Readiness reports a thread and run store mismatch before a run is started.
 
+## Mount the API in your backend
+
+`plico.fetch(options)` returns a web-standard `(request) => Promise<Response>` handler for Hono, Next.js route handlers, Bun and Deno. `plico.node(options)` returns a Node `(req, res)` handler for Express, Fastify and plain `http`; it reads a body the host already parsed into `req.body`, such as with `express.json()`. Both serve the `/v1` API. Run your own authentication first, then let `scope` keep each request to its own data:
+
+```ts
+const plico = await createPlico({ projectRoot, databasePath });
+
+app.use("/plico", requireLogin, plico.node({
+  scope: (req) => ({ userId: req.headers.get("x-user-id") ?? "" }),
+  context: (req) => ({ actor: req.headers.get("x-user-id") ?? "" }),
+}));
+```
+
+- `scope` is a JSON object the host computes per request. Plico stamps it on new threads and runs as their `metadata` and refuses every read and action on anything it does not match, with a `404`, including events, artifacts, cancel and approvals. A client cannot widen it or set its own `metadata`. A `scope` function that throws or returns anything but an object fails the request with a `500`.
+- A scoped mount does not serve the project-level routes `/v1/project`, `/v1/instructions`, `/v1/eval`, `/v1/readiness` and `/v1/runs/dry`.
+- `context` is host data for the runs a request starts. Tools read it as `ctx.context`, `run.started` records it, and an approval sent through the mounted API is recorded with it as `approval.decided.context`; a client cannot supply its own.
+- `basePath` removes a mount path such as `/plico` before routing, for hosts that do not strip it. `publicOrigin` and `allowScript` work as on `servePlico`.
+- A mounted API checks `Content-Type` and refuses cross-origin requests, but not the loopback `Host`. The host owns authentication and permissions.
+
 ## Host data: metadata and context
 
 Plico has no user model; a host that serves users passes data and enforces access.

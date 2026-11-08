@@ -1,3 +1,4 @@
+import type { RequestListener } from "node:http";
 import type { PlicoEvent, RunSummary, Thread, ThreadMessage } from "@plico/contracts";
 import type {
   DryRunScriptStep,
@@ -6,6 +7,7 @@ import type {
   ModelProvider,
   ThreadStore,
 } from "@plico/runtime";
+import type { MountOptions } from "../mount.js";
 import type { Metadata } from "./metadata.js";
 
 /** What the shared layer runs on. Internal: hosts pass a project folder to `createPlico` instead. */
@@ -18,6 +20,13 @@ export interface AppDeps {
   /** Account-only identity used to resume queued runs after a model change. */
   providerAccountKey?: string;
   engine: Engine;
+  /**
+   * Set by a mounted handler for one request. New threads and runs carry it as their metadata, and
+   * every read and action refuses what it does not match.
+   */
+  scope?: Metadata;
+  /** Set by a mounted handler for one request: host data for the runs and decisions it causes. */
+  context?: Metadata;
 }
 
 export interface EventFollowOptions {
@@ -85,6 +94,13 @@ export interface Plico {
       options?: { context?: Metadata },
     ): Promise<string>;
   };
+  /**
+   * The `/v1` API as a web-standard handler for Hono, Next.js, Bun and Deno. The host's own
+   * authentication runs first; `scope` then keeps each request to its own data.
+   */
+  fetch(options?: MountOptions): (request: Request) => Promise<Response>;
+  /** The `/v1` API as a Node handler for Express, Fastify and `http`. Honours a parsed `req.body`. */
+  node(options?: MountOptions): RequestListener;
   /** Stops following events, waits for recovery and closes the stores Plico opened. */
   close(): Promise<void>;
 }

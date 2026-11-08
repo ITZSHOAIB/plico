@@ -28,6 +28,7 @@ export { checkReadiness } from "./readiness/index.js";
 export { recoverRuns, runProject } from "./run/index.js";
 export { normalizeScript, ScriptValidationError } from "./script.js";
 export { createSqliteEventStore } from "./storage/index.js";
+export { matchesMetadata } from "./storage/metadata.js";
 export {
   createSqliteThreadStore,
   ThreadBusyError,
