@@ -19,16 +19,36 @@ export function setUserTitle(
   appendThreadEvent(db, threadId, "thread.titled", { title, source: "user" }, timestamp);
 }
 
-/** Names the thread from its transcript. Called inside the transaction that stores a reply. */
+/**
+ * Names the thread from its transcript. Called inside the transaction that stores a reply, where
+ * a title is only a convenience: if naming fails, the reply is still stored and the run completes.
+ */
 export function retitleThread(db: DatabaseSync, threadId: string, timestamp: string): void {
+  db.exec("SAVEPOINT retitle");
+  try {
+    nameThread(db, threadId, timestamp);
+  } catch {
+    db.exec("ROLLBACK TO retitle");
+  } finally {
+    db.exec("RELEASE retitle");
+  }
+}
+
+function nameThread(db: DatabaseSync, threadId: string, timestamp: string): void {
   const thread = db
     .prepare("SELECT title, title_source AS source FROM threads WHERE thread_id = ?")
     .get(threadId) as { title: string | null; source: string | null } | undefined;
   if (!thread || thread.source === "user") return;
+  // Count first: a frozen thread must not load its transcript on every reply.
+  const replies = db
+    .prepare(
+      "SELECT COUNT(*) AS count FROM thread_messages WHERE thread_id = ? AND role = 'assistant'",
+    )
+    .get(threadId) as { count: number };
+  if (replies.count > retitledExchanges) return;
   const messages = db
     .prepare("SELECT role, content FROM thread_messages WHERE thread_id = ? ORDER BY sequence")
     .all(threadId) as Array<{ role: "user" | "assistant"; content: string }>;
-  if (messages.filter((message) => message.role === "assistant").length > retitledExchanges) return;
   const title = suggestThreadTitle(messages);
   if (title === undefined || title === thread.title) return;
   db.prepare("UPDATE threads SET title = ?, title_source = 'generated' WHERE thread_id = ?").run(
