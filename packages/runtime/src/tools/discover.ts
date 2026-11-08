@@ -5,6 +5,7 @@ import {
   getProjectPaths,
   getProjectRelativePaths,
   type LoadedProject,
+  SKILL_TOOL_NAME,
 } from "@plico/core";
 import type { DeclaredTool } from "../types/index.js";
 import { loadToolFile } from "./load.js";
@@ -30,6 +31,8 @@ export async function discoverTools(project: LoadedProject): Promise<DeclaredToo
     const tool = await loadToolFile(join(projectPaths.directories.tools, entry), source);
     if (ARTIFACT_TOOL_NAMES.includes(tool.name as (typeof ARTIFACT_TOOL_NAMES)[number]))
       throw new Error(`Tool name "${tool.name}" is reserved by Plico's artifact tools`);
+    if (tool.name === SKILL_TOOL_NAME)
+      throw new Error(`Tool name "${tool.name}" is reserved by Plico's skill loader`);
     const first = sources.get(tool.name);
     if (first) {
       throw new Error(`Duplicate tool name "${tool.name}" declared in ${first} and ${source}`);

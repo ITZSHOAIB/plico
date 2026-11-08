@@ -8,6 +8,9 @@ const require = createRequire(import.meta.url);
 
 export const ARTIFACT_TOOL_NAMES = ["list_files", "read_file", "write_file", "edit_file"] as const;
 
+/** The built-in tool the agent calls to read a skill's full text. */
+export const SKILL_TOOL_NAME = "load_skill";
+
 type ToolNameResolution =
   | { kind: "known"; name: string }
   | { kind: "absent" }
@@ -39,6 +42,15 @@ export async function validateToolNames(root: string): Promise<ValidationIssue[]
       issues.push({
         path: source,
         message: `Tool name "${name}" is reserved by Plico's artifact tools`,
+        severity: "error",
+      });
+      continue;
+    }
+
+    if (name === SKILL_TOOL_NAME) {
+      issues.push({
+        path: source,
+        message: `Tool name "${name}" is reserved by Plico's skill loader`,
         severity: "error",
       });
       continue;

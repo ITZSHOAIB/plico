@@ -1,12 +1,13 @@
 import { randomUUID } from "node:crypto";
 import { setTimeout as delay } from "node:timers/promises";
 import type { ProjectConfig } from "@plico/contracts";
-import { ARTIFACT_TOOL_NAMES } from "@plico/core";
+import { ARTIFACT_TOOL_NAMES, type Skill } from "@plico/core";
 import { RunCancelled, type RunContext } from "../../engine/index.js";
 import { ModelProviderError, RuntimeDiagnosticError } from "../../errors.js";
 import type { InMemoryEventLog } from "../../events.js";
 import { approvalTimeoutMs, decideApproval } from "../../policy/approval.js";
 import { createArtifactModelTools } from "../../tools/artifact-model-tools.js";
+import { createSkillModelTool } from "../../tools/skill-model-tool.js";
 import type { DeclaredTool, EventStore, ModelProvider, ModelRequest } from "../../types/index.js";
 import { runToolStep } from "../tool-step.js";
 import { nameToolStep } from "../tracing.js";
@@ -23,6 +24,7 @@ export async function runProviderBackedRun(
   model: ProjectConfig["model"],
   config: ProjectConfig,
   history: Array<Pick<import("../../types/index.js").ProviderMessage, "role" | "content">> = [],
+  skills: Skill[] = [],
 ): Promise<string> {
   const maxSteps = model?.maxSteps ?? 10;
   if (!message) {
@@ -36,10 +38,13 @@ export async function runProviderBackedRun(
   await events.append("input.received", { content: message });
 
   const artifactTools = await createArtifactModelTools();
-  const toolsByName = new Map([...tools, ...artifactTools].map((tool) => [tool.name, tool]));
+  const skillTools = skills.length > 0 ? [await createSkillModelTool(skills)] : [];
+  const toolsByName = new Map(
+    [...tools, ...artifactTools, ...skillTools].map((tool) => [tool.name, tool]),
+  );
   const artifactAccess = config.artifacts?.access ?? "read-write";
 
-  const providerTools = [...tools, ...artifactTools]
+  const providerTools = [...tools, ...artifactTools, ...skillTools]
     .filter((tool) => isArtifactToolAllowed(tool.name, artifactAccess))
     .map((tool) => ({
       name: tool.name,

@@ -1,3 +1,6 @@
+---
+description: Review incoming work items and choose the smallest safe next step.
+---
 # Triage
 
 Review incoming work items, identify the smallest safe next step, and record the outcome.
