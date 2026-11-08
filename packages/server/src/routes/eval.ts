@@ -1,6 +1,6 @@
 import { type EvalReport, type EventStore, runEvals } from "@plico/runtime";
 import { HttpError } from "../errors.js";
-import { sendJson } from "../responses.js";
+import { jsonResponse } from "../responses.js";
 import type { Route } from "./types.js";
 
 async function readLatestReport(eventStore: EventStore): Promise<EvalReport> {
@@ -16,21 +16,18 @@ export const evalRoutes: Route[] = [
   {
     method: "POST",
     pattern: /^\/v1\/eval$/,
-    handler: async ({ projectRoot, eventStore, response }) => {
-      sendJson(response, 200, await runEvals(projectRoot, { eventStore }));
-    },
+    handler: async ({ projectRoot, eventStore }) =>
+      jsonResponse(200, await runEvals(projectRoot, { eventStore })),
   },
   {
     method: "GET",
     pattern: /^\/v1\/eval$/,
-    handler: async ({ eventStore, response }) => {
-      sendJson(response, 200, await readLatestReport(eventStore));
-    },
+    handler: async ({ eventStore }) => jsonResponse(200, await readLatestReport(eventStore)),
   },
   {
     method: "GET",
     pattern: /^\/v1\/eval\/([^/]+)$/,
-    handler: async ({ eventStore, response, params }) => {
+    handler: async ({ eventStore, params }) => {
       const name = params[0] ?? "";
       const report = await readLatestReport(eventStore);
       const result = report.results.find((candidate) => candidate.name === name);
@@ -38,7 +35,7 @@ export const evalRoutes: Route[] = [
         throw new HttpError(404, "eval.not_found", `Unknown eval: ${name}`);
       }
 
-      sendJson(response, 200, result);
+      return jsonResponse(200, result);
     },
   },
 ];

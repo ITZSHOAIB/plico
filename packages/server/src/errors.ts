@@ -1,5 +1,4 @@
-import type { ServerResponse } from "node:http";
-import { sendJson } from "./responses.js";
+import { jsonResponse } from "./responses.js";
 
 export class HttpError extends Error {
   constructor(
@@ -11,13 +10,13 @@ export class HttpError extends Error {
   }
 }
 
-export function sendError(
-  response: ServerResponse,
-  statusCode: number,
+export function errorResponse(
+  status: number,
   code: string,
   message: string,
-): void {
-  sendJson(response, statusCode, { error: { code, message } });
+  headers?: Record<string, string>,
+): Response {
+  return jsonResponse(status, { error: { code, message } }, headers);
 }
 
 export function errorMessage(error: unknown): string {

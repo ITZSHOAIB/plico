@@ -1,18 +1,18 @@
 import { checkReadiness } from "@plico/runtime";
-import { sendJson } from "../responses.js";
+import { jsonResponse } from "../responses.js";
 import type { Route } from "./types.js";
 
 export const readinessRoutes: Route[] = [
   {
     method: "GET",
     pattern: /^\/v1\/readiness$/,
-    handler: async ({ projectRoot, eventStore, threadStore, studioPath, response }) => {
+    handler: async ({ projectRoot, eventStore, threadStore, studioPath }) => {
       const report = await checkReadiness(projectRoot, {
         eventStore,
         ...(threadStore ? { threadStore } : {}),
         studioPath,
       });
-      sendJson(response, 200, report);
+      return jsonResponse(200, report);
     },
   },
 ];

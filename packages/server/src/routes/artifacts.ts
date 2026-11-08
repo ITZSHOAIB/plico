@@ -6,7 +6,7 @@ import {
 } from "@plico/runtime";
 import { createTwoFilesPatch } from "diff";
 import { HttpError } from "../errors.js";
-import { sendJson } from "../responses.js";
+import { jsonResponse } from "../responses.js";
 import type { Route, RouteContext } from "./types.js";
 
 async function readRunEvents(context: RouteContext, runId: string) {
@@ -96,7 +96,7 @@ export const artifactRoutes: Route[] = [
         );
       }
 
-      sendJson(context.response, 200, {
+      return jsonResponse(200, {
         path,
         fromVersion,
         toVersion,
@@ -118,7 +118,7 @@ export const artifactRoutes: Route[] = [
       const runId = context.params[0] ?? "";
       const workspace = await readWorkspace(context, runId);
       const threadId = await context.threadStore?.getThreadForRun(runId);
-      sendJson(context.response, 200, threadId ? { ...workspace, threadId } : workspace);
+      return jsonResponse(200, threadId ? { ...workspace, threadId } : workspace);
     },
   },
   {
@@ -132,7 +132,7 @@ export const artifactRoutes: Route[] = [
         throw new HttpError(404, "artifact.not_found", `Unknown artifact file: ${path}`);
       }
 
-      sendJson(context.response, 200, file);
+      return jsonResponse(200, file);
     },
   },
   {
@@ -159,15 +159,15 @@ export const artifactRoutes: Route[] = [
         /[!'()*]/g,
         (character) => `%${character.charCodeAt(0).toString(16).toUpperCase()}`,
       );
-      context.response.statusCode = 200;
-      context.response.setHeader("x-content-type-options", "nosniff");
-      context.response.setHeader("content-type", exportMediaType(file.mimeType));
-      context.response.setHeader(
-        "content-disposition",
-        `attachment; filename*=UTF-8''${encodedFilename}`,
-      );
-      context.response.end(
+      return new Response(
         typeof file.content === "string" ? file.content : Buffer.from(file.content.data, "base64"),
+        {
+          headers: {
+            "x-content-type-options": "nosniff",
+            "content-type": exportMediaType(file.mimeType),
+            "content-disposition": `attachment; filename*=UTF-8''${encodedFilename}`,
+          },
+        },
       );
     },
   },
@@ -183,7 +183,7 @@ export const artifactRoutes: Route[] = [
         throw new HttpError(404, "artifact.not_found", `Unknown artifact snapshot: ${snapshotId}`);
       }
 
-      sendJson(context.response, 200, snapshot);
+      return jsonResponse(200, snapshot);
     },
   },
 ];

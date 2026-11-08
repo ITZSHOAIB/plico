@@ -1,4 +1,3 @@
-import type { IncomingMessage } from "node:http";
 import { isIPv4 } from "node:net";
 import { HttpError } from "./errors.js";
 
@@ -17,10 +16,10 @@ export interface GuardOptions {
  * attacker's domain, so both are checked. `Origin` must match in scheme, host and port. Clients
  * that send no `Origin`, such as curl and the CLI, are unaffected.
  */
-export function assertTrustedRequest(request: IncomingMessage, options: GuardOptions): void {
+export function assertTrustedRequest(request: Request, options: GuardOptions): void {
   const { allowRemote, publicOrigin } = options;
-  const host = request.headers.host ?? "";
-  if (!allowRemote && !isLoopbackHost(hostname(host))) {
+  const own = new URL(request.url);
+  if (!allowRemote && !isLoopbackHost(hostname(own.host))) {
     throw new HttpError(
       421,
       "request.host_not_allowed",
@@ -28,21 +27,14 @@ export function assertTrustedRequest(request: IncomingMessage, options: GuardOpt
     );
   }
 
-  const origin = request.headers.origin;
-  if (
-    origin !== undefined &&
-    !isSameOrigin(origin, publicOrigin ?? `${connectionScheme(request)}://${host}`)
-  ) {
+  const origin = request.headers.get("origin");
+  if (origin !== null && !isSameOrigin(origin, publicOrigin ?? own.origin)) {
     throw new HttpError(
       403,
       "request.origin_not_allowed",
       "Cross-origin requests to this Plico server are not allowed.",
     );
   }
-}
-
-function connectionScheme(request: IncomingMessage): "http" | "https" {
-  return "encrypted" in request.socket && request.socket.encrypted ? "https" : "http";
 }
 
 function isSameOrigin(origin: string, expected: string): boolean {

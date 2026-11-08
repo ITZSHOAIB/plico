@@ -1,7 +1,10 @@
-import type { ServerResponse } from "node:http";
-
-export function sendJson(response: ServerResponse, statusCode: number, body: unknown): void {
-  response.statusCode = statusCode;
-  response.setHeader("content-type", "application/json; charset=utf-8");
-  response.end(JSON.stringify(body));
+export function jsonResponse(
+  status: number,
+  body: unknown,
+  headers?: Record<string, string>,
+): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "content-type": "application/json; charset=utf-8", ...headers },
+  });
 }

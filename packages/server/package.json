@@ -30,10 +30,12 @@
     "dist"
   ],
   "dependencies": {
+    "@hono/node-server": "2.1.6",
     "@plico/contracts": "workspace:*",
     "@plico/core": "workspace:*",
     "@plico/runtime": "workspace:*",
-    "diff": "8.0.4"
+    "diff": "8.0.4",
+    "hono": "4.13.17"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --noEmit",

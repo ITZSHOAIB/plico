@@ -1,20 +1,17 @@
-import type { IncomingMessage } from "node:http";
 import { HttpError } from "./errors.js";
 
 /** Like `readJsonBody`, but an empty body is `{}` so a bare POST still works. */
-export async function readOptionalJsonBody(
-  request: IncomingMessage,
-): Promise<Record<string, unknown>> {
+export async function readOptionalJsonBody(request: Request): Promise<Record<string, unknown>> {
   const raw = await readBody(request);
   return raw.trim() === "" ? {} : parseJsonBody(request, raw);
 }
 
-export async function readJsonBody(request: IncomingMessage): Promise<Record<string, unknown>> {
+export async function readJsonBody(request: Request): Promise<Record<string, unknown>> {
   return parseJsonBody(request, await readBody(request));
 }
 
-function parseJsonBody(request: IncomingMessage, raw: string): Record<string, unknown> {
-  const mediaType = (request.headers["content-type"] ?? "").split(";")[0]?.trim().toLowerCase();
+function parseJsonBody(request: Request, raw: string): Record<string, unknown> {
+  const mediaType = (request.headers.get("content-type") ?? "").split(";")[0]?.trim().toLowerCase();
   if (mediaType !== "application/json") {
     throw new HttpError(
       415,
@@ -22,6 +19,7 @@ function parseJsonBody(request: IncomingMessage, raw: string): Record<string, un
       "Send the request body as application/json.",
     );
   }
+
   try {
     const parsed = JSON.parse(raw);
     if (!isRecord(parsed) || Array.isArray(parsed)) {
@@ -36,19 +34,29 @@ function parseJsonBody(request: IncomingMessage, raw: string): Record<string, un
 
 export const MAX_BODY_BYTES: number = 1024 * 1024;
 
-async function readBody(request: IncomingMessage): Promise<string> {
-  const chunks: Buffer[] = [];
+async function readBody(request: Request): Promise<string> {
+  const declared = Number(request.headers.get("content-length"));
+  if (declared > MAX_BODY_BYTES) throw tooLarge();
+  const reader = request.body?.getReader();
+  if (!reader) return "";
+  const chunks: Uint8Array[] = [];
   let size = 0;
-  for await (const chunk of request) {
-    const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
-    size += buffer.length;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.length;
     if (size > MAX_BODY_BYTES) {
-      throw new HttpError(413, "request.too_large", "Request body is too large.");
+      await reader.cancel();
+      throw tooLarge();
     }
-    chunks.push(buffer);
+    chunks.push(value);
   }
 
   return Buffer.concat(chunks).toString("utf8");
+}
+
+function tooLarge(): HttpError {
+  return new HttpError(413, "request.too_large", "Request body is too large.");
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
