@@ -24,6 +24,11 @@ export interface CreatePlicoServerOptions {
    * scheme of the connection and the `Host` header decide.
    */
   publicOrigin?: string;
+  /**
+   * Accept a `script` on `POST /v1/runs` and `POST /v1/runs/dry`. A script calls project tool
+   * handlers with arguments the caller chooses and skips the model, so it is off by default.
+   */
+  allowScript?: boolean;
 }
 
 export interface ServePlicoOptions {
@@ -34,6 +39,8 @@ export interface ServePlicoOptions {
   studioPath?: string;
   /** See {@link CreatePlicoServerOptions.allowRemote}. */
   allowRemote?: boolean;
+  /** See {@link CreatePlicoServerOptions.allowScript}. */
+  allowScript?: boolean;
 }
 
 export interface PlicoServer {

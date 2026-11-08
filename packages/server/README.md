@@ -2,6 +2,6 @@
 
 The thin native HTTP API over the Plico runtime and event store: runs, threads, signals, approvals, cancel, artifacts, events and readiness.
 
-Start it with `plico serve [path]` from [`@plico/cli`](../cli). It binds to loopback by default and rejects cross-origin and DNS-rebinding requests unless `--allow-remote` is set.
+Start it with `plico serve [path]` from [`@plico/cli`](../cli). It binds to loopback by default and rejects cross-origin and DNS-rebinding requests unless `--allow-remote` is set. Run requests that carry a `script` are refused with 403 `run.script_disabled` unless `--allow-script` (`allowScript: true`) is set.
 
 Requires Node `>=22.18`. Wire types come from `@plico/contracts`.

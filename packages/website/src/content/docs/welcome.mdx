@@ -112,3 +112,8 @@ Use `plico validate --help` to show validation usage. Unknown flags are reported
 as errors, and `plico runs` clearly reports when a project has no saved runs.
 Validation rejects duplicate names declared across `.tool.ts` files, and readiness
 reports the duplicate under tool discovery.
+
+A `script` in a run request calls project tools with arguments the caller picks
+and skips the model, so the API answers 403 `run.script_disabled` unless the
+server starts with `plico serve --allow-script` (`allowScript: true` for
+`createPlicoServer`). `plico run --dry --script` on the command line is unaffected.

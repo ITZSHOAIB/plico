@@ -2,7 +2,7 @@ import { runProject } from "@plico/runtime";
 import { readJsonBody } from "../body.js";
 import { sendError } from "../errors.js";
 import { sendJson } from "../responses.js";
-import { normalizeScript } from "../script.js";
+import { readScript } from "../script.js";
 import { handleEventStream, parseAfterCursor } from "../stream.js";
 import type { Route, RouteContext } from "./types.js";
 
@@ -19,9 +19,8 @@ export const runRoutes: Route[] = [
   {
     method: "POST",
     pattern: /^\/v1\/runs$/,
-    handler: async ({ projectRoot, eventStore, engine, request, response }) => {
-      const body = await readJsonBody(request);
-      const script = body.script === undefined ? undefined : normalizeScript(body.script);
+    handler: async ({ projectRoot, eventStore, engine, allowScript, request, response }) => {
+      const script = readScript(await readJsonBody(request), allowScript);
       let resolveStarted!: (runId: string) => void;
       let rejectStarted!: (error: unknown) => void;
       const started = new Promise<string>((resolve, reject) => {
@@ -41,9 +40,8 @@ export const runRoutes: Route[] = [
   {
     method: "POST",
     pattern: /^\/v1\/runs\/dry$/,
-    handler: async ({ projectRoot, eventStore, engine, request, response }) => {
-      const body = await readJsonBody(request);
-      const script = body.script === undefined ? undefined : normalizeScript(body.script);
+    handler: async ({ projectRoot, eventStore, engine, allowScript, request, response }) => {
+      const script = readScript(await readJsonBody(request), allowScript);
       const result = await runProject(projectRoot, {
         ...(script === undefined ? {} : { script }),
         eventStore,

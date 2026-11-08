@@ -15,3 +15,19 @@ export function normalizeScript(value: unknown): DryRunScriptStep[] {
     throw error;
   }
 }
+
+/** Reads the optional `script` of a run request, refusing it unless the server opted in. */
+export function readScript(
+  body: Record<string, unknown>,
+  allowScript: boolean,
+): DryRunScriptStep[] | undefined {
+  if (body.script === undefined) return undefined;
+  if (!allowScript) {
+    throw new HttpError(
+      403,
+      "run.script_disabled",
+      "Scripted runs are disabled on this server. Start it with allowScript to enable them.",
+    );
+  }
+  return normalizeScript(body.script);
+}

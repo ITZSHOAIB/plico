@@ -11,6 +11,8 @@ export interface RouteContext {
   providerAccountKey: string | undefined;
   engine: Engine | undefined;
   studioPath: string | undefined;
+  /** Whether a request may carry a `script` that drives project tools without a model. */
+  allowScript: boolean;
   request: IncomingMessage;
   response: ServerResponse;
   url: URL;
