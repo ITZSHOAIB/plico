@@ -1,6 +1,8 @@
 import { randomUUID } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
 import type { PlicoEvent, ThreadMessage } from "@plico/contracts";
+import { appendThreadEvent } from "./thread-log.js";
+import { retitleThread } from "./thread-title.js";
 
 /** Called inside the run event transaction so the transcript cannot lag behind its log. */
 export function projectThreadEvent(db: DatabaseSync, event: PlicoEvent): void {
@@ -30,15 +32,15 @@ export function projectThreadEvent(db: DatabaseSync, event: PlicoEvent): void {
     createdAt: event.timestamp,
     runId: event.runId,
   };
-  const row = db
-    .prepare(
-      "SELECT COALESCE(MAX(sequence), 0) + 1 AS next FROM events WHERE stream_type = 'thread' AND stream_id = ?",
-    )
-    .get(run.thread_id) as { next: number };
-  db.prepare(
-    "INSERT INTO events (stream_type, stream_id, sequence, event_id, schema_version, type, timestamp, payload_json) VALUES ('thread', ?, ?, ?, 1, 'message.created', ?, ?)",
-  ).run(run.thread_id, row.next, randomUUID(), event.timestamp, JSON.stringify({ message }));
+  const sequence = appendThreadEvent(
+    db,
+    run.thread_id,
+    "message.created",
+    { message },
+    event.timestamp,
+  );
   db.prepare(
     "INSERT INTO thread_messages (message_id, thread_id, role, content, created_at, sequence, run_id) VALUES (?, ?, 'assistant', ?, ?, ?, ?)",
-  ).run(message.id, run.thread_id, message.content, event.timestamp, row.next, event.runId);
+  ).run(message.id, run.thread_id, message.content, event.timestamp, sequence, event.runId);
+  retitleThread(db, run.thread_id, event.timestamp);
 }

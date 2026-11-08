@@ -4,6 +4,7 @@ import {
   fetchRun,
   fetchThreadMessages,
   fetchThreads,
+  renameThread,
   sendThreadMessage,
 } from "../api";
 import type { Thread, ThreadMessage } from "../types";
@@ -135,6 +136,14 @@ export function useChat(inspector: RunInspector) {
     loadedTerminal.current = selectedRun.runId;
     const generation = selection.current;
     const revision = messageRevision.current;
+    // The reply is when a thread gets named, so pick the new title up with the transcript.
+    void fetchThreads().then(
+      (result) =>
+        setThreads((current) =>
+          current.map((thread) => result.find((item) => item.id === thread.id) ?? thread),
+        ),
+      () => undefined,
+    );
     void fetchThreadMessages(selected).then(
       (history) => {
         if (selection.current === generation && messageRevision.current === revision)
@@ -146,5 +155,21 @@ export function useChat(inspector: RunInspector) {
     );
   }, [events, selected, selectedRun]);
 
-  return { threads, selected, messages, error, sending, loading, newThread, chooseThread, send };
+  const rename = useCallback(async (threadId: string, title: string) => {
+    const renamed = await renameThread(threadId, title);
+    setThreads((items) => items.map((item) => (item.id === renamed.id ? renamed : item)));
+  }, []);
+
+  return {
+    threads,
+    selected,
+    messages,
+    error,
+    sending,
+    loading,
+    newThread,
+    chooseThread,
+    send,
+    rename,
+  };
 }

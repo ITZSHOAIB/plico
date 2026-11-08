@@ -91,6 +91,15 @@ A run workspace includes files inherited from earlier turns and shows the state
 as of that run. Diffs and exports work across those thread versions, and Studio's
 Artifacts view labels thread workspaces and shows each version's writing run.
 
+Threads get a `title` once the conversation has a topic. After each of a
+thread's first three replies, Plico names it from the words the user used, so a
+greeting such as "Hi" leaves it untitled until there is something to name. The
+rule runs locally with no model call, and the assistant's text can only confirm a
+topic, not add one. `PATCH /v1/threads/<thread-id>` with `{ "title": "..." }` (up
+to 200 characters) renames a thread; a title set that way is never replaced.
+Studio shows titles in the thread list and the chat header, where a pencil icon
+renames the conversation.
+
 Provider-backed runs have four built-in tools for this workspace: `list_files`,
 `read_file`, `write_file`, and `edit_file`. Set `artifacts.access` in
 `plico.config.ts` to `read-write`, `read-only`, or `off`; it defaults to

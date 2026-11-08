@@ -123,6 +123,15 @@ files inherited from earlier turns and its state as of that run; diffs and
 exports work across inherited versions. In Studio, the Artifacts view labels
 thread workspaces and shows the writing run for each version.
 
+Threads get a `title` once the conversation has a topic. After each of a
+thread's first three replies, Plico names it from the words the user used, so a
+greeting such as "Hi" leaves it untitled until there is something to name. The
+rule runs locally with no model call, and the assistant's text can only confirm a
+topic, not add one. `PATCH /v1/threads/<thread-id>` with `{ "title": "..." }` (up
+to 200 characters) renames a thread; a title set that way is never replaced.
+Studio shows titles in the thread list and the chat header, where a pencil icon
+renames the conversation.
+
 Provider-backed runs also offer Plico's four built-in artifact tools:
 `list_files`, `read_file`, `write_file`, and `edit_file`. Configure their access
 in `plico.config.ts` with `artifacts: { access: "read-write" | "read-only" | "off" }`;

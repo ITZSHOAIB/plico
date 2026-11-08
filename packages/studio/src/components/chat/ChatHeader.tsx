@@ -4,6 +4,7 @@ import type { RunSummary } from "../../types";
 import { Button } from "../../ui/Button";
 import { StatusBadge } from "../../ui/StatusBadge";
 import { chatInspectorId } from "./ChatInspector";
+import { TitleEditor } from "./TitleEditor";
 
 export function ChatHeader({
   title,
@@ -12,6 +13,7 @@ export function ChatHeader({
   inspectorCollapsed,
   onExpandInspector,
   onOpenInspector,
+  onRename,
 }: {
   title: string;
   subtitle: string;
@@ -19,11 +21,17 @@ export function ChatHeader({
   inspectorCollapsed: boolean;
   onExpandInspector: () => void;
   onOpenInspector: () => void;
+  /** Without it the title is read-only, as before a thread exists. */
+  onRename?: (title: string) => Promise<void>;
 }) {
   return (
     <header className="flex h-14 shrink-0 items-center justify-between gap-3 border-b border-line px-4 sm:px-5">
       <div className="min-w-0">
-        <h2 className="m-0 truncate text-body font-semibold">{title}</h2>
+        {onRename ? (
+          <TitleEditor title={title} onRename={onRename} />
+        ) : (
+          <h2 className="m-0 truncate text-body font-semibold">{title}</h2>
+        )}
         <p className="m-0 truncate text-caption text-muted">{subtitle}</p>
       </div>
       <div className="flex shrink-0 items-center gap-2">

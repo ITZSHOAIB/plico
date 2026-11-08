@@ -47,6 +47,23 @@ export function createThread(): Promise<Thread> {
   return getJson("/v1/threads", { method: "POST" });
 }
 
+export async function renameThread(threadId: string, title: string): Promise<Thread> {
+  const response = await fetch(`/v1/threads/${encodeURIComponent(threadId)}`, {
+    method: "PATCH",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ title }),
+  });
+  if (!response.ok) {
+    const body = (await response.json().catch(() => null)) as {
+      error?: { message?: string };
+    } | null;
+    throw new Error(
+      body?.error?.message ?? `Could not rename the conversation (${response.status}).`,
+    );
+  }
+  return response.json() as Promise<Thread>;
+}
+
 export function fetchThreadMessages(threadId: string): Promise<ThreadMessage[]> {
   return getJson(`/v1/threads/${encodeURIComponent(threadId)}/messages`);
 }

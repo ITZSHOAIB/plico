@@ -3,6 +3,8 @@ import { resolve } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 import type { Thread, ThreadEvent, ThreadMessage } from "@plico/contracts";
 import { openDatabase } from "./open.js";
+import { appendThreadEvent } from "./thread-log.js";
+import { setUserTitle } from "./thread-title.js";
 
 export interface ThreadStore {
   readonly storageIdentity?: string;
@@ -11,6 +13,8 @@ export interface ThreadStore {
   createThread(): Promise<Thread>;
   listThreads(): Promise<Thread[]>;
   getThread(id: string): Promise<Thread | undefined>;
+  /** Names a thread for the user. Returns undefined for an unknown thread. */
+  renameThread(id: string, title: string): Promise<Thread | undefined>;
   getThreadForRun(runId: string): Promise<string | undefined>;
   addMessage(
     threadId: string,
@@ -30,6 +34,13 @@ export interface ThreadStore {
       history: Array<Pick<ThreadMessage, "role" | "content">>;
     }>
   >;
+}
+
+const selectThread = "SELECT thread_id AS id, created_at AS createdAt, title FROM threads";
+
+function toThread(row: unknown): Thread {
+  const { title, ...thread } = row as Thread & { title: string | null };
+  return title === null ? thread : { ...thread, title };
 }
 
 export class ThreadBusyError extends Error {
@@ -62,7 +73,7 @@ export function createSqliteThreadStore({
     async createThread() {
       const thread: Thread = { id: randomUUID(), createdAt: new Date().toISOString() };
       transaction(db, () => {
-        append(db, thread.id, "thread.created", { thread }, thread.createdAt);
+        appendThreadEvent(db, thread.id, "thread.created", { thread }, thread.createdAt);
         db.prepare("INSERT INTO threads (thread_id, created_at) VALUES (?, ?)").run(
           thread.id,
           thread.createdAt,
@@ -71,16 +82,21 @@ export function createSqliteThreadStore({
       return thread;
     },
     async listThreads() {
-      return db
-        .prepare(
-          "SELECT thread_id AS id, created_at AS createdAt FROM threads ORDER BY created_at, rowid",
-        )
-        .all() as unknown as Thread[];
+      return db.prepare(`${selectThread} ORDER BY created_at, rowid`).all().map(toThread);
     },
     async getThread(id) {
-      return db
-        .prepare("SELECT thread_id AS id, created_at AS createdAt FROM threads WHERE thread_id = ?")
-        .get(id) as unknown as Thread | undefined;
+      const row = db.prepare(`${selectThread} WHERE thread_id = ?`).get(id);
+      return row === undefined ? undefined : toThread(row);
+    },
+    async renameThread(id, title) {
+      const found = transaction(db, () => {
+        if (!db.prepare("SELECT 1 FROM threads WHERE thread_id = ?").get(id)) return false;
+        setUserTitle(db, id, title, new Date().toISOString());
+        return true;
+      });
+      return found
+        ? toThread(db.prepare(`${selectThread} WHERE thread_id = ?`).get(id))
+        : undefined;
     },
     async getThreadForRun(runId) {
       const row = db.prepare("SELECT thread_id FROM thread_runs WHERE run_id = ?").get(runId) as
@@ -112,7 +128,13 @@ export function createSqliteThreadStore({
           createdAt: new Date().toISOString(),
           ...(runId === undefined ? {} : { runId }),
         };
-        const sequence = append(db, threadId, "message.created", { message }, message.createdAt);
+        const sequence = appendThreadEvent(
+          db,
+          threadId,
+          "message.created",
+          { message },
+          message.createdAt,
+        );
         db.prepare(
           "INSERT INTO thread_messages (message_id, thread_id, role, content, created_at, sequence, run_id) VALUES (?, ?, ?, ?, ?, ?, ?)",
         ).run(
@@ -201,22 +223,4 @@ function transaction<T>(db: DatabaseSync, fn: () => T): T {
     db.exec("ROLLBACK");
     throw error;
   }
-}
-
-function append(
-  db: DatabaseSync,
-  threadId: string,
-  type: ThreadEvent["type"],
-  payload: unknown,
-  timestamp: string,
-): number {
-  const row = db
-    .prepare(
-      "SELECT COALESCE(MAX(sequence), 0) + 1 AS next FROM events WHERE stream_type = 'thread' AND stream_id = ?",
-    )
-    .get(threadId) as { next: number };
-  db.prepare(
-    "INSERT INTO events (stream_type, stream_id, sequence, event_id, schema_version, type, timestamp, payload_json) VALUES ('thread', ?, ?, ?, 1, ?, ?, ?)",
-  ).run(threadId, row.next, randomUUID(), type, timestamp, JSON.stringify(payload));
-  return row.next;
 }
