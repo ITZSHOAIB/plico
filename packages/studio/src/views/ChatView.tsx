@@ -6,6 +6,7 @@ import { ChatAnnouncer, ChatHeader } from "../components/chat/ChatHeader";
 import { ChatInspector } from "../components/chat/ChatInspector";
 import { ChatThreads } from "../components/chat/ChatThreads";
 import { ChatTranscript } from "../components/chat/ChatTranscript";
+import { threadLabel } from "../components/chat/threadLabel";
 import { useChat } from "../hooks/useChat";
 import { type RunInspector, useRunInspector } from "../hooks/useRunInspector";
 import type { PlicoEvent } from "../types";
@@ -115,7 +116,8 @@ export function ChatView({ inspector }: { inspector: RunInspector }) {
         className={`min-h-0 min-w-0 flex-1 flex-col bg-bg ${showInspector ? "hidden lg:flex" : "flex"}`}
       >
         <ChatHeader
-          title={chat.selected ? threadLabel(chat.selected) : "Chat"}
+          threadId={thread?.id}
+          title={thread ? threadLabel(thread) : "Chat"}
           subtitle={
             thread
               ? `Started ${formatDate(thread.createdAt)}`
@@ -125,6 +127,7 @@ export function ChatView({ inspector }: { inspector: RunInspector }) {
           inspectorCollapsed={inspectorCollapsed}
           onExpandInspector={() => setInspectorCollapsed(false)}
           onOpenInspector={() => setShowInspector(true)}
+          {...(thread ? { onRename: (title: string) => chat.rename(thread.id, title) } : {})}
         />
         <ChatAnnouncer running={running} />
         {(chat.error || inspectError || stopError) && (
@@ -184,10 +187,6 @@ export function ChatView({ inspector }: { inspector: RunInspector }) {
       />
     </section>
   );
-}
-
-function threadLabel(id: string): string {
-  return `Thread ${id.slice(0, 8)}`;
 }
 
 function formatDate(iso: string): string {

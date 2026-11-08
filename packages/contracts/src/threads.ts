@@ -1,6 +1,8 @@
 export interface Thread {
   id: string;
   createdAt: string;
+  /** Absent until the conversation has a topic or the user names it. */
+  title?: string;
 }
 
 export interface ThreadMessage {
@@ -23,4 +25,8 @@ interface ThreadEventEnvelope {
 
 export type ThreadEvent =
   | (ThreadEventEnvelope & { type: "thread.created"; payload: { thread: Thread } })
-  | (ThreadEventEnvelope & { type: "message.created"; payload: { message: ThreadMessage } });
+  | (ThreadEventEnvelope & { type: "message.created"; payload: { message: ThreadMessage } })
+  | (ThreadEventEnvelope & {
+      type: "thread.titled";
+      payload: { title: string; source: "generated" | "user" };
+    });

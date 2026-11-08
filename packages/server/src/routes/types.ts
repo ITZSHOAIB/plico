@@ -21,7 +21,7 @@ export interface RouteContext {
 }
 
 export interface Route {
-  method: "GET" | "POST";
+  method: "GET" | "POST" | "PATCH";
   pattern: RegExp;
   handler: (context: RouteContext) => Promise<void>;
 }

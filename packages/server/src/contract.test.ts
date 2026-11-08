@@ -248,6 +248,13 @@ it("keeps the /v1 response shapes stable", async () => {
     await fetch(`${baseUrl}/v1/runs/${approvalRun.runId}/events`)
   ).json()) as Array<{ type: string }>;
   await unlink(join(root, "tools", "archive.tool.ts"));
+  const renamed = (await (
+    await fetch(`${baseUrl}${threadPath}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ title: "Contract thread" }),
+    })
+  ).json()) as unknown;
 
   const shapes = {
     // Legacy rows predate receipts and omit contentHash/version; the runtime replays them with derived values.
@@ -258,6 +265,7 @@ it("keeps the /v1 response shapes stable", async () => {
     }),
     "Binary artifact content": shapeOf({ encoding: "base64", data: "AP8K" }),
     "POST /v1/threads": shapeOf(createdThread),
+    "PATCH /v1/threads/:id": shapeOf(renamed),
     "POST /v1/threads/:id/messages": shapeOf(posted),
     "GET /v1/threads": await shape("/v1/threads"),
     "GET /v1/threads/:id": await shape(threadPath),

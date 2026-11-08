@@ -153,6 +153,8 @@ describe("event log streams", () => {
       INSERT INTO artifact_content (content_hash, content)
         SELECT content_hash, CAST(content AS TEXT) FROM artifact_content_binary;
       DROP TABLE artifact_content_binary;
+      ALTER TABLE threads DROP COLUMN title;
+      ALTER TABLE threads DROP COLUMN title_source;
       UPDATE plico_meta SET value = '10' WHERE key = 'schema_version';
     `);
     database.close();

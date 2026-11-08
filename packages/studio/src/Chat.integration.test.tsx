@@ -154,6 +154,15 @@ it("streams a real server run into Studio and reopens it after restart", async (
     fireEvent.click(await screen.findByRole("button", { name: `Thread ${threadId.slice(0, 8)}` }));
     expect(await screen.findByText("Hello from the agent.")).toBeTruthy();
     expect(await screen.findByText("run.completed")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Rename conversation" }));
+    const title = screen.getByRole("textbox", { name: "Conversation title" });
+    fireEvent.change(title, { target: { value: "Studio greeting" } });
+    fireEvent.keyDown(title, { key: "Enter" });
+    expect(await screen.findByRole("button", { name: /Studio greeting/ })).toBeTruthy();
+    const renamed = (await realFetch(`${base}/v1/threads/${threadId}`).then((response) =>
+      response.json(),
+    )) as { title?: string };
+    expect(renamed.title).toBe("Studio greeting");
   } finally {
     release();
     cleanup();

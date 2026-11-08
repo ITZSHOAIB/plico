@@ -1,6 +1,7 @@
 import { MessageSquare, Plus } from "lucide-react";
 import type { Thread } from "../../types";
 import { Button } from "../../ui/Button";
+import { threadLabel } from "./threadLabel";
 
 function threadDate(iso: string): string {
   const date = new Date(iso);
@@ -47,7 +48,7 @@ export function ChatThreads({
       </div>
       <ul className="m-0 flex min-h-0 list-none gap-1 overflow-x-auto px-2 pb-2 lg:flex-1 lg:p-2 lg:flex-col lg:overflow-y-auto">
         {ordered.map((thread) => {
-          const label = labelForThread ? labelForThread(thread) : `Thread ${thread.id.slice(0, 8)}`;
+          const label = labelForThread ? labelForThread(thread) : threadLabel(thread);
           const dateId = `thread-date-${thread.id}`;
           return (
             <li key={thread.id} className="shrink-0 lg:shrink">

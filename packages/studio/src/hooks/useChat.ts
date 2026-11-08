@@ -4,6 +4,7 @@ import {
   fetchRun,
   fetchThreadMessages,
   fetchThreads,
+  renameThread,
   sendThreadMessage,
 } from "../api";
 import type { Thread, ThreadMessage } from "../types";
@@ -23,6 +24,9 @@ export function useChat(inspector: RunInspector) {
   const loadedTerminal = useRef<string | null>(null);
   const lastTerminalEventId = useRef<string | null>(null);
   const messageRevision = useRef(0);
+  // Counts renames so a thread-list response that started before one cannot undo it.
+  const renameCount = useRef(0);
+  const renamedAt = useRef(new Map<string, number>());
 
   useEffect(() => {
     let active = true;
@@ -135,6 +139,19 @@ export function useChat(inspector: RunInspector) {
     loadedTerminal.current = selectedRun.runId;
     const generation = selection.current;
     const revision = messageRevision.current;
+    // The reply is when a thread gets named, so pick the new title up with the transcript.
+    const refreshStarted = renameCount.current;
+    void fetchThreads().then(
+      (result) =>
+        setThreads((current) =>
+          current.map((thread) =>
+            (renamedAt.current.get(thread.id) ?? 0) > refreshStarted
+              ? thread
+              : (result.find((item) => item.id === thread.id) ?? thread),
+          ),
+        ),
+      () => undefined,
+    );
     void fetchThreadMessages(selected).then(
       (history) => {
         if (selection.current === generation && messageRevision.current === revision)
@@ -146,5 +163,22 @@ export function useChat(inspector: RunInspector) {
     );
   }, [events, selected, selectedRun]);
 
-  return { threads, selected, messages, error, sending, loading, newThread, chooseThread, send };
+  const rename = useCallback(async (threadId: string, title: string) => {
+    const renamed = await renameThread(threadId, title);
+    renamedAt.current.set(renamed.id, ++renameCount.current);
+    setThreads((items) => items.map((item) => (item.id === renamed.id ? renamed : item)));
+  }, []);
+
+  return {
+    threads,
+    selected,
+    messages,
+    error,
+    sending,
+    loading,
+    newThread,
+    chooseThread,
+    send,
+    rename,
+  };
 }

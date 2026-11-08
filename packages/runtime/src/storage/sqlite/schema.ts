@@ -95,6 +95,11 @@ const migrations: ReadonlyArray<{ from: number; to: number; sql: string }> = [
       DROP TABLE artifact_content_text;
     `,
   },
+  {
+    from: 11,
+    to: 12,
+    sql: `ALTER TABLE threads ADD COLUMN title TEXT; ALTER TABLE threads ADD COLUMN title_source TEXT;`,
+  },
 ];
 
 function readSchemaVersion(

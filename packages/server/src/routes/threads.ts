@@ -7,6 +7,8 @@ import { sendJson } from "../responses.js";
 import { finishFailedThreadRun } from "../thread-failure.js";
 import type { Route, RouteContext } from "./types.js";
 
+const maxTitleLength = 200;
+
 function storeFor(context: RouteContext) {
   if (!context.threadStore)
     throw new HttpError(503, "threads.unavailable", "Thread storage is unavailable.");
@@ -36,6 +38,22 @@ export const threadRoutes: Route[] = [
     method: "GET",
     pattern: /^\/v1\/threads\/([^/]+)$/,
     handler: async (ctx) => sendJson(ctx.response, 200, (await existing(ctx)).thread),
+  },
+  {
+    method: "PATCH",
+    pattern: /^\/v1\/threads\/([^/]+)$/,
+    handler: async (ctx) => {
+      const { store, thread } = await existing(ctx);
+      const { title } = await readJsonBody(ctx.request);
+      const trimmed = typeof title === "string" ? title.trim() : "";
+      if (!trimmed || trimmed.length > maxTitleLength)
+        throw new HttpError(
+          400,
+          "thread.invalid_title",
+          `Title must be a nonempty string of at most ${maxTitleLength} characters.`,
+        );
+      sendJson(ctx.response, 200, await store.renameThread(thread.id, trimmed));
+    },
   },
   {
     method: "GET",

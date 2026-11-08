@@ -82,3 +82,24 @@ it("keeps event order and message projections consistent across writers", async 
   expect((await first.getEvents(thread.id)).map((event) => event.sequence)).toEqual([1, 2, 3]);
   expect(await first.addMessage("missing", "hello")).toBeUndefined();
 });
+
+it("keeps a renamed thread's title across reopen and records it in the thread log", async () => {
+  const databasePath = join(await mkdtemp(join(tmpdir(), "plico-thread-title-")), "state.sqlite");
+  const store = createSqliteThreadStore({ databasePath });
+  const thread = await store.createThread();
+
+  expect(await store.renameThread(thread.id, "Berlin VPN")).toEqual({
+    ...thread,
+    title: "Berlin VPN",
+  });
+  expect(await store.renameThread("missing", "Nope")).toBeUndefined();
+  store.close();
+
+  const reopened = createSqliteThreadStore({ databasePath });
+  expect(await reopened.listThreads()).toEqual([{ ...thread, title: "Berlin VPN" }]);
+  expect((await reopened.getEvents(thread.id)).at(-1)).toMatchObject({
+    type: "thread.titled",
+    payload: { title: "Berlin VPN", source: "user" },
+  });
+  reopened.close();
+});

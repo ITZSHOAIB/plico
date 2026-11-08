@@ -1386,6 +1386,40 @@ Three deliberate breaks each failed the matching check: dropping the trace carri
 
 More than one machine, network partitions, Conductor, a DBOS worker stalling rather than dying, in-flight runs across an application version change, or sustained load. Tokens did not stream live in the combined run: text enters the log after the model step ends, so live deltas need their own path. Subagents, skills, compaction and evals were not part of the combined run; subagents ran only in the engine suite. The artifact step was a simple stand-in, not PoC 10's full store. MCP ran over HTTP without OAuth. AG-UI frames were checked by schema, not by a client this time. Reusing one wait name in a run: the first-decision scenario passes on both engines, but the own engine stores one signal per name while DBOS `recv` appears to consume queued messages, so results could differ. Wait names should be unique per run, as the combined host's per-call keys are.
 
+## PoC 14 results: thread titles
+
+Date: 2026-11-08. Windows 11, Node 22.23.3, `wink-nlp` 2.4.0 with `wink-eng-lite-web-model` 1.8.1, `compromise` 14.19.0, and Ollama `llama3.2` (3.2B) for the model arm. Throwaway code in `D:\projects\plico-poc	itles`. Run `node run.mjs` for the 15 short conversations (retitled after each of their first three exchanges, 26 titles), `node long.mjs` for the long-text cases, and `WITH_MODEL=1 node run.mjs` to add the model arm. Quality ratings are the author's judgement on a small hand-written set; speed and size are measured. No Plico code, contract, ADR or epic changed by the PoC itself.
+
+The owner rejected truncating the first message and model-written titles as the only options, because a first message can be "Hi". The question was how to name a thread from what both sides said, without a model by default.
+
+### Arms
+
+| Arm | What it is | Good final titles (of 15) | Waits on "Hi" / "thanks" | Languages | Cost for 26 titles |
+| --- | --- | --- | --- | --- | --- |
+| Own keyword scoring | `Intl.Segmenter` words, RAKE-style phrase windows, user words weighted above assistant words | about 12 | yes, always | Spanish and Japanese worked, German compounds missed | 10 ms, no dependency |
+| `wink-nlp` noun phrases | Part-of-speech patterns | about 10 | yes | English model only; no Japanese title | 28 ms, 4.5 MB |
+| `compromise` noun phrases | Topics and nouns | about 10 | yes | English only | 280 ms, 3.8 MB |
+| Local model (`llama3.2`) | One prompt per title | about 11 | no: "How Can I Assist You" after "Hi" | all tested | about 300 ms per title; 7.8 s total |
+
+### Findings
+
+- **The tagger did not beat plain keyword scoring.** Part-of-speech patterns gave fewer good titles than the own arm, handled one language, and added 4 to 5 MB.
+- **Waiting for a topic is the main rule.** A thread stays untitled until the user has said at least two non-stopword words. This is what keeps "Hi", "thanks" and a bare "expenses" from becoming titles. The model arm invented titles for all of them.
+- **Title words must come from the user.** The assistant's text only boosts a phrase the user already used. A 245-word answer cannot change the title of a six-word question.
+- **Long user text needs three corrections.** Without them a pasted email titled itself from its first lines ("Year CloudHost term · week's board meeting"). Clipping to the first 3,000 and last 1,000 characters, weighting the sentence that asks (a question mark, "please", "can you") three times in messages over 60 words, and ignoring word position in long text fixed the pasted-email and buried-intent cases. Applying the ask weighting to short messages dropped "jammed printer" from a topic-shift case, so it is limited to long ones. Counting the first and last sentences as asks also broke the buried-intent case and was reverted.
+- **Hyphenated words and possessives stay whole.** "two-year" had become "Year" and "week's" a word of its own.
+- **Cost on large threads.** About 54,000 words took 281 ms before clipping and about 30 ms after.
+- **Remaining weaknesses of keyword titles.** An imperative with no marker inside a long paste ("Review the payments gateway outage report" followed by ten thousand words) is not recognised as the ask. "Summarise this email" asks give a generic title ("Action items"). German compounds ("Serverkosten") are missed, and a pasted error message titles badly. The model arm did better on the first two.
+- **The model arm reads best but needs a gate.** Its titles were the most natural on long and messy threads. It does not stop on a greeting, so a keyword check for "has a topic yet" decides when it may be called.
+
+### Decision
+
+Own keyword titler, no dependency, on `Intl.Segmenter`. The two NLP libraries are not adopted: English-only, 4 to 5 MB, and no better. A model-written title stays a proposed opt-in behind the same interface, called only after the keyword check finds a topic, and is not built yet.
+
+### Not tested
+
+More than 15 hand-written conversations, real user conversations, other languages beyond Spanish, German and Japanese, right-to-left text, titles from tool-heavy threads where the assistant's tool output dominates, and a model arm larger than 3.2B parameters.
+
 ## What this pauses
 
 This audit led to ADR 0008 and a revision of the planning documents: a new epic #95 for the execution engine, and changes to ADRs 0002, 0003, 0004 and 0007, the PRD and epics #69, #70, #72, #73, #77, #78, #79 and #82. #69 keeps its state machine and migrator, because the event log stays authoritative for what happened. Only its killed-run slice changes.
