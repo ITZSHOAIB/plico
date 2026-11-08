@@ -1,13 +1,13 @@
 # Cloudflare Pages Deployment
 
-The website package deploys as a static site to the URL below. The Astro homepage is served at `/`, and the docs (`@plico/docs`, a Fumadocs Next.js static export) are merged into the same build and served at `/docs`.
+The site deploys as a static site to the URL below. `@plico/docs` is a Fumadocs Next.js static export that serves both the homepage at `/` and the docs at `/docs`.
 
 - Production URL: `https://plico.sohab.dev`
 - Cloudflare Pages project: `plico`
-- Package: `@plico/website`
-- Build output: `packages/website/dist`
+- Package: `@plico/docs`
+- Build output: `packages/docs/out`
 
-`packages/website/astro.config.mjs` already sets `site` to `https://plico.sohab.dev`.
+`packages/docs/lib/shared.ts` sets `siteUrl` to `https://plico.sohab.dev`.
 
 ## Recommended: Git-Connected Pages
 
@@ -24,9 +24,9 @@ Create the Pages project from the Cloudflare dashboard:
 | Project name | `plico` |
 | Production branch | `main` |
 | Root directory | `/` |
-| Framework preset | `Astro` or `None` |
-| Build command | `pnpm --filter @plico/website... build` |
-| Build output directory | `packages/website/dist` |
+| Framework preset | `None` |
+| Build command | `pnpm --filter @plico/docs build` |
+| Build output directory | `packages/docs/out` |
 
 Set these environment variables in the Pages project if Cloudflare does not infer them:
 
@@ -35,7 +35,7 @@ Set these environment variables in the Pages project if Cloudflare does not infe
 | `NODE_VERSION` | `22` |
 | `PNPM_VERSION` | `10.12.4` |
 
-The trailing `...` builds the docs package first, then the homepage, whose build copies the docs output into `packages/website/dist`. Old `/docs/welcome` links redirect through `packages/website/public/_redirects`. `packages/website/public/_worker.js` (Pages advanced mode) serves a docs page as Markdown when the request sends `Accept: text/markdown`, and passes everything else to the static assets.
+Old `/docs/welcome` links redirect through `packages/docs/public/_redirects`. `packages/docs/public/_worker.js` (Pages advanced mode) serves a docs page as Markdown when the request sends `Accept: text/markdown`, and passes everything else to the static assets.
 
 Cloudflare will install dependencies and deploy again on pushes to `main`.
 
@@ -61,16 +61,16 @@ Do not create only the DNS record without adding `plico.sohab.dev` as a Pages cu
 For a one-off manual deployment from your local machine:
 
 ```sh
-pnpm --filter @plico/website deploy:pages
+pnpm --filter @plico/docs deploy:pages
 ```
 
 For a preview deployment:
 
 ```sh
-pnpm --filter @plico/website deploy:pages:preview
+pnpm --filter @plico/docs deploy:pages:preview
 ```
 
-These commands build the docs and the homepage into `packages/website/dist` and upload it with Wrangler. You must be authenticated with Cloudflare first:
+These commands build the site into `packages/docs/out` and upload it with Wrangler. You must be authenticated with Cloudflare first:
 
 ```sh
 pnpm dlx wrangler@latest login

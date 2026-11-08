@@ -48,9 +48,6 @@ jobs:
           node packages/cli/dist/cli.js run --dry --script examples/internal-ops-agent/evals/smoke.script.json examples/internal-ops-agent
           node scripts/verify-built-server.mjs
 
-      - name: Check website
-        run: pnpm --filter @plico/website check
-
       - name: Typecheck
         run: pnpm typecheck
 

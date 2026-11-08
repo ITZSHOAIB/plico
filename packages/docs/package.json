@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "typecheck": "next typegen && tsc --noEmit"
+    "typecheck": "next typegen && tsc --noEmit",
+    "deploy:pages": "pnpm --filter @plico/docs build && pnpm dlx wrangler@latest pages deploy out --project-name plico",
+    "deploy:pages:preview": "pnpm --filter @plico/docs build && pnpm dlx wrangler@latest pages deploy out --project-name plico --branch preview"
   },
   "dependencies": {
     "@fontsource-variable/geist": "5.3.0",

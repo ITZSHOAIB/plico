@@ -61,9 +61,9 @@ pnpm smoke:tarballs
 
 ## Website Deployment
 
-The Astro website lives in `packages/website` and is configured for Cloudflare Pages at `plico.sohab.dev`.
+The website lives in `packages/docs`, a Fumadocs Next.js static export configured for Cloudflare Pages at `plico.sohab.dev`. It serves the homepage at `/` and the docs at `/docs`.
 
-The docs live in `packages/docs` (Fumadocs). Write pages as MDX in `packages/docs/content/docs` and list them in its `meta.json`; run `pnpm --filter @plico/docs dev` to preview them. The website build merges the docs under `/docs`. The docs are agent-readable: `/llms.txt` indexes every page, `/llms-full.txt` holds them all, each page has a plain Markdown version at `/llms.mdx/docs/<page>/content.md`, and `Accept: text/markdown` on a docs URL returns that Markdown. `/sitemap.xml` and `/robots.txt` are generated too.
+Write docs pages as MDX in `packages/docs/content/docs` and list them in its `meta.json`; the homepage is `packages/docs/app/(home)`. Run `pnpm --filter @plico/docs dev` to preview both. The docs are agent-readable: `/llms.txt` indexes every page, `/llms-full.txt` holds them all, each page has a plain Markdown version at `/llms.mdx/docs/<page>/content.md`, and `Accept: text/markdown` on a docs URL returns that Markdown. `/sitemap.xml` and `/robots.txt` are generated too.
 
 See [docs/cloudflare-pages.md](docs/cloudflare-pages.md) for the Pages project settings, custom domain setup, and manual Wrangler deployment commands.
 
