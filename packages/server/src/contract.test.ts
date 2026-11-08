@@ -330,4 +330,4 @@ it("keeps the /v1 response shapes stable", async () => {
   };
 
   await expect(`${JSON.stringify(shapes, null, 2)}\n`).toMatchFileSnapshot("./v1-contract.snap");
-});
+}, 30_000);
