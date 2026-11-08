@@ -2,7 +2,8 @@ import { randomUUID } from "node:crypto";
 import { rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
-import { DatabaseSync } from "node:sqlite";
+import type { DatabaseSync } from "node:sqlite";
+import { createDatabase } from "./driver.js";
 
 let current: { token: string; path: string; database: DatabaseSync } | undefined;
 
@@ -14,7 +15,7 @@ export function acquireOwner(): { token: string; path: string } {
   if (current) return current;
   const token = randomUUID();
   const path = lockPath(token);
-  const database = new DatabaseSync(path);
+  const database = createDatabase(path);
   // SQLite releases this process-owned lock on exit, even when a PID is reused.
   database.exec("CREATE TABLE owner_lock (id INTEGER); BEGIN EXCLUSIVE;");
   current = { token, path, database };
@@ -41,7 +42,7 @@ export function ownerIsAlive(token: string, path: string): boolean {
   }
   let probe: DatabaseSync | undefined;
   try {
-    probe = new DatabaseSync(path, { readOnly: true });
+    probe = createDatabase(path, { readOnly: true });
     probe.exec("PRAGMA busy_timeout = 0; BEGIN EXCLUSIVE; ROLLBACK;");
     return false;
   } catch {

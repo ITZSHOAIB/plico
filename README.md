@@ -31,6 +31,8 @@ See the milestones in GitHub Issues for the remaining planned capabilities.
 
 ## Local Development
 
+Plico needs Node 22.18 or later (CI tests 22.18 and 24) and `pnpm`.
+
 Install dependencies:
 
 ```sh

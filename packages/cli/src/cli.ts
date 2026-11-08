@@ -10,6 +10,7 @@ import { serveCommand } from "./commands/serve.js";
 import { usageCommand } from "./commands/usage.js";
 import { validateCommand } from "./commands/validate.js";
 import { isDirectRun } from "./direct-run.js";
+import { quietSqliteWarning } from "./quiet-sqlite-warning.js";
 
 function readVersion(): string {
   const pkg = createRequire(import.meta.url)("../package.json") as { version: string };
@@ -53,6 +54,7 @@ export async function main(argv: string[]): Promise<number> {
 }
 
 if (isDirectRun(import.meta.url, process.argv[1])) {
+  quietSqliteWarning();
   main(process.argv).then((code) => {
     process.exitCode = code;
   });

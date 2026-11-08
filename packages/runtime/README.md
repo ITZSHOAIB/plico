@@ -9,4 +9,4 @@ import { loadProject } from "@plico/core";
 import { runProject } from "@plico/runtime";
 ```
 
-Requires Node `>=22.13`. Wire types come from `@plico/contracts`.
+Requires Node `>=22.18`. Wire types come from `@plico/contracts`.
