@@ -6,6 +6,7 @@ import { useProjectData } from "./hooks/useProjectData";
 import { useRunInspector } from "./hooks/useRunInspector";
 import { useRunUrl } from "./hooks/useRunUrl";
 import { ThemeToggle } from "./theme/ThemeToggle";
+import { Logo } from "./ui/Logo";
 import { Notice } from "./ui/Page";
 import type { View } from "./view";
 import { MainView } from "./views/MainView";
@@ -104,12 +105,7 @@ export function App() {
     <div className="flex h-dvh flex-col lg:flex-row">
       <header className="flex shrink-0 items-center justify-between gap-3 border-b border-line bg-surface px-4 py-2 lg:hidden">
         <span className="flex min-w-0 items-center gap-2.5 truncate font-semibold">
-          <span
-            aria-hidden="true"
-            className="grid size-6 shrink-0 place-items-center rounded-md bg-primary font-mono text-small font-bold text-on-primary"
-          >
-            P
-          </span>
+          <Logo className="size-6" />
           {data.project?.config.name ?? "Plico Studio"}
         </span>
         <ThemeToggle />

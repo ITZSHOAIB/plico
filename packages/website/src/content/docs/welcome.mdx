@@ -40,7 +40,9 @@ Start the bundled Studio with `plico serve --studio <project>`. Studio shows the
 run's event history and, when a tool call needs approval, its reason and input
 arguments. Approve the call to resume the run or deny it to stop the run before
 the tool executes. Each decision is recorded in the run's event log. The run
-inspector also lets you cancel active runs. The Readiness view reports approval
+inspector also lets you cancel active runs. In Chat, replies stream in as
+Markdown, **Stop** cancels the reply in progress, and **Inspect run** opens the
+reply's timeline, where streamed model chunks are grouped into one row. The Readiness view reports approval
 policy overrides that reference missing tools or conflict with a tool's declared
 approval requirement. It also reports whether model-facing artifact tools are
 configured as `read-write`, `read-only`, or `off`.

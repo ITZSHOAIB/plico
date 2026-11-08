@@ -7,66 +7,66 @@
 :root,
 [data-theme="dark"] {
   color-scheme: dark;
-  /* Graphite neutrals with a faint cool tint, so the indigo accent belongs to the same family. */
-  --bg: #0b0b0d;
-  --surface: #111113;
-  --surface-raised: #19191c;
-  --border: #27272b;
-  --border-subtle: #1d1d21;
-  --text: #ededef;
-  --muted: #a1a1aa;
-  --faint: #85858f;
-  /* One restrained accent for focus, selection, links and live activity. Indigo stays clear of
-     the green / amber / red status hues, so it never reads as a status. */
-  --accent: #949be8;
-  --accent-strong: #b3b8f2;
-  --accent-contrast: #0b0b0d;
-  --accent-soft: #1b1c2e;
+  /* Stone neutrals with a faint green-grey tint, so the verdigris accent belongs to the same family. */
+  --bg: #0b0d0d;
+  --surface: #111414;
+  --surface-raised: #181c1c;
+  --border: #262c2b;
+  --border-subtle: #1c2121;
+  --text: #e7ecea;
+  --muted: #a0aaa7;
+  --faint: #818b88;
+  /* Brand: verdigris, the patina of a durable record. One restrained accent for the mark, focus,
+     links and live activity. Success moves to a yellow-green so "running" and "completed" differ. */
+  --accent: #62bfa8;
+  --accent-strong: #8dd4c2;
+  --accent-contrast: #04140f;
+  --accent-soft: #10261f;
   /* Primary actions use the inverted neutral: the highest-contrast element on the page. */
-  --primary: #ededef;
+  --primary: #e7ecea;
   --primary-hover: #ffffff;
-  --primary-contrast: #0b0b0d;
-  --success: #5cc49a;
-  --success-soft: #12251d;
-  --danger: #ec7a7f;
-  --danger-soft: #2b1617;
-  --warning: #dcab5f;
+  --primary-contrast: #0b0d0d;
+  --success: #a3cf6e;
+  --success-soft: #1a2412;
+  --danger: #e8737a;
+  --danger-soft: #2b1618;
+  --warning: #e0a95a;
   --warning-soft: #281f12;
-  --code-key: #a5b4fc;
-  --code-string: #b5d6a7;
-  --code-bg: #0e0e10;
+  --code-key: #8dd4c2;
+  --code-string: #b9d3c9;
+  --code-bg: #0e1111;
   --elevation-raised: 0 1px 0 rgb(255 255 255 / 0.035) inset, 0 12px 32px -12px rgb(0 0 0 / 0.7);
   --elevation-panel: 0 1px 0 rgb(255 255 255 / 0.025) inset;
 }
 
 [data-theme="light"] {
   color-scheme: light;
-  --bg: #fafafa;
+  --bg: #f7f9f8;
   --surface: #ffffff;
-  --surface-raised: #f4f4f5;
-  --border: #e4e4e7;
-  --border-subtle: #efeff1;
-  --text: #18181b;
-  --muted: #52525b;
-  --faint: #6b6b76;
-  --accent: #4e55c4;
-  --accent-strong: #3d43a6;
+  --surface-raised: #eef2f1;
+  --border: #dbe2e0;
+  --border-subtle: #e8eeec;
+  --text: #141a19;
+  --muted: #4d5856;
+  --faint: #626d6a;
+  --accent: #0f6e5c;
+  --accent-strong: #0a5547;
   --accent-contrast: #ffffff;
-  --accent-soft: #eff0fa;
-  --primary: #18181b;
-  --primary-hover: #2e2e33;
-  --primary-contrast: #fafafa;
-  --success: #17794a;
-  --success-soft: #e9f6ef;
-  --danger: #bf2f36;
+  --accent-soft: #e3f3ee;
+  --primary: #141a19;
+  --primary-hover: #29312f;
+  --primary-contrast: #f7f9f8;
+  --success: #456f19;
+  --success-soft: #eef5e4;
+  --danger: #b8323a;
   --danger-soft: #fcefef;
-  --warning: #93560b;
+  --warning: #8a5a0e;
   --warning-soft: #fcf3e3;
-  --code-key: #3d43a6;
-  --code-string: #2f6b3a;
-  --code-bg: #fafafa;
-  --elevation-raised: 0 1px 2px rgb(24 24 27 / 0.05), 0 12px 32px -14px rgb(24 24 27 / 0.16);
-  --elevation-panel: 0 1px 2px rgb(24 24 27 / 0.04);
+  --code-key: #0a5547;
+  --code-string: #2d4a42;
+  --code-bg: #f7f9f8;
+  --elevation-raised: 0 1px 2px rgb(20 26 25 / 0.05), 0 12px 32px -14px rgb(20 26 25 / 0.16);
+  --elevation-panel: 0 1px 2px rgb(20 26 25 / 0.04);
 }
 
 @theme inline {

@@ -1,5 +1,6 @@
 import { ThemeToggle } from "../theme/ThemeToggle";
 import { Icon, type IconName } from "../ui/Icon";
+import { Logo } from "../ui/Logo";
 import type { View } from "../view";
 
 export interface NavItem {
@@ -19,12 +20,7 @@ export function NavRail({ items, view }: { items: NavItem[]; view: View }) {
       aria-label="Studio sections"
       className="order-last flex shrink-0 items-stretch border-t border-line bg-surface px-1 pb-[env(safe-area-inset-bottom)] lg:order-first lg:w-14 lg:flex-col lg:items-center lg:gap-1 lg:border-t-0 lg:border-r lg:px-0 lg:py-3"
     >
-      <div
-        aria-hidden="true"
-        className="mb-3 hidden size-8 place-items-center rounded-lg bg-primary font-mono text-body font-bold text-on-primary lg:grid"
-      >
-        P
-      </div>
+      <Logo className="mb-3 hidden size-8 lg:block" />
       {items.map((item) => (
         <button
           key={item.view}

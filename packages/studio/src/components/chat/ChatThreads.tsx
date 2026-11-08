@@ -26,10 +26,10 @@ export function ChatThreads({
   return (
     <aside
       aria-label="Threads"
-      className="flex shrink-0 flex-col border-b border-line bg-surface lg:w-64 lg:border-r lg:border-b-0"
+      className="flex shrink-0 flex-col border-b border-line bg-surface lg:w-72 lg:border-r lg:border-b-0"
     >
-      <div className="flex h-14 shrink-0 items-center justify-between gap-3 px-4 lg:border-b lg:border-line">
-        <h2 className="m-0 flex items-center gap-2 text-body font-semibold">
+      <div className="flex h-14 shrink-0 items-center justify-between gap-2 px-4 lg:border-b lg:border-line">
+        <h2 className="m-0 flex min-w-0 items-center gap-2 text-body font-semibold">
           Conversations
           <span className="rounded-full bg-raised px-1.5 text-caption font-medium text-muted tabular-nums">
             <span className="sr-only">(</span>
