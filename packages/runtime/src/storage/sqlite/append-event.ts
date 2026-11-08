@@ -46,13 +46,14 @@ export function appendEventRecord(database: DatabaseSync, event: PlicoEvent): vo
         throw new Error("The first event must be run.started.");
       database
         .prepare(
-          "INSERT INTO runs (run_id, project_root, project_name, status, started_at, ended_at) VALUES (?, ?, ?, 'running', ?, NULL)",
+          "INSERT INTO runs (run_id, project_root, project_name, status, started_at, ended_at, metadata_json) VALUES (?, ?, ?, 'running', ?, NULL, ?)",
         )
         .run(
           event.runId,
           String(event.payload.projectRoot ?? ""),
           String(event.payload.projectName ?? ""),
           event.timestamp,
+          event.payload.metadata === undefined ? null : JSON.stringify(event.payload.metadata),
         );
       const owner = acquireOwner();
       database

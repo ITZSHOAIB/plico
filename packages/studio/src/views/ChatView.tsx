@@ -7,6 +7,7 @@ import { ChatInspector } from "../components/chat/ChatInspector";
 import { ChatThreads } from "../components/chat/ChatThreads";
 import { ChatTranscript } from "../components/chat/ChatTranscript";
 import { threadLabel } from "../components/chat/threadLabel";
+import { formatMetadata } from "../format-metadata";
 import { useChat } from "../hooks/useChat";
 import { type RunInspector, useRunInspector } from "../hooks/useRunInspector";
 import type { PlicoEvent } from "../types";
@@ -120,7 +121,7 @@ export function ChatView({ inspector }: { inspector: RunInspector }) {
           title={thread ? threadLabel(thread) : "Chat"}
           subtitle={
             thread
-              ? `Started ${formatDate(thread.createdAt)}`
+              ? `Started ${formatDate(thread.createdAt)}${thread.metadata ? ` · ${formatMetadata(thread.metadata)}` : ""}`
               : "Try your agent and inspect every run"
           }
           run={active.selectedRun}

@@ -4,6 +4,8 @@ import type { Thread, ThreadArtifactWorkspace, ThreadMessage } from "@plico/cont
 import { buildArtifactWorkspace, runProject, ThreadBusyError } from "@plico/runtime";
 import { finishFailedThreadRun } from "../thread-failure.js";
 import { PlicoError } from "./errors.js";
+import type { Metadata } from "./metadata.js";
+import { readMetadata } from "./metadata.js";
 import type { AppDeps, SendMessageOptions } from "./types.js";
 
 const maxTitleLength = 200;
@@ -20,16 +22,23 @@ export async function requireThread(deps: AppDeps, threadId: string): Promise<Th
   return thread;
 }
 
-export function createThread(deps: AppDeps): Promise<Thread> {
-  return storeFor(deps).createThread();
+export async function createThread(
+  deps: AppDeps,
+  options: { metadata?: unknown } = {},
+): Promise<Thread> {
+  return storeFor(deps).createThread(readMetadata(options.metadata));
 }
 
 export function getThread(deps: AppDeps, threadId: string): Promise<Thread | undefined> {
   return storeFor(deps).getThread(threadId);
 }
 
-export function listThreads(deps: AppDeps): Promise<Thread[]> {
-  return storeFor(deps).listThreads();
+export async function listThreads(
+  deps: AppDeps,
+  filter: { metadata?: unknown } = {},
+): Promise<Thread[]> {
+  const metadata = readMetadata(filter.metadata);
+  return storeFor(deps).listThreads(metadata === undefined ? {} : { metadata });
 }
 
 export async function renameThread(
@@ -81,6 +90,7 @@ export async function sendMessage(
   if (typeof content !== "string" || !content.trim())
     throw new PlicoError("message.invalid", "Message content must be a nonempty string.");
   const startRun = options.startRun !== false;
+  const context = readMetadata(options.context, "context");
   const { provider } = deps;
   if (startRun && !provider)
     throw new PlicoError(
@@ -103,7 +113,13 @@ export async function sendMessage(
       thread.id,
       content,
       runId,
-      providerKey ? { providerKey, projectRoot: resolve(deps.projectRoot) } : undefined,
+      providerKey
+        ? {
+            providerKey,
+            projectRoot: resolve(deps.projectRoot),
+            ...(context === undefined ? {} : { context }),
+          }
+        : undefined,
     );
   } catch (error) {
     if (error instanceof ThreadBusyError) throw new PlicoError("thread.busy", error.message);
@@ -115,6 +131,8 @@ export async function sendMessage(
     await startThreadRun(deps, {
       runId,
       threadId: thread.id,
+      ...(thread.metadata === undefined ? {} : { metadata: thread.metadata }),
+      ...(context === undefined ? {} : { context }),
       content,
       history: history.map(({ role, content }) => ({ role, content })),
     });
@@ -127,6 +145,8 @@ async function startThreadRun(
   run: {
     runId: string;
     threadId: string;
+    metadata?: Metadata;
+    context?: Metadata;
     content: string;
     history: Array<{ role: "user" | "assistant"; content: string }>;
   },
@@ -140,6 +160,8 @@ async function startThreadRun(
   void runProject(deps.projectRoot, {
     runId: run.runId,
     threadId: run.threadId,
+    ...(run.metadata === undefined ? {} : { metadata: run.metadata }),
+    ...(run.context === undefined ? {} : { context: run.context }),
     message: run.content,
     history: run.history,
     ...(deps.provider ? { provider: deps.provider } : {}),
@@ -156,6 +178,7 @@ async function startThreadRun(
         deps.engine,
         deps.eventStore,
         error,
+        run.metadata,
       );
     } catch (settleError) {
       console.error("Could not record failed thread run", settleError);

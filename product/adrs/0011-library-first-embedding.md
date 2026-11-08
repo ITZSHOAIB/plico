@@ -25,7 +25,7 @@ Plico owns agent state: threads, runs, events, approvals, artifacts. The host ow
 
 - `threads`: `create`, `get`, `list`, `rename`, `messages`, `send`.
 - `runs`: `start`, `get`, `list`, `cancel`, `events`. _Proposed:_ `start({ script })` exposes the dry-run script to host code, which can drive tool handlers without a model; `servePlico` keeps it behind `allowScript`. `events(runId, { after, signal })` is an async iterator over the event log from a cursor. The SSE route is a writer over the same iterator.
-- `approvals`: `decide(runId, requestId, approved)`. _Proposed shape:_ it wraps the approval signal that `POST /v1/runs/:id/signal` already carries. Settle it with the other approval work. _Proposed:_ export the `PlicoError` class so hosts can narrow on `code`.
+- `approvals`: `decide(runId, requestId, approved, { context })`; `context` records who decided on `approval.decided`, and approval signals sent over HTTP have any `context` dropped. _Proposed shape:_ it wraps the approval signal that `POST /v1/runs/:id/signal` already carries. Settle it with the other approval work. _Proposed:_ export the `PlicoError` class so hosts can narrow on `code`.
 - `close()`: ends open event iterators, stops recovery from starting more work and closes the thread store. The SQLite event store and engine expose no `close()` yet; adding one belongs with production storage (#82).
 
 `servePlico` and `plico serve` are `createPlico` plus `listen`. The `/v1` routes call the same layer as the library, so the two cannot drift. `createPlicoServer` is removed before the first publish, with no alias. Stores, engine, provider and recovery keys are not public. Tests that need a scripted model use an internal factory.

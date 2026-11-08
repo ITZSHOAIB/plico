@@ -52,3 +52,26 @@ is an async iterator over the run's events. Call `await plico.close()` before th
 exits; it ends open event iterators and closes the thread store. `servePlico` is
 `createPlico` plus an HTTP listener and closes Plico when the server closes. Readiness
 reports a thread and run store mismatch before a run is started.
+
+## Host data: metadata and context
+
+Plico has no user model. A host that serves its own users passes two kinds of data and
+enforces access itself.
+
+`metadata` is a JSON object kept with a thread or run, set when it is created and never
+changed. Use it to tag work with your own identifiers, such as a tenant or a ticket.
+`plico.threads.create({ metadata })` and `plico.runs.start({ metadata })` set it, and a
+thread's runs carry the thread's metadata. Lists filter by exact match on top-level keys:
+`plico.threads.list({ metadata: { tenant: "acme" } })`, or over HTTP
+`GET /v1/threads?metadata=<url-encoded JSON>` and `GET /v1/runs?metadata=<url-encoded JSON>`.
+A key matches when its value is equal as JSON; a filter with several keys needs all of them.
+Metadata that is not a JSON object is rejected with `request.invalid`.
+
+`context` is JSON the host passes for one run: `plico.threads.send(threadId, text, { context })`
+or `plico.runs.start({ context })`. Tools read it as `ctx.context`. Plico records it on the
+run's `run.started` event, so a run that resumes after a restart, including one queued before
+the restart, gets the same context. Because the event log stores it, `context` must not carry
+secrets: pass an identifier and look up credentials in your tool. `plico.approvals.decide(runId,
+requestId, approved, { context })` records the deciding context on `approval.decided`. The HTTP
+API does not accept `context`; an approval signal sent to `POST /v1/runs/<run-id>/signal`
+has any `context` dropped, so only the host can say who decided.

@@ -57,6 +57,7 @@ let providerRunId: string;
 let eventStore: ReturnType<typeof createSqliteEventStore>;
 let threadStore: ReturnType<typeof createSqliteThreadStore>;
 let engine: ReturnType<typeof createSqliteEngine>;
+let plico: Awaited<ReturnType<typeof createTestServer>>["plico"];
 
 beforeAll(async () => {
   root = await mkdtemp(join(tmpdir(), "plico-contract-"));
@@ -139,6 +140,7 @@ beforeAll(async () => {
       },
     },
   });
+  plico = api.plico;
   server = createServer(api.requestListener);
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   baseUrl = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
@@ -210,11 +212,16 @@ it("keeps the /v1 response shapes stable", async () => {
   );
 
   const createdThread = (await (
-    await fetch(`${baseUrl}/v1/threads`, { method: "POST" })
+    await fetch(`${baseUrl}/v1/threads`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ metadata: { tenant: "acme" } }),
+    })
   ).json()) as { id: string };
   const threadArtifactRun = await runProject(root, {
     runId: "thread-artifact-contract",
     threadId: createdThread.id,
+    metadata: { tenant: "acme" },
     eventStore,
     script: [
       { type: "artifact.write", files: [{ path: "thread.md", content: "Thread artifact" }] },
@@ -244,6 +251,24 @@ it("keeps the /v1 response shapes stable", async () => {
     const run = (await response.json()) as { status: string };
     expect(run.status).toBe("completed");
   });
+  // A host decides through the programmatic API, which is the only way to record who decided.
+  const contextRun = await runProject(root, {
+    runId: "approval-context-contract",
+    script: [{ type: "tool.call", toolName: "archive", arguments: {} }],
+    context: { userId: "requester" },
+    eventStore,
+    engine,
+  });
+  if (contextRun.status !== "waiting") throw new Error("Context fixture did not wait");
+  await plico.approvals.decide(contextRun.runId, `${contextRun.runId}:0`, true, {
+    context: { userId: "approver" },
+  });
+  await vi.waitFor(async () => {
+    expect((await eventStore.getRun(contextRun.runId))?.status).toBe("completed");
+  });
+  const contextEvents = (await (
+    await fetch(`${baseUrl}/v1/runs/${contextRun.runId}/events`)
+  ).json()) as Array<{ type: string }>;
   const approvalEvents = (await (
     await fetch(`${baseUrl}/v1/runs/${approvalRun.runId}/events`)
   ).json()) as Array<{ type: string }>;
@@ -277,6 +302,9 @@ it("keeps the /v1 response shapes stable", async () => {
     "GET /v1/runs/:id/events (provider)": providerShapes,
     "GET /v1/runs/:id/events (approval)": approvalEvents
       .filter((event) => event.type === "approval.decided")
+      .map((event) => shapeOf(event)),
+    "GET /v1/runs/:id/events (context)": contextEvents
+      .filter((event) => event.type === "run.started" || event.type === "approval.decided")
       .map((event) => shapeOf(event)),
     "POST /v1/runs/:id/signal (approval)": shapeOf(decisionResult),
     "POST /v1/runs/dry": await shape("/v1/runs/dry", dryRun),

@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { isAbsolute, resolve } from "node:path";
 import { type Span, SpanStatusCode } from "@opentelemetry/api";
-import { validateProject } from "@plico/core";
+import { readSkills, validateProject } from "@plico/core";
 import {
   createEngine,
   createMemoryJournal,
@@ -13,6 +13,7 @@ import {
 import { RunWaitingError, runtimeErrorPayload } from "../errors.js";
 import { InMemoryEventLog } from "../events.js";
 import { composeInstructions } from "../instructions.js";
+import type { Metadata } from "../storage/metadata.js";
 import { discoverTools } from "../tools/index.js";
 import type { DryRunScriptStep, RunProjectOptions, RunResult } from "../types/index.js";
 import { finalizeRun } from "./finalize.js";
@@ -32,6 +33,8 @@ interface RunInput {
   startedAt: string;
   message?: string;
   threadId?: string;
+  metadata?: Metadata;
+  context?: Metadata;
   history?: RunProjectOptions["history"];
   script?: DryRunScriptStep[];
   providerRecoveryKey?: string;
@@ -52,6 +55,8 @@ export async function runProject(
     traceContext: storeSpanContext(span),
     ...(options.message === undefined ? {} : { message: options.message }),
     ...(options.threadId === undefined ? {} : { threadId: options.threadId }),
+    ...(options.metadata === undefined ? {} : { metadata: options.metadata }),
+    ...(options.context === undefined ? {} : { context: options.context }),
     ...(options.history === undefined ? {} : { history: options.history }),
     ...(options.script === undefined ? {} : { script: options.script }),
     ...(options.providerRecoveryKey === undefined
@@ -193,6 +198,8 @@ async function runLoop(
     projectRoot: displayRoot,
     projectName: validation.project?.config.name ?? "",
     ...(input.threadId === undefined ? {} : { threadId: input.threadId }),
+    ...(input.metadata === undefined ? {} : { metadata: input.metadata }),
+    ...(input.context === undefined ? {} : { context: input.context }),
   });
   if (newlyStarted) options.onStarted?.(runId);
 
@@ -223,7 +230,8 @@ async function runLoop(
   };
 
   try {
-    const instructions = await composeInstructions(project);
+    const { skills } = await readSkills(project.root);
+    const instructions = await composeInstructions(project, skills);
     await events.append("instructions.composed", {
       length: instructions.content.length,
       sources: instructions.sources,
@@ -255,6 +263,7 @@ async function runLoop(
             project.config.model,
             project.config,
             input.history,
+            skills,
           )
         : input.script === undefined
           ? await runDefaultDryRun(project, events)

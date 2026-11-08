@@ -52,6 +52,11 @@ export interface ToolHandlerContext {
    */
   idempotencyKey: string;
   artifacts: ToolArtifactContext;
+  /**
+   * Data the host passed when it started the run, such as the calling user. It is recorded in the
+   * run's event log, so it must not carry secrets.
+   */
+  context?: Record<string, JsonValue>;
 }
 
 export interface ToolDefinition {

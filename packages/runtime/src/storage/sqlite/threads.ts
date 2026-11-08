@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { resolve } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 import type { Thread, ThreadEvent, ThreadMessage } from "@plico/contracts";
+import { type Metadata, matchesMetadata, parseMetadata } from "../metadata.js";
 import { openDatabase } from "./open.js";
 import { appendThreadEvent } from "./thread-log.js";
 import { setUserTitle } from "./thread-title.js";
@@ -10,8 +11,9 @@ export interface ThreadStore {
   readonly storageIdentity?: string;
   /** Release resources owned by this store. */
   close(): void;
-  createThread(): Promise<Thread>;
-  listThreads(): Promise<Thread[]>;
+  createThread(metadata?: Metadata): Promise<Thread>;
+  /** `metadata` keeps threads whose top-level keys equal every given value. */
+  listThreads(filter?: { metadata?: Metadata }): Promise<Thread[]>;
   getThread(id: string): Promise<Thread | undefined>;
   /** Names a thread for the user. Returns undefined for an unknown thread. */
   renameThread(id: string, title: string): Promise<Thread | undefined>;
@@ -20,7 +22,7 @@ export interface ThreadStore {
     threadId: string,
     content: string,
     runId?: string,
-    recovery?: { providerKey: string; projectRoot: string },
+    recovery?: { providerKey: string; projectRoot: string; context?: Metadata },
   ): Promise<ThreadMessage | undefined>;
   getMessages(threadId: string): Promise<ThreadMessage[]>;
   getEvents(threadId: string): Promise<ThreadEvent[]>;
@@ -31,16 +33,26 @@ export interface ThreadStore {
       content: string;
       providerKey: string | null;
       projectRoot: string | null;
+      context?: Metadata;
       history: Array<Pick<ThreadMessage, "role" | "content">>;
     }>
   >;
 }
 
-const selectThread = "SELECT thread_id AS id, created_at AS createdAt, title FROM threads";
+const selectThread =
+  "SELECT thread_id AS id, created_at AS createdAt, title, metadata_json AS metadataJson FROM threads";
 
 function toThread(row: unknown): Thread {
-  const { title, ...thread } = row as Thread & { title: string | null };
-  return title === null ? thread : { ...thread, title };
+  const { title, metadataJson, ...thread } = row as Thread & {
+    title: string | null;
+    metadataJson: string | null;
+  };
+  const metadata = parseMetadata(metadataJson);
+  return {
+    ...thread,
+    ...(title === null ? {} : { title }),
+    ...(metadata === undefined ? {} : { metadata }),
+  };
 }
 
 export class ThreadBusyError extends Error {
@@ -70,19 +82,30 @@ export function createSqliteThreadStore({
     close() {
       db.close();
     },
-    async createThread() {
-      const thread: Thread = { id: randomUUID(), createdAt: new Date().toISOString() };
+    async createThread(metadata) {
+      const thread: Thread = {
+        id: randomUUID(),
+        createdAt: new Date().toISOString(),
+        ...(metadata === undefined ? {} : { metadata }),
+      };
       transaction(db, () => {
         appendThreadEvent(db, thread.id, "thread.created", { thread }, thread.createdAt);
-        db.prepare("INSERT INTO threads (thread_id, created_at) VALUES (?, ?)").run(
+        db.prepare(
+          "INSERT INTO threads (thread_id, created_at, metadata_json) VALUES (?, ?, ?)",
+        ).run(
           thread.id,
           thread.createdAt,
+          metadata === undefined ? null : JSON.stringify(metadata),
         );
       });
       return thread;
     },
-    async listThreads() {
-      return db.prepare(`${selectThread} ORDER BY created_at, rowid`).all().map(toThread);
+    async listThreads(filter) {
+      return db
+        .prepare(`${selectThread} ORDER BY created_at, rowid`)
+        .all()
+        .map(toThread)
+        .filter((thread) => matchesMetadata(thread.metadata, filter?.metadata));
     },
     async getThread(id) {
       const row = db.prepare(`${selectThread} WHERE thread_id = ?`).get(id);
@@ -118,8 +141,14 @@ export function createSqliteThreadStore({
           throw new ThreadBusyError();
         if (runId !== undefined)
           db.prepare(
-            "INSERT INTO thread_runs (run_id, thread_id, provider_key, project_root) VALUES (?, ?, ?, ?)",
-          ).run(runId, threadId, recovery?.providerKey ?? null, recovery?.projectRoot ?? null);
+            "INSERT INTO thread_runs (run_id, thread_id, provider_key, project_root, context_json) VALUES (?, ?, ?, ?, ?)",
+          ).run(
+            runId,
+            threadId,
+            recovery?.providerKey ?? null,
+            recovery?.projectRoot ?? null,
+            recovery?.context === undefined ? null : JSON.stringify(recovery.context),
+          );
         const message: ThreadMessage = {
           id: randomUUID(),
           threadId,
@@ -163,7 +192,7 @@ export function createSqliteThreadStore({
     async listQueuedRuns() {
       const queued = db
         .prepare(
-          "SELECT t.run_id AS runId, t.thread_id AS threadId, t.provider_key AS providerKey, t.project_root AS projectRoot, m.content, m.sequence FROM thread_runs t JOIN thread_messages m ON m.run_id = t.run_id AND m.role = 'user' LEFT JOIN runs r ON r.run_id = t.run_id WHERE r.run_id IS NULL",
+          "SELECT t.run_id AS runId, t.thread_id AS threadId, t.provider_key AS providerKey, t.project_root AS projectRoot, t.context_json AS contextJson, m.content, m.sequence FROM thread_runs t JOIN thread_messages m ON m.run_id = t.run_id AND m.role = 'user' LEFT JOIN runs r ON r.run_id = t.run_id WHERE r.run_id IS NULL",
         )
         .all() as unknown as Array<{
         runId: string;
@@ -172,9 +201,11 @@ export function createSqliteThreadStore({
         sequence: number;
         providerKey: string | null;
         projectRoot: string | null;
+        contextJson: string | null;
       }>;
-      return queued.map(({ sequence, ...run }) => ({
+      return queued.map(({ sequence, contextJson, ...run }) => ({
         ...run,
+        ...(contextJson === null ? {} : { context: parseMetadata(contextJson) as Metadata }),
         history: db
           .prepare(
             "SELECT role, content FROM thread_messages WHERE thread_id = ? AND sequence < ? ORDER BY sequence",

@@ -1,4 +1,4 @@
-import type { PlicoEvent } from "./events.js";
+import type { JsonValue, PlicoEvent } from "./events.js";
 import type { ValidationIssue } from "./project.js";
 
 export type RunStatus = "running" | "completed" | "failed" | "waiting" | "cancelled";
@@ -11,6 +11,8 @@ export interface RunSummary {
   startedAt: string;
   endedAt: string | null;
   output?: string;
+  /** Host data set when the run started and never changed. */
+  metadata?: Record<string, JsonValue>;
 }
 
 export interface RunResult {

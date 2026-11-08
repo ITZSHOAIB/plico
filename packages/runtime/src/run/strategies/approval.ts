@@ -1,3 +1,4 @@
+import type { JsonValue } from "@plico/contracts";
 import type { RunContext } from "../../engine/index.js";
 import { RunSuspended } from "../../engine/index.js";
 import { RuntimeDiagnosticError, RunWaitingError } from "../../errors.js";
@@ -6,6 +7,7 @@ import type { InMemoryEventLog } from "../../events.js";
 /** The decision a person sends for an approval. Only an explicit `approved: true` lets the tool run. */
 interface ApprovalDecision {
   approved?: boolean;
+  context?: Record<string, JsonValue>;
 }
 
 export function approvalWaitName(requestId: string): string {
@@ -45,6 +47,7 @@ export async function awaitApproval(
   await events.append("approval.decided", {
     requestId,
     approved: outcome.value?.approved === true,
+    ...(outcome.value?.context === undefined ? {} : { context: outcome.value.context }),
   });
   if (outcome.value?.approved !== true) {
     throw new RuntimeDiagnosticError({

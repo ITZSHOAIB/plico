@@ -24,7 +24,9 @@ export async function runToolStep(
   stepName: string,
   idempotencyKey: string,
 ): Promise<unknown> {
-  const threadId = events.all().find((event) => event.type === "run.started")?.payload.threadId;
+  const started = events.all().find((event) => event.type === "run.started");
+  const threadId = started?.payload.threadId;
+  const context = started?.payload.context;
   let staged: ReturnType<typeof createStagedArtifactContext> | undefined;
   const workspaceId = threadId ? `${threadId}:workspace` : `${ctx.runId}:workspace`;
   const ensureStaged = async () => {
@@ -55,6 +57,7 @@ export async function runToolStep(
       signal,
       idempotencyKey,
       artifacts,
+      ...(context === undefined ? {} : { context }),
     });
     return {
       result: normalizeToolResult(result),

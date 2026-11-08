@@ -52,6 +52,7 @@ export async function recoverPlicoState(options: RecoveryOptions): Promise<void>
     if (!options.threadStore || options.isClosed?.()) continue;
     const threadId = await options.threadStore.getThreadForRun(run.runId);
     if (!threadId || options.isClosed?.()) continue;
+    const metadata = (await options.threadStore.getThread(threadId))?.metadata;
     await finishFailedThreadRun(
       run.runId,
       threadId,
@@ -59,6 +60,7 @@ export async function recoverPlicoState(options: RecoveryOptions): Promise<void>
       options.engine,
       options.eventStore,
       run.error,
+      metadata,
     );
   }
 }
@@ -80,6 +82,7 @@ export async function resumeQueuedRuns(options: ResumeQueuedOptions): Promise<vo
       run.providerKey !== options.providerAccountKey
     )
       continue;
+    const metadata = (await options.threadStore.getThread(run.threadId))?.metadata;
     const status = await options.engine.status(run.runId);
     if (status) {
       if (status.state === "failed" || status.state === "cancelled" || status.state === "completed")
@@ -90,12 +93,15 @@ export async function resumeQueuedRuns(options: ResumeQueuedOptions): Promise<vo
           options.engine,
           options.eventStore,
           status.state === "failed" ? "Queued run failed before it could be resumed." : undefined,
+          metadata,
         ).catch((error: unknown) => console.error("Could not settle queued thread run", error));
       continue;
     }
     void runProject(options.projectRoot, {
       runId: run.runId,
       threadId: run.threadId,
+      ...(metadata === undefined ? {} : { metadata }),
+      ...(run.context === undefined ? {} : { context: run.context }),
       history: run.history,
       message: run.content,
       provider: options.provider,
@@ -111,6 +117,7 @@ export async function resumeQueuedRuns(options: ResumeQueuedOptions): Promise<vo
           options.engine,
           options.eventStore,
           error,
+          metadata,
         );
       } catch (settleError) {
         console.error("Could not record failed queued thread run", settleError);

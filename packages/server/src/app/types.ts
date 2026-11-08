@@ -6,6 +6,7 @@ import type {
   ModelProvider,
   ThreadStore,
 } from "@plico/runtime";
+import type { Metadata } from "./metadata.js";
 
 /** What the shared layer runs on. Internal: hosts pass a project folder to `createPlico` instead. */
 export interface AppDeps {
@@ -31,13 +32,20 @@ export interface EventFollowOptions {
 export interface SendMessageOptions {
   /** Record the message without starting a run. Defaults to true. */
   startRun?: boolean;
+  /**
+   * Host data passed to tools as `ctx.context` for the run this message starts, and recorded on its
+   * `run.started` event. It must not carry secrets.
+   */
+  context?: Metadata;
 }
 
 export interface Plico {
   threads: {
-    create(): Promise<Thread>;
+    /** `metadata` is host data kept with the thread, set now and never changed. */
+    create(options?: { metadata?: Metadata }): Promise<Thread>;
     get(threadId: string): Promise<Thread | undefined>;
-    list(): Promise<Thread[]>;
+    /** `metadata` keeps threads whose top-level keys equal every given value. */
+    list(filter?: { metadata?: Metadata }): Promise<Thread[]>;
     /** Rejects with `thread.not_found` for an unknown thread. */
     rename(threadId: string, title: string): Promise<Thread>;
     messages(threadId: string): Promise<ThreadMessage[]>;
@@ -52,16 +60,30 @@ export interface Plico {
      * Starts a run that has no thread and no model, running the optional script against the
      * project's tools. Provider-backed runs start through `threads.send`.
      */
-    start(options?: { script?: DryRunScriptStep[] }): Promise<{ runId: string }>;
+    start(options?: {
+      script?: DryRunScriptStep[];
+      metadata?: Metadata;
+      /** Passed to tools as `ctx.context` and recorded on `run.started`. No secrets. */
+      context?: Metadata;
+    }): Promise<{ runId: string }>;
     get(runId: string): Promise<RunSummary | undefined>;
-    list(): Promise<RunSummary[]>;
+    /** `metadata` keeps runs whose top-level keys equal every given value. */
+    list(filter?: { metadata?: Metadata }): Promise<RunSummary[]>;
     cancel(runId: string): Promise<string>;
     /** Follows a run's events from a cursor until it reaches a terminal state or is stopped. */
     events(runId: string, options?: EventFollowOptions): AsyncGenerator<PlicoEvent, void, void>;
   };
   approvals: {
-    /** Delivers an approval decision to a waiting run. Returns the engine's signal result. */
-    decide(runId: string, requestId: string, approved: boolean): Promise<string>;
+    /**
+     * Delivers an approval decision to a waiting run. `context` describes who decided and is
+     * recorded on `approval.decided`. Returns the engine's signal result.
+     */
+    decide(
+      runId: string,
+      requestId: string,
+      approved: boolean,
+      options?: { context?: Metadata },
+    ): Promise<string>;
   };
   /** Stops following events, waits for recovery and closes the stores Plico opened. */
   close(): Promise<void>;
