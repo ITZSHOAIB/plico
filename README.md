@@ -53,6 +53,12 @@ Or run the full local check in one shot:
 pnpm check
 ```
 
+CI also installs the packed tarballs into an empty project on Linux and Windows and runs `plico --version`, `create-plico`, `plico validate`, and `plico serve --studio` against them. To run the same check locally, build first, then:
+
+```sh
+pnpm smoke:tarballs
+```
+
 ## Website Deployment
 
 The Astro website lives in `packages/website` and is configured for Cloudflare Pages at `plico.sohab.dev`.
