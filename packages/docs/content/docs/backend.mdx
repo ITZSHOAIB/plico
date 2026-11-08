@@ -63,4 +63,4 @@ Studio is a local development tool. Point it at the same database with `--inspec
 plico serve --studio --inspect --db ./plico.sqlite ./agent
 ```
 
-An inspecting server does not recover or resume runs, so it cannot interfere with the runs your app owns. Every request that would change state, such as sending a message, cancelling a run or deciding an approval, is refused with `403 inspection.read_only`. `GET /health` reports `"inspection": true`, and Studio disables Chat, Run evals and approvals with that reason.
+An inspecting server opens the database read-only, so the database must already exist. It does not recover or resume runs, so it cannot interfere with the runs your app owns. Every request that would change state, such as sending a message, cancelling a run or deciding an approval, is refused with `403 inspection.read_only`. `GET /health` reports `"inspection": true`, and Studio disables Chat, Run evals and approvals with that reason.

@@ -1,6 +1,8 @@
 import { validateProject } from "@plico/core";
 import {
   createConfiguredModelProvider,
+  createEngine,
+  createMemoryJournal,
   createSqliteEngine,
   createSqliteEventStore,
   createSqliteThreadStore,
@@ -40,18 +42,21 @@ export async function openPlico(options: CreatePlicoOptions, inspect: boolean): 
       `createPlico accepts only projectRoot and databasePath; files define the agent. Unknown option: ${unknown.join(", ")}`,
     );
   const { projectRoot, databasePath } = options;
-  const eventStore = createSqliteEventStore({ databasePath });
+  // Inspection opens the database read-only, so it cannot settle runs the host left unfinished.
+  const eventStore = createSqliteEventStore({ databasePath, readOnly: inspect });
   const validation = await validateProject(projectRoot);
   const leaseMs = validation.project?.config.execution?.leaseMs;
-  const engine = createSqliteEngine({
-    databasePath,
-    ...(leaseMs === undefined ? {} : { leaseMs }),
-  });
+  const engine = inspect
+    ? createEngine({ journal: createMemoryJournal() })
+    : createSqliteEngine({
+        databasePath,
+        ...(leaseMs === undefined ? {} : { leaseMs }),
+      });
   const model = validation.project?.config.model;
   const provider = model ? createConfiguredModelProvider(model) : undefined;
   const providerRecoveryKey = model ? modelProviderRecoveryKey(model) : undefined;
   const providerAccountKey = model ? modelProviderAccountKey(model) : undefined;
-  const threadStore = createSqliteThreadStore({ databasePath });
+  const threadStore = createSqliteThreadStore({ databasePath, readOnly: inspect });
   let closing = false;
   const recoveryOptions = {
     projectRoot,
