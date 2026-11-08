@@ -13,6 +13,7 @@ export async function servePlico(options: ServePlicoOptions): Promise<Server> {
     createRequestListener(plico, {
       ...(options.studioPath === undefined ? {} : { studioPath: options.studioPath }),
       ...(options.allowRemote === undefined ? {} : { allowRemote: options.allowRemote }),
+      ...(options.publicOrigin === undefined ? {} : { publicOrigin: options.publicOrigin }),
       ...(options.allowScript === undefined ? {} : { allowScript: options.allowScript }),
     }),
   );
