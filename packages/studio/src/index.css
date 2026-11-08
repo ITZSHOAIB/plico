@@ -1,5 +1,7 @@
 @import "tailwindcss";
 @import "./theme/tokens.css";
+@import "./theme/motion.css";
+@import "./ui/markdown.css";
 
 @layer base {
   html,
@@ -15,5 +17,37 @@
     font-family: var(--font-sans);
     font-size: var(--text-body);
     line-height: var(--text-body--line-height);
+    font-feature-settings: "cv11", "ss01";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection {
+    background: color-mix(in srgb, var(--accent) 30%, transparent);
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+}
+
+@layer components {
+  .kbd {
+    display: inline-flex;
+    align-items: center;
+    min-width: 1.4rem;
+    height: 1.25rem;
+    justify-content: center;
+    padding: 0 0.3rem;
+    border: 1px solid var(--border);
+    border-bottom-width: 2px;
+    border-radius: 5px;
+    background: var(--surface-raised);
+    color: var(--muted);
+    font-family: inherit;
+    font-size: 10.5px;
+    font-weight: 500;
   }
 }

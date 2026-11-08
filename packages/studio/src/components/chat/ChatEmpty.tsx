@@ -1,22 +1,30 @@
-import { MessageSquareText } from "lucide-react";
+import { Plus } from "lucide-react";
+import { Button } from "../../ui/Button";
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "../../ui/chat/empty";
+import { AgentMark } from "./AgentMark";
 
-export function ChatEmpty({ selected }: { selected: boolean }) {
+export function ChatEmpty({ selected, onNew }: { selected: boolean; onNew?: () => void }) {
   return (
-    <Empty>
+    <Empty className="animate-view-in">
       <EmptyHeader>
-        <EmptyMedia>
-          <MessageSquareText size={21} aria-hidden="true" />
+        <EmptyMedia className="size-11 overflow-hidden border-0 p-0">
+          <AgentMark />
         </EmptyMedia>
         <EmptyTitle>
           {selected ? "Start a conversation" : "Your agent, ready to explore"}
         </EmptyTitle>
         <EmptyDescription>
           {selected
-            ? "Send a message to start the conversation. Your agent’s reply and run activity will appear here."
-            : "Create a thread or choose a conversation to try your agent and inspect each run."}
+            ? "Ask anything below. The reply streams in here, and every run is saved with its full event history."
+            : "Open a conversation to try your agent. Each reply links to its run, so you can see exactly what happened."}
         </EmptyDescription>
       </EmptyHeader>
+      {!selected && onNew && (
+        <Button variant="primary" onClick={onNew}>
+          <Plus size={15} aria-hidden="true" />
+          Start a conversation
+        </Button>
+      )}
     </Empty>
   );
 }

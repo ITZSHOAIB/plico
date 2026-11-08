@@ -1,26 +1,32 @@
-import { ArrowUp } from "lucide-react";
-import { Button } from "../../ui/Button";
+import { ArrowUp, Square } from "lucide-react";
 import { InputGroup, InputGroupAddon, InputGroupTextarea } from "../../ui/chat/input-group";
+
+const roundButton =
+  "inline-flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-full border-0 transition-[background-color,color,transform] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent active:scale-95";
 
 export function ChatComposer({
   draft,
   setDraft,
   disabled,
   onSubmit,
-  notice = "Responses and run activity are saved to this project.",
+  onStop,
+  notice = "Replies and run activity are saved to this project.",
 }: {
   draft: string;
   setDraft: (value: string) => void;
   disabled: boolean;
   onSubmit: () => void;
+  /** Shown instead of Send while a reply is streaming. */
+  onStop?: (() => void) | undefined;
   notice?: string;
 }) {
+  const canSend = !disabled && !!draft.trim();
   return (
     <form
-      className="shrink-0 px-4 pb-5 pt-3 sm:px-6"
+      className="shrink-0 px-4 pt-2 pb-4 sm:px-6"
       onSubmit={(event) => {
         event.preventDefault();
-        if (!disabled && draft.trim()) onSubmit();
+        if (canSend) onSubmit();
       }}
     >
       <div className="mx-auto max-w-3xl">
@@ -35,25 +41,42 @@ export function ChatComposer({
                 event.currentTarget.form?.requestSubmit();
               }
             }}
-            placeholder="Ask your agent anything about this project…"
+            placeholder="Message your agent…"
           />
           <InputGroupAddon>
-            <span className="hidden sm:inline">
-              Enter to send <span className="px-1 text-faint">·</span> Shift + Enter for a new line
+            <span className="hidden items-center gap-1.5 text-caption text-faint sm:flex">
+              <kbd className="kbd">Enter</kbd> to send
+              <span aria-hidden="true" className="px-0.5">
+                ·
+              </span>
+              <kbd className="kbd">Shift</kbd>
+              <span aria-hidden="true">+</span>
+              <kbd className="kbd">Enter</kbd> for a new line
             </span>
-            <span className="sm:hidden">Message your agent</span>
-            <Button
-              variant="primary"
-              type="submit"
-              disabled={disabled || !draft.trim()}
-              className="ml-auto h-9 gap-2 px-3"
-            >
-              <span>Send</span>
-              <ArrowUp aria-hidden="true" size={15} />
-            </Button>
+            {onStop ? (
+              <button
+                type="button"
+                aria-label="Stop response"
+                title="Stop response"
+                onClick={onStop}
+                className={`${roundButton} ml-auto bg-fg text-bg hover:opacity-85`}
+              >
+                <Square size={11} fill="currentColor" aria-hidden="true" />
+              </button>
+            ) : (
+              <button
+                type="submit"
+                aria-label="Send"
+                title="Send"
+                disabled={!canSend}
+                className={`${roundButton} ml-auto bg-accent text-on-accent hover:bg-accent-strong disabled:cursor-not-allowed disabled:bg-raised disabled:text-faint disabled:active:scale-100`}
+              >
+                <ArrowUp size={16} strokeWidth={2.25} aria-hidden="true" />
+              </button>
+            )}
           </InputGroupAddon>
         </InputGroup>
-        <p className="mb-0 mt-2 text-center text-caption text-faint">{notice}</p>
+        <p className="mt-2 mb-0 text-center text-caption text-faint">{notice}</p>
       </div>
     </form>
   );
