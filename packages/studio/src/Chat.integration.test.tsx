@@ -8,7 +8,7 @@ import { join } from "node:path";
 import { JSDOM } from "jsdom";
 import { afterEach, expect, it, vi } from "vitest";
 import { createSqliteEventStore, createSqliteThreadStore } from "../../runtime/src/index";
-import { createPlicoServer } from "../../server/src/index";
+import { createTestServer } from "../../server/src/testing/test-server";
 import { App } from "./App";
 
 const realFetch = globalThis.fetch;
@@ -91,7 +91,7 @@ it("streams a real server run into Studio and reopens it after restart", async (
   async function start() {
     const eventStore = createSqliteEventStore({ databasePath });
     store = createSqliteThreadStore({ databasePath });
-    const api = await createPlicoServer({
+    const api = await createTestServer({
       projectRoot: root,
       eventStore,
       threadStore: store,

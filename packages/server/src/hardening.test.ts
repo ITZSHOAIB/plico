@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createSqliteEventStore, type EventStore } from "@plico/runtime";
 import { afterEach, describe, expect, it } from "vitest";
-import { createPlicoServer } from "./index.js";
+import { createTestServer } from "./testing/test-server.js";
 
 const servers: Server[] = [];
 
@@ -23,7 +23,7 @@ async function start(
   await mkdir(join(root, "skills"), { recursive: true });
   const eventStore =
     options.eventStore ?? createSqliteEventStore({ databasePath: join(root, "db.sqlite") });
-  const plico = await createPlicoServer({
+  const plico = await createTestServer({
     projectRoot: root,
     eventStore,
     ...(options.studioPath ? { studioPath: options.studioPath } : {}),

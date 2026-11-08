@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createSqliteEventStore, createSqliteThreadStore } from "@plico/runtime";
 import { afterEach, describe, expect, it } from "vitest";
-import { createPlicoServer } from "./index.js";
+import { createTestServer } from "./testing/test-server.js";
 
 const servers: Server[] = [];
 
@@ -36,7 +36,7 @@ async function startProject(options: { evalCase?: unknown; studioPath?: string }
     await writeFile(join(root, "evals", "case.script.json"), JSON.stringify(options.evalCase));
   }
   const eventStore = createSqliteEventStore({ databasePath: join(root, "state.sqlite") });
-  const api = await createPlicoServer({
+  const api = await createTestServer({
     allowScript: true,
     projectRoot: root,
     eventStore,
@@ -193,7 +193,7 @@ describe("readiness", () => {
     const threadStore = createSqliteThreadStore({
       databasePath: join(root, "threads.sqlite"),
     });
-    const api = await createPlicoServer({
+    const api = await createTestServer({
       allowScript: true,
       projectRoot: root,
       eventStore,

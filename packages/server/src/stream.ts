@@ -1,29 +1,14 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import type { EventStore, PlicoEventType, RunStatus } from "@plico/runtime";
-import { HttpError, sendError } from "./errors.js";
+import { followEvents } from "./app/events.js";
+import { requireRun } from "./app/runs.js";
+import type { AppDeps } from "./app/types.js";
+import { HttpError } from "./errors.js";
 import { initSSEStream, sendSSEEvent, sendSSEHeartbeat } from "./sse.js";
 
-// Waiting is not terminal: the stream stays open for approval (#69). run.error is followed by
-// run.failed, which closes the stream.
-const TERMINAL_EVENT_TYPES: readonly PlicoEventType[] = [
-  "run.completed",
-  "run.failed",
-  "run.cancelled",
-];
-
-const TERMINAL_RUN_STATUSES: readonly RunStatus[] = ["completed", "failed", "cancelled"];
-
-function isTerminalEventType(type: string): boolean {
-  return (TERMINAL_EVENT_TYPES as readonly string[]).includes(type);
-}
-
-function isTerminalRunStatus(status: RunStatus): boolean {
-  return (TERMINAL_RUN_STATUSES as readonly RunStatus[]).includes(status);
-}
-
 export interface HandleEventStreamOptions {
-  projectRoot: string;
-  eventStore: EventStore;
+  app: AppDeps;
+  /** Aborts when the host closes Plico. */
+  stop: AbortSignal;
   request: IncomingMessage;
   response: ServerResponse;
   runId: string;
@@ -31,66 +16,31 @@ export interface HandleEventStreamOptions {
   heartbeatInterval?: number;
 }
 
+/** Writes a run's events as server-sent events until the run ends or the client leaves. */
 export async function handleEventStream(options: HandleEventStreamOptions): Promise<void> {
-  const { eventStore, request, response, runId, heartbeatInterval = 2000 } = options;
+  const { app, stop, request, response, runId, heartbeatInterval = 2000 } = options;
 
-  const run = await eventStore.getRun(runId);
-  if (!run) {
-    sendError(response, 404, "run.not_found", `Unknown run ID: ${runId}`);
-    return;
-  }
-
-  const cursor = options.afterSequence ?? 0;
+  await requireRun(app, runId);
   initSSEStream(response);
 
-  request.on("close", () => {
-    response.end();
-  });
-
-  let currentSequence = cursor;
-  let closed = false;
-
-  while (!closed) {
-    const events = await eventStore.getEvents(runId, { afterSequence: currentSequence });
-
-    for (const event of events) {
+  const disconnected = new AbortController();
+  request.on("close", () => disconnected.abort());
+  const heartbeat = setInterval(() => sendSSEHeartbeat(response), heartbeatInterval);
+  try {
+    const events = followEvents(app, runId, {
+      ...(options.afterSequence === undefined ? {} : { after: options.afterSequence }),
+      signal: disconnected.signal,
+      stop,
+      pollMs: heartbeatInterval,
+    });
+    for await (const event of events) {
       sendSSEEvent(response, "plico.event", event, String(event.sequence));
-      currentSequence = event.sequence;
     }
-
-    const hasTerminalEvent = events.some((e) => isTerminalEventType(e.type));
-    if (hasTerminalEvent) {
-      closed = true;
-    }
-
     sendSSEHeartbeat(response);
-
-    if (closed) {
-      break;
-    }
-
-    const currentRun = await eventStore.getRun(runId);
-    if (currentRun && isTerminalRunStatus(currentRun.status)) {
-      const remaining = await eventStore.getEvents(runId, { afterSequence: currentSequence });
-      for (const event of remaining) {
-        sendSSEEvent(response, "plico.event", event, String(event.sequence));
-        currentSequence = event.sequence;
-      }
-      break;
-    }
-
-    await sleep(heartbeatInterval);
-
-    if (request.destroyed) {
-      return;
-    }
+  } finally {
+    clearInterval(heartbeat);
+    response.end();
   }
-
-  response.end();
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 export function parseAfterCursor(value: string): number {

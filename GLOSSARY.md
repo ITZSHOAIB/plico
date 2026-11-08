@@ -31,3 +31,23 @@ _Avoid_: Lock, heartbeat timeout
 **Run replay**:
 A Studio view of a run at a chosen event in its recorded sequence, showing only what was known up to that point. It does not mean the engine replaying recorded steps after a crash.
 _Avoid_: Step replay, engine replay
+
+**Host**:
+The backend application that embeds Plico by importing `createPlico`. It owns users, login, permissions and routes; Plico owns the agent's threads, runs, events and artifacts.
+_Avoid_: Client app, consumer
+
+**Embedded mode**:
+Running Plico inside the host's process, through the programmatic API or the mounted `/v1` handlers, instead of as a separate `plico serve` process. The host's own authentication replaces the loopback-only rule.
+_Avoid_: In-process server, SDK mode
+
+**Scope**:
+The JSON the host computes per request on the mounted API. Plico stamps it on new threads and runs and filters every read and action by it. It is not a permission system; the host decides what the scope is.
+_Avoid_: Tenant, user, permission
+
+**Metadata**:
+A JSON map the host attaches to a thread or run at creation. It is immutable and can be filtered by exact match on top-level keys.
+_Avoid_: Tags, labels
+
+**Context**:
+JSON the host passes with a call. Tools read it as `ctx.context`, and it is recorded with the run. It must not carry secrets.
+_Avoid_: Auth context, session

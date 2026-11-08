@@ -22,8 +22,8 @@ a web page could send:
 Clients that send no `Origin`, such as curl and the CLI, are unaffected.
 
 `plico serve --allow-remote` exposes the server on another host and skips the `Host`
-check; the `Origin` check still applies. A host app that mounts `createPlicoServer`
-under its own name passes `allowRemote: true` and owns authentication. `Origin` must
+check; the `Origin` check still applies. A host app that serves the API behind its own
+authentication passes `allowRemote: true` to `servePlico` and owns authentication. `Origin` must
 match in scheme, host and port, so behind a TLS proxy the host app also passes
 `publicOrigin: "https://its.host"`.
 
@@ -38,4 +38,4 @@ that run.
 A `script` in a run request calls project tools with arguments the caller picks and
 skips the model. For that reason the API answers 403 `run.script_disabled` unless the
 server starts with `plico serve --allow-script` (`allowScript: true` for
-`createPlicoServer`). `plico run --dry --script` on the command line is unaffected.
+`servePlico`). `plico run --dry --script` on the command line is unaffected.

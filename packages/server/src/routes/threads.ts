@@ -1,172 +1,68 @@
-import { randomUUID } from "node:crypto";
-import { resolve } from "node:path";
-import { buildArtifactWorkspace, runProject, ThreadBusyError } from "@plico/runtime";
+import {
+  createThread,
+  listThreads,
+  renameThread,
+  requireThread,
+  sendMessage,
+  threadMessages,
+  threadWorkspace,
+} from "../app/threads.js";
 import { readJsonBody } from "../body.js";
 import { HttpError } from "../errors.js";
 import { sendJson } from "../responses.js";
-import { finishFailedThreadRun } from "../thread-failure.js";
-import type { Route, RouteContext } from "./types.js";
-
-const maxTitleLength = 200;
-
-function storeFor(context: RouteContext) {
-  if (!context.threadStore)
-    throw new HttpError(503, "threads.unavailable", "Thread storage is unavailable.");
-  return context.threadStore;
-}
-
-async function existing(context: RouteContext) {
-  const store = storeFor(context);
-  const id = context.params[0] ?? "";
-  const thread = await store.getThread(id);
-  if (!thread) throw new HttpError(404, "thread.not_found", `Unknown thread ID: ${id}`);
-  return { store, thread };
-}
+import type { Route } from "./types.js";
 
 export const threadRoutes: Route[] = [
   {
     method: "POST",
     pattern: /^\/v1\/threads$/,
-    handler: async (ctx) => sendJson(ctx.response, 201, await storeFor(ctx).createThread()),
+    handler: async (ctx) => sendJson(ctx.response, 201, await createThread(ctx.app)),
   },
   {
     method: "GET",
     pattern: /^\/v1\/threads$/,
-    handler: async (ctx) => sendJson(ctx.response, 200, await storeFor(ctx).listThreads()),
+    handler: async (ctx) => sendJson(ctx.response, 200, await listThreads(ctx.app)),
   },
   {
     method: "GET",
     pattern: /^\/v1\/threads\/([^/]+)$/,
-    handler: async (ctx) => sendJson(ctx.response, 200, (await existing(ctx)).thread),
+    handler: async (ctx) =>
+      sendJson(ctx.response, 200, await requireThread(ctx.app, ctx.params[0] ?? "")),
   },
   {
     method: "PATCH",
     pattern: /^\/v1\/threads\/([^/]+)$/,
     handler: async (ctx) => {
-      const { store, thread } = await existing(ctx);
+      const threadId = ctx.params[0] ?? "";
+      await requireThread(ctx.app, threadId);
       const { title } = await readJsonBody(ctx.request);
-      const trimmed = typeof title === "string" ? title.trim() : "";
-      if (!trimmed || trimmed.length > maxTitleLength)
-        throw new HttpError(
-          400,
-          "thread.invalid_title",
-          `Title must be a nonempty string of at most ${maxTitleLength} characters.`,
-        );
-      sendJson(ctx.response, 200, await store.renameThread(thread.id, trimmed));
+      sendJson(ctx.response, 200, await renameThread(ctx.app, threadId, title));
     },
   },
   {
     method: "GET",
     pattern: /^\/v1\/threads\/([^/]+)\/workspace$/,
-    handler: async (ctx) => {
-      const { thread } = await existing(ctx);
-      if (!ctx.eventStore.getThreadRunEvents)
-        throw new HttpError(
-          503,
-          "workspace.unavailable",
-          "Thread workspace projection is unavailable.",
-        );
-      const events = await ctx.eventStore.getThreadRunEvents(thread.id);
-      const workspace = buildArtifactWorkspace(thread.id, events);
-      if (!workspace)
-        throw new HttpError(
-          404,
-          "workspace.not_found",
-          `No artifact workspace for thread: ${thread.id}`,
-        );
-      const { runId: _runId, ...threadWorkspace } = workspace;
-      sendJson(ctx.response, 200, { ...threadWorkspace, threadId: thread.id });
-    },
+    handler: async (ctx) =>
+      sendJson(ctx.response, 200, await threadWorkspace(ctx.app, ctx.params[0] ?? "")),
   },
   {
     method: "GET",
     pattern: /^\/v1\/threads\/([^/]+)\/messages$/,
-    handler: async (ctx) => {
-      const { store, thread } = await existing(ctx);
-      sendJson(ctx.response, 200, await store.getMessages(thread.id));
-    },
+    handler: async (ctx) =>
+      sendJson(ctx.response, 200, await threadMessages(ctx.app, ctx.params[0] ?? "")),
   },
   {
     method: "POST",
     pattern: /^\/v1\/threads\/([^/]+)\/messages$/,
     handler: async (ctx) => {
-      const { store, thread } = await existing(ctx);
+      const threadId = ctx.params[0] ?? "";
+      await requireThread(ctx.app, threadId);
       const body = await readJsonBody(ctx.request);
-      if (typeof body.content !== "string" || !body.content.trim())
-        throw new HttpError(400, "message.invalid", "Message content must be a nonempty string.");
       if (body.startRun !== undefined && typeof body.startRun !== "boolean")
         throw new HttpError(400, "message.invalid", "startRun must be a boolean.");
-      const startRun = body.startRun !== false;
-      if (startRun && !ctx.provider)
-        throw new HttpError(
-          503,
-          "provider.unavailable",
-          "Configure a model provider before sending a message.",
-        );
-      if (
-        startRun &&
-        (!store.storageIdentity || store.storageIdentity !== ctx.eventStore.storageIdentity)
-      )
-        throw new HttpError(
-          503,
-          "threads.store_mismatch",
-          "Thread and run stores must use the same database.",
-        );
-      const runId = startRun ? `run-${randomUUID()}` : undefined;
-      const providerKey = ctx.providerAccountKey ?? ctx.providerRecoveryKey;
-      let message: Awaited<ReturnType<typeof store.addMessage>>;
-      try {
-        message = await store.addMessage(
-          thread.id,
-          body.content,
-          runId,
-          providerKey ? { providerKey, projectRoot: resolve(ctx.projectRoot) } : undefined,
-        );
-      } catch (error) {
-        if (error instanceof ThreadBusyError)
-          throw new HttpError(409, "thread.busy", error.message);
-        throw error;
-      }
-      if (!message) throw new HttpError(404, "thread.not_found", `Unknown thread ID: ${thread.id}`);
-      if (ctx.provider && runId) {
-        const history = (await store.getMessages(thread.id)).filter(
-          (entry) => entry.id !== message.id,
-        );
-        let resolveStarted!: () => void;
-        let rejectStarted!: (error: unknown) => void;
-        const started = new Promise<void>((resolve, reject) => {
-          resolveStarted = resolve;
-          rejectStarted = reject;
-        });
-        void runProject(ctx.projectRoot, {
-          runId,
-          threadId: thread.id,
-          message: body.content,
-          history: history.map(({ role, content }) => ({ role, content })),
-          provider: ctx.provider,
-          eventStore: ctx.eventStore,
-          ...(ctx.engine ? { engine: ctx.engine } : {}),
-          ...(ctx.providerRecoveryKey ? { providerRecoveryKey: ctx.providerRecoveryKey } : {}),
-          onStarted: resolveStarted,
-        }).catch(async (error: unknown) => {
-          try {
-            if (ctx.engine)
-              await finishFailedThreadRun(
-                runId,
-                thread.id,
-                ctx.projectRoot,
-                ctx.engine,
-                ctx.eventStore,
-                error,
-              );
-          } catch (settleError) {
-            console.error("Could not record failed thread run", settleError);
-          } finally {
-            rejectStarted(error);
-          }
-        });
-        await started;
-      }
+      const message = await sendMessage(ctx.app, threadId, body.content, {
+        startRun: body.startRun !== false,
+      });
       sendJson(ctx.response, 201, message);
     },
   },

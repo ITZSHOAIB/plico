@@ -26,12 +26,11 @@ resumes it only for the same project and provider account. A model change alone
 does not prevent recovery. A mismatched account leaves the message queued rather
 than sending its content to a different account.
 
-Hosts using `createPlicoServer` can enable these routes by passing a
-`threadStore` from `createSqliteThreadStore({ databasePath })`. If no thread
-store is supplied, thread routes return a `threads.unavailable` error.
-The host owns an injected thread store and must call its `close()` method when
-it is no longer needed. `servePlico` owns its thread store and closes it when
-the server shuts down. Hosts using `createPlicoServer` should call and await the
-returned `recover()` method at startup, supplying stable provider recovery and
-account keys in the server options when using a provider. Readiness reports a
-thread and run store mismatch before a run is started.
+A host that embeds Plico calls `createPlico({ projectRoot, databasePath })` from
+`@plico/server`. It opens the thread store, run store, engine and provider from the
+project and the database path, recovers interrupted runs, resumes queued ones, and
+returns `plico.threads` (create, get, list, rename, messages, send), `plico.runs`
+(start, get, list, cancel, events) and `plico.approvals`. Call `await plico.close()`
+before the process exits; it stops open event iterators and closes the thread store.
+`servePlico` is `createPlico` plus an HTTP listener and closes Plico when the server
+closes. Readiness reports a thread and run store mismatch before a run is started.

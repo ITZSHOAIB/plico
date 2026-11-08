@@ -13,7 +13,8 @@ import {
   modelProviderAccountKey,
 } from "@plico/runtime";
 import { expect, it, vi } from "vitest";
-import { createPlicoServer, servePlico } from "./index.js";
+import { servePlico } from "./index.js";
+import { createTestServer } from "./testing/test-server.js";
 
 it("starts a provider run from a thread message and persists its answer", async () => {
   const root = await mkdtemp(join(tmpdir(), "plico-thread-run-"));
@@ -28,7 +29,7 @@ it("starts a provider run from a thread message and persists its answer", async 
   const eventStore = createSqliteEventStore({ databasePath });
   const threadStore = createSqliteThreadStore({ databasePath });
   const seen: Array<Array<{ role: string; content: string }>> = [];
-  const api = await createPlicoServer({
+  const api = await createTestServer({
     projectRoot: root,
     eventStore,
     threadStore,
@@ -108,7 +109,7 @@ it("releases a thread when its run fails before it starts", async () => {
       return backing.appendEvent(event);
     },
   };
-  const api = await createPlicoServer({
+  const api = await createTestServer({
     projectRoot: root,
     eventStore,
     threadStore,
@@ -151,7 +152,7 @@ it("rejects starting runs when thread and run stores use different databases", a
   const eventStore = createSqliteEventStore({ databasePath: join(root, "runs.sqlite") });
   const threadStore = createSqliteThreadStore({ databasePath: join(root, "threads.sqlite") });
   const thread = await threadStore.createThread();
-  const api = await createPlicoServer({
+  const api = await createTestServer({
     projectRoot: root,
     eventStore,
     threadStore,
@@ -346,7 +347,7 @@ it("releases a thread when the engine cannot begin the run", async () => {
       return memory.begin(...args);
     },
   };
-  const api = await createPlicoServer({
+  const api = await createTestServer({
     projectRoot: root,
     eventStore,
     threadStore,
@@ -413,7 +414,7 @@ it("exposes recovery to hosts that create their own server", async () => {
     providerKey: accountKey,
     projectRoot: root,
   });
-  const api = await createPlicoServer({
+  const api = await createTestServer({
     projectRoot: root,
     eventStore,
     threadStore,
@@ -463,7 +464,7 @@ it("reports mismatched stores without starting or changing a queued run", async 
   const stream = vi.fn(async function* () {
     yield { type: "text" as const, text: "Recovered" };
   });
-  const api = await createPlicoServer({
+  const api = await createTestServer({
     projectRoot: root,
     eventStore,
     threadStore,
@@ -500,7 +501,7 @@ it("does not accept another message while the thread's run is active", async () 
   const blocked = new Promise<void>((resolve) => {
     release = resolve;
   });
-  const api = await createPlicoServer({
+  const api = await createTestServer({
     projectRoot: root,
     eventStore,
     threadStore,

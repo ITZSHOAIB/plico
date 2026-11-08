@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createSqliteEventStore, createSqliteThreadStore, runProject } from "@plico/runtime";
 import { afterEach, expect, it, vi } from "vitest";
-import { createPlicoServer } from "./index.js";
+import { createTestServer } from "./testing/test-server.js";
 
 const servers: Server[] = [];
 
@@ -61,7 +61,7 @@ it("projects thread files, inherited run workspaces, versions, diffs, and export
   expect(first.status).toBe("completed");
   expect(second.status).toBe("completed");
   expect(third.status).toBe("completed");
-  const api = await createPlicoServer({ projectRoot: root, eventStore, threadStore });
+  const api = await createTestServer({ projectRoot: root, eventStore, threadStore });
   const server = createServer(api.requestListener);
   servers.push(server);
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));

@@ -1,7 +1,12 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { Engine, EventStore, ModelProvider, ThreadStore } from "@plico/runtime";
+import type { AppDeps } from "../app/types.js";
 
 export interface RouteContext {
+  /** The shared layer the thread and run routes call. */
+  app: AppDeps;
+  /** Aborts when the host closes Plico, so open event streams end. */
+  stop: AbortSignal;
   projectRoot: string;
   eventStore: EventStore;
   threadStore: ThreadStore | undefined;

@@ -1,0 +1,68 @@
+import type { PlicoEvent, RunSummary, Thread, ThreadMessage } from "@plico/contracts";
+import type {
+  DryRunScriptStep,
+  Engine,
+  EventStore,
+  ModelProvider,
+  ThreadStore,
+} from "@plico/runtime";
+
+/** What the shared layer runs on. Internal: hosts pass a project folder to `createPlico` instead. */
+export interface AppDeps {
+  projectRoot: string;
+  eventStore: EventStore;
+  threadStore?: ThreadStore;
+  provider?: ModelProvider;
+  providerRecoveryKey?: string;
+  /** Account-only identity used to resume queued runs after a model change. */
+  providerAccountKey?: string;
+  engine: Engine;
+}
+
+export interface EventFollowOptions {
+  /** Yield events after this sequence number. Defaults to the start of the run. */
+  after?: number;
+  /** Stops following. The iterator then ends without error. */
+  signal?: AbortSignal;
+  /** Milliseconds between reads of the event log. Defaults to 2000. */
+  pollMs?: number;
+}
+
+export interface SendMessageOptions {
+  /** Record the message without starting a run. Defaults to true. */
+  startRun?: boolean;
+}
+
+export interface Plico {
+  threads: {
+    create(): Promise<Thread>;
+    get(threadId: string): Promise<Thread | undefined>;
+    list(): Promise<Thread[]>;
+    /** Rejects with `thread.not_found` for an unknown thread. */
+    rename(threadId: string, title: string): Promise<Thread>;
+    messages(threadId: string): Promise<ThreadMessage[]>;
+    /**
+     * Records a user message and, unless `startRun` is false, starts the run that answers it. The
+     * returned message carries the `runId`. Rejects with `thread.busy` while another run is active.
+     */
+    send(threadId: string, content: string, options?: SendMessageOptions): Promise<ThreadMessage>;
+  };
+  runs: {
+    /**
+     * Starts a run that has no thread and no model, running the optional script against the
+     * project's tools. Provider-backed runs start through `threads.send`.
+     */
+    start(options?: { script?: DryRunScriptStep[] }): Promise<{ runId: string }>;
+    get(runId: string): Promise<RunSummary | undefined>;
+    list(): Promise<RunSummary[]>;
+    cancel(runId: string): Promise<string>;
+    /** Follows a run's events from a cursor until it reaches a terminal state or is stopped. */
+    events(runId: string, options?: EventFollowOptions): AsyncGenerator<PlicoEvent, void, void>;
+  };
+  approvals: {
+    /** Delivers an approval decision to a waiting run. Returns the engine's signal result. */
+    decide(runId: string, requestId: string, approved: boolean): Promise<string>;
+  };
+  /** Stops following events, waits for recovery and closes the stores Plico opened. */
+  close(): Promise<void>;
+}
