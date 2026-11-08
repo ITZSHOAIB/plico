@@ -1,5 +1,4 @@
 import type { BaseLayoutProps } from "fumadocs-ui/layouts/shared";
-import { BookOpen, Terminal } from "lucide-react";
 import { appName, gitConfig } from "./shared";
 
 function Brand() {
@@ -20,12 +19,7 @@ export function baseOptions(): BaseLayoutProps {
   return {
     nav: {
       title: <Brand />,
-      transparentMode: "top",
     },
     githubUrl: `https://github.com/${gitConfig.user}/${gitConfig.repo}`,
-    links: [
-      { icon: <BookOpen />, text: "Docs", url: "/docs", active: "nested-url" },
-      { icon: <Terminal />, text: "CLI", url: "/docs/cli" },
-    ],
   };
 }

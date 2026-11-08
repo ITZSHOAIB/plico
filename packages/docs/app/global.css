@@ -79,17 +79,7 @@ pre {
   background: var(--plico-accent-line);
 }
 
-/* A verdigris rule across the top of every page. */
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0 0 auto 0;
-  z-index: 60;
-  height: 3px;
-  background: linear-gradient(90deg, var(--plico-accent), var(--plico-accent-strong));
-}
-
-/* Body copy: links, headings, inline code and quotes carry the brand. */
+/* Accent is used sparingly: links, the active page, and selection. */
 .prose a:not([data-card]) {
   color: var(--plico-accent);
   text-decoration-color: var(--plico-accent-line);
@@ -97,54 +87,11 @@ body::before {
 }
 .prose a:not([data-card]):hover {
   color: var(--plico-accent-strong);
-  text-decoration-color: currentColor;
 }
-.prose :is(h2, h3, h4) a {
+.prose :is(h1, h2, h3, h4) a {
   color: inherit;
 }
-.prose h2 {
-  border-bottom: 1px solid var(--plico-accent-line);
-  padding-bottom: 0.35em;
-}
-.prose :not(pre) > code {
-  background: var(--plico-accent-soft);
-  border: 1px solid var(--plico-accent-line);
-  color: var(--plico-accent-strong);
-}
-.prose blockquote {
-  border-inline-start-color: var(--plico-accent);
-}
-.prose :is(th) {
-  background: var(--plico-accent-soft);
-  color: var(--plico-accent-strong);
-}
-
-/* Code blocks: a verdigris edge and a tinted title bar. */
-figure.shiki {
-  border-color: var(--plico-accent-line);
-  box-shadow: inset 3px 0 0 var(--plico-accent);
-}
-
-/* Navigation: the active page and the on-this-page marker. */
-#nd-sidebar a[data-active="true"] {
-  background: var(--plico-accent-soft);
-  color: var(--plico-accent-strong);
-  font-weight: 600;
-}
-#nd-sidebar a[data-active="false"]:hover {
-  color: var(--plico-accent);
-}
+#nd-sidebar a[data-active="true"],
 #nd-toc a[data-active="true"] {
-  color: var(--plico-accent);
-}
-
-/* Cards lift toward the brand on hover. */
-a[data-card] {
-  transition:
-    border-color 150ms,
-    background-color 150ms;
-}
-a[data-card]:hover {
-  border-color: var(--plico-accent);
-  background: var(--plico-accent-soft);
+  color: var(--plico-accent-strong);
 }
