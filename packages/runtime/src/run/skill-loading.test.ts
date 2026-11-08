@@ -14,15 +14,17 @@ async function scaffold(skills: Record<string, string>): Promise<string> {
     'export default { schemaVersion: 1, name: "Demo" };',
   );
   await writeFile(join(root, "agent.md"), "# Demo\n\nUse your skills.");
-  for (const [file, text] of Object.entries(skills))
-    await writeFile(join(root, "skills", file), text);
+  for (const [name, text] of Object.entries(skills)) {
+    await mkdir(join(root, "skills", name));
+    await writeFile(join(root, "skills", name, "SKILL.md"), text);
+  }
   return root;
 }
 
 const triage = "---\ndescription: Sort urgent work first.\n---\n# Triage\n\nFull triage steps.";
 
 it("lists skill names and descriptions in the instructions, not their bodies", async () => {
-  const root = await scaffold({ "triage.md": triage });
+  const root = await scaffold({ triage: triage });
 
   const run = await runProject(root);
 
@@ -32,7 +34,7 @@ it("lists skill names and descriptions in the instructions, not their bodies", a
   };
   expect(payload.content).toContain("- triage: Sort urgent work first.");
   expect(payload.content).not.toContain("Full triage steps.");
-  expect(payload.sources).toEqual(["agent.md", "skills/triage.md"]);
+  expect(payload.sources).toEqual(["agent.md", "skills/triage/SKILL.md"]);
 });
 
 it("offers load_skill only when the project has skills", async () => {
@@ -50,12 +52,12 @@ it("offers load_skill only when the project has skills", async () => {
     return (tools ?? []).map((tool) => tool.name).filter((name) => name === "load_skill");
   };
 
-  expect(await offered({ "triage.md": triage })).toEqual(["load_skill"]);
+  expect(await offered({ triage: triage })).toEqual(["load_skill"]);
   expect(await offered({})).toEqual([]);
 });
 
 it("loads a full skill through a tool call that is recorded as events", async () => {
-  const root = await scaffold({ "triage.md": triage });
+  const root = await scaffold({ triage: triage });
   const results: string[] = [];
   const calls = [
     { name: "load_skill", arguments: { name: "triage" } },
@@ -90,4 +92,16 @@ it("loads a full skill through a tool call that is recorded as events", async ()
   expect(run.events.find((event) => event.type === "tool.result")?.payload).toMatchObject({
     toolName: "load_skill",
   });
+});
+
+it("never sends agent.md frontmatter to the model", async () => {
+  const root = await scaffold({});
+  await writeFile(join(root, "agent.md"), "---\nmodel: fast\n---\n# Demo\n\nUse your skills.");
+
+  const run = await runProject(root);
+
+  const payload = run.events.find((event) => event.type === "instructions.composed")?.payload as {
+    content: string;
+  };
+  expect(payload.content).toBe("# Demo\n\nUse your skills.");
 });

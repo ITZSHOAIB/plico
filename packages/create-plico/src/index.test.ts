@@ -20,9 +20,9 @@ describe("createInternalOpsScaffold", () => {
     expect(result.errors).toHaveLength(0);
     expect(result.warnings).toHaveLength(0);
     expect(configText).toContain('template: "internal-ops"');
-    expect(await readFile(join(projectPaths.directories.skills, "triage.md"), "utf8")).toContain(
-      "smallest safe next step",
-    );
+    expect(
+      await readFile(join(projectPaths.directories.skills, "triage", "SKILL.md"), "utf8"),
+    ).toContain("smallest safe next step");
     expect(await readFile(join(projectPaths.directories.tools, "readme.md"), "utf8")).toContain(
       "file-first",
     );

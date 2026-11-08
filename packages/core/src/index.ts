@@ -1,3 +1,4 @@
+export { AGENT_FRONTMATTER_KEYS, parseAgentFile } from "./agent-file.js";
 export { installAuthoringFallback } from "./authoring.js";
 export { loadProject } from "./config.js";
 export { type Frontmatter, parseFrontmatter } from "./frontmatter.js";

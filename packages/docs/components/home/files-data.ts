@@ -17,7 +17,7 @@ export const sources: SourceFile[] = [
     ],
   },
   {
-    path: "skills/triage.md",
+    path: "skills/triage/SKILL.md",
     label: "Teach a workflow",
     lines: [
       "# Triage a request",

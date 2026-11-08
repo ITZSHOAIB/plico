@@ -31,7 +31,12 @@ export async function createInternalOpsScaffold(options: ScaffoldOptions): Promi
   await writeFile(projectPaths.configFile, configFile(projectName), "utf8");
   await writeFile(join(root, "package.json"), packageFile(), "utf8");
   await writeFile(projectPaths.agentFile, agentFile(projectName), "utf8");
-  await writeFile(join(projectPaths.directories.skills, "triage.md"), triageSkillFile(), "utf8");
+  await mkdir(join(projectPaths.directories.skills, "triage"), { recursive: true });
+  await writeFile(
+    join(projectPaths.directories.skills, "triage", "SKILL.md"),
+    triageSkillFile(),
+    "utf8",
+  );
   await writeFile(join(projectPaths.directories.tools, "readme.md"), toolsReadmeFile(), "utf8");
   await writeFile(join(projectPaths.directories.evals, "smoke.md"), smokeEvalFile(), "utf8");
   await writeFile(join(projectPaths.directories.memory, "README.md"), memoryReadmeFile(), "utf8");
