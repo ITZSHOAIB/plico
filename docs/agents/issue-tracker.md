@@ -30,7 +30,7 @@ GitHub shares one number space across issues and PRs, so a bare `#42` may be eit
 
 Delivery tickets are epics: one issue labelled `epic`, with one demoable outcome and a milestone. Do not break an epic into separate implementation issues.
 
-- List an epic's slices as a checklist in its body. Each slice is one PR, using `Part of #<epic>`; only the last slice uses `Closes #<epic>`.
+- List an epic's slices as a checklist in its body. A PR may bundle several slices, from one epic or from more than one, to keep pace toward release (maintainer, 2026-11-08). Tick every slice a PR covers. Use `Part of #<epic>` for each epic it touches; only the PR that finishes an epic uses `Closes #<epic>`. Keep the TDD slices inside the PR, and merge to `main` before starting the next PR.
 - When a skill such as `/to-tickets` would create several small issues, add the work to an existing epic's slices, or create one new epic if the outcome is new.
 - Do not open planning tickets or maps. Keep decisions and open questions in the epic body.
 
