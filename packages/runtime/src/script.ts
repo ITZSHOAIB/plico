@@ -22,7 +22,13 @@ function normalizeStep(step: unknown, index: number): DryRunScriptStep {
     if (typeof step.toolName !== "string") {
       throw new ScriptValidationError(`${prefix} must include a toolName.`);
     }
-    return { type: "tool.call", toolName: step.toolName, arguments: step.arguments };
+    return {
+      type: "tool.call",
+      toolName: step.toolName,
+      arguments: step.arguments,
+      ...("result" in step ? { result: step.result } : {}),
+      ...(step.live === true ? { live: true as const } : {}),
+    };
   }
   if (step.type === "artifact.write") {
     if (!Array.isArray(step.files)) {

@@ -1,4 +1,4 @@
-import { join } from "node:path";
+import { getProjectPaths } from "@plico/core";
 import { runProject } from "../run/index.js";
 import type { EvalCaseResult, EvalSummary, RunEvalsOptions } from "../types/index.js";
 import { digestEvalFixtures, discoverEvalCases } from "./discover.js";
@@ -7,7 +7,7 @@ export async function runEvals(
   projectRoot: string,
   options: RunEvalsOptions = {},
 ): Promise<EvalSummary> {
-  const evalsDir = join(projectRoot, "evals");
+  const evalsDir = getProjectPaths(projectRoot).directories.evals;
   const cases = await discoverEvalCases(evalsDir);
   const fixturesDigest = await digestEvalFixtures(evalsDir);
 
@@ -17,6 +17,7 @@ export async function runEvals(
     const runId = `eval-${evalCase.name.replace(/[^a-z0-9_-]/gi, "_")}-${crypto.randomUUID().slice(0, 8)}`;
     const runOpts: Record<string, unknown> = {
       script: evalCase.script,
+      mockTools: true,
       runId,
     };
     if (options.eventStore !== undefined) runOpts.eventStore = options.eventStore;
@@ -43,6 +44,11 @@ export async function runEvals(
           `Expected output to contain "${evalCase.expect.outputContains}" but got "${output}"`,
         );
       }
+    }
+
+    for (const event of result.events) {
+      if (event.type === "run.error" && typeof event.payload.message === "string")
+        diagnostics.push(event.payload.message);
     }
 
     if (result.errors?.length) {

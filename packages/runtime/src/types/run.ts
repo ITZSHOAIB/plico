@@ -6,6 +6,11 @@ import type { EventStore } from "./store.js";
 
 export interface RunProjectOptions {
   script?: DryRunScriptStep[];
+  /**
+   * Do not run tool handlers for scripted `tool.call` steps. Each step supplies its output as
+   * `result`; a step without one fails the run, and `live: true` opts a step back in to its handler.
+   */
+  mockTools?: boolean;
   eventStore?: EventStore;
   /** Runs the loop durably. Defaults to an in-memory engine that does not survive the process. */
   engine?: Engine;
