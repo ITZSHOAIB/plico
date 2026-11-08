@@ -10,6 +10,7 @@
     "format": "biome format --write .",
     "lint": "biome check .",
     "test": "vitest run",
+    "smoke:tarballs": "node scripts/smoke-tarballs.mjs",
     "test:watch": "vitest",
     "prepare": "husky"
   },
