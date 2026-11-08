@@ -1,10 +1,12 @@
 export function configFile(projectName: string): string {
   return [
-    "export default {",
+    'import { defineConfig } from "plico";',
+    "",
+    "export default defineConfig({",
     "  schemaVersion: 1,",
     `  name: ${JSON.stringify(projectName)},`,
     '  template: "internal-ops",',
-    "} as const;",
+    "});",
     "",
   ].join("\n");
 }
@@ -60,6 +62,8 @@ export function toolsReadmeFile(): string {
     "Set `inputSchema` to a JSON Schema object or a Zod 3 or 4 schema. Plico validates each call and",
     "sends JSON Schema to the model. Parsed Zod values, including defaults, reach the handler. Add",
     "`zod` to this project's dependencies before importing it in a tool.",
+    "",
+    'Wrap a tool in `defineTool` from `"plico"` to type the handler `input` from its `inputSchema`.',
     "",
   ].join("\n");
 }

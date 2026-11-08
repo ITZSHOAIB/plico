@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
+import { defineTool } from "plico";
 
-export default {
+export default defineTool({
   name: "create_ticket",
   description: "Create a support ticket for the internal ops team.",
   inputSchema: {
@@ -22,4 +23,4 @@ export default {
     );
     return { ticketId };
   },
-} as const;
+});

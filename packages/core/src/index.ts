@@ -1,3 +1,4 @@
+export { installAuthoringFallback } from "./authoring.js";
 export { loadProject } from "./config.js";
 export {
   getProjectPaths,

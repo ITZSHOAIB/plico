@@ -97,6 +97,12 @@ that schema and sends JSON Schema to the model. Parsed Zod values, including
 defaults and transforms, reach the handler. Add `zod` to the project dependencies
 before importing it from a tool.
 
+Wrap a tool in `defineTool` and the config in `defineConfig`, both from `plico`,
+to get editor types. `defineTool` infers the handler `input` from `inputSchema`,
+so `input.title` is a `string` for a JSON Schema with a required string `title`.
+Both helpers return their argument unchanged, and Plico finds them without a
+`node_modules` in the project, so a global `plico` install works with them.
+
 Each tool handler receives `artifacts` alongside its abort signal and
 idempotency key. Use `artifacts.write(path, content, { mimeType })` to stage
 text or `Uint8Array` content, `artifacts.read(path)` to read the current file,
