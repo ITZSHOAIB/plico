@@ -1,0 +1,28 @@
+---
+title: CLI
+description: The plico commands.
+icon: Terminal
+---
+
+| Command | What it does |
+| --- | --- |
+| `plico validate [path]` | Validates a project and prints diagnostics. |
+| `plico run --dry [path]` | Runs the project with a scripted model. |
+| `plico cancel <run-id> <project>` | Cancels an active persisted run. |
+| `plico runs` | Lists saved runs. |
+| `plico events` | Prints a run's event log. |
+| `plico eval` | Runs the project's scripted evals. |
+| `plico readiness` | Reports readiness diagnostics. |
+| `plico serve [path]` | Starts the HTTP API. |
+
+## serve
+
+`plico serve --studio <project>` also serves the bundled Studio. Other options:
+
+- `--allow-remote` exposes the server on another host. See [HTTP API](/docs/http-api).
+- `--allow-script` lets API callers send scripted runs. See [HTTP API](/docs/http-api).
+
+## Help and unknown flags
+
+`plico validate --help` shows validation usage. Unknown flags are reported as errors.
+`plico runs` reports clearly when a project has no saved runs.

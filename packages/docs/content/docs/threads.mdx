@@ -1,0 +1,52 @@
+---
+title: Threads
+description: Multi-turn conversations stored alongside runs.
+icon: MessagesSquare
+---
+
+`plico serve` stores threads and user messages in the same SQLite database as runs.
+Create a thread with `POST /v1/threads` (HTTP 201), list threads with
+`GET /v1/threads`, and read one at `GET /v1/threads/:id`. Post a message as
+`{ "content": "Hello" }` to `POST /v1/threads/:id/messages`, and read its history
+with `GET /v1/threads/:id/messages`.
+
+## Messages and runs
+
+When a provider is configured, posting a message reserves and starts a run and
+returns its `runId`. The run uses earlier thread messages as conversation history,
+and its successful answer is recorded as an assistant message.
+
+- Only one run per thread may be active. A concurrent message receives
+  `thread.busy` (HTTP 409).
+- Stream run events at `GET /v1/runs/:runId/events/stream`. Reconnect with
+  `Last-Event-ID` or `?after=`.
+- Without a configured provider the endpoint returns an actionable error. To store a
+  message without starting a run, include `"startRun": false`.
+
+## Titles
+
+Threads get a `title` once the conversation has a topic. After each of a thread's
+first three replies, Plico names it from the words the user used, so a greeting such
+as "Hi" leaves it untitled until there is something to name. The rule runs locally
+with no model call, and the assistant's text can only confirm a topic, not add one.
+
+`PATCH /v1/threads/<thread-id>` with `{ "title": "..." }` (up to 200 characters)
+renames a thread. A title set that way is never replaced. Studio shows titles in the
+thread list and the chat header, where a pencil icon renames the conversation.
+
+## Recovery
+
+If a server stops after reserving a run but before starting it, `servePlico` resumes
+it only for the same project and provider account. A model change alone does not
+prevent recovery. A mismatched account leaves the message queued rather than sending
+its content to a different account.
+
+## Embedding
+
+Hosts using `createPlicoServer` enable thread routes by passing a `threadStore` from
+`createSqliteThreadStore({ databasePath })`. Without one, thread routes return a
+`threads.unavailable` error. The host owns an injected thread store and must call its
+`close()` when it is no longer needed; `servePlico` owns its store and closes it on
+shutdown. Hosts should also await the returned `recover()` method at startup,
+supplying stable provider recovery and account keys when they use a provider.
+Readiness reports a thread and run store mismatch before a run is started.

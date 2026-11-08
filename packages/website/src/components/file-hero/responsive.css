@@ -104,7 +104,11 @@
     line-height: 1.85;
   }
   .fh-code-stack {
-    min-height: 216px;
+    min-height: 0;
+  }
+  /* One pane at a time here, so the panel fits the active file instead of the tallest one. */
+  .fh-code-stack .fh-code[hidden] {
+    display: none;
   }
   .fh-code-line {
     min-height: 22px;

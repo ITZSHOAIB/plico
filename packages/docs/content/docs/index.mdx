@@ -1,0 +1,35 @@
+---
+title: Welcome to Plico
+description: A folder of Markdown and TypeScript becomes a runnable, inspectable agent app.
+icon: House
+---
+
+Plico is a **TypeScript-first agent app kit**. A folder of Markdown instructions,
+skills, TypeScript tools, config, evals, memory, and artifacts becomes a runnable,
+inspectable agent app.
+
+<Callout>Plico needs Node 22.18 or later.</Callout>
+
+## Why Plico?
+
+Most agent frameworks lock you into an SDK, a provider, or a runtime. Plico starts
+from a different premise: **your agent should be a folder of files** — readable,
+version-controllable, reviewable alongside your app code.
+
+## Core principles
+
+- **File-first.** The project model is a directory tree. No black boxes, no hidden
+  state. Everything is a file you can read, edit, and commit.
+- **Event-native.** Every run produces a replayable canonical trace. Studio, evals,
+  artifacts, and streams all derive from that one log.
+- **Provider-agnostic.** Adapters map provider shapes to the project contract. Swap
+  models and providers without rewriting your agent.
+
+## Where to go next
+
+<Cards>
+  <Card title="Quickstart" href="/docs/quickstart">Scaffold, validate, and run a project.</Card>
+  <Card title="Project layout" href="/docs/project-layout">What each file and folder does.</Card>
+  <Card title="Tools" href="/docs/tools">Typed TypeScript tools with `defineTool`.</Card>
+  <Card title="Studio" href="/docs/studio">Inspect runs, approve tool calls, and chat.</Card>
+</Cards>

@@ -1,0 +1,15 @@
+{
+  "pages": [
+    "index",
+    "quickstart",
+    "---Build---",
+    "project-layout",
+    "tools",
+    "artifacts",
+    "---Run---",
+    "studio",
+    "threads",
+    "http-api",
+    "cli"
+  ]
+}
