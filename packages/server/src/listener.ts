@@ -1,7 +1,9 @@
 import type { RequestListener } from "node:http";
+import { getRequestListener } from "@hono/node-server";
+import { Hono } from "hono";
 import { internalsOf } from "./app/assemble.js";
 import type { Plico } from "./app/types.js";
-import { HttpError, sendError } from "./errors.js";
+import { errorResponse, HttpError } from "./errors.js";
 import { assertTrustedRequest } from "./origin-guard.js";
 import { handleRequest } from "./routes/index.js";
 import { serveStaticFile } from "./serve-static.js";
@@ -27,42 +29,54 @@ export interface ListenerOptions {
   allowScript?: boolean;
 }
 
-/** Serves the `/v1` API, and Studio when `studioPath` is set, over one `Plico`. */
-export function createRequestListener(
-  plico: Plico,
-  options: ListenerOptions = {},
-): RequestListener {
+/** The `/v1` API, and Studio when `studioPath` is set, over one `Plico`, as a Hono app. */
+export function createApi(plico: Plico, options: ListenerOptions = {}): Hono {
   const { deps, stop } = internalsOf(plico);
   const { studioPath } = options;
-  return async (request, response) => {
+  const api = new Hono();
+
+  api.use("*", async (context, next) => {
     try {
-      assertTrustedRequest(request, {
+      assertTrustedRequest(context.req.raw, {
         allowRemote: options.allowRemote === true,
         publicOrigin: options.publicOrigin,
       });
     } catch (error) {
       if (!(error instanceof HttpError)) throw error;
-      sendError(response, error.status, error.code, error.message);
-      return;
+      return errorResponse(error.status, error.code, error.message);
     }
-    const url = new URL(request.url ?? "/", "http://127.0.0.1");
+    await next();
+  });
+
+  api.all("*", async (context) => {
+    const request = context.req.raw;
+    const url = new URL(request.url);
     const isApiPath = url.pathname === "/health" || url.pathname.startsWith("/v1/");
-    const context = {
-      app: deps,
-      stop,
-      studioPath,
-      allowScript: options.allowScript === true,
-      request,
-      response,
-    };
+    const route = () =>
+      handleRequest({
+        app: deps,
+        stop,
+        studioPath,
+        allowScript: options.allowScript === true,
+        request,
+      });
 
-    if (isApiPath || !studioPath) {
-      await handleRequest(context);
-      return;
-    }
+    if (isApiPath || !studioPath) return route();
+    return (
+      (await serveStaticFile(studioPath, url.pathname)) ??
+      (await serveStaticFile(studioPath, "/index.html")) ??
+      route()
+    );
+  });
 
-    const served = await serveStaticFile(studioPath, url.pathname, response);
-    if (served) return;
-    await serveStaticFile(studioPath, "/index.html", response);
-  };
+  return api;
+}
+
+/** `createApi` for a Node server. It never replaces the global `Request` or `Response`. */
+export function createRequestListener(
+  plico: Plico,
+  options: ListenerOptions = {},
+): RequestListener {
+  const api = createApi(plico, options);
+  return getRequestListener((request) => api.fetch(request), { overrideGlobalObjects: false });
 }

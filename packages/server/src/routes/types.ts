@@ -1,4 +1,3 @@
-import type { IncomingMessage, ServerResponse } from "node:http";
 import type { Engine, EventStore, ModelProvider, ThreadStore } from "@plico/runtime";
 import type { AppDeps } from "../app/types.js";
 
@@ -18,8 +17,7 @@ export interface RouteContext {
   studioPath: string | undefined;
   /** Whether a request may carry a `script` that drives project tools without a model. */
   allowScript: boolean;
-  request: IncomingMessage;
-  response: ServerResponse;
+  request: Request;
   url: URL;
   /** Decoded capture groups from the route pattern, in order. */
   params: string[];
@@ -28,5 +26,5 @@ export interface RouteContext {
 export interface Route {
   method: "GET" | "POST" | "PATCH";
   pattern: RegExp;
-  handler: (context: RouteContext) => Promise<void>;
+  handler: (context: RouteContext) => Promise<Response>;
 }

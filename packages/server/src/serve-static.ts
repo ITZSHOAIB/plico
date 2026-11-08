@@ -1,5 +1,4 @@
 import { readFile } from "node:fs/promises";
-import type { ServerResponse } from "node:http";
 import { isAbsolute, join, normalize, relative, resolve } from "node:path";
 
 const MIME_TYPES: Record<string, string> = {
@@ -13,32 +12,31 @@ const MIME_TYPES: Record<string, string> = {
   ".woff2": "font/woff2",
 };
 
+/** Answers with the file at `pathname` under `root`, or undefined when there is no such file. */
 export async function serveStaticFile(
   root: string,
   pathname: string,
-  response: ServerResponse,
-): Promise<boolean> {
+): Promise<Response | undefined> {
   let decoded: string;
   try {
     decoded = decodeURIComponent(pathname);
   } catch {
-    return false;
+    return undefined;
   }
 
   const safePath = normalize(join(resolve(root), decoded === "/" ? "index.html" : decoded));
   const fromRoot = relative(resolve(root), safePath);
   if (fromRoot.startsWith("..") || isAbsolute(fromRoot)) {
-    return false;
+    return undefined;
   }
 
   try {
     const content = await readFile(safePath);
     const ext = safePath.substring(safePath.lastIndexOf("."));
-    response.statusCode = 200;
-    response.setHeader("content-type", MIME_TYPES[ext] ?? "application/octet-stream");
-    response.end(content);
-    return true;
+    return new Response(content, {
+      headers: { "content-type": MIME_TYPES[ext] ?? "application/octet-stream" },
+    });
   } catch {
-    return false;
+    return undefined;
   }
 }

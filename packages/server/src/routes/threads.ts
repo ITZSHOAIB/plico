@@ -9,7 +9,7 @@ import {
 } from "../app/threads.js";
 import { readJsonBody, readOptionalJsonBody } from "../body.js";
 import { HttpError } from "../errors.js";
-import { sendJson } from "../responses.js";
+import { jsonResponse } from "../responses.js";
 import { readMetadataFilter } from "./metadata-query.js";
 import type { Route } from "./types.js";
 
@@ -19,20 +19,19 @@ export const threadRoutes: Route[] = [
     pattern: /^\/v1\/threads$/,
     handler: async (ctx) => {
       const { metadata } = await readOptionalJsonBody(ctx.request);
-      sendJson(ctx.response, 201, await createThread(ctx.app, { metadata }));
+      return jsonResponse(201, await createThread(ctx.app, { metadata }));
     },
   },
   {
     method: "GET",
     pattern: /^\/v1\/threads$/,
     handler: async (ctx) =>
-      sendJson(ctx.response, 200, await listThreads(ctx.app, readMetadataFilter(ctx.url))),
+      jsonResponse(200, await listThreads(ctx.app, readMetadataFilter(ctx.url))),
   },
   {
     method: "GET",
     pattern: /^\/v1\/threads\/([^/]+)$/,
-    handler: async (ctx) =>
-      sendJson(ctx.response, 200, await requireThread(ctx.app, ctx.params[0] ?? "")),
+    handler: async (ctx) => jsonResponse(200, await requireThread(ctx.app, ctx.params[0] ?? "")),
   },
   {
     method: "PATCH",
@@ -41,20 +40,18 @@ export const threadRoutes: Route[] = [
       const threadId = ctx.params[0] ?? "";
       await requireThread(ctx.app, threadId);
       const { title } = await readJsonBody(ctx.request);
-      sendJson(ctx.response, 200, await renameThread(ctx.app, threadId, title));
+      return jsonResponse(200, await renameThread(ctx.app, threadId, title));
     },
   },
   {
     method: "GET",
     pattern: /^\/v1\/threads\/([^/]+)\/workspace$/,
-    handler: async (ctx) =>
-      sendJson(ctx.response, 200, await threadWorkspace(ctx.app, ctx.params[0] ?? "")),
+    handler: async (ctx) => jsonResponse(200, await threadWorkspace(ctx.app, ctx.params[0] ?? "")),
   },
   {
     method: "GET",
     pattern: /^\/v1\/threads\/([^/]+)\/messages$/,
-    handler: async (ctx) =>
-      sendJson(ctx.response, 200, await threadMessages(ctx.app, ctx.params[0] ?? "")),
+    handler: async (ctx) => jsonResponse(200, await threadMessages(ctx.app, ctx.params[0] ?? "")),
   },
   {
     method: "POST",
@@ -68,7 +65,7 @@ export const threadRoutes: Route[] = [
       const message = await sendMessage(ctx.app, threadId, body.content, {
         startRun: body.startRun !== false,
       });
-      sendJson(ctx.response, 201, message);
+      return jsonResponse(201, message);
     },
   },
 ];

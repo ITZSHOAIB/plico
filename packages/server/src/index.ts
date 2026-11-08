@@ -1,3 +1,4 @@
+export { PlicoError } from "./app/errors.js";
 export type {
   EventFollowOptions,
   Plico,
