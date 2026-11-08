@@ -9,6 +9,7 @@
     "---Run---",
     "studio",
     "threads",
+    "backend",
     "http-api",
     "cli"
   ]

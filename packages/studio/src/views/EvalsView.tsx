@@ -1,4 +1,5 @@
 import type { EvalsState } from "../hooks/useEvals";
+import { inspectionReason, useInspecting } from "../hooks/useInspection";
 import type { EvalCaseResult } from "../types";
 import { Button } from "../ui/Button";
 import { Icon } from "../ui/Icon";
@@ -15,6 +16,7 @@ const statusStyle = {
 } as const satisfies Record<EvalCaseResult["status"], object>;
 
 export function EvalsView({ evals, onOpenRun }: EvalsViewProps) {
+  const inspecting = useInspecting();
   const { report, selected, running, error, run, select } = evals;
 
   if (selected) {
@@ -70,7 +72,12 @@ export function EvalsView({ evals, onOpenRun }: EvalsViewProps) {
         ) : undefined
       }
       actions={
-        <Button variant="primary" onClick={run} disabled={running}>
+        <Button
+          variant="primary"
+          onClick={run}
+          disabled={running || inspecting}
+          title={inspecting ? inspectionReason : undefined}
+        >
           {running ? "Running…" : "Run evals"}
         </Button>
       }

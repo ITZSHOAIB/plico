@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { sendApprovalDecision } from "../api";
+import { inspectionReason, useInspecting } from "../hooks/useInspection";
 import { Button } from "../ui/Button";
 import { CodeBlock, Notice, sectionHeadingClass } from "../ui/Page";
 
@@ -11,6 +12,7 @@ interface ApprovalRequest {
 }
 
 export function ApprovalDecision({ runId, request }: { runId: string; request: ApprovalRequest }) {
+  const inspecting = useInspecting();
   const [submitting, setSubmitting] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -51,16 +53,21 @@ export function ApprovalDecision({ runId, request }: { runId: string; request: A
         <CodeBlock className="mt-2">{JSON.stringify(request.arguments, null, 2)}</CodeBlock>
       </details>
       {error && <Notice>{error}</Notice>}
+      {inspecting && <Notice>{inspectionReason}</Notice>}
       {status ? (
         <p role="status" className="m-0 text-small text-muted">
           {status}
         </p>
       ) : (
         <div className="flex flex-wrap gap-2">
-          <Button variant="primary" disabled={submitting} onClick={() => void decide(true)}>
+          <Button
+            variant="primary"
+            disabled={submitting || inspecting}
+            onClick={() => void decide(true)}
+          >
             {submitting ? "Sending…" : "Approve tool call"}
           </Button>
-          <Button disabled={submitting} onClick={() => void decide(false)}>
+          <Button disabled={submitting || inspecting} onClick={() => void decide(false)}>
             Deny tool call
           </Button>
         </div>

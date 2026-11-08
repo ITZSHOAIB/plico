@@ -34,6 +34,13 @@ export async function handleRequest(options: HandleRequestOptions): Promise<Resp
   const url = new URL(request.url);
 
   try {
+    if (app.inspect && request.method !== "GET" && request.method !== "HEAD")
+      return errorResponse(
+        403,
+        "inspection.read_only",
+        "This Plico server is inspection-only and does not change runs or threads.",
+      );
+
     const pathMatches = routes.filter(
       (route) => route.pattern.test(url.pathname) && !(app.scope && route.hostOnly),
     );
