@@ -32,7 +32,7 @@ Plico owns agent state: threads, runs, events, approvals, artifacts. The host ow
 
 HTTP-only options (`allowScript`, `allowRemote`, `publicOrigin`, `studioPath`) belong to the listener, not to `createPlico`.
 
-`plico.node()` and `plico.fetch()` mount the `/v1` API in a host (later slice). They take `scope` and `context` functions of the request.
+`plico.node()` and `plico.fetch()` mount the `/v1` API in a host. They take `scope` and `context` functions of the request.
 
 ## `scope`, `metadata` and `context`
 

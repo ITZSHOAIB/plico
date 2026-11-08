@@ -26,5 +26,7 @@ export interface RouteContext {
 export interface Route {
   method: "GET" | "POST" | "PATCH";
   pattern: RegExp;
+  /** Project-level routes. A scoped mount does not serve them. */
+  hostOnly?: true;
   handler: (context: RouteContext) => Promise<Response>;
 }

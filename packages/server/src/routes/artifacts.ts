@@ -5,16 +5,14 @@ import {
   readArtifactVersion,
 } from "@plico/runtime";
 import { createTwoFilesPatch } from "diff";
+import { requireRun } from "../app/runs.js";
 import { HttpError } from "../errors.js";
 import { jsonResponse } from "../responses.js";
 import type { Route, RouteContext } from "./types.js";
 
 async function readRunEvents(context: RouteContext, runId: string) {
   const { eventStore, threadStore } = context;
-  const run = await eventStore.getRun(runId);
-  if (!run) {
-    throw new HttpError(404, "run.not_found", `Unknown run ID: ${runId}`);
-  }
+  await requireRun(context.app, runId);
 
   const threadId = await threadStore?.getThreadForRun(runId);
   if (!threadId) return eventStore.getEvents(runId);

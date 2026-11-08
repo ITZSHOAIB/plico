@@ -34,7 +34,9 @@ export async function handleRequest(options: HandleRequestOptions): Promise<Resp
   const url = new URL(request.url);
 
   try {
-    const pathMatches = routes.filter((route) => route.pattern.test(url.pathname));
+    const pathMatches = routes.filter(
+      (route) => route.pattern.test(url.pathname) && !(app.scope && route.hostOnly),
+    );
     const route = pathMatches.find((candidate) => candidate.method === request.method);
     if (route) {
       const match = route.pattern.exec(url.pathname);

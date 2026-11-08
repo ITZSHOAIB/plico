@@ -6,6 +6,7 @@ import { finishFailedThreadRun } from "../thread-failure.js";
 import { PlicoError } from "./errors.js";
 import type { Metadata } from "./metadata.js";
 import { readMetadata } from "./metadata.js";
+import { inScope, scopedFilter, scopedMetadata } from "./scope.js";
 import type { AppDeps, SendMessageOptions } from "./types.js";
 
 const maxTitleLength = 200;
@@ -18,7 +19,8 @@ function storeFor(deps: AppDeps) {
 
 export async function requireThread(deps: AppDeps, threadId: string): Promise<Thread> {
   const thread = await storeFor(deps).getThread(threadId);
-  if (!thread) throw new PlicoError("thread.not_found", `Unknown thread ID: ${threadId}`);
+  if (!thread || !inScope(deps, thread.metadata))
+    throw new PlicoError("thread.not_found", `Unknown thread ID: ${threadId}`);
   return thread;
 }
 
@@ -26,18 +28,19 @@ export async function createThread(
   deps: AppDeps,
   options: { metadata?: unknown } = {},
 ): Promise<Thread> {
-  return storeFor(deps).createThread(readMetadata(options.metadata));
+  return storeFor(deps).createThread(scopedMetadata(deps, readMetadata(options.metadata)));
 }
 
-export function getThread(deps: AppDeps, threadId: string): Promise<Thread | undefined> {
-  return storeFor(deps).getThread(threadId);
+export async function getThread(deps: AppDeps, threadId: string): Promise<Thread | undefined> {
+  const thread = await storeFor(deps).getThread(threadId);
+  return thread && inScope(deps, thread.metadata) ? thread : undefined;
 }
 
 export async function listThreads(
   deps: AppDeps,
   filter: { metadata?: unknown } = {},
 ): Promise<Thread[]> {
-  const metadata = readMetadata(filter.metadata);
+  const metadata = scopedFilter(deps, readMetadata(filter.metadata));
   return storeFor(deps).listThreads(metadata === undefined ? {} : { metadata });
 }
 
@@ -90,7 +93,7 @@ export async function sendMessage(
   if (typeof content !== "string" || !content.trim())
     throw new PlicoError("message.invalid", "Message content must be a nonempty string.");
   const startRun = options.startRun !== false;
-  const context = readMetadata(options.context, "context");
+  const context = readMetadata(options.context, "context") ?? deps.context;
   const { provider } = deps;
   if (startRun && !provider)
     throw new PlicoError(

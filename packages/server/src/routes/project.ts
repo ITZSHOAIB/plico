@@ -6,6 +6,7 @@ import type { Route } from "./types.js";
 export const projectRoutes: Route[] = [
   {
     method: "GET",
+    hostOnly: true,
     pattern: /^\/v1\/project$/,
     handler: async ({ projectRoot }) => {
       const project = await loadProjectOrThrow(projectRoot);
@@ -14,6 +15,7 @@ export const projectRoutes: Route[] = [
   },
   {
     method: "GET",
+    hostOnly: true,
     pattern: /^\/v1\/instructions$/,
     handler: async ({ projectRoot }) => {
       const project = await loadProjectOrThrow(projectRoot);

@@ -1,3 +1,4 @@
+import { createFetchHandler, createNodeHandler } from "../mount.js";
 import { followEvents } from "./events.js";
 import { cancelRun, decideApproval, listRuns, startRun } from "./runs.js";
 import {
@@ -52,6 +53,8 @@ export function assemblePlico(
       decide: (runId, requestId, approved, options) =>
         decideApproval(deps, runId, requestId, approved, options),
     },
+    fetch: (options) => createFetchHandler({ deps, stop: stopper.signal }, options),
+    node: (options) => createNodeHandler({ deps, stop: stopper.signal }, options),
     close() {
       closing ??= (async () => {
         stopper.abort();
