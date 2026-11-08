@@ -109,7 +109,7 @@ describe("run inspection", () => {
     render(<App />);
     await openRun();
 
-    click("Raw events");
+    fireEvent.click(screen.getByRole("tab", { name: "Raw events" }));
 
     const raw = screen.getByLabelText("Raw events").textContent ?? "";
     expect(JSON.parse(raw)).toEqual(events);
