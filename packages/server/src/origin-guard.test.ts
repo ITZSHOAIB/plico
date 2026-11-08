@@ -22,6 +22,7 @@ async function start(
   const root = await mkdtemp(join(tmpdir(), "plico-origin-"));
   await mkdir(join(root, "skills"), { recursive: true });
   const plico = await createPlicoServer({
+    allowScript: true,
     projectRoot: root,
     eventStore: createSqliteEventStore({ databasePath: join(root, "db.sqlite") }),
     ...options,

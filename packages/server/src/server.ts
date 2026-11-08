@@ -66,6 +66,7 @@ export async function createPlicoServer(options: CreatePlicoServerOptions): Prom
         providerAccountKey: options.providerAccountKey,
         engine,
         studioPath,
+        allowScript: options.allowScript === true,
         request,
         response,
       };
@@ -144,6 +145,7 @@ export async function servePlico(options: ServePlicoOptions): Promise<Server> {
         engine,
         ...(options.studioPath === undefined ? {} : { studioPath: options.studioPath }),
         ...(options.allowRemote === undefined ? {} : { allowRemote: options.allowRemote }),
+        ...(options.allowScript === undefined ? {} : { allowScript: options.allowScript }),
       })
     ).requestListener,
   );

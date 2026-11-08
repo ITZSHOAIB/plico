@@ -37,6 +37,7 @@ async function startProject(options: { evalCase?: unknown; studioPath?: string }
   }
   const eventStore = createSqliteEventStore({ databasePath: join(root, "state.sqlite") });
   const api = await createPlicoServer({
+    allowScript: true,
     projectRoot: root,
     eventStore,
     ...(options.studioPath === undefined ? {} : { studioPath: options.studioPath }),
@@ -192,7 +193,12 @@ describe("readiness", () => {
     const threadStore = createSqliteThreadStore({
       databasePath: join(root, "threads.sqlite"),
     });
-    const api = await createPlicoServer({ projectRoot: root, eventStore, threadStore });
+    const api = await createPlicoServer({
+      allowScript: true,
+      projectRoot: root,
+      eventStore,
+      threadStore,
+    });
     try {
       const baseUrl = await listen(api.requestListener);
       const report = await getJson(`${baseUrl}/v1/readiness`);

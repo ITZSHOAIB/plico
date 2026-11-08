@@ -29,6 +29,7 @@ interface HandleRequestOptions {
   providerAccountKey: string | undefined;
   engine: Engine | undefined;
   studioPath: string | undefined;
+  allowScript: boolean;
   request: IncomingMessage;
   response: ServerResponse;
 }
@@ -43,6 +44,7 @@ export async function handleRequest(options: HandleRequestOptions): Promise<void
     providerAccountKey,
     engine,
     studioPath,
+    allowScript,
     request,
     response,
   } = options;
@@ -63,6 +65,7 @@ export async function handleRequest(options: HandleRequestOptions): Promise<void
         providerAccountKey,
         engine,
         studioPath,
+        allowScript,
         request,
         response,
         url,

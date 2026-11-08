@@ -127,6 +127,7 @@ beforeAll(async () => {
   await unlink(join(root, "tools", "lookup.tool.ts"));
   engine = createSqliteEngine({ databasePath });
   const api = await createPlicoServer({
+    allowScript: true,
     projectRoot: root,
     eventStore,
     engine,
