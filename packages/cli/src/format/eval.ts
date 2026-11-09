@@ -1,4 +1,4 @@
-import type { EvalSummary } from "@plico/runtime";
+import type { EvalSummary } from "@plico-ai/runtime";
 
 export function formatEvalSummary(target: string, summary: EvalSummary): string[] {
   const lines = [`Eval results for ${target}`];

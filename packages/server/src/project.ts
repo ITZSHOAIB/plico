@@ -1,4 +1,4 @@
-import { type LoadedProject, validateProject } from "@plico/core";
+import { type LoadedProject, validateProject } from "@plico-ai/core";
 import { HttpError } from "./errors.js";
 
 export async function loadProjectOrThrow(projectRoot: string): Promise<LoadedProject> {

@@ -7,7 +7,7 @@ import {
   readSkills,
   SKILL_TOOL_NAME,
   type Skill,
-} from "@plico/core";
+} from "@plico-ai/core";
 import type { ComposedInstructions } from "./types/index.js";
 
 /** The agent's instructions plus a list of skills. A skill's full text loads on demand. */

@@ -1,4 +1,4 @@
-import { getProjectPaths } from "@plico/core";
+import { getProjectPaths } from "@plico-ai/core";
 import { runProject } from "../run/index.js";
 import type { EvalCaseResult, EvalSummary, RunEvalsOptions } from "../types/index.js";
 import { digestEvalFixtures, discoverEvalCases } from "./discover.js";

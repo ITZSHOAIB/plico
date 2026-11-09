@@ -7,7 +7,7 @@ Build the initial Plico repository scaffold around the PRD's file-first promise:
 Resolved decisions:
 
 - Use pnpm workspaces.
-- Use the `@plico/*` package scope.
+- Use the `@plico-ai/*` package scope.
 - Use `tsc` for package builds.
 - Keep the workspace ESM-only.
 - Use Vitest for tests.
@@ -19,11 +19,11 @@ Resolved decisions:
 Create a TypeScript monorepo scaffold:
 
 - Root workspace config: `package.json`, `pnpm-workspace.yaml`, shared TypeScript config, Vitest config, and `.gitignore`.
-- Packages: `@plico/core`, `@plico/cli`, and `create-plico`.
+- Packages: `@plico-ai/core`, `@plico-ai/cli`, and `create-plico`.
 - Sample app: `examples/internal-ops-agent`.
 - Package builds emit ESM only and declarations from `tsc`, not `tsup`.
 
-Implement the `@plico/core` contract first:
+Implement the `@plico-ai/core` contract first:
 
 - Define the versioned project config shape anchored by `plico.config.ts`.
 - Minimum valid project requires `schemaVersion: 1`, project name, `agent.md`, and declared standard folders: `skills/`, `tools/`, `evals/`, `artifacts/`, and `memory/`.
@@ -34,9 +34,9 @@ Implement `create-plico`:
 
 - Generate the internal-ops pilot project from fixtures.
 - Output `plico.config.ts`, `agent.md`, standard folders, one Markdown skill, placeholder tool and eval files, and a README.
-- Ensure generated output validates through `@plico/core`.
+- Ensure generated output validates through `@plico-ai/core`.
 
-Implement `@plico/cli`:
+Implement `@plico-ai/cli`:
 
 - Provide `plico validate [path]`.
 - Print human-readable diagnostics.
@@ -87,6 +87,6 @@ Workspace smoke tests:
 
 - Phase one does not implement runtime execution, event logs, persistence, AG-UI, Studio, React, approvals, artifact behavior, or real provider calls.
 - The validator should be strict for the minimum project contract but avoid validating full PRD surfaces until those features enter implementation.
-- `@plico/*` is used as the intended package namespace even though npm availability is not verified in this phase.
+- `@plico-ai/*` is used as the intended package namespace even though npm availability is not verified in this phase.
 - Tooling should optimize for a small TypeScript framework monorepo rather than a large application workspace.
 - TypeScript build settings should favor correctness over convenience: ESM-only output, strict optional property handling, and declaration emission from the compiler.

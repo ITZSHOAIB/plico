@@ -1,5 +1,5 @@
 import type { DatabaseSync } from "node:sqlite";
-import type { EvalReport, PlicoEvent, RunStatus, RunSummary } from "@plico/contracts";
+import type { EvalReport, PlicoEvent, RunStatus, RunSummary } from "@plico-ai/contracts";
 import { runStreamType } from "../../events.js";
 import { parseMetadata } from "../metadata.js";
 

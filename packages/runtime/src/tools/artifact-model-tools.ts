@@ -1,4 +1,4 @@
-import { ARTIFACT_TOOL_NAMES } from "@plico/core";
+import { ARTIFACT_TOOL_NAMES } from "@plico-ai/core";
 import type { DeclaredTool, ToolDefinition } from "../types/index.js";
 import { editFile, listFiles, readFile, writeFile } from "./artifact-model-tool-operations.js";
 import { normalizeInputSchema } from "./schema.js";

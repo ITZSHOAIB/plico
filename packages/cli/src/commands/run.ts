@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { ARTIFACT_TOOL_NAMES, SKILL_TOOL_NAME, validateProject } from "@plico/core";
+import { ARTIFACT_TOOL_NAMES, SKILL_TOOL_NAME, validateProject } from "@plico-ai/core";
 import {
   createSqliteEngine,
   createSqliteEventStore,
@@ -8,7 +8,7 @@ import {
   modelProviderRecoveryKey,
   recoverRuns,
   runProject,
-} from "@plico/runtime";
+} from "@plico-ai/runtime";
 import { lastPositional, parseArgs, readStringOption } from "../args.js";
 import { errorMessage } from "../errors.js";
 import { formatRunResult } from "../format/run.js";

@@ -5,7 +5,7 @@ import {
   createSqliteEventStore,
   createSqliteThreadStore,
   type ModelProvider,
-} from "@plico/runtime";
+} from "@plico-ai/runtime";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createTestServer } from "./testing/test-server.js";
 

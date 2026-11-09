@@ -1,4 +1,4 @@
-import { validateProject } from "@plico/core";
+import { validateProject } from "@plico-ai/core";
 import {
   createConfiguredModelProvider,
   createEngine,
@@ -8,7 +8,7 @@ import {
   createSqliteThreadStore,
   modelProviderAccountKey,
   modelProviderRecoveryKey,
-} from "@plico/runtime";
+} from "@plico-ai/runtime";
 import { assemblePlico } from "./app/assemble.js";
 import type { Plico } from "./app/types.js";
 import { recoverPlicoState, resumeQueuedRuns } from "./recovery.js";

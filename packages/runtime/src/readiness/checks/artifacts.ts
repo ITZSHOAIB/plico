@@ -1,5 +1,5 @@
 import { access } from "node:fs/promises";
-import { getProjectPaths, getProjectRelativePaths } from "@plico/core";
+import { getProjectPaths, getProjectRelativePaths } from "@plico-ai/core";
 import type { ReadinessDiagnostic } from "../../types/index.js";
 import { makeDiagnostic } from "../diagnostic.js";
 

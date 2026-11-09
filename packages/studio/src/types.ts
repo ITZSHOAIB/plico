@@ -18,4 +18,4 @@ export type {
   Thread,
   ThreadArtifactWorkspace,
   ThreadMessage,
-} from "@plico/contracts";
+} from "@plico-ai/contracts";

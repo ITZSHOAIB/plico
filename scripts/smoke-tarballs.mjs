@@ -122,7 +122,7 @@ try {
     run("npm", ["install", "--no-audit", "--no-fund", "--loglevel=error"], { cwd: directory });
     return directory;
   }
-  const project = await install(join(work, "project"), ["@plico/cli", "plico"]);
+  const project = await install(join(work, "project"), ["@plico-ai/cli", "plico"]);
   const creator = await install(join(work, "creator"), ["create-plico"]);
 
   const bin = (name, ...args) => run("npx", ["--no-install", name, ...args], { cwd: project });

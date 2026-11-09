@@ -1,4 +1,4 @@
-import type { PlicoEvent, RunStatus } from "@plico/contracts";
+import type { PlicoEvent, RunStatus } from "@plico-ai/contracts";
 import type { DryRunScriptStep, EvalCase } from "../types/index.js";
 
 /**

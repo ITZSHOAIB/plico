@@ -1,4 +1,4 @@
-import type { EventStreamType, PlicoEventPayloads } from "@plico/contracts";
+import type { EventStreamType, PlicoEventPayloads } from "@plico-ai/contracts";
 import { ProjectChangedError } from "./engine/index.js";
 import type { EventStore, PlicoEvent, PlicoEventType } from "./types/index.js";
 

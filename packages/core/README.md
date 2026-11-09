@@ -1,4 +1,4 @@
-# @plico/core
+# @plico-ai/core
 
 Core project-loading and validation helpers for Plico.
 

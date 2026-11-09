@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { setTimeout as delay } from "node:timers/promises";
-import type { ProjectConfig } from "@plico/contracts";
-import { ARTIFACT_TOOL_NAMES, type Skill } from "@plico/core";
+import type { ProjectConfig } from "@plico-ai/contracts";
+import { ARTIFACT_TOOL_NAMES, type Skill } from "@plico-ai/core";
 import { RunCancelled, type RunContext } from "../../engine/index.js";
 import { ModelProviderError, RuntimeDiagnosticError } from "../../errors.js";
 import type { InMemoryEventLog } from "../../events.js";
@@ -85,7 +85,7 @@ export async function runProviderBackedRun(
         let content = "";
         const toolCalls: NonNullable<import("../../types/index.js").ModelResponse["toolCalls"]> =
           [];
-        let providerMetadata: import("@plico/contracts").JsonValue | undefined;
+        let providerMetadata: import("@plico-ai/contracts").JsonValue | undefined;
         let usage: import("../../types/index.js").ModelResponse["usage"] | undefined;
         for await (const chunk of provider.stream(modelRequest, { signal })) {
           if (chunk.type === "text") {

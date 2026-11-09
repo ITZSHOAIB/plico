@@ -1,5 +1,5 @@
 import { isIPv4 } from "node:net";
-import { loadProjectEnv } from "@plico/runtime";
+import { loadProjectEnv } from "@plico-ai/runtime";
 import {
   lastPositional,
   parseArgs,
@@ -33,7 +33,7 @@ export async function serveCommand(args: string[]): Promise<number> {
     const databasePath = resolveDatabasePath(target, readStringOption(parsed, "--db"));
     const studioPath = parsed.flags.has("--studio") ? resolveStudioPath() : undefined;
 
-    const { servePlico } = await import("@plico/server");
+    const { servePlico } = await import("@plico-ai/server");
     const server = await servePlico({
       projectRoot: target,
       databasePath,
@@ -64,7 +64,7 @@ function resolveStudioPath(): string {
   const studioPath = findStudioPath();
   if (studioPath === undefined) {
     throw new Error(
-      "Cannot find the Studio assets. From a source checkout, build them with: pnpm --filter @plico/studio build",
+      "Cannot find the Studio assets. From a source checkout, build them with: pnpm --filter @plico-ai/studio build",
     );
   }
 

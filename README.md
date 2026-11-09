@@ -5,9 +5,9 @@ Plico is a TypeScript-first agent app kit built around local Markdown instructio
 Today this repo can:
 
 - scaffold valid Plico projects
-- validate projects with `@plico/core`
-- expose validation and dry runs through `@plico/cli`
-- expose persisted runs, replay, and the native HTTP API through `@plico/server`
+- validate projects with `@plico-ai/core`
+- expose validation and dry runs through `@plico-ai/cli`
+- expose persisted runs, replay, and the native HTTP API through `@plico-ai/server`
 - persist artifact content by SHA-256 hash and expose ordered write receipts in run workspaces
 - offer provider runs `list_files`, `read_file`, `write_file`, and `edit_file` over their artifact workspace
 - report the configured model-facing artifact access in readiness diagnostics
@@ -23,6 +23,10 @@ Today this repo can:
 - generate the internal-ops starter with `create-plico`, choosing a model provider with `--provider` or the prompt
 
 See the milestones in GitHub Issues for the remaining planned capabilities.
+
+Package names: install `plico` for the config and tool helpers and start a project with
+`npm create plico`. The runtime and embedding packages are scoped `@plico-ai/*`, for example
+`@plico-ai/server` for `createPlico`. There is no `@plico` scope.
 
 ## Repo Layout
 
@@ -65,7 +69,7 @@ pnpm smoke:tarballs
 
 The website lives in `packages/docs`, a Fumadocs Next.js static export configured for Cloudflare Pages at `plico.sohab.dev`. It serves the homepage at `/` and the docs at `/docs`.
 
-Write docs pages as MDX in `packages/docs/content/docs` and list them in its `meta.json`; the homepage is `packages/docs/app/(home)`. Run `pnpm --filter @plico/docs dev` to preview both. The docs are agent-readable: `/llms.txt` indexes every page, `/llms-full.txt` holds them all, each page has a plain Markdown version at `/llms.mdx/docs/<page>/content.md`, and `Accept: text/markdown` on a docs URL returns that Markdown. `/sitemap.xml` and `/robots.txt` are generated too.
+Write docs pages as MDX in `packages/docs/content/docs` and list them in its `meta.json`; the homepage is `packages/docs/app/(home)`. Run `pnpm --filter @plico-ai/docs dev` to preview both. The docs are agent-readable: `/llms.txt` indexes every page, `/llms-full.txt` holds them all, each page has a plain Markdown version at `/llms.mdx/docs/<page>/content.md`, and `Accept: text/markdown` on a docs URL returns that Markdown. `/sitemap.xml` and `/robots.txt` are generated too.
 
 See [docs/cloudflare-pages.md](docs/cloudflare-pages.md) for the Pages project settings, custom domain setup, and manual Wrangler deployment commands.
 
@@ -85,7 +89,7 @@ Husky runs `lint-staged` on commit so staged JS, TS, and JSON files are checked 
 Validate the example project from the repo root:
 
 ```sh
-pnpm --filter @plico/cli exec plico validate examples/internal-ops-agent
+pnpm --filter @plico-ai/cli exec plico validate examples/internal-ops-agent
 ```
 
 Use `plico validate --help` to show the validate usage. Unknown flags such as
@@ -98,7 +102,7 @@ reports the same duplicate under tool discovery and shows the configured
 Run the dry runtime with the checked-in example tool:
 
 ```sh
-pnpm --filter @plico/cli exec plico run --dry --script examples/internal-ops-agent/evals/smoke.script.json examples/internal-ops-agent
+pnpm --filter @plico-ai/cli exec plico run --dry --script examples/internal-ops-agent/evals/smoke.script.json examples/internal-ops-agent
 ```
 
 Project tools are loaded from their `.tool.ts` files, so they can import sibling
@@ -164,10 +168,10 @@ limited to 1 MiB and use the same staged write path as project tools.
 Persist the smoke run, list stored runs, replay events, and start the native API server with Studio:
 
 ```sh
-pnpm --filter @plico/cli exec plico run --dry --persist --script examples/internal-ops-agent/evals/smoke.script.json examples/internal-ops-agent
-pnpm --filter @plico/cli exec plico runs examples/internal-ops-agent
-pnpm --filter @plico/cli exec plico events <run-id> examples/internal-ops-agent
-pnpm --filter @plico/cli exec plico serve --studio --db examples/internal-ops-agent/.plico/plico.sqlite examples/internal-ops-agent
+pnpm --filter @plico-ai/cli exec plico run --dry --persist --script examples/internal-ops-agent/evals/smoke.script.json examples/internal-ops-agent
+pnpm --filter @plico-ai/cli exec plico runs examples/internal-ops-agent
+pnpm --filter @plico-ai/cli exec plico events <run-id> examples/internal-ops-agent
+pnpm --filter @plico-ai/cli exec plico serve --studio --db examples/internal-ops-agent/.plico/plico.sqlite examples/internal-ops-agent
 ```
 
 The server has no authentication, so it listens on loopback only and refuses requests a web page could send: a foreign `Host` header (DNS rebinding) gets 421, a cross-origin `Origin` gets 403, and a JSON body sent with another content type gets 415. Send `Content-Type: application/json` on requests with a body. `--allow-remote` exposes the server on another host and skips the `Host` check; `Origin` is still checked. `Origin` must match in scheme, host and port. A host that serves the API behind its own authentication passes `allowRemote: true` to `servePlico`; behind a TLS proxy it also passes `publicOrigin: "https://their.host"`, since the server sees plain HTTP. A `script` in a run request calls project tools with arguments the caller picks and skips the model, so the API answers 403 `run.script_disabled` unless the server starts with `--allow-script` (`allowScript: true` for `servePlico`). `plico run --dry --script` on the command line is unaffected.

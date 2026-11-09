@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { dirname, extname, isAbsolute, join, parse, relative } from "node:path";
 import { pathToFileURL } from "node:url";
-import { installAuthoringFallback } from "@plico/core";
+import { installAuthoringFallback } from "@plico-ai/core";
 import { register as registerCjs, require as tsxRequire } from "tsx/cjs/api";
 import { register as registerEsm } from "tsx/esm/api";
 import { isRecord } from "../guards.js";

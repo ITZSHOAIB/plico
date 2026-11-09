@@ -1,4 +1,4 @@
-import type { ReadinessReport } from "@plico/runtime";
+import type { ReadinessReport } from "@plico-ai/runtime";
 
 export function formatReadinessReport(report: ReadinessReport): string[] {
   const lines: string[] = [];

@@ -1,5 +1,5 @@
 import { join } from "node:path";
-import type { ReadinessDiagnostic } from "@plico/contracts";
+import type { ReadinessDiagnostic } from "@plico-ai/contracts";
 import { loadedEnvFiles } from "../../env.js";
 import { makeDiagnostic } from "../diagnostic.js";
 

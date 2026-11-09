@@ -2,7 +2,7 @@ import { mkdtemp } from "node:fs/promises";
 import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createPlico } from "@plico/server";
+import { createPlico } from "@plico-ai/server";
 import { expect, it } from "vitest";
 import { createApp } from "./app.js";
 

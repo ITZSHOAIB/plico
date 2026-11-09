@@ -6,7 +6,7 @@ import {
   getProjectRelativePaths,
   type LoadedProject,
   SKILL_TOOL_NAME,
-} from "@plico/core";
+} from "@plico-ai/core";
 import type { DeclaredTool } from "../types/index.js";
 import { loadToolFile } from "./load.js";
 

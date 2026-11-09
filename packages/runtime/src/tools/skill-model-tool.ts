@@ -1,4 +1,4 @@
-import { SKILL_TOOL_NAME, type Skill } from "@plico/core";
+import { SKILL_TOOL_NAME, type Skill } from "@plico-ai/core";
 import type { DeclaredTool } from "../types/index.js";
 import { normalizeInputSchema } from "./schema.js";
 

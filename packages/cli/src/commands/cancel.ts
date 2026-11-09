@@ -1,4 +1,4 @@
-import { createSqliteEngine, createSqliteEventStore } from "@plico/runtime";
+import { createSqliteEngine, createSqliteEventStore } from "@plico-ai/runtime";
 import { parseArgs, readStringOption } from "../args.js";
 import { errorMessage } from "../errors.js";
 import { ensureDatabaseExists, resolveDatabasePath } from "../paths.js";

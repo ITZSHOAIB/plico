@@ -1,4 +1,4 @@
-import type { EvalReport, JsonValue, PlicoEvent, RunSummary } from "@plico/contracts";
+import type { EvalReport, JsonValue, PlicoEvent, RunSummary } from "@plico-ai/contracts";
 
 export interface EventStore {
   readonly storageIdentity?: string;

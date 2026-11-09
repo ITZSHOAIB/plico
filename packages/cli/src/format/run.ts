@@ -1,4 +1,4 @@
-import type { RunResult } from "@plico/runtime";
+import type { RunResult } from "@plico-ai/runtime";
 import { readCount, readString } from "./values.js";
 
 export function formatRunResult(target: string, result: RunResult, dry = true): string[] {

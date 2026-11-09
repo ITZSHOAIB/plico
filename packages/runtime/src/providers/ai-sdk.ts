@@ -1,4 +1,4 @@
-import type { JsonValue } from "@plico/contracts";
+import type { JsonValue } from "@plico-ai/contracts";
 import {
   APICallError,
   dynamicTool,

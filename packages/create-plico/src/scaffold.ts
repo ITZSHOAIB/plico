@@ -1,6 +1,6 @@
 import { mkdir, readdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { getProjectPaths, REQUIRED_PROJECT_DIRECTORIES } from "@plico/core";
+import { getProjectPaths, REQUIRED_PROJECT_DIRECTORIES } from "@plico-ai/core";
 import {
   agentFile,
   artifactsReadmeFile,

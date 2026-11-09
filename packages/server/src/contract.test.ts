@@ -8,7 +8,7 @@ import {
   createSqliteEventStore,
   createSqliteThreadStore,
   runProject,
-} from "@plico/runtime";
+} from "@plico-ai/runtime";
 import { afterAll, beforeAll, expect, it, vi } from "vitest";
 import { createTestServer } from "./testing/test-server.js";
 

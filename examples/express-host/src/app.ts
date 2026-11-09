@@ -1,5 +1,5 @@
 import { fileURLToPath } from "node:url";
-import { createPlico, type Plico } from "@plico/server";
+import { createPlico, type Plico } from "@plico-ai/server";
 import express, { type Express, type NextFunction, type Request, type Response } from "express";
 
 /** Replace this with your real session lookup. Here a header stands in for a logged-in user. */

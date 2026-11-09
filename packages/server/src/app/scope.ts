@@ -1,4 +1,4 @@
-import { matchesMetadata } from "@plico/runtime";
+import { matchesMetadata } from "@plico-ai/runtime";
 import { PlicoError } from "./errors.js";
 import type { Metadata } from "./metadata.js";
 import type { AppDeps } from "./types.js";

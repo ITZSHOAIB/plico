@@ -1,4 +1,4 @@
-import type { ZodInputSchema } from "@plico/contracts";
+import type { ZodInputSchema } from "@plico-ai/contracts";
 
 /** JSON Schema as written in a tool file: `const` inference makes its arrays readonly. */
 export type ReadonlyJson =

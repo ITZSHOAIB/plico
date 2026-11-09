@@ -1,5 +1,5 @@
 import { access } from "node:fs/promises";
-import { getProjectPaths, getProjectRelativePaths } from "@plico/core";
+import { getProjectPaths, getProjectRelativePaths } from "@plico-ai/core";
 import { digestEvalFixtures, discoverEvalCases } from "../../evals/discover.js";
 import type { EvalCase, EvalReport, EventStore, ReadinessDiagnostic } from "../../types/index.js";
 import { makeDiagnostic } from "../diagnostic.js";

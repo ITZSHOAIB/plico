@@ -1,4 +1,4 @@
-# @plico/contracts
+# @plico-ai/contracts
 
 Types-only contracts shared by every Plico package and surface: project/validation results, native events, run results, artifacts, eval results, readiness reports and composed instructions.
 

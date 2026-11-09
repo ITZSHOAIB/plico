@@ -9,7 +9,7 @@ import {
 } from "@opentelemetry/api";
 import type { RunContext } from "../engine/index.js";
 
-const getTracer = () => trace.getTracer("@plico/runtime");
+const getTracer = () => trace.getTracer("@plico-ai/runtime");
 const toolNames = new WeakMap<RunContext, Map<string, string>>();
 
 export type StoredSpanContext = Pick<SpanContext, "traceId" | "spanId" | "traceFlags"> & {

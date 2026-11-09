@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { loadProject } from "@plico/core";
+import { loadProject } from "@plico-ai/core";
 import { describe, expect, it } from "vitest";
 import { discoverTools } from "../index.js";
 

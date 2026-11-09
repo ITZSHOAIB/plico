@@ -4,7 +4,7 @@ import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import { createSqliteEventStore, runProject } from "@plico/runtime";
+import { createSqliteEventStore, runProject } from "@plico-ai/runtime";
 import { afterEach, describe, expect, it } from "vitest";
 import { createTestServer } from "./testing/test-server.js";
 

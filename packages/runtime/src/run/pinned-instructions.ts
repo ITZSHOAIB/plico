@@ -1,5 +1,5 @@
-import type { ValidationIssue } from "@plico/contracts";
-import { type LoadedProject, readSkills, type Skill } from "@plico/core";
+import type { ValidationIssue } from "@plico-ai/contracts";
+import { type LoadedProject, readSkills, type Skill } from "@plico-ai/core";
 import type { InMemoryEventLog } from "../events.js";
 import { composeInstructions } from "../instructions.js";
 

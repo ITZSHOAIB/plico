@@ -1,5 +1,5 @@
 import type { RequestListener } from "node:http";
-import { createEngine, createMemoryJournal } from "@plico/runtime";
+import { createEngine, createMemoryJournal } from "@plico-ai/runtime";
 import { assemblePlico } from "../app/assemble.js";
 import type { AppDeps, Plico } from "../app/types.js";
 import { createRequestListener, type ListenerOptions } from "../listener.js";

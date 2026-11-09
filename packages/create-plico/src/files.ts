@@ -40,7 +40,7 @@ export function packageFile(version: string, provider?: ScaffoldProvider): strin
         eval: "plico eval .",
       },
       dependencies: { plico: `^${version}`, ...(adapter ? { [adapter]: "latest" } : {}) },
-      devDependencies: { "@plico/cli": `^${version}` },
+      devDependencies: { "@plico-ai/cli": `^${version}` },
     },
     null,
     2,

@@ -1,4 +1,4 @@
-import type { JsonValue } from "@plico/contracts";
+import type { JsonValue } from "@plico-ai/contracts";
 import type { Engine } from "../engine/index.js";
 import type { ModelProvider, ProviderMessage } from "./provider.js";
 import type { DryRunScriptStep } from "./script.js";

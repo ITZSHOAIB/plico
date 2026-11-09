@@ -1,4 +1,4 @@
-import type { ProjectConfig } from "@plico/contracts";
+import type { ProjectConfig } from "@plico-ai/contracts";
 import type { ReadinessDiagnostic } from "../../types/index.js";
 import { makeDiagnostic } from "../diagnostic.js";
 

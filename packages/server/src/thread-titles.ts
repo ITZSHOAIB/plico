@@ -1,11 +1,11 @@
-import { loadProject } from "@plico/core";
+import { loadProject } from "@plico-ai/core";
 import {
   createThreadTitler,
   type EventStore,
   type ModelProvider,
   type ThreadStore,
   type ThreadTitler,
-} from "@plico/runtime";
+} from "@plico-ai/runtime";
 
 /**
  * After a run in a thread completes, asks the project's titler for a title and stores it. The

@@ -1,5 +1,5 @@
 import { access } from "node:fs/promises";
-import { createSqliteEventStore } from "@plico/runtime";
+import { createSqliteEventStore } from "@plico-ai/runtime";
 import { lastPositional, parseArgs, readStringOption } from "../args.js";
 import { errorMessage } from "../errors.js";
 import { formatRunSummaries } from "../format/runs.js";

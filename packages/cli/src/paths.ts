@@ -14,7 +14,7 @@ export function findStudioPath(): string | undefined {
   if (existsSync(join(bundled, "index.html"))) return bundled;
   try {
     const require = createRequire(import.meta.url);
-    return join(dirname(require.resolve("@plico/studio/package.json")), "dist");
+    return join(dirname(require.resolve("@plico-ai/studio/package.json")), "dist");
   } catch {
     return undefined;
   }

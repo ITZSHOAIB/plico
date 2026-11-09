@@ -1,5 +1,5 @@
 import { resolve } from "node:path";
-import type { EvalReport, PlicoEvent, RunSummary } from "@plico/contracts";
+import type { EvalReport, PlicoEvent, RunSummary } from "@plico-ai/contracts";
 import type { CreateSqliteEventStoreOptions, EventStore } from "../../types/index.js";
 import { matchesMetadata } from "../metadata.js";
 import { appendEventRecord } from "./append-event.js";

@@ -1,5 +1,5 @@
 {
-  "name": "@plico/runtime",
+  "name": "@plico-ai/runtime",
   "version": "0.0.0",
   "description": "Plico runtime: linear agent runs, durable event log, tools, evals and readiness checks",
   "license": "Apache-2.0",
@@ -34,8 +34,8 @@
   "dependencies": {
     "@ai-sdk/openai-compatible": "^3.0.84",
     "@opentelemetry/api": "1.9.0",
-    "@plico/contracts": "workspace:*",
-    "@plico/core": "workspace:*",
+    "@plico-ai/contracts": "workspace:*",
+    "@plico-ai/core": "workspace:*",
     "ai": "^7.0.162",
     "ajv": "8.20.0",
     "ajv-formats": "3.0.1",

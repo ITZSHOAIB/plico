@@ -10,7 +10,7 @@ import {
   createSqliteThreadStore,
   modelProviderAccountKey,
   modelProviderRecoveryKey,
-} from "@plico/runtime";
+} from "@plico-ai/runtime";
 import { expect, it, vi } from "vitest";
 import { servePlico } from "./index.js";
 import { createTestServer } from "./testing/test-server.js";

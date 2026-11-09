@@ -7,7 +7,7 @@ const { servePlicoMock } = vi.hoisted(() => ({
   servePlicoMock: vi.fn(),
 }));
 
-vi.mock("@plico/server", () => ({
+vi.mock("@plico-ai/server", () => ({
   servePlico: servePlicoMock,
 }));
 
@@ -50,7 +50,7 @@ async function writeValidProject(root: string) {
 }
 
 describe("serve", () => {
-  it("passes host, port, database path, and project root to @plico/server", async () => {
+  it("passes host, port, database path, and project root to @plico-ai/server", async () => {
     const root = await mkdtemp(join(tmpdir(), "plico-cli-"));
     await writeValidProject(root);
     const databasePath = join(root, "state", "custom.sqlite");

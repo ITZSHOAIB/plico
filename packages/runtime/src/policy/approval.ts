@@ -1,4 +1,4 @@
-import type { ProjectConfig } from "@plico/contracts";
+import type { ProjectConfig } from "@plico-ai/contracts";
 import type { DeclaredTool } from "../types/tools.js";
 
 export type ApprovalDecision = "none" | "required";

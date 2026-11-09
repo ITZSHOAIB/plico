@@ -51,7 +51,7 @@ it("runs a configured model and stores its events for inspection", async () => {
     expect(code).toBe(0);
     const result = JSON.parse(String(log.mock.calls[0]?.[0]));
     expect(result).toMatchObject({ status: "completed", output: "Hello" });
-    const { createSqliteEventStore } = await import("@plico/runtime");
+    const { createSqliteEventStore } = await import("@plico-ai/runtime");
     const store = createSqliteEventStore({
       databasePath: join(root, ".plico", "plico.sqlite"),
       readOnly: true,

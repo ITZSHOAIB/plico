@@ -6,8 +6,11 @@ icon: Server
 
 Plico is a library your Node backend imports. Your files define the agent; your code only runs it. Your app owns users, login and permissions. Plico owns the agent's threads, runs, events and artifacts, and filters them by the `scope` you give it.
 
+`createPlico` comes from `@plico-ai/server`. Plico's packages are scoped `@plico-ai/*`; there is
+no `@plico` scope.
+
 ```ts
-import { createPlico } from "@plico/server";
+import { createPlico } from "@plico-ai/server";
 
 const plico = await createPlico({ projectRoot: "./agent", databasePath: "./plico.sqlite" });
 

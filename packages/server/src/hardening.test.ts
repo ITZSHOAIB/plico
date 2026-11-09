@@ -3,7 +3,7 @@ import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createSqliteEventStore, type EventStore } from "@plico/runtime";
+import { createSqliteEventStore, type EventStore } from "@plico-ai/runtime";
 import { afterEach, describe, expect, it } from "vitest";
 import { createTestServer } from "./testing/test-server.js";
 

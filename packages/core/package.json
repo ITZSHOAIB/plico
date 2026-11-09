@@ -1,5 +1,5 @@
 {
-  "name": "@plico/core",
+  "name": "@plico-ai/core",
   "version": "0.0.0",
   "description": "Plico project model: load and validate agent projects from files",
   "license": "Apache-2.0",
@@ -36,7 +36,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@plico/contracts": "workspace:*",
+    "@plico-ai/contracts": "workspace:*",
     "plico": "workspace:*",
     "typescript": "^6.0.3"
   },

@@ -1,7 +1,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { getProjectPaths } from "@plico/core";
-import { createSqliteEventStore, evalCaseFromRun } from "@plico/runtime";
+import { getProjectPaths } from "@plico-ai/core";
+import { createSqliteEventStore, evalCaseFromRun } from "@plico-ai/runtime";
 
 /** Writes a stored run into the project's evals folder and returns the file it created. */
 export async function promoteRun(

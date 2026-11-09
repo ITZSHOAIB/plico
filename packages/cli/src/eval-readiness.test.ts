@@ -1,7 +1,7 @@
 import { access, mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createSqliteEventStore } from "@plico/runtime";
+import { createSqliteEventStore } from "@plico-ai/runtime";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { main } from "./cli.js";
 

@@ -1,5 +1,5 @@
-import type { PlicoEvent, RunResult, RunStatus } from "@plico/contracts";
-import type { ValidationIssue } from "@plico/core";
+import type { PlicoEvent, RunResult, RunStatus } from "@plico-ai/contracts";
+import type { ValidationIssue } from "@plico-ai/core";
 import type { EventStore } from "../types/index.js";
 
 export interface FinalizeRunInput {

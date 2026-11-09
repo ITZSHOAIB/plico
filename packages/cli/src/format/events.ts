@@ -1,4 +1,4 @@
-import type { PlicoEvent } from "@plico/runtime";
+import type { PlicoEvent } from "@plico-ai/runtime";
 
 export function formatEvents(runId: string, events: PlicoEvent[]): string[] {
   const lines = [`Events for ${runId}`];

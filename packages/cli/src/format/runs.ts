@@ -1,4 +1,4 @@
-import type { RunSummary } from "@plico/runtime";
+import type { RunSummary } from "@plico-ai/runtime";
 
 export function formatRunSummaries(
   target: string,

@@ -1,4 +1,4 @@
-# @plico/cli
+# @plico-ai/cli
 
 CLI entrypoints for validating Plico projects and running the deterministic dry runtime.
 

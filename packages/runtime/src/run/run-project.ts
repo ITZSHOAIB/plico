@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { isAbsolute, resolve } from "node:path";
 import { type Span, SpanStatusCode } from "@opentelemetry/api";
-import { validateProject } from "@plico/core";
+import { validateProject } from "@plico-ai/core";
 import {
   createEngine,
   createMemoryJournal,

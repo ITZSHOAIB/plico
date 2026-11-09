@@ -1,5 +1,5 @@
 {
-  "name": "@plico/server",
+  "name": "@plico-ai/server",
   "version": "0.0.0",
   "description": "Plico native HTTP API over the runtime and event store",
   "license": "Apache-2.0",
@@ -33,9 +33,9 @@
   ],
   "dependencies": {
     "@hono/node-server": "2.1.6",
-    "@plico/contracts": "workspace:*",
-    "@plico/core": "workspace:*",
-    "@plico/runtime": "workspace:*",
+    "@plico-ai/contracts": "workspace:*",
+    "@plico-ai/core": "workspace:*",
+    "@plico-ai/runtime": "workspace:*",
     "diff": "8.0.4",
     "hono": "4.13.17"
   },
