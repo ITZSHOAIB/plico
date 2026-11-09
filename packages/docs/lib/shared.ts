@@ -13,6 +13,7 @@ export const gitConfig = {
 };
 
 export const siteUrl = "https://plico.sohab.dev";
+export const homeImageUrl = "/og/home/image.png";
 
 const getContentUrl = createGetUrl(docsContentRoute);
 

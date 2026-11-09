@@ -5,7 +5,7 @@ import { KitSection } from "@/components/home/kit-section";
 import { StartSection } from "@/components/home/start-section";
 import { StatusSection } from "@/components/home/status-section";
 import { ViewsSection } from "@/components/home/views-section";
-import { gitConfig, siteUrl } from "@/lib/shared";
+import { appName, gitConfig, homeImageUrl, siteUrl } from "@/lib/shared";
 
 const title = "Plico: build AI agents from files";
 const description =
@@ -15,8 +15,16 @@ export const metadata: Metadata = {
   title: { absolute: title },
   description,
   alternates: { canonical: "/" },
-  openGraph: { type: "website", url: "/", title, description },
-  twitter: { card: "summary_large_image", title, description },
+  openGraph: {
+    type: "website",
+    url: "/",
+    siteName: appName,
+    locale: "en_US",
+    title,
+    description,
+    images: homeImageUrl,
+  },
+  twitter: { card: "summary_large_image", title, description, images: homeImageUrl },
 };
 
 const jsonLd = {
