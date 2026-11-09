@@ -34,6 +34,22 @@ with no model call, and the assistant's text can only confirm a topic, not add o
 renames a thread. A title set that way is never replaced. Studio shows titles in the
 thread list and the chat header, where a pencil icon renames the conversation.
 
+### Model-written and custom titles
+
+Keyword titles are the default. To have the configured model write the title instead, set
+`threads: { title: "model" }` in `plico.config.ts`. That costs one short model call after each of a
+thread's first three replies. For full control, add `threads/title.ts` and export a function by
+default; it receives the messages (`{ role, content }[]`) and returns the title, and it takes
+priority over the `title` setting:
+
+```ts title="threads/title.ts"
+export default async (messages: Array<{ role: string; content: string }>) =>
+  messages[0]?.content.slice(0, 40);
+```
+
+The keyword title is stored first, so a model or function that fails, or returns nothing,
+leaves it in place and never fails the run. A title the user set is never replaced.
+
 ## Recovery
 
 If a server stops after reserving a run but before starting it, `servePlico` resumes

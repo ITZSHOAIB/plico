@@ -5,7 +5,12 @@ import type { Thread, ThreadEvent, ThreadMessage } from "@plico/contracts";
 import { type Metadata, matchesMetadata, parseMetadata } from "../metadata.js";
 import { openDatabase } from "./open.js";
 import { appendThreadEvent } from "./thread-log.js";
-import { setUserTitle } from "./thread-title.js";
+import {
+  getTitleRequest,
+  setGeneratedTitle,
+  setUserTitle,
+  type TitleRequest,
+} from "./thread-title.js";
 
 export interface ThreadStore {
   readonly storageIdentity?: string;
@@ -17,6 +22,13 @@ export interface ThreadStore {
   getThread(id: string): Promise<Thread | undefined>;
   /** Names a thread for the user. Returns undefined for an unknown thread. */
   renameThread(id: string, title: string): Promise<Thread | undefined>;
+  /** The transcript to title after a reply, or nothing when the thread no longer takes titles. */
+  getTitleRequest(id: string): Promise<TitleRequest | undefined>;
+  /**
+   * Stores a title written after a reply. A title the user chose is never replaced, and a title
+   * from an older `revision` than the stored one is dropped.
+   */
+  setGeneratedTitle(id: string, title: string, revision: number): Promise<boolean>;
   getThreadForRun(runId: string): Promise<string | undefined>;
   addMessage(
     threadId: string,
@@ -120,6 +132,14 @@ export function createSqliteThreadStore({
       return found
         ? toThread(db.prepare(`${selectThread} WHERE thread_id = ?`).get(id))
         : undefined;
+    },
+    async getTitleRequest(id) {
+      return getTitleRequest(db, id);
+    },
+    async setGeneratedTitle(id, title, revision) {
+      return transaction(db, () =>
+        setGeneratedTitle(db, id, title, revision, new Date().toISOString()),
+      );
     },
     async getThreadForRun(runId) {
       const row = db.prepare("SELECT thread_id FROM thread_runs WHERE run_id = ?").get(runId) as

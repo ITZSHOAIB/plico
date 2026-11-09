@@ -35,6 +35,7 @@ export {
   ThreadBusyError,
   type ThreadStore,
 } from "./storage/sqlite/threads.js";
+export { createThreadTitler, type ThreadTitler } from "./threads/titler.js";
 export { discoverTools } from "./tools/index.js";
 export type {
   ArtifactContent,

@@ -71,3 +71,7 @@ See [Model providers](/docs/providers) for the `model` settings.
 
 Set `artifacts.access` to `read-write`, `read-only`, or `off` to control which
 artifact tools the model sees. See [Artifacts](/docs/artifacts).
+
+Set `threads.title` to `model` to have the model write thread titles, or add an optional
+`threads/title.ts` that default-exports a function from messages to a title. See
+[Threads](/docs/threads#model-written-and-custom-titles).

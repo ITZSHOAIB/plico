@@ -155,6 +155,7 @@ describe("event log streams", () => {
       DROP TABLE artifact_content_binary;
       ALTER TABLE threads DROP COLUMN title;
       ALTER TABLE threads DROP COLUMN title_source;
+      ALTER TABLE threads DROP COLUMN title_revision;
       ALTER TABLE threads DROP COLUMN metadata_json;
       ALTER TABLE runs DROP COLUMN metadata_json;
       ALTER TABLE thread_runs DROP COLUMN context_json;

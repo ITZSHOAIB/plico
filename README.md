@@ -140,7 +140,9 @@ rule runs locally with no model call, and the assistant's text can only confirm 
 topic, not add one. `PATCH /v1/threads/<thread-id>` with `{ "title": "..." }` (up
 to 200 characters) renames a thread; a title set that way is never replaced.
 Studio shows titles in the thread list and the chat header, where a pencil icon
-renames the conversation.
+renames the conversation. Set `threads: { title: "model" }` in `plico.config.ts` to have
+the model write the title after the reply, or export a function from `threads/title.ts`
+to name threads yourself. Either way the keyword title stays if titling fails.
 
 Provider-backed runs also offer Plico's four built-in artifact tools:
 `list_files`, `read_file`, `write_file`, and `edit_file`. Configure their access
