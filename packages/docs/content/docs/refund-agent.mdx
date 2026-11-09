@@ -1,0 +1,160 @@
+---
+title: "Example: a refund agent"
+description: Two tools, one that waits for approval, and three evals. Copy it and run it with no key.
+icon: Receipt
+---
+
+A complete small agent: `lookup_order` reads an order, and `issue_refund` moves money, so it waits
+for a person. Three evals prove the approval rules. Everything here runs with no API key.
+
+## Create the project
+
+```bash
+npm create plico@latest refund-agent
+cd refund-agent
+npm install
+rm evals/smoke.script.json
+```
+
+Replace `agent.md`:
+
+```md title="agent.md"
+# Refund Agent
+
+You help support staff with refund requests.
+
+- Look up the order with `lookup_order` before anything else.
+- Refund only orders that are in `delivered` status, with `issue_refund`.
+- A person approves every refund. Explain what you are asking them to approve.
+```
+
+## The tools
+
+```ts title="tools/lookup-order.tool.ts"
+import { defineTool } from "@plico-ai/sdk";
+
+const orders: Record<string, { id: string; status: string; total: number }> = {
+  "A-1001": { id: "A-1001", status: "delivered", total: 42 },
+  "A-1002": { id: "A-1002", status: "shipped", total: 15 },
+};
+
+export default defineTool({
+  name: "lookup_order",
+  description: "Look up an order by id.",
+  inputSchema: {
+    type: "object",
+    properties: { orderId: { type: "string" } },
+    required: ["orderId"],
+    additionalProperties: false,
+  },
+  capabilities: ["orders:read"],
+  approval: { required: false },
+  handler: async ({ orderId }) => orders[orderId] ?? { error: `No order ${orderId}` },
+});
+```
+
+```ts title="tools/issue-refund.tool.ts"
+import { defineTool } from "@plico-ai/sdk";
+
+export default defineTool({
+  name: "issue_refund",
+  description: "Refund a delivered order.",
+  inputSchema: {
+    type: "object",
+    properties: { orderId: { type: "string" }, reason: { type: "string" } },
+    required: ["orderId"],
+    additionalProperties: false,
+  },
+  capabilities: ["payments:write"],
+  approval: { required: true, reason: "Refunds move money and cannot be undone." },
+  handler: async ({ orderId }) => ({ orderId, status: "refunded" }),
+});
+```
+
+`approval: { required: true }` is the whole gate. See [Tools](/docs/tools) and
+[Approvals](/docs/approvals).
+
+## The evals
+
+Three cases cover the approval path. See [Evals](/docs/evals) for the format.
+
+```json title="evals/refund-approved.script.json"
+{
+  "description": "A person approves the refund and the agent confirms it.",
+  "script": [
+    { "type": "tool.call", "toolName": "lookup_order", "arguments": { "orderId": "A-1001" },
+      "result": { "id": "A-1001", "status": "delivered", "total": 42 } },
+    { "type": "tool.call", "toolName": "issue_refund", "arguments": { "orderId": "A-1001" },
+      "result": { "orderId": "A-1001", "status": "refunded" } },
+    { "type": "approval.decide", "approved": true },
+    { "type": "assistant.output", "content": "Refunded order A-1001." }
+  ],
+  "expect": { "status": "completed", "outputContains": "Refunded" }
+}
+```
+
+```json title="evals/refund-held.script.json"
+{
+  "description": "Without a decision the refund waits and the handler never runs.",
+  "script": [
+    { "type": "tool.call", "toolName": "issue_refund", "arguments": { "orderId": "A-1001" },
+      "result": { "status": "refunded" } }
+  ],
+  "expect": { "status": "waiting" }
+}
+```
+
+```json title="evals/refund-denied.script.json"
+{
+  "description": "A denied refund ends the run before the tool runs.",
+  "script": [
+    { "type": "tool.call", "toolName": "issue_refund", "arguments": { "orderId": "A-1001" },
+      "result": { "status": "refunded" } },
+    { "type": "approval.decide", "approved": false }
+  ],
+  "expect": { "status": "failed" }
+}
+```
+
+## Check it
+
+```bash
+npm run validate
+```
+
+```text
+Valid Plico project: .
+```
+
+```bash
+npm run eval
+```
+
+```text
+Eval results for .
+  PASS refund-approved (eval-refund-approved-5fb6d184)
+  PASS refund-denied (eval-refund-denied-12aad571)
+       Approval for issue_refund was denied.
+  PASS refund-held (eval-refund-held-5607f9f4)
+
+3/3 passed, 0 failed
+```
+
+Run the held case on its own to see the wait. It exits with code 2:
+
+```bash
+npx plico run --dry --script evals/refund-held.script.json .
+```
+
+```text
+tool.call: issue_refund
+approval.requested: issue_refund
+run.waiting: approval required
+Dry run waiting for approval.
+```
+
+## With a model
+
+Pick a provider when you scaffold (`--provider anthropic`), put the key in `.env`, then
+`npm run dev` and chat in [Studio](/docs/studio). Ask for a refund on order A-1001: the run calls
+`lookup_order`, then `issue_refund`, and stops until you approve it.

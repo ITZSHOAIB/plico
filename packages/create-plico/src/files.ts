@@ -92,6 +92,84 @@ export function agentFile(projectName: string): string {
   ].join("\n");
 }
 
+export function projectAgentsFile(projectName: string): string {
+  return `# ${projectName}: instructions for coding agents
+
+This is a [Plico](https://plico.sohab.dev) project: the agent is the files in this folder. Plico docs as plain Markdown: https://plico.sohab.dev/llms.txt (everything in one file: https://plico.sohab.dev/llms-full.txt).
+
+## Layout
+
+- \`agent.md\` is the agent's instructions. Edit it to change behaviour.
+- \`plico.config.ts\` is the project config (\`defineConfig\` from \`@plico-ai/sdk\`): name, optional \`model\`, optional \`approvals\`.
+- \`skills/<name>/SKILL.md\` holds a skill. It needs a \`description\` in its frontmatter.
+- \`tools/<name>.tool.ts\` holds one tool as a default export (below).
+- \`evals/<name>.script.json\` holds one eval case (below).
+- \`artifacts/\` and \`memory/\` are required folders. Leave them in place.
+
+## Add a tool
+
+\`\`\`ts
+import { defineTool } from "@plico-ai/sdk";
+
+export default defineTool({
+  name: "issue_refund", // unique, snake_case
+  description: "Refund an order.",
+  inputSchema: {
+    type: "object",
+    properties: { orderId: { type: "string" } },
+    required: ["orderId"],
+    additionalProperties: false,
+  },
+  capabilities: ["payments:write"], // required, recorded only
+  approval: { required: true, reason: "Moves money." }, // required; true makes the run wait for a person
+  handler: async ({ orderId }, ctx) => ({ orderId, status: "refunded" }),
+});
+\`\`\`
+
+\`capabilities\` and \`approval\` are required. For a Zod \`inputSchema\`, add \`zod\` to this project first.
+
+## Add an eval
+
+A case is a script plus an optional \`expect\`. It uses no model and no API key:
+
+\`\`\`json
+{
+  "description": "A refund waits for approval, then is approved.",
+  "script": [
+    { "type": "tool.call", "toolName": "issue_refund", "arguments": { "orderId": "A-1" },
+      "result": { "status": "refunded" } },
+    { "type": "approval.decide", "approved": true },
+    { "type": "assistant.output", "content": "Refunded." }
+  ],
+  "expect": { "status": "completed", "outputContains": "Refunded" }
+}
+\`\`\`
+
+Steps are \`assistant.output\` (\`content\`), \`tool.call\` (\`toolName\`, \`arguments\`, \`result\` is required because evals do not run handlers, or \`"live": true\` to run the handler), \`approval.decide\` (\`approved\`, right after a tool call that needs approval) and \`artifact.write\` (\`files\`). Leave out \`approval.decide\` and the run stops as \`waiting\`, so \`"expect": { "status": "waiting" }\` tests that a tool is held. \`approved: false\` ends the run as \`failed\`.
+
+## Check your work
+
+\`\`\`bash
+npm run validate         # plico validate: layout, config, tool and skill names
+npm run eval             # plico eval: every case in evals/; exit 1 on any failure or no cases
+npx plico run --dry .    # runs with a scripted model; add --script <file> for your own steps
+\`\`\`
+
+\`plico run --dry\` exits 0 on completion, 2 when a run is waiting for approval and 1 on failure. Run \`npx plico <command> --help\` for a command's flags.
+
+## Rules
+
+- Keep secrets in \`.env\`, never in \`agent.md\`, tools or config. Events record tool arguments and results.
+- Do not edit \`.plico/\`: it holds saved runs.
+- Do not ask for a model key to test. Use \`--dry\` and evals.
+- With a model, \`plico serve --studio .\` opens Studio, a local UI to chat, read run events and approve tool calls.
+`;
+}
+
+export function projectClaudeFile(): string {
+  return "@AGENTS.md\n";
+}
+
 export function triageSkillFile(): string {
   return [
     "---",

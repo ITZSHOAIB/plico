@@ -15,6 +15,11 @@ export type DryRunScriptStep =
       live?: true;
     }
   | {
+      /** Decides the approval requested by the `tool.call` step just before it. */
+      type: "approval.decide";
+      approved: boolean;
+    }
+  | {
       type: "artifact.write";
       files: ArtifactFileInput[];
     };

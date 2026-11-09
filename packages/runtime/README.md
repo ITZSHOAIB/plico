@@ -10,3 +10,5 @@ import { runProject } from "@plico-ai/runtime";
 ```
 
 Requires Node `>=22.18`. Wire types come from `@plico-ai/contracts`.
+
+Docs: [plico.sohab.dev](https://plico.sohab.dev). For AI coding agents: [llms.txt](https://plico.sohab.dev/llms.txt).

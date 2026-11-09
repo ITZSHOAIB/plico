@@ -33,3 +33,5 @@ export default defineTool({
 - A Zod schema (3 or 4) gives its parsed output type. Add `zod` to your project to use one.
 
 You do not need to install `@plico-ai/sdk` in the project. `plico validate` and `plico run` resolve it from the project when it is there, and fall back to the copy that comes with the CLI. Install it when you want editor types.
+
+Docs: [plico.sohab.dev](https://plico.sohab.dev). For AI coding agents: [llms.txt](https://plico.sohab.dev/llms.txt).

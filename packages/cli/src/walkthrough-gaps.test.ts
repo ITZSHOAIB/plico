@@ -131,3 +131,30 @@ describe("waiting dry runs", () => {
     );
   });
 });
+
+describe("scripts with an approval decision", () => {
+  it("runs an eval-shaped file passed to --script and approves in the script", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-cli-"));
+    await writeApprovalProject(root);
+    const file = join(root, "approved.script.json");
+    await writeFile(
+      file,
+      JSON.stringify({
+        description: "Approve then finish.",
+        script: [
+          { type: "tool.call", toolName: "delete_ticket", arguments: {}, result: { ok: true } },
+          { type: "approval.decide", approved: true },
+          { type: "assistant.output", content: "Deleted." },
+        ],
+        expect: { status: "completed" },
+      }),
+      "utf8",
+    );
+    vi.spyOn(console, "log").mockImplementation(() => undefined);
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    const exitCode = await main(["node", "plico", "run", "--dry", "--script", file, root]);
+
+    expect(exitCode).toBe(0);
+  });
+});

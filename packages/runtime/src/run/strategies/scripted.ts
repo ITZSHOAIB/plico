@@ -22,8 +22,19 @@ export async function runScriptedDryRun(
   let workspaceId: string | undefined;
   const artifactPaths = new Set<string>();
   const artifactVersions = new Map<string, number>();
+  let decidedAt = -1;
 
   for (const [index, step] of script.entries()) {
+    if (step.type === "approval.decide") {
+      if (decidedAt !== index) {
+        throw new RuntimeDiagnosticError({
+          phase: "tool.validation",
+          message: `script step ${index + 1} approval.decide must follow a tool.call that needs approval.`,
+        });
+      }
+      continue;
+    }
+
     if (step.type === "assistant.output") {
       output = step.content;
       await events.append("assistant.output", { content: step.content });
@@ -89,12 +100,25 @@ export async function runScriptedDryRun(
         arguments: step.arguments,
         approval,
       });
-      await events.append("run.waiting", {
-        requestId,
-        toolName: tool.name,
-        ...(output === undefined ? {} : { output }),
-      });
-      await awaitApproval(ctx, requestId, tool.name, output, events, approvalTimeoutMs(config));
+      const decision = script[index + 1];
+      if (decision?.type === "approval.decide") {
+        decidedAt = index + 1;
+        await events.append("approval.decided", { requestId, approved: decision.approved });
+        if (!decision.approved) {
+          throw new RuntimeDiagnosticError({
+            phase: "approval",
+            toolName: tool.name,
+            message: `Approval for ${tool.name} was denied.`,
+          });
+        }
+      } else {
+        await events.append("run.waiting", {
+          requestId,
+          toolName: tool.name,
+          ...(output === undefined ? {} : { output }),
+        });
+        await awaitApproval(ctx, requestId, tool.name, output, events, approvalTimeoutMs(config));
+      }
     }
 
     if (mockTools && step.live !== true) {

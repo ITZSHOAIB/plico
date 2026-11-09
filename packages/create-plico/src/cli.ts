@@ -91,6 +91,9 @@ export async function main(
         ...(provider ? { provider } : {}),
       });
       console.log(`Created Plico scaffold in ${targetDir}`);
+      console.log(
+        "Next: cd in, npm install, npm run validate. Docs: https://plico.sohab.dev (for AI agents: /llms.txt)",
+      );
       return 0;
     } catch (error) {
       console.error(formatError(error));

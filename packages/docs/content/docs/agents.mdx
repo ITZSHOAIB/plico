@@ -1,0 +1,50 @@
+---
+title: Build with an AI coding agent
+description: Point Claude Code, Cursor or any coding agent at Plico and get a working agent project.
+icon: Bot
+---
+
+Plico is a folder of files with fast, key-free checks, which suits a coding agent: it can write the
+files, run `plico validate` and `plico eval`, and read the result without a model key.
+
+## Give the agent the docs
+
+- **`https://plico.sohab.dev/llms.txt`** is an index of every docs page with a one-paragraph summary.
+  Each page is plain Markdown.
+- **`https://plico.sohab.dev/llms-full.txt`** is all of the docs in one file.
+- **Any docs page as Markdown:** request it with `Accept: text/markdown`, or use the
+  `/llms.mdx/docs/<page>/content.md` URL that `llms.txt` lists.
+
+## Start from the scaffold
+
+`npm create plico@latest my-agent` writes an `AGENTS.md` into the project, and a `CLAUDE.md` that
+imports it. It explains the layout, how to add a tool and an eval, and the commands that check
+the work. Claude Code, Cursor and other agents read these files on their own.
+
+## Add the Claude skill
+
+The repository has a `plico` skill for Claude Code. Install it into your project:
+
+```bash
+npx skills add ITZSHOAIB/plico
+```
+
+Or copy `skills/plico` from the [repository](https://github.com/ITZSHOAIB/plico/tree/main/skills/plico)
+into `.claude/skills/plico`.
+
+## A prompt that works
+
+> Build a support agent with Plico (https://plico.sohab.dev/llms.txt). It needs a `lookup_order` tool
+> and an `issue_refund` tool that waits for human approval. Add evals for the approved, denied and
+> held cases. Run `plico validate` and `plico eval` until they pass. No API key is needed.
+
+[Example: a refund agent](/docs/refund-agent) is what this produces.
+
+## What an agent should check
+
+| Command | What it proves |
+| --- | --- |
+| `npx plico validate .` | The layout, config, tool and skill names. |
+| `npx plico eval .` | Every eval case passes. Exit 1 on a failure or no cases. |
+| `npx plico run --dry --script <file> .` | One scripted run. Exit 2 means it is waiting for approval. |
+| `npx plico readiness .` | What is still missing, such as a model. |
