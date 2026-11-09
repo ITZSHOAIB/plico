@@ -40,6 +40,8 @@ export interface PlicoEventPayloads {
       capabilities: string[];
       approval: { required: boolean; reason?: string };
     }>;
+    /** Hash of the TypeScript files in `tools/`, so a resumed run can tell the tool code changed. */
+    fingerprint?: string;
   };
   "input.received": { content: string };
   "model.request": {

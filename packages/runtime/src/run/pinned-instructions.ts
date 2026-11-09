@@ -1,3 +1,4 @@
+import type { ValidationIssue } from "@plico/contracts";
 import { type LoadedProject, readSkills, type Skill } from "@plico/core";
 import type { InMemoryEventLog } from "../events.js";
 import { composeInstructions } from "../instructions.js";
@@ -31,4 +32,12 @@ export async function pinInstructions(
     })),
   });
   return { instructions, skills };
+}
+
+/**
+ * A run that already recorded its instructions and skills does not read them again, so an
+ * `agent.md` or skill that is invalid now must not stop it from resuming.
+ */
+export function ignoredWhenPinned(issue: ValidationIssue): boolean {
+  return issue.path === "agent.md" || issue.path === "skills" || issue.path.startsWith("skills/");
 }

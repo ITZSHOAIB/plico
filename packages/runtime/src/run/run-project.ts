@@ -16,7 +16,8 @@ import type { Metadata } from "../storage/metadata.js";
 import { discoverTools } from "../tools/index.js";
 import type { DryRunScriptStep, RunProjectOptions, RunResult } from "../types/index.js";
 import { finalizeRun } from "./finalize.js";
-import { pinInstructions } from "./pinned-instructions.js";
+import { ignoredWhenPinned, pinInstructions } from "./pinned-instructions.js";
+import { recordTools } from "./record-tools.js";
 import { runDefaultDryRun } from "./strategies/default-dry.js";
 import { runProviderBackedRun } from "./strategies/provider.js";
 import { runScriptedDryRun } from "./strategies/scripted.js";
@@ -195,6 +196,9 @@ async function runLoop(
   const displayRoot = input.displayRoot ?? root;
   const validation = await validateProject(root);
   const events = await InMemoryEventLog.open(runId, options.eventStore);
+  const errors = events.all().some((event) => event.type === "instructions.composed")
+    ? validation.errors.filter((issue) => !ignoredWhenPinned(issue))
+    : validation.errors;
   const newlyStarted = events.all().length === 0;
   await events.append("run.started", {
     projectRoot: displayRoot,
@@ -205,8 +209,8 @@ async function runLoop(
   });
   if (newlyStarted) options.onStarted?.(runId);
 
-  if (!validation.ok || !validation.project) {
-    await events.append("run.error", { phase: "validation", issues: validation.errors });
+  if (errors.length > 0 || !validation.project) {
+    await events.append("run.error", { phase: "validation", issues: errors });
     await events.append("run.failed", { phase: "validation" });
 
     return finalizeRun({
@@ -216,7 +220,7 @@ async function runLoop(
       status: "failed",
       startedAt,
       events: events.all(),
-      errors: validation.errors,
+      errors,
       eventStore: options.eventStore,
     });
   }
@@ -235,16 +239,7 @@ async function runLoop(
     const { instructions, skills } = await pinInstructions(project, events);
 
     const tools = await discoverTools(project);
-    await events.append("tools.discovered", {
-      tools: tools.map((tool) => ({
-        source: tool.source,
-        name: tool.name,
-        description: tool.description,
-        inputSchema: tool.inputSchema,
-        capabilities: tool.capabilities,
-        approval: tool.approval,
-      })),
-    });
+    await recordTools(project.root, tools, events);
 
     const output =
       options.provider !== undefined

@@ -345,6 +345,7 @@
         "payload": {
           "content": "string",
           "fileCount": "number",
+          "fingerprint": "string",
           "length": "number",
           "mimeType": "string",
           "output": "string",
@@ -425,6 +426,7 @@
         "content": "string",
         "contentHash": "string",
         "fileCount": "number",
+        "fingerprint": "string",
         "length": "number",
         "mimeType": "string",
         "output": "string",
