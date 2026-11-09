@@ -44,8 +44,7 @@ answers 403 `run.script_disabled` unless the server starts with
 
 Scripted runs over HTTP never run tool handlers. Each `tool.call` step needs a `result`, which
 is recorded as the tool's output, the same way evals mock tools. A step without `result`
-fails the run and names the tool, and a step with `"live": true` is refused with 400
-`request.invalid_body`. Approval policies still apply, so a step for a tool that needs
+or with `"live": true` is refused with 400 `request.invalid_body` before the run starts. Approval policies still apply, so a step for a tool that needs
 approval waits for a decision first. `plico run --dry --script` on the command line, and
 `plico.runs.start({ script })` in your backend, still run the real handlers.
 

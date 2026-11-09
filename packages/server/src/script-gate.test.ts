@@ -137,17 +137,24 @@ export default {
     expect(existsSync(marker)).toBe(false);
   });
 
-  it("fails a tool step with no result instead of running the handler", async () => {
+  it.each([
+    "/v1/runs",
+    "/v1/runs/dry",
+  ])("rejects a tool step with no result on %s, asking only for a result", async (path) => {
     const { base, marker } = await startWithTool();
 
-    const response = await post(base, "/v1/runs", {
+    const response = await post(base, path, {
       script: [{ type: "tool.call", toolName: "touch", arguments: {} }],
     });
-    const { runId } = (await response.json()) as { runId: string };
-    const events = await finished(base, runId);
 
-    expect(events.at(-1)?.type).toBe("run.failed");
+    expect(response.status).toBe(400);
+    const { error } = (await response.json()) as { error: { code: string; message: string } };
+    expect(error.code).toBe("request.invalid_body");
+    expect(error.message).toContain('"result"');
+    expect(error.message).not.toContain("live");
     expect(existsSync(marker)).toBe(false);
+    const runs = (await (await fetch(`${base}/v1/runs`)).json()) as unknown[];
+    expect(runs).toEqual([]);
   });
 
   it.each(["/v1/runs", "/v1/runs/dry"])("rejects a live tool step on %s", async (path) => {

@@ -42,5 +42,13 @@ export function readScript(
       `Script step ${live} is live. Scripted runs over HTTP never run tool handlers; give the step a "result" instead.`,
     );
   }
+  const unmocked = script.findIndex((step) => step.type === "tool.call" && !("result" in step));
+  if (unmocked !== -1) {
+    throw new HttpError(
+      400,
+      "request.invalid_body",
+      `Script step ${unmocked} has no "result". Scripted runs over HTTP never run tool handlers; add the "result" the tool should return.`,
+    );
+  }
   return script;
 }
