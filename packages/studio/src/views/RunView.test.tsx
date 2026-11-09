@@ -88,3 +88,17 @@ it("shows no metadata row for a run without metadata", () => {
   render(<RunView selectedRun={run} events={[]} />);
   expect(screen.queryByText("Metadata")).toBeNull();
 });
+
+it("totals input and output tokens across the run's model responses", () => {
+  const events = [
+    runEvent(1, "model.response", { content: "a", usage: { inputTokens: 12, outputTokens: 4 } }),
+    runEvent(2, "model.response", { content: "b", usage: { inputTokens: 30, outputTokens: 6 } }),
+  ];
+  render(<RunView selectedRun={{ ...run, status: "completed" }} events={events} />);
+  expect(screen.getByText("Tokens").nextSibling?.textContent).toBe("42 in · 10 out");
+});
+
+it("omits the token total for a run that called no model", () => {
+  render(<RunView selectedRun={{ ...run, status: "completed" }} events={[]} />);
+  expect(screen.queryByText("Tokens")).toBeNull();
+});

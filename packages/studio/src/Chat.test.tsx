@@ -257,3 +257,36 @@ it("shows an error when stopping a reply fails", async () => {
   expect(await screen.findByText("The engine is unavailable.")).toBeTruthy();
   expect(screen.getByRole("button", { name: "Stop response" })).toBeTruthy();
 });
+
+it("totals tokens across every run in the selected thread", async () => {
+  const fetchMock = stubApi();
+  const original = required(fetchMock.getMockImplementation());
+  const thread = { id: "thread-123", createdAt: "2026-01-01T00:00:00Z" };
+  const message = (id: string, runId: string) => ({
+    id,
+    threadId: thread.id,
+    role: "user",
+    content: "Hello",
+    runId,
+    createdAt: thread.createdAt,
+  });
+  const usageEvents = (input: number, output: number) => [
+    runEvent(1, "model.response", {
+      content: "x",
+      usage: { inputTokens: input, outputTokens: output },
+    }),
+  ];
+  fetchMock.mockImplementation(async (input, init) => {
+    if (input === "/v1/threads") return json([thread]);
+    if (input === "/v1/threads/thread-123/messages")
+      return json([message("m1", "run-aaaaaaaaaaaa"), message("m2", "run-bbbbbbbbbbbb")]);
+    if (input === "/v1/runs/run-aaaaaaaaaaaa/events") return json(usageEvents(10, 3));
+    if (input === "/v1/runs/run-bbbbbbbbbbbb/events") return json(usageEvents(25, 7));
+    return original(input, init);
+  });
+  render(<App />);
+  fireEvent.click(await screen.findByRole("button", { name: "Chat" }));
+  fireEvent.click(await screen.findByRole("button", { name: "Thread thread-1" }));
+
+  expect(await screen.findByText(/35 in · 10 out/)).toBeTruthy();
+});

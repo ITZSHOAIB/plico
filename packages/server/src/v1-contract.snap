@@ -345,12 +345,14 @@
         "payload": {
           "content": "string",
           "fileCount": "number",
+          "fingerprint": "string",
           "length": "number",
           "mimeType": "string",
           "output": "string",
           "path": "string",
           "projectName": "string",
           "projectRoot": "string",
+          "skills": [],
           "snapshotId": "string",
           "sources": [
             "string"
@@ -424,12 +426,14 @@
         "content": "string",
         "contentHash": "string",
         "fileCount": "number",
+        "fingerprint": "string",
         "length": "number",
         "mimeType": "string",
         "output": "string",
         "path": "string",
         "projectName": "string",
         "projectRoot": "string",
+        "skills": [],
         "snapshotId": "string",
         "sources": [
           "string"

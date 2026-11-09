@@ -10,8 +10,10 @@ import { threadLabel } from "../components/chat/threadLabel";
 import { formatMetadata } from "../format-metadata";
 import { useChat } from "../hooks/useChat";
 import { type RunInspector, useRunInspector } from "../hooks/useRunInspector";
+import { useThreadUsage } from "../hooks/useThreadUsage";
 import type { PlicoEvent } from "../types";
 import { Notice } from "../ui/Page";
+import { formatUsage } from "../usage";
 
 function liveText(events: PlicoEvent[]): string {
   const turns = new Map<number, { attempt: string; text: string }>();
@@ -86,6 +88,9 @@ export function ChatView({ inspector }: { inspector: RunInspector }) {
   }
 
   const thread = chat.threads.find((item) => item.id === chat.selected);
+  const threadTokens = formatUsage(
+    useThreadUsage(thread?.id, chat.messages, running) ?? { inputTokens: 0, outputTokens: 0 },
+  );
   const stop =
     running && runId
       ? () => {
@@ -121,7 +126,7 @@ export function ChatView({ inspector }: { inspector: RunInspector }) {
           title={thread ? threadLabel(thread) : "Chat"}
           subtitle={
             thread
-              ? `Started ${formatDate(thread.createdAt)}${thread.metadata ? ` · ${formatMetadata(thread.metadata)}` : ""}`
+              ? `Started ${formatDate(thread.createdAt)}${thread.metadata ? ` · ${formatMetadata(thread.metadata)}` : ""}${threadTokens ? ` · ${threadTokens} tokens` : ""}`
               : "Try your agent and inspect every run"
           }
           run={active.selectedRun}
