@@ -55,9 +55,18 @@ export async function serveCommand(args: string[]): Promise<number> {
     console.log(`Database: ${databasePath}`);
     return 0;
   } catch (error) {
-    console.error(errorMessage(error));
+    console.error(portInUseMessage(error) ?? errorMessage(error));
     return 1;
   }
+}
+
+function portInUseMessage(error: unknown): string | undefined {
+  if (!(error instanceof Error) || (error as NodeJS.ErrnoException).code !== "EADDRINUSE") {
+    return undefined;
+  }
+  const port = (error as NodeJS.ErrnoException & { port?: number }).port;
+  const label = port === undefined ? "The port" : `Port ${port}`;
+  return `${label} is already in use. Stop the other process or pick another with --port, for example: plico serve --port ${(port ?? 3000) + 1}`;
 }
 
 function resolveStudioPath(): string {

@@ -43,7 +43,11 @@ export async function createInternalOpsScaffold(options: ScaffoldOptions): Promi
     "utf8",
   );
   await writeFile(join(projectPaths.directories.tools, "readme.md"), toolsReadmeFile(), "utf8");
-  await writeFile(join(projectPaths.directories.evals, "smoke.md"), smokeEvalFile(), "utf8");
+  await writeFile(
+    join(projectPaths.directories.evals, "smoke.script.json"),
+    smokeEvalFile(),
+    "utf8",
+  );
   await writeFile(join(projectPaths.directories.memory, "README.md"), memoryReadmeFile(), "utf8");
   await writeFile(
     join(projectPaths.directories.artifacts, "README.md"),

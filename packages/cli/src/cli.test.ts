@@ -651,6 +651,7 @@ describe("main", () => {
       "approval.requested: delete_ticket",
       "run.waiting: approval required",
       "Dry run waiting for approval.",
+      "Not saved. Add --persist to keep this run and read it with plico events.",
     ]);
     expect(logSpy).not.toHaveBeenCalledWith(expect.stringContaining("run.completed"));
 

@@ -10,9 +10,12 @@ const USAGE_LINES: readonly string[] = [
   "Usage: plico serve [--host <host>] [--port <port>] [--db <path>] [--studio] [--allow-remote] [--allow-script] [--inspect] [path]",
 ];
 
-export function usageCommand(stream: "stdout" | "stderr" = "stdout"): number {
+export function usageCommand(stream: "stdout" | "stderr" = "stdout", command?: string): number {
   const write = stream === "stdout" ? console.log : console.error;
-  for (const line of USAGE_LINES) {
+  const lines = command
+    ? USAGE_LINES.filter((line) => line.startsWith(`Usage: plico ${command} `))
+    : USAGE_LINES;
+  for (const line of lines) {
     write(line);
   }
   return 0;

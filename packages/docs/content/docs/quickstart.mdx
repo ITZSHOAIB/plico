@@ -5,7 +5,8 @@ icon: Rocket
 ---
 
 `create-plico` generates the internal-ops starter and the `plico` CLI validates, runs and serves
-it. Plan on about 20 minutes. You need Node 22.18 or later and, for step 4, an API key.
+it. Steps 1 and 2 take a few minutes and need no API key. You need Node 22.18 or later and, to chat with
+a model in steps 3 to 5, an API key.
 
 <Callout>
   Plico is a developer preview (`0.1`). The HTTP API under `/v1` takes additive changes only; the
@@ -37,8 +38,8 @@ it. Plan on about 20 minutes. You need Node 22.18 or later and, for step 4, an A
     npx plico run --dry .
     ```
 
-    `plico validate` reports missing files, duplicate tool names and invalid config. A dry run
-    uses a scripted model, so it needs no key.
+    `plico validate` prints `Valid Plico project: .` and otherwise names the file at fault. A dry
+    run uses a scripted model, so it needs no key, and ends with `run.completed: completed`.
   </Step>
   <Step>
     ### Add your key
@@ -57,15 +58,18 @@ it. Plan on about 20 minutes. You need Node 22.18 or later and, for step 4, an A
     npm run dev
     ```
 
-    `plico serve` prints the address. Open it, start a thread, ask for something, and watch the run's events
-    stream in. See [Studio](/docs/studio) and [Threads](/docs/threads).
+    `plico serve` prints `Serving Plico at http://127.0.0.1:3000`. Open that address, start a
+    thread, ask for something, and watch the run's events stream in. If the port is taken, add
+    `--port 3001`. See [Studio](/docs/studio) and [Threads](/docs/threads).
   </Step>
   <Step>
     ### Approve a tool call
 
     Add a tool with `approval: { required: true }` (see [Tools](/docs/tools)). When the model
-    calls it, the run waits and Studio shows the request. Approve it and the run continues. See [Approvals](/docs/approvals).
-    `examples/internal-ops-agent` has a `close_ticket` tool that does this.
+    calls it, the run waits and Studio shows the request. Approve it and the run continues. To try
+    it with no key, see [Try it without a key](/docs/approvals#try-it-without-a-key). The
+    [internal-ops example](https://github.com/ITZSHOAIB/plico/tree/main/examples/internal-ops-agent)
+    has a `close_ticket` tool that does this.
   </Step>
   <Step>
     ### Check it in CI
@@ -74,7 +78,9 @@ it. Plan on about 20 minutes. You need Node 22.18 or later and, for step 4, an A
     npm run eval
     ```
 
-    Evals run scripted cases with no provider. See [CLI](/docs/cli).
+    Evals run scripted cases with no provider. The scaffold ships one case, `evals/smoke.script.json`,
+    and the command prints `1/1 passed, 0 failed`. Add your own with [`--from-run`](/docs/cli#turn-a-run-into-a-case).
+    See [CLI](/docs/cli).
   </Step>
 </Steps>
 

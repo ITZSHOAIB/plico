@@ -43,6 +43,11 @@ A run that was waiting resumed after a tool file under `tools/` changed. Instruc
 are pinned, so editing them does not cause this. Start a new run. See
 [Upgrading](/docs/upgrading#runs-that-are-waiting).
 
+## "Port 3000 is already in use"
+
+Another process holds the port `plico serve` wants. Stop it, or pick another port:
+`plico serve --studio --port 3001 .`. Open the address `plico serve` prints.
+
 ## Studio shows no runs
 
 `plico serve` stores runs under `.plico/` in the project folder. Serve the same folder you ran

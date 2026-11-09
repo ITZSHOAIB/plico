@@ -91,6 +91,32 @@ was already decided. `"unknown"` means there is no such run.
 `context` on a signal that comes over HTTP, so only your backend can say who approved. See
 [Use Plico from your backend](/docs/backend) and [Threads](/docs/threads#host-data-metadata-and-context).
 
+## Try it without a key
+
+A scripted run exercises the whole wait with no model. Save this as `waiting.script.json` next to a
+project with an approval-gated tool such as `close_ticket`:
+
+```json
+[{ "type": "tool.call", "toolName": "close_ticket", "arguments": { "ticketId": "T-1" } }]
+```
+
+```bash
+plico run --dry --persist --script waiting.script.json .
+```
+
+The run stops with `run.waiting`, prints `Persisted run ID: <run-id>` and exits with code 2. Start
+the server in another terminal, read the `requestId` from the events, and decide:
+
+```bash
+plico serve .
+plico events <run-id> .             # find the approval.requested event and its requestId
+curl -X POST http://127.0.0.1:3000/v1/runs/<run-id>/signal   -H "content-type: application/json"   -d '{ "name": "approval:<requestId>", "value": { "approved": true } }'
+```
+
+The run continues, writes `approval.decided`, `tool.result` and `run.completed`, and `plico events`
+shows them. Without `--persist` the run is not saved, so there is nothing to decide. In a scripted
+run the tool's output comes from the step's `result`; see [CLI](/docs/cli#scripts).
+
 ## Approvals in evals
 
 Approval policy applies in evals the same way it does in a run, so a scripted case that calls a
