@@ -1,4 +1,4 @@
-import { defineTool } from "plico";
+import { defineTool } from "@plico-ai/sdk";
 
 export default defineTool({
   name: "close_ticket",

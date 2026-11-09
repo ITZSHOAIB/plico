@@ -3,17 +3,17 @@ import { dirname } from "node:path";
 import { pathToFileURL } from "node:url";
 
 /**
- * Project files import `plico` for `defineConfig` and `defineTool`. Those helpers return their
- * argument unchanged, so any copy works. A project installed next to a global `plico` has no
+ * Project files import `@plico-ai/sdk` for `defineConfig` and `defineTool`. Those helpers return
+ * their argument unchanged, so any copy works. A project run by a global `plico` CLI may have no
  * node_modules of its own; resolution falls back to the copy that ships with this install.
  */
-const SPECIFIER = "plico";
+export const SPECIFIER = "@plico-ai/sdk";
 
 function ownEntry(): string {
   return createRequire(import.meta.url).resolve(SPECIFIER);
 }
 
-/** The file URL the `plico` specifier should resolve to for a file in `fromFile`'s project. */
+/** The file URL the `@plico-ai/sdk` specifier should resolve to for a file in `fromFile`'s project. */
 export function resolveAuthoringModule(fromFile: string): string {
   try {
     return pathToFileURL(createRequire(fromFile).resolve(SPECIFIER)).href;
@@ -22,10 +22,10 @@ export function resolveAuthoringModule(fromFile: string): string {
   }
 }
 
-/** Point `import "plico"` in a transpiled project file at an absolute file URL. */
+/** Point `import "@plico-ai/sdk"` in a transpiled project file at an absolute file URL. */
 export function rewriteAuthoringImports(code: string, fromFile: string): string {
   return code.replace(
-    /(\bfrom\s*|\bimport\s*)(["'])plico\2/g,
+    /(\bfrom\s*|\bimport\s*)(["'])@plico-ai\/sdk\2/g,
     (_match, keyword: string) => `${keyword}${JSON.stringify(resolveAuthoringModule(fromFile))}`,
   );
 }
@@ -49,7 +49,7 @@ type ResolveFilename = (request: string, ...rest: unknown[]) => string;
 
 let installed = false;
 
-/** Make `import "plico"` and `require("plico")` fall back to this install when a tool file cannot resolve it. */
+/** Make `import "@plico-ai/sdk"` and `require("@plico-ai/sdk")` fall back to this install when a tool file cannot resolve it. */
 export function installAuthoringFallback(): void {
   if (installed) return;
   installed = true;

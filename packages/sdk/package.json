@@ -1,5 +1,5 @@
 {
-  "name": "plico",
+  "name": "@plico-ai/sdk",
   "version": "0.0.0",
   "description": "Typed helpers for writing Plico projects: defineConfig and defineTool",
   "license": "Apache-2.0",
@@ -7,7 +7,7 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/ITZSHOAIB/plico.git",
-    "directory": "packages/plico"
+    "directory": "packages/sdk"
   },
   "keywords": [
     "plico",

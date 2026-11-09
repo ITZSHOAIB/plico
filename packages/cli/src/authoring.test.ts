@@ -5,20 +5,20 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterAll, describe, expect, it } from "vitest";
 
-// Runs the built CLI against projects that import `plico`, in a temp folder with no node_modules
-// above it, the way a globally installed `plico` meets a freshly scaffolded project.
+// Runs the built CLI against projects that import `@plico-ai/sdk`, in a temp folder with no node_modules
+// above it, the way a globally installed `plico` CLI meets a freshly scaffolded project.
 const cliPath = fileURLToPath(new URL("../dist/cli.js", import.meta.url));
 const CHILD_TIMEOUT_MS = 30_000;
 const TEST_TIMEOUT_MS = 45_000;
 const roots: string[] = [];
 
-const CONFIG = `import { defineConfig } from "plico";
+const CONFIG = `import { defineConfig } from "@plico-ai/sdk";
 
 export default defineConfig({ schemaVersion: 1, name: "Typed", template: "internal-ops" });
 `;
 
 function tool(name: string): string {
-  return `import { defineTool } from "plico";
+  return `import { defineTool } from "@plico-ai/sdk";
 
 export default defineTool({
   name: "${name}",

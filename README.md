@@ -24,9 +24,10 @@ Today this repo can:
 
 See the milestones in GitHub Issues for the remaining planned capabilities.
 
-Package names: install `plico` for the config and tool helpers and start a project with
-`npm create plico`. The runtime and embedding packages are scoped `@plico-ai/*`, for example
-`@plico-ai/server` for `createPlico`. There is no `@plico` scope.
+Package names: start a project with `npm create plico`. Every other package is scoped
+`@plico-ai/*`: `@plico-ai/sdk` for the config and tool helpers, `@plico-ai/cli` for the `plico`
+command, and `@plico-ai/server` for `createPlico`. There is no `@plico` scope, and the unscoped
+`plico` package is not ours.
 
 ## Repo Layout
 
@@ -113,11 +114,11 @@ that schema and sends JSON Schema to the model. Parsed Zod values, including
 defaults and transforms, reach the handler. Add `zod` to the project dependencies
 before importing it from a tool.
 
-Wrap a tool in `defineTool` and the config in `defineConfig`, both from `plico`,
+Wrap a tool in `defineTool` and the config in `defineConfig`, both from `@plico-ai/sdk`,
 to get editor types. `defineTool` infers the handler `input` from `inputSchema`,
 so `input.title` is a `string` for a JSON Schema with a required string `title`.
 Both helpers return their argument unchanged, and Plico finds them without a
-`node_modules` in the project, so a global `plico` install works with them.
+`node_modules` in the project, so a global `@plico-ai/cli` install works with them.
 
 Each tool handler receives `artifacts` alongside its abort signal and
 idempotency key. Use `artifacts.write(path, content, { mimeType })` to stage

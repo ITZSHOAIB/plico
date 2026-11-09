@@ -31,7 +31,7 @@ export const sources: SourceFile[] = [
     path: "tools/create-ticket.tool.ts",
     label: "Give it an action",
     lines: [
-      'import { defineTool } from "plico";',
+      'import { defineTool } from "@plico-ai/sdk";',
       "",
       "export default defineTool({",
       '  name: "create_ticket",',

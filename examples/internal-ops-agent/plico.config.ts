@@ -1,4 +1,4 @@
-import { defineConfig } from "plico";
+import { defineConfig } from "@plico-ai/sdk";
 
 export default defineConfig({
   schemaVersion: 1,
