@@ -1,4 +1,4 @@
-import { checkReadiness } from "@plico/runtime";
+import { checkReadiness, loadProjectEnv } from "@plico/runtime";
 import { lastPositional, parseArgs, readStringOption } from "../args.js";
 import { errorMessage } from "../errors.js";
 import { formatReadinessReport } from "../format/readiness.js";
@@ -12,6 +12,7 @@ export async function readinessCommand(args: string[]): Promise<number> {
       rejectUnknown: true,
     });
     const target = lastPositional(parsed, process.cwd());
+    loadProjectEnv(target);
     const databasePath = resolveDatabasePath(target, readStringOption(parsed, "--db"));
     const report = await checkReadiness(target, { databasePath, studioPath: findStudioPath() });
 

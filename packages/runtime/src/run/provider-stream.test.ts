@@ -59,7 +59,7 @@ it("persists text chunks while the model is still streaming", async () => {
 it("records configured model identity with the provider request", async () => {
   const root = await scaffold(
     "plico-model-identity-",
-    'export default { schemaVersion: 1, name: "Demo", model: { provider: "fake", name: "test-model" } };',
+    'export default { schemaVersion: 1, name: "Demo", model: { provider: "openai-compatible", name: "test-model" } };',
   );
   const result = await runProject(root, {
     message: "hello",
@@ -70,7 +70,7 @@ it("records configured model identity with the provider request", async () => {
     },
   });
   expect(result.events.find((event) => event.type === "model.request")?.payload).toMatchObject({
-    model: { provider: "fake", name: "test-model" },
+    model: { provider: "openai-compatible", name: "test-model" },
   });
 });
 
@@ -104,7 +104,7 @@ it("aborts the provider when the run is cancelled", async () => {
 it("fails at the configured model step limit", async () => {
   const root = await scaffold(
     "plico-limit-",
-    'export default { schemaVersion: 1, name: "Demo", model: { provider: "fake", name: "test", maxSteps: 1 } };',
+    'export default { schemaVersion: 1, name: "Demo", model: { provider: "openai-compatible", name: "test", maxSteps: 1 } };',
   );
   await writeFile(
     join(root, "tools", "noop.tool.ts"),
@@ -129,7 +129,7 @@ it("fails at the configured model step limit", async () => {
 it("rejects invalid model configuration before calling the provider", async () => {
   const root = await scaffold(
     "plico-invalid-model-",
-    'export default { schemaVersion: 1, name: "Demo", model: { provider: "fake", name: "test", maxSteps: 0 } };',
+    'export default { schemaVersion: 1, name: "Demo", model: { provider: "openai-compatible", name: "test", maxSteps: 0 } };',
   );
   let called = false;
   const result = await runProject(root, {
@@ -255,7 +255,7 @@ it("does not retry non-retryable provider errors", async () => {
 it("respects the configured model retry budget", async () => {
   const root = await scaffold(
     "plico-retry-budget-",
-    'export default { schemaVersion: 1, name: "Demo", model: { provider: "fake", name: "test", retries: 0 } };',
+    'export default { schemaVersion: 1, name: "Demo", model: { provider: "openai-compatible", name: "test", retries: 0 } };',
   );
   const { ModelProviderError } = await import("../index.js");
   let attempts = 0;

@@ -10,6 +10,7 @@ export {
   type RunContext,
   type Workflow,
 } from "./engine/index.js";
+export { loadedEnvFiles, loadProjectEnv } from "./env.js";
 export { type ModelErrorKind, ModelProviderError } from "./errors.js";
 export { evalCaseFromRun, runEvals } from "./evals/index.js";
 export { runFailureEvents } from "./events.js";

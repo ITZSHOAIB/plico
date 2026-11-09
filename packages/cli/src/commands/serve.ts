@@ -1,4 +1,5 @@
 import { isIPv4 } from "node:net";
+import { loadProjectEnv } from "@plico/runtime";
 import {
   lastPositional,
   parseArgs,
@@ -21,6 +22,7 @@ export async function serveCommand(args: string[]): Promise<number> {
       rejectUnknown: true,
     });
     const target = lastPositional(parsed, process.cwd());
+    loadProjectEnv(target);
     const host = readStringOption(parsed, "--host");
     const port = readNumberOption(parsed, "--port");
     if (host !== undefined && !isLoopbackHost(host) && !parsed.flags.has("--allow-remote")) {

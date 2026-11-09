@@ -22,6 +22,7 @@ export type { ComposedInstructions } from "./instructions.js";
 export type {
   LoadedProject,
   ProjectConfig,
+  ProviderInput,
   ValidationIssue,
   ValidationResult,
   ValidationSeverity,

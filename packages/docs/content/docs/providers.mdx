@@ -1,0 +1,76 @@
+---
+title: Model providers
+description: Choose a model provider, keep keys in .env, and reach any other provider.
+icon: Cpu
+---
+
+Set `model` in `plico.config.ts`. `plico validate` fails when `model.provider` is not one of the
+providers below and the project has no matching file in `providers/`.
+
+| `provider` | Key variable | Package to install |
+| --- | --- | --- |
+| `anthropic` | `ANTHROPIC_API_KEY` | `@ai-sdk/anthropic` |
+| `google` | `GOOGLE_GENERATIVE_AI_API_KEY` | `@ai-sdk/google` |
+| `openai` | `OPENAI_API_KEY` | `@ai-sdk/openai` |
+| `openai-compatible` | `OPENAI_API_KEY` | none |
+
+The adapter packages are optional peer dependencies, so install only the one you use:
+`pnpm add @ai-sdk/anthropic`. A run that needs a missing package fails with that command.
+
+```ts title="plico.config.ts"
+export default defineConfig({
+  schemaVersion: 1,
+  name: "My agent",
+  model: { provider: "anthropic", name: "claude-sonnet-5-5" },
+});
+```
+
+## Keys and .env
+
+`plico run`, `plico serve` and `plico readiness` load `.env` from the project folder. A variable already set in
+the shell wins over the file. Values are never logged, and `plico readiness` says when a `.env`
+was loaded. Keep `.env` out of git.
+
+Set `model.apiKeyEnv` to read the key from another variable. Set `model.baseURL` to change the
+endpoint. For `openai` and `openai-compatible`, `OPENAI_BASE_URL` is the fallback.
+
+## Other providers
+
+`openai-compatible` reaches any server that speaks the OpenAI chat API:
+
+```ts title="plico.config.ts"
+// OpenRouter
+model: { provider: "openai-compatible", name: "anthropic/claude-sonnet-5-5",
+  baseURL: "https://openrouter.ai/api/v1", apiKeyEnv: "OPENROUTER_API_KEY" }
+
+// LiteLLM proxy
+model: { provider: "openai-compatible", name: "my-model",
+  baseURL: "http://localhost:4000/v1", apiKeyEnv: "LITELLM_API_KEY" }
+
+// Ollama (any non-empty key works)
+model: { provider: "openai-compatible", name: "llama3.2",
+  baseURL: "http://localhost:11434/v1", apiKeyEnv: "OLLAMA_API_KEY" }
+
+// Vercel AI Gateway
+model: { provider: "openai-compatible", name: "anthropic/claude-sonnet-5-5",
+  baseURL: "https://ai-gateway.vercel.sh/v1", apiKeyEnv: "AI_GATEWAY_API_KEY" }
+```
+
+For anything else, name the provider after a file in `providers/`. It exports a function that
+returns an AI SDK language model:
+
+```ts title="providers/acme.ts"
+import { defineProvider } from "plico";
+import { createAcme } from "@acme/ai-sdk-provider";
+
+export default defineProvider(({ model, apiKey, baseURL }) =>
+  createAcme({ apiKey, baseURL })(model),
+);
+```
+
+```ts title="plico.config.ts"
+model: { provider: "acme", name: "acme-large", apiKeyEnv: "ACME_API_KEY" }
+```
+
+Plico wraps the model behind its own model port, so no AI SDK type enters the project contract.
+Retries stay off inside the adapter; the engine retries the step.

@@ -8,6 +8,10 @@ export {
   PROJECT_LAYOUT,
   REQUIRED_PROJECT_DIRECTORIES,
 } from "./layout.js";
+export {
+  findProjectProviderFile,
+  NATIVE_MODEL_PROVIDERS,
+} from "./model-provider.js";
 export { readSkills, type Skill, type SkillsResult } from "./skills.js";
 export { ARTIFACT_TOOL_NAMES, SKILL_TOOL_NAME } from "./tool-name-validation.js";
 export type {

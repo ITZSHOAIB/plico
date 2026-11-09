@@ -84,7 +84,7 @@ beforeAll(async () => {
   threadStore = createSqliteThreadStore({ databasePath });
   await writeFile(
     join(root, "plico.config.ts"),
-    'export default { schemaVersion: 1, name: "Demo", execution: { leaseMs: 30000 }, model: { provider: "fake", name: "test" } } as const;\n',
+    'export default { schemaVersion: 1, name: "Demo", execution: { leaseMs: 30000 }, model: { provider: "openai-compatible", name: "test" } } as const;\n',
   );
   await writeFile(
     join(root, "tools", "lookup.tool.ts"),

@@ -1,9 +1,12 @@
 import type { ProjectConfig } from "@plico/core";
 import { createConfiguredModelProvider, type ModelProvider } from "@plico/runtime";
 
-export function resolveModelProvider(model: ProjectConfig["model"]): ModelProvider {
+export function resolveModelProvider(
+  model: ProjectConfig["model"],
+  projectRoot: string,
+): ModelProvider {
   if (!model) throw new Error("Model configuration is missing from plico.config.ts.");
-  const provider = createConfiguredModelProvider(model);
+  const provider = createConfiguredModelProvider(model, projectRoot);
   if (!provider) throw new Error(`Unsupported model provider: ${model.provider}`);
   return provider;
 }

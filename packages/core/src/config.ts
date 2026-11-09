@@ -111,6 +111,8 @@ function normalizeProjectConfig(value: unknown, configPath: string): ProjectConf
 
   if (config.model !== undefined) {
     normalized.model = { provider: config.model.provider, name: config.model.name };
+    if (config.model.baseURL !== undefined) normalized.model.baseURL = config.model.baseURL;
+    if (config.model.apiKeyEnv !== undefined) normalized.model.apiKeyEnv = config.model.apiKeyEnv;
     if (config.model.maxSteps !== undefined) normalized.model.maxSteps = config.model.maxSteps;
     if (config.model.retries !== undefined) normalized.model.retries = config.model.retries;
     if (config.model.retryDelayMs !== undefined)
@@ -217,6 +219,10 @@ function validateProjectConfigShape(value: unknown): ValidationIssue[] {
       !model.provider.trim() ||
       typeof model.name !== "string" ||
       !model.name.trim() ||
+      (Object.hasOwn(model, "baseURL") &&
+        (typeof model.baseURL !== "string" || !model.baseURL.trim())) ||
+      (Object.hasOwn(model, "apiKeyEnv") &&
+        (typeof model.apiKeyEnv !== "string" || !/^[A-Za-z_]\w*$/.test(model.apiKeyEnv))) ||
       (Object.hasOwn(model, "maxSteps") &&
         (!Number.isSafeInteger(model.maxSteps) || Number(model.maxSteps) <= 0)) ||
       (Object.hasOwn(model, "retries") &&
@@ -231,7 +237,7 @@ function validateProjectConfigShape(value: unknown): ValidationIssue[] {
       issues.push({
         path: relativePaths.configFile,
         message:
-          "Expected non-empty model.provider and model.name, positive model.maxSteps, retries between 0 and 10, and retryDelayMs between 0 and 60000",
+          "Expected non-empty model.provider and model.name, string model.baseURL and model.apiKeyEnv (a variable name), positive model.maxSteps, retries between 0 and 10, and retryDelayMs between 0 and 60000",
         severity: "error",
       });
     }

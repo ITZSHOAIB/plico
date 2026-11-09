@@ -2,6 +2,7 @@ import { join } from "node:path";
 import type { ReadinessDiagnostic, ReadinessOptions, ReadinessReport } from "../types/index.js";
 import { checkArtifactAccess } from "./checks/artifact-access.js";
 import { checkArtifacts } from "./checks/artifacts.js";
+import { checkEnv } from "./checks/env.js";
 import { checkEvals } from "./checks/evals.js";
 import { checkPersistence } from "./checks/persistence.js";
 import { checkProject } from "./checks/project.js";
@@ -27,6 +28,7 @@ export async function checkReadiness(
   const database = openDatabase(databasePath, options.eventStore);
 
   diagnostics.push(
+    ...checkEnv(projectRoot),
     ...checkProvider(projectCheck.project.config.model),
     checkArtifactAccess(projectCheck.project.config),
     ...(await checkTools(projectCheck.project)),

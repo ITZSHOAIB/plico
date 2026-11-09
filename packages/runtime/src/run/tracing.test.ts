@@ -17,7 +17,7 @@ it("traces a provider run and its model and tool steps without recording content
     await mkdir(join(root, dir));
   await writeFile(
     join(root, "plico.config.ts"),
-    'export default { schemaVersion: 1, name: "Demo", model: { provider: "fake", name: "test" } };',
+    'export default { schemaVersion: 1, name: "Demo", model: { provider: "openai-compatible", name: "test" } };',
   );
   await writeFile(join(root, "agent.md"), "private instruction");
   await writeFile(
@@ -61,7 +61,7 @@ it("makes the model attempt active for asynchronous provider spans", async () =>
     await mkdir(join(root, dir));
   await writeFile(
     join(root, "plico.config.ts"),
-    'export default { schemaVersion: 1, name: "Demo", model: { provider: "fake", name: "test" } };',
+    'export default { schemaVersion: 1, name: "Demo", model: { provider: "openai-compatible", name: "test" } };',
   );
   await writeFile(join(root, "agent.md"), "instructions");
   const exporter = new InMemorySpanExporter();

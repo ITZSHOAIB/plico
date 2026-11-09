@@ -1,5 +1,6 @@
 import type {
   ProjectConfig,
+  ProviderInput,
   ToolApprovalPolicy,
   ToolDefinition,
   ToolHandlerContext,
@@ -8,6 +9,7 @@ import type { InferToolInput, SchemaInput } from "./infer.js";
 
 export type {
   ProjectConfig,
+  ProviderInput,
   ToolApprovalPolicy,
   ToolArtifactContext,
   ToolDefinition,
@@ -35,4 +37,14 @@ export function defineTool<const Schema extends SchemaInput>(
 /** Declare `plico.config.ts`. Returns the object unchanged; the types check it. */
 export function defineConfig(config: ProjectConfig): ProjectConfig {
   return config;
+}
+
+/**
+ * Declare `providers/<name>.ts`: a function that returns any AI SDK language model. Returns the
+ * function unchanged. Plico wraps the model behind its own model port.
+ */
+export function defineProvider(
+  provider: (input: ProviderInput) => unknown,
+): (input: ProviderInput) => unknown {
+  return provider;
 }
