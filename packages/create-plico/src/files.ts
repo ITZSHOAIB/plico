@@ -1,5 +1,8 @@
 import { PROVIDER_SETUP, type ScaffoldProvider } from "./providers.js";
 
+/** Matches the adapter ranges `@plico-ai/runtime` accepts as optional peer dependencies. */
+const ADAPTER_RANGE = "^4.0.0";
+
 export function configFile(projectName: string, provider?: ScaffoldProvider): string {
   const setup = provider ? PROVIDER_SETUP[provider] : undefined;
   return [
@@ -39,7 +42,10 @@ export function packageFile(version: string, provider?: ScaffoldProvider): strin
         validate: "plico validate .",
         eval: "plico eval .",
       },
-      dependencies: { "@plico-ai/sdk": `^${version}`, ...(adapter ? { [adapter]: "latest" } : {}) },
+      dependencies: {
+        "@plico-ai/sdk": `^${version}`,
+        ...(adapter ? { [adapter]: ADAPTER_RANGE } : {}),
+      },
       devDependencies: { "@plico-ai/cli": `^${version}` },
     },
     null,
@@ -122,12 +128,17 @@ export function toolsReadmeFile(): string {
 }
 
 export function smokeEvalFile(): string {
-  return [
-    "# Smoke Eval",
-    "",
-    "Verify the scaffold boots, validates, and presents a clear starting point.",
-    "",
-  ].join("\n");
+  return `${JSON.stringify(
+    {
+      description:
+        "Scripted smoke case. It needs no model and no key, so it passes in CI. Replace the steps with calls to your own tools.",
+      script: [{ type: "assistant.output", content: "The project boots." }],
+      expect: { status: "completed", outputContains: "boots" },
+    },
+    null,
+    2,
+  )}
+`;
 }
 
 export function memoryReadmeFile(): string {

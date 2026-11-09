@@ -120,6 +120,9 @@ export async function runCommand(args: string[]): Promise<number> {
       process.stdout.write("\n");
       if (result.status !== "completed") {
         for (const line of formatRunResult(target, result, false)) console.error(line);
+        if (persist && result.status === "waiting") {
+          console.error(`Persisted run ID: ${result.runId}`);
+        }
       } else if (persist) {
         console.log(`Persisted run ID: ${result.runId}`);
       }
@@ -133,6 +136,12 @@ export async function runCommand(args: string[]): Promise<number> {
       }
       if (persist && result.status === "completed") {
         console.log(`Persisted run ID: ${result.runId}`);
+      } else if (result.status === "waiting") {
+        console.error(
+          persist
+            ? `Persisted run ID: ${result.runId}`
+            : "Not saved. Add --persist to keep this run and read it with plico events.",
+        );
       }
     }
 

@@ -3,7 +3,12 @@ import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { getProjectPaths, validateProject } from "@plico-ai/core";
-import { createConfiguredModelProvider, loadProjectEnv, runProject } from "@plico-ai/runtime";
+import {
+  createConfiguredModelProvider,
+  loadProjectEnv,
+  runEvals,
+  runProject,
+} from "@plico-ai/runtime";
 import { describe, expect, it } from "vitest";
 import { createInternalOpsScaffold } from "./index.js";
 
@@ -27,9 +32,9 @@ describe("createInternalOpsScaffold", () => {
     expect(await readFile(join(projectPaths.directories.tools, "readme.md"), "utf8")).toContain(
       "file-first",
     );
-    expect(await readFile(join(projectPaths.directories.evals, "smoke.md"), "utf8")).toContain(
-      "validates",
-    );
+    expect(
+      await readFile(join(projectPaths.directories.evals, "smoke.script.json"), "utf8"),
+    ).toContain("Scripted smoke case");
     expect(await readFile(join(projectPaths.directories.memory, "README.md"), "utf8")).toContain(
       "durable project notes",
     );
@@ -156,5 +161,26 @@ describe("createInternalOpsScaffold", () => {
       stub.close();
       if (saved !== undefined) process.env.OPENAI_API_KEY = saved;
     }
+  });
+});
+
+describe("scaffold eval and dependencies", () => {
+  it("passes plico eval out of the box", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-create-"));
+    await createInternalOpsScaffold({ targetDir: root });
+
+    const report = await runEvals(root);
+
+    expect(report.total).toBe(1);
+    expect(report.passed).toBe(1);
+  });
+
+  it("pins the provider adapter to a range instead of latest", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-create-"));
+    await createInternalOpsScaffold({ targetDir: root, provider: "anthropic" });
+
+    const pkg = JSON.parse(await readFile(join(root, "package.json"), "utf8"));
+
+    expect(pkg.dependencies["@ai-sdk/anthropic"]).toBe("^4.0.0");
   });
 });

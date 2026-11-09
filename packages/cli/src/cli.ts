@@ -50,7 +50,12 @@ export async function main(argv: string[]): Promise<number> {
     return 1;
   }
 
-  return command(argv.slice(3));
+  const args = argv.slice(3);
+  if (args.includes("--help") || args.includes("-h")) {
+    return usageCommand("stdout", name);
+  }
+
+  return command(args);
 }
 
 if (isDirectRun(import.meta.url, process.argv[1])) {

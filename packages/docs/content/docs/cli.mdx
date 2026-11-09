@@ -18,10 +18,39 @@ Run `plico --version` to print the installed version. Every command takes an opt
 | `plico readiness [path]` | Reports readiness diagnostics. |
 | `plico serve [path]` | Starts the HTTP API. |
 
+`plico <command> --help` prints that command's usage.
+
 Common flags: `--json` prints machine-readable output, and `--db <path>` points at a database other
 than `.plico/plico.sqlite`. `plico run` without `--dry` needs a configured model; see
 [Model providers](/docs/providers). A dry run prints its events but only saves them with
 `--persist`.
+
+## Scripts
+
+`plico run --dry --script <file>` replays a script instead of calling a model. A script is a JSON
+array of steps:
+
+```json
+[
+  { "type": "assistant.output", "content": "I will create the ticket." },
+  { "type": "tool.call", "toolName": "create_ticket", "arguments": { "title": "VPN down" },
+    "result": { "ticketId": "T-1" } },
+  { "type": "artifact.write", "files": [{ "path": "summary.md", "content": "# Ticket" }] }
+]
+```
+
+| Step | Fields |
+| --- | --- |
+| `assistant.output` | `content`, the text the agent says. |
+| `tool.call` | `toolName`, `arguments`, and an optional `result` used instead of running the handler. Add `"live": true` to run the real handler. |
+| `artifact.write` | `files`, each with `path`, `content` and an optional `mimeType`. |
+
+A script that calls a tool needing approval stops with `run.waiting`, prints
+`Dry run waiting for approval.` and exits with code 2. Add `--persist` to save the run and print its
+id. See [Approvals](/docs/approvals#try-it-without-a-key) for how to decide it.
+
+An eval case is the same array, or an object with the array under `script` plus `description` and
+`expect`, described next.
 
 ## serve
 
@@ -34,8 +63,9 @@ address; the default is `127.0.0.1:3000`. Other options:
 
 ## eval
 
-Each `evals/*.script.json` file is one case: a script of steps and an optional `expect`
-(`status`, `outputContains`). `plico eval` exits 1 when a case fails, and also when there are
+Each `evals/*.script.json` file is one case: a [script](#scripts) of steps, or an object with a
+`script` array, an optional `description` and an optional `expect` (`status`, `outputContains`). A new
+project has one case, `evals/smoke.script.json`, so `npm run eval` passes out of the box. `plico eval` exits 1 when a case fails, and also when there are
 no cases, so a CI gate cannot pass with nothing tested. `--allow-empty` accepts an empty
 `evals/` folder.
 
