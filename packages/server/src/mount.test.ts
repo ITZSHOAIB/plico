@@ -157,8 +157,8 @@ describe("mounted API with scope", () => {
           method: "POST",
           body: {
             script: [
-              { type: "tool.call", toolName: "who", arguments: {} },
-              { type: "tool.call", toolName: "archive", arguments: {} },
+              { type: "tool.call", toolName: "who", arguments: {}, result: {} },
+              { type: "tool.call", toolName: "archive", arguments: {}, result: {} },
             ],
           },
         }),

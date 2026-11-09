@@ -20,7 +20,7 @@ icon: Terminal
 `plico serve --studio <project>` also serves the bundled Studio. Other options:
 
 - `--allow-remote` exposes the server on another host. See [HTTP API](/docs/http-api).
-- `--allow-script` lets API callers send scripted runs. See [HTTP API](/docs/http-api).
+- `--allow-script` lets API callers send scripted runs. Their tool steps use the output in the script and never run handlers. See [HTTP API](/docs/http-api).
 - `--inspect` serves for inspection beside a backend that owns the database: nothing is recovered or resumed and every change is refused. See [Use Plico from your backend](/docs/backend).
 
 ## eval

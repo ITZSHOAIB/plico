@@ -38,10 +38,16 @@ that run.
 
 ## Scripted runs
 
-A `script` in a run request calls project tools with arguments the caller picks and
-skips the model. For that reason the API answers 403 `run.script_disabled` unless the
-server starts with `plico serve --allow-script` (`allowScript: true` for
-`servePlico`). `plico run --dry --script` on the command line is unaffected.
+A `script` in a run request replays steps the caller picks and skips the model. The API
+answers 403 `run.script_disabled` unless the server starts with
+`plico serve --allow-script` (`allowScript: true` for `servePlico`).
+
+Scripted runs over HTTP never run tool handlers. Each `tool.call` step needs a `result`, which
+is recorded as the tool's output, the same way evals mock tools. A step without `result`
+fails the run and names the tool, and a step with `"live": true` is refused with 400
+`request.invalid_body`. Approval policies still apply, so a step for a tool that needs
+approval waits for a decision first. `plico run --dry --script` on the command line, and
+`plico.runs.start({ script })` in your backend, still run the real handlers.
 
 With `plico serve --inspect` (`inspect: true` for `servePlico`) the server only reads: it recovers
 nothing, `GET /health` returns `{ "ok": true, "inspection": true }`, and every request other than
