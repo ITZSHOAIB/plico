@@ -24,7 +24,9 @@ Today this repo can:
 
 See the milestones in GitHub Issues for the remaining planned capabilities.
 
-Package names: start a project with `npm create plico`. Every other package is scoped
+Plico is a developer preview on npm (`0.1`). Start a project with `npm create plico@latest my-agent -- --provider anthropic`, then follow the [quickstart](packages/docs/content/docs/quickstart.mdx).
+
+Package names: the starter is `create-plico`. Every other package is scoped
 `@plico-ai/*`: `@plico-ai/sdk` for the config and tool helpers, `@plico-ai/cli` for the `plico`
 command, and `@plico-ai/server` for `createPlico`. There is no `@plico` scope, and the unscoped
 `plico` package is not ours.

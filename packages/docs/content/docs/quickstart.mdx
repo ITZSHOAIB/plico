@@ -7,10 +7,9 @@ icon: Rocket
 `create-plico` generates the internal-ops starter and the `plico` CLI validates, runs and serves
 it. Plan on about 20 minutes. You need Node 22.18 or later and, for step 4, an API key.
 
-<Callout type="warn">
-  Plico packages are not published to npm yet, so `npm create plico` and `npm install` cannot
-  fetch them. Until release, follow [Before release](#before-release) to run everything from a
-  checkout of the repository. The steps below are the walkthrough after release.
+<Callout>
+  Plico is a developer preview (`0.1`). The HTTP API under `/v1` takes additive changes only; the
+  TypeScript exports can change in any `0.x` minor release.
 </Callout>
 
 <Steps>
@@ -18,7 +17,7 @@ it. Plan on about 20 minutes. You need Node 22.18 or later and, for step 4, an A
     ### Create a project
 
     ```bash
-    create-plico my-agent --provider anthropic
+    npm create plico@latest my-agent -- --provider anthropic
     cd my-agent
     npm install
     ```
@@ -80,23 +79,3 @@ it. Plan on about 20 minutes. You need Node 22.18 or later and, for step 4, an A
 </Steps>
 
 If something fails, see [Troubleshooting](/docs/troubleshooting).
-
-## Before release
-
-Build the repository once, then run the built CLIs by path from the repository root. Replace
-`<repo>` with its path and `my-agent` with any folder:
-
-```bash
-cd <repo>
-pnpm install && pnpm build
-node packages/create-plico/dist/cli.js ../my-agent --provider anthropic
-node packages/cli/dist/cli.js validate ../my-agent
-node packages/cli/dist/cli.js run --dry ../my-agent
-cp ../my-agent/.env.example ../my-agent/.env   # then add your key
-node packages/cli/dist/cli.js readiness ../my-agent
-node packages/cli/dist/cli.js serve --studio ../my-agent
-```
-
-Skip `npm install` in the new folder, and use these commands in place of its `npm run` scripts
-(`dev` is `serve --studio`, `validate` is `validate`, `eval` is `eval`). The model adapters
-(`@ai-sdk/anthropic`, `@ai-sdk/openai`, `@ai-sdk/google`) load from the repository's install.

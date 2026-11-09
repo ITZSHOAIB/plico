@@ -20,8 +20,5 @@ These steps need the npm and GitHub account owners. Do them once, before the fir
 1. **Reserve the six scoped names.** npm only lets you configure trusted publishing for a package that already exists. Publish a placeholder `0.0.0-reserved.0` for each of `@plico-ai/contracts`, `sdk`, `core`, `runtime`, `server` and `cli` with `npm publish --access public --tag reserved`. `create-plico` already has one.
 2. **Add a trusted publisher to each of the seven packages** on npmjs.com (package, Settings, Trusted Publisher, GitHub Actions): organization or user `ITZSHOAIB`, repository `plico`, workflow filename `release.yml`, environment `npm-publish`.
 3. **Create the `npm-publish` environment** (repository Settings, Environments) and add yourself as a required reviewer. Limit it to the `main` branch.
-4. **Optional: add a `RELEASE_TOKEN` secret**, a fine-grained personal access token with contents and pull requests write on this repository. Without it the Version Packages pull request is opened with the default token, and GitHub does not run CI on pull requests opened that way. You can still merge it, but its checks never run.
-
-## After the first publish
-
-The quickstart and README say the packages are not on npm yet. Change them in the first pull request after the publish, so they are true when merged.
+4. **Allow Actions to open pull requests** (repository Settings, Actions, General, Workflow permissions): tick "Allow GitHub Actions to create and approve pull requests". Without it the Version Packages pull request fails with "GitHub Actions is not permitted to create or approve pull requests".
+5. **Optional: add a `RELEASE_TOKEN` secret**, a fine-grained personal access token with contents and pull requests write on this repository. Without it the Version Packages pull request is opened with the default token, and GitHub does not run CI on pull requests opened that way. You can still merge it, but its checks never run.
