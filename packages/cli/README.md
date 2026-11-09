@@ -39,3 +39,5 @@ The lease defaults to 30,000 ms and must be a positive integer. The host's setti
 run's worker records the terminal cancellation event; if no worker is active, the
 next recovery pass finalizes it. `--db <path>` selects a non-default database and
 `--json` prints the cancellation result.
+
+Docs: [plico.sohab.dev](https://plico.sohab.dev). For AI coding agents: [llms.txt](https://plico.sohab.dev/llms.txt).

@@ -3,7 +3,11 @@ import type { ArtifactFileInput, DryRunScriptStep } from "./types/index.js";
 export class ScriptValidationError extends Error {}
 
 export function normalizeScript(value: unknown): DryRunScriptStep[] {
-  if (!Array.isArray(value)) throw new ScriptValidationError("script must be an array.");
+  if (isRecord(value) && Array.isArray(value.script)) return value.script.map(normalizeStep);
+  if (!Array.isArray(value))
+    throw new ScriptValidationError(
+      'script must be an array of steps, or an object with a "script" array.',
+    );
   return value.map(normalizeStep);
 }
 
@@ -17,6 +21,12 @@ function normalizeStep(step: unknown, index: number): DryRunScriptStep {
       throw new ScriptValidationError(`${prefix} must include content.`);
     }
     return { type: "assistant.output", content: step.content };
+  }
+  if (step.type === "approval.decide") {
+    if (typeof step.approved !== "boolean") {
+      throw new ScriptValidationError(`${prefix} must include approved as true or false.`);
+    }
+    return { type: "approval.decide", approved: step.approved };
   }
   if (step.type === "tool.call") {
     if (typeof step.toolName !== "string") {
@@ -48,7 +58,9 @@ function normalizeStep(step: unknown, index: number): DryRunScriptStep {
     });
     return { type: "artifact.write", files };
   }
-  throw new ScriptValidationError(`${prefix} has an unsupported type.`);
+  throw new ScriptValidationError(
+    `${prefix} has an unsupported type. Use assistant.output, tool.call, approval.decide or artifact.write.`,
+  );
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

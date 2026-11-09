@@ -9,3 +9,5 @@ Threads and runs take a host `metadata` JSON object at creation (immutable; list
 Start the HTTP server with `plico serve [path]` from [`@plico-ai/cli`](../cli). It binds to loopback by default and rejects cross-origin and DNS-rebinding requests unless `--allow-remote` is set. Run requests that carry a `script` are refused with 403 `run.script_disabled` unless `--allow-script` (`allowScript: true`) is set.
 
 Requires Node `>=22.18`. Wire types come from `@plico-ai/contracts`.
+
+Docs: [plico.sohab.dev](https://plico.sohab.dev). For AI coding agents: [llms.txt](https://plico.sohab.dev/llms.txt).

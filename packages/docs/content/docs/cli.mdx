@@ -35,6 +35,7 @@ array of steps:
   { "type": "assistant.output", "content": "I will create the ticket." },
   { "type": "tool.call", "toolName": "create_ticket", "arguments": { "title": "VPN down" },
     "result": { "ticketId": "T-1" } },
+  { "type": "approval.decide", "approved": true },
   { "type": "artifact.write", "files": [{ "path": "summary.md", "content": "# Ticket" }] }
 ]
 ```
@@ -42,15 +43,21 @@ array of steps:
 | Step | Fields |
 | --- | --- |
 | `assistant.output` | `content`, the text the agent says. |
-| `tool.call` | `toolName`, `arguments`, and an optional `result` used instead of running the handler. Add `"live": true` to run the real handler. |
+| `tool.call` | `toolName`, `arguments`, and an optional `result`. `plico run --dry` runs the real handler. [Evals](/docs/evals) and scripted runs over HTTP use `result` instead and never run it. `"live": true` runs the handler there too. |
+| `approval.decide` | `approved`, `true` or `false`. Place it right after a `tool.call` that needs approval. |
 | `artifact.write` | `files`, each with `path`, `content` and an optional `mimeType`. |
 
-A script that calls a tool needing approval stops with `run.waiting`, prints
-`Dry run waiting for approval.` and exits with code 2. Add `--persist` to save the run and print its
-id. See [Approvals](/docs/approvals#try-it-without-a-key) for how to decide it.
+A script that calls a tool needing approval and has no `approval.decide` after it stops with
+`run.waiting`, prints `Dry run waiting for approval.` and exits with code 2. Add `--persist` to save
+the run and print its id. See [Approvals](/docs/approvals#try-it-without-a-key).
 
-An eval case is the same array, or an object with the array under `script` plus `description` and
-`expect`, described next.
+`--script` also accepts an [eval case](/docs/evals#the-case-file): an object with the steps under
+`script`.
+
+### Exit codes
+
+`plico run` exits 0 when the run completed, 2 when it is waiting for approval and 1 on any failure.
+`plico validate`, `plico eval` and `plico readiness` exit 0 on success and 1 otherwise.
 
 ## serve
 
@@ -63,30 +70,9 @@ address; the default is `127.0.0.1:3000`. Other options:
 
 ## eval
 
-Each `evals/*.script.json` file is one case: a [script](#scripts) of steps, or an object with a
-`script` array, an optional `description` and an optional `expect` (`status`, `outputContains`). A new
-project has one case, `evals/smoke.script.json`, so `npm run eval` passes out of the box. `plico eval` exits 1 when a case fails, and also when there are
-no cases, so a CI gate cannot pass with nothing tested. `--allow-empty` accepts an empty
-`evals/` folder.
-
-Evals never run tool handlers by surprise. A `tool.call` step supplies the tool's output as
-`result`, and the run uses it instead of calling the handler:
-
-```json
-{ "type": "tool.call", "toolName": "create_ticket", "arguments": { "title": "VPN down" },
-  "result": { "ticketId": "T-1" } }
-```
-
-A `tool.call` step without `result` fails the case and names the tool. Add `"live": true` to a
-step to run the real handler on purpose. Approval policy still applies in evals, so a tool that
-requires approval is held exactly as it is in a normal run.
-
-### Turn a run into a case
-
-`plico eval --from-run <run-id> [--name <name>] [path]` writes a stored run to
-`evals/<name>.script.json` (the name defaults to the run id). Each tool call keeps the output it
-produced as `result`, and `expect` records the run's status and final output. It refuses to
-overwrite an existing case and fails on an unknown run id. Files a tool wrote are not carried over.
+`plico eval [path]` runs every `evals/*.script.json` case with no model and exits 1 when a case fails
+or when there are no cases. `--allow-empty` accepts an empty `evals/` folder. See [Evals](/docs/evals)
+for the case format, approval cases and `--from-run`.
 
 ## Help and unknown flags
 

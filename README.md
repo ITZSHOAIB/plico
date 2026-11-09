@@ -117,9 +117,10 @@ Plico is a **developer preview (`0.1`)**. The HTTP API under `/v1` takes additiv
 
 - [Quickstart](https://plico.sohab.dev/docs/quickstart): scaffold, run, and approve a tool call
 - [Project layout](https://plico.sohab.dev/docs/project-layout), [Tools](https://plico.sohab.dev/docs/tools), [Providers](https://plico.sohab.dev/docs/providers)
-- [Approvals](https://plico.sohab.dev/docs/approvals), [Events](https://plico.sohab.dev/docs/events), [Upgrading](https://plico.sohab.dev/docs/upgrading), and [how Plico compares](https://plico.sohab.dev/docs/compare)
+- [Approvals](https://plico.sohab.dev/docs/approvals), [Evals](https://plico.sohab.dev/docs/evals), [Events](https://plico.sohab.dev/docs/events), [Upgrading](https://plico.sohab.dev/docs/upgrading), and [how Plico compares](https://plico.sohab.dev/docs/compare)
 - [Embed in a backend](https://plico.sohab.dev/docs/backend) and the [HTTP API](https://plico.sohab.dev/docs/http-api)
-- [`examples/internal-ops-agent`](examples/internal-ops-agent), a complete project
+- [Example: a refund agent](https://plico.sohab.dev/docs/refund-agent) and [`examples/internal-ops-agent`](examples/internal-ops-agent), complete projects
+- [Build with an AI coding agent](https://plico.sohab.dev/docs/agents): `llms.txt`, a scaffolded `AGENTS.md` and a Claude skill
 
 ## Contributing
 

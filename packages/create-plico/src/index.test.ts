@@ -184,3 +184,40 @@ describe("scaffold eval and dependencies", () => {
     expect(pkg.dependencies["@ai-sdk/anthropic"]).toBe("^4.0.0");
   });
 });
+
+describe("scaffold agent instructions", () => {
+  it("writes AGENTS.md for coding agents and a CLAUDE.md that imports it", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-create-"));
+    await createInternalOpsScaffold({ targetDir: root });
+
+    const agents = await readFile(join(root, "AGENTS.md"), "utf8");
+
+    expect(agents).toContain("https://plico.sohab.dev/llms.txt");
+    expect(await readFile(join(root, "CLAUDE.md"), "utf8")).toBe("@AGENTS.md\n");
+  });
+
+  it("documents a tool and an eval that work as written", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-create-"));
+    await createInternalOpsScaffold({ targetDir: root });
+    const agents = await readFile(join(root, "AGENTS.md"), "utf8");
+    const blocks = [...agents.matchAll(/```(ts|json)\n([\s\S]*?)```/g)];
+    const tool = blocks.find((block) => block[1] === "ts")?.[2] ?? "";
+    const evalCase = blocks.find((block) => block[1] === "json")?.[2] ?? "";
+    await writeFile(
+      join(root, "tools", "issue-refund.tool.ts"),
+      tool.replace(
+        'import { defineTool } from "@plico-ai/sdk";',
+        "const defineTool = <T>(t: T) => t;",
+      ),
+      "utf8",
+    );
+    await writeFile(join(root, "evals", "refund.script.json"), evalCase, "utf8");
+
+    const validation = await validateProject(root);
+    const report = await runEvals(root);
+
+    expect(validation.ok).toBe(true);
+    expect(report.failed).toBe(0);
+    expect(report.passed).toBe(2);
+  });
+});

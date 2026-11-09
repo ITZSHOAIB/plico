@@ -9,6 +9,8 @@ import {
   gitignoreFile,
   memoryReadmeFile,
   packageFile,
+  projectAgentsFile,
+  projectClaudeFile,
   projectReadmeFile,
   smokeEvalFile,
   toolsReadmeFile,
@@ -55,6 +57,8 @@ export async function createInternalOpsScaffold(options: ScaffoldOptions): Promi
     "utf8",
   );
   await writeFile(join(root, "README.md"), projectReadmeFile(projectName), "utf8");
+  await writeFile(join(root, "AGENTS.md"), projectAgentsFile(projectName), "utf8");
+  await writeFile(join(root, "CLAUDE.md"), projectClaudeFile(), "utf8");
 }
 
 async function ensureEmptyTarget(root: string): Promise<void> {

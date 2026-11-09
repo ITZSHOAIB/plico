@@ -1,0 +1,91 @@
+---
+title: Evals
+description: Scripted test cases that run with no model and no API key.
+icon: FlaskConical
+---
+
+An eval is a script of steps that Plico replays against your project, plus what you expect to
+happen. It needs no model and no API key, so it is a good gate in CI. Evals check your wiring:
+the tools exist, the approval rules hold, the run ends how you expect. They do not judge what a
+model would say.
+
+```bash
+plico eval .
+```
+
+```text
+Eval results for .
+  PASS refund-approved (eval-refund-approved-5fb6d184)
+  PASS refund-denied (eval-refund-denied-12aad571)
+       Approval for issue_refund was denied.
+  PASS refund-held (eval-refund-held-5607f9f4)
+
+3/3 passed, 0 failed
+```
+
+`plico eval` exits 0 when every case passes and 1 when a case fails. It also exits 1 when there are
+no cases, so a CI gate cannot pass with nothing tested. `--allow-empty` accepts an empty `evals/`
+folder. A new project ships one case, `evals/smoke.script.json`.
+
+## The case file
+
+Each `evals/<name>.script.json` file is one case:
+
+```json
+{
+  "description": "A person approves the refund and the agent confirms it.",
+  "script": [
+    { "type": "tool.call", "toolName": "issue_refund", "arguments": { "orderId": "A-1001" },
+      "result": { "orderId": "A-1001", "status": "refunded" } },
+    { "type": "approval.decide", "approved": true },
+    { "type": "assistant.output", "content": "Refunded order A-1001." }
+  ],
+  "expect": { "status": "completed", "outputContains": "Refunded" }
+}
+```
+
+| Key | Meaning |
+| --- | --- |
+| `script` | The steps, required. A file that is only the array of steps also works. |
+| `description` | Optional text. |
+| `name` | Optional. Defaults to the file name without `.script.json`. |
+| `expect.status` | `completed`, `waiting` or `failed`. |
+| `expect.outputContains` | Text the run's final output must contain. |
+
+The steps are the same ones `plico run --dry --script` takes, so you can try a case on its own:
+`plico run --dry --script evals/refund-approved.script.json .`.
+
+| Step | Fields |
+| --- | --- |
+| `assistant.output` | `content`, the text the agent says. |
+| `tool.call` | `toolName`, `arguments` and `result`. |
+| `approval.decide` | `approved`. Right after a `tool.call` that needs approval. |
+| `artifact.write` | `files`, each with `path`, `content` and an optional `mimeType`. |
+
+Evals never run tool handlers by surprise. A `tool.call` step supplies the tool's output as
+`result`, and the run uses it instead of calling the handler. A step without `result` fails the case
+and names the tool. Add `"live": true` to run the real handler on purpose. Arguments are still
+checked against the tool's `inputSchema`.
+
+## Test approvals
+
+Approval policy applies in evals as it does in a run. Three cases cover a tool that needs approval:
+
+- **Held.** No `approval.decide` step. The run stops as `waiting` and the tool never runs. Use
+  `"expect": { "status": "waiting" }`.
+- **Approved.** `{ "type": "approval.decide", "approved": true }` right after the tool call. The run
+  records `approval.requested` and `approval.decided`, uses the step's `result` and carries on.
+- **Denied.** `"approved": false` ends the run as `failed` before the tool runs. Use
+  `"expect": { "status": "failed" }`.
+
+An `approval.decide` step that does not follow a tool call needing approval fails the case. See
+[Approvals](/docs/approvals).
+
+## Turn a run into a case
+
+`plico eval --from-run <run-id> [--name <name>] [path]` writes a stored run to
+`evals/<name>.script.json` (the name defaults to the run id). Each tool call keeps the output it
+produced as `result`, and `expect` records the run's status and final output. It refuses to
+overwrite an existing case and fails on an unknown run id. Files a tool wrote are not carried over.
+
+For a complete project with three cases, see [Example: a refund agent](/docs/refund-agent).
