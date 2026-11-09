@@ -179,3 +179,7 @@ Generate a new internal-ops starter:
 ```sh
 pnpm --filter create-plico exec create-plico my-plico
 ```
+
+## License
+
+Apache-2.0. See [LICENSE](LICENSE) and [NOTICE](NOTICE).

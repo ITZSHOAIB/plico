@@ -2,6 +2,7 @@
   "name": "@plico/cli",
   "version": "0.0.0",
   "description": "The plico command line: validate, run, eval, readiness and serve with Studio",
+  "license": "Apache-2.0",
   "homepage": "https://plico.sohab.dev",
   "repository": {
     "type": "git",
@@ -34,6 +35,7 @@
     }
   },
   "files": [
+    "NOTICE",
     "dist"
   ],
   "dependencies": {
