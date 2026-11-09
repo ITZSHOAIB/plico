@@ -33,7 +33,15 @@ export function useChat(inspector: RunInspector) {
   const renamedAt = useRef(new Map<string, number>());
   const timers = useRef<Array<ReturnType<typeof setInterval>>>([]);
 
-  useEffect(() => () => timers.current.forEach(clearInterval), []);
+  const mounted = useRef(true);
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      timers.current.forEach(clearInterval);
+    };
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -164,6 +172,7 @@ export function useChat(inspector: RunInspector) {
       );
     // Model-written titles land after the run completes, so keep looking for a short while.
     void refreshThreads().then((first) => {
+      if (!mounted.current) return;
       let attempts = 0;
       const timer = setInterval(() => {
         if (selection.current !== generation || ++attempts > titleRetries) {

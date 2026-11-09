@@ -51,6 +51,38 @@ it("picks up a title written after the reply finished", async () => {
   }
 });
 
+it("stops looking for titles when unmounted before the first refresh answers", async () => {
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  try {
+    let resolveRefresh!: (threads: Thread[]) => void;
+    vi.mocked(api.fetchThreads).mockReset();
+    vi.mocked(api.fetchThreads)
+      .mockResolvedValueOnce([untitled])
+      .mockImplementationOnce(
+        () =>
+          new Promise<Thread[]>((resolve) => {
+            resolveRefresh = resolve;
+          }),
+      )
+      .mockResolvedValue([untitled]);
+    const { result, rerender, unmount } = renderHook(({ events }) => useChat(inspector(events)), {
+      initialProps: { events: [] as PlicoEvent[] },
+    });
+    await waitFor(() => expect(result.current.threads).toHaveLength(1));
+    await act(() => result.current.chooseThread("t1"));
+    rerender({ events: [{ id: "e1", type: "run.completed" } as PlicoEvent] });
+    await waitFor(() => expect(resolveRefresh).toBeTypeOf("function"));
+
+    unmount();
+    await act(async () => resolveRefresh([untitled]));
+    await vi.advanceTimersByTimeAsync(60_000);
+
+    expect(api.fetchThreads).toHaveBeenCalledTimes(2);
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
 it("keeps a rename when an older thread-list refresh arrives afterwards", async () => {
   let resolveRefresh!: (threads: Thread[]) => void;
   vi.mocked(api.fetchThreads)
