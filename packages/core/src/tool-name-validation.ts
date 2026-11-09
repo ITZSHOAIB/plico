@@ -1,11 +1,17 @@
 import { readdir, readFile } from "node:fs/promises";
-import { createRequire } from "node:module";
 import { join } from "node:path";
+import {
+  type CallExpression,
+  type Expression,
+  type ImportDeclaration,
+  type ObjectExpression,
+  type Program,
+  parse,
+} from "acorn";
+import { transform } from "esbuild";
 import { SPECIFIER } from "./authoring.js";
 import { getProjectPaths, getProjectRelativePaths } from "./layout.js";
 import type { ValidationIssue } from "./types.js";
-
-const require = createRequire(import.meta.url);
 
 export const ARTIFACT_TOOL_NAMES = ["list_files", "read_file", "write_file", "edit_file"] as const;
 
@@ -36,7 +42,7 @@ export async function validateToolNames(root: string): Promise<ValidationIssue[]
   for (const entry of entries) {
     const source = `${relativePaths.directories.tools}/${entry}`;
     const text = await readFile(join(paths.directories.tools, entry), "utf8");
-    const name = readToolName(text, source);
+    const name = await readToolName(text, source);
     if (name === undefined) continue;
 
     if (ARTIFACT_TOOL_NAMES.includes(name as (typeof ARTIFACT_TOOL_NAMES)[number])) {
@@ -72,29 +78,56 @@ export async function validateToolNames(root: string): Promise<ValidationIssue[]
 }
 
 interface Scope {
-  declarations: Map<string, import("typescript").Expression>;
+  declarations: Map<string, Expression>;
   /** Local names bound to `defineTool` from "@plico-ai/sdk", including `import { defineTool as x }`. */
   defineTools: Set<string>;
   /** Local names bound to the whole module, as in `import * as plico from "@plico-ai/sdk"`. */
   namespaces: Set<string>;
 }
 
-function readToolName(text: string, fileName: string): string | undefined {
-  const ts = require("typescript") as typeof import("typescript");
-  const source = ts.createSourceFile(fileName, text, ts.ScriptTarget.Latest, true);
-  const scope: Scope = { declarations: new Map(), defineTools: new Set(), namespaces: new Set() };
-  let defaultExpression: import("typescript").Expression | undefined;
+/**
+ * Types are stripped first, so `as`, `satisfies` and annotations are gone before the tree is read.
+ * A file that does not parse has no readable name; the project still validates and the load step
+ * reports the syntax error.
+ */
+async function parseToolFile(text: string, fileName: string): Promise<Program | undefined> {
+  try {
+    const { code } = await transform(text, {
+      loader: "ts",
+      format: "esm",
+      target: "esnext",
+      sourcefile: fileName,
+    });
+    return parse(code, { ecmaVersion: "latest", sourceType: "module" });
+  } catch {
+    return undefined;
+  }
+}
 
-  for (const statement of source.statements) {
-    if (ts.isVariableStatement(statement)) {
-      for (const declaration of statement.declarationList.declarations) {
-        if (ts.isIdentifier(declaration.name) && declaration.initializer) {
-          scope.declarations.set(declaration.name.text, declaration.initializer);
+async function readToolName(text: string, fileName: string): Promise<string | undefined> {
+  const program = await parseToolFile(text, fileName);
+  if (!program) return undefined;
+  const scope: Scope = { declarations: new Map(), defineTools: new Set(), namespaces: new Set() };
+  let defaultExpression: Expression | undefined;
+
+  for (const statement of program.body) {
+    if (statement.type === "VariableDeclaration") {
+      for (const declaration of statement.declarations) {
+        if (declaration.id.type === "Identifier" && declaration.init) {
+          scope.declarations.set(declaration.id.name, declaration.init);
         }
       }
-    } else if (ts.isExportAssignment(statement) && !statement.isExportEquals) {
-      defaultExpression = statement.expression;
-    } else if (ts.isImportDeclaration(statement)) {
+    } else if (statement.type === "ExportDefaultDeclaration") {
+      const { declaration } = statement;
+      if (declaration.type !== "FunctionDeclaration" && declaration.type !== "ClassDeclaration") {
+        defaultExpression = declaration;
+      }
+    } else if (statement.type === "ExportNamedDeclaration") {
+      // esbuild may write `export default tool` as `export { tool as default }`.
+      for (const specifier of statement.specifiers) {
+        if (moduleName(specifier.exported) === "default") defaultExpression = specifier.local;
+      }
+    } else if (statement.type === "ImportDeclaration") {
       readAuthoringImport(statement, scope);
     }
   }
@@ -105,47 +138,36 @@ function readToolName(text: string, fileName: string): string | undefined {
   return result.kind === "known" ? result.name : undefined;
 }
 
-function readAuthoringImport(
-  statement: import("typescript").ImportDeclaration,
-  scope: Scope,
-): void {
-  const ts = require("typescript") as typeof import("typescript");
-  const bindings = statement.importClause?.namedBindings;
-  if (!bindings || !ts.isStringLiteral(statement.moduleSpecifier)) return;
-  if (statement.moduleSpecifier.text !== SPECIFIER) return;
-  if (ts.isNamespaceImport(bindings)) {
-    scope.namespaces.add(bindings.name.text);
-    return;
-  }
-  for (const element of bindings.elements) {
-    if ((element.propertyName ?? element.name).text === "defineTool") {
-      scope.defineTools.add(element.name.text);
+function moduleName(node: { type: string; name?: string; value?: unknown }): string | undefined {
+  if (node.type === "Identifier") return node.name;
+  return typeof node.value === "string" ? node.value : undefined;
+}
+
+function readAuthoringImport(statement: ImportDeclaration, scope: Scope): void {
+  if (statement.source.value !== SPECIFIER) return;
+  for (const specifier of statement.specifiers) {
+    if (specifier.type === "ImportNamespaceSpecifier") {
+      scope.namespaces.add(specifier.local.name);
+    } else if (
+      specifier.type === "ImportSpecifier" &&
+      moduleName(specifier.imported) === "defineTool"
+    ) {
+      scope.defineTools.add(specifier.local.name);
     }
   }
 }
 
-function resolveObjectName(
-  object: import("typescript").ObjectLiteralExpression,
-  scope: Scope,
-): ToolNameResolution {
-  const ts = require("typescript") as typeof import("typescript");
+function resolveObjectName(object: ObjectExpression, scope: Scope): ToolNameResolution {
   for (const property of [...object.properties].reverse()) {
-    if (ts.isPropertyAssignment(property)) {
-      const propertyName =
-        ts.isIdentifier(property.name) || ts.isStringLiteral(property.name)
-          ? property.name.text
-          : undefined;
+    if (property.type === "Property" && property.kind === "init" && !property.method) {
+      const propertyName = property.computed ? undefined : moduleName(property.key);
       if (propertyName === "name") {
-        const name = resolveString(property.initializer, scope);
+        const name = resolveString(property.value as Expression, scope);
         return name === undefined ? { kind: "unknown" } : { kind: "known", name };
       }
     }
-    if (ts.isShorthandPropertyAssignment(property) && property.name.text === "name") {
-      const name = resolveString(property.name, scope);
-      return name === undefined ? { kind: "unknown" } : { kind: "known", name };
-    }
-    if (ts.isSpreadAssignment(property)) {
-      const spreadObject = resolveObject(property.expression, scope);
+    if (property.type === "SpreadElement") {
+      const spreadObject = resolveObject(property.argument, scope);
       if (!spreadObject) return { kind: "unknown" };
       const spreadName = resolveObjectName(spreadObject, scope);
       if (spreadName.kind !== "absent") return spreadName;
@@ -154,79 +176,60 @@ function resolveObjectName(
   return { kind: "absent" };
 }
 
-function resolveString(
-  expression: import("typescript").Expression,
-  scope: Scope,
-): string | undefined {
-  const ts = require("typescript") as typeof import("typescript");
+function resolveString(expression: Expression, scope: Scope): string | undefined {
   let current = unwrap(expression, scope);
   const visited = new Set<string>();
-  while (ts.isIdentifier(current)) {
-    if (visited.has(current.text)) return undefined;
-    visited.add(current.text);
-    const declaration = scope.declarations.get(current.text);
+  while (current.type === "Identifier") {
+    if (visited.has(current.name)) return undefined;
+    visited.add(current.name);
+    const declaration = scope.declarations.get(current.name);
     if (!declaration) return undefined;
     current = unwrap(declaration, scope);
   }
-  return ts.isStringLiteral(current) ? current.text : undefined;
+  return current.type === "Literal" && typeof current.value === "string"
+    ? current.value
+    : undefined;
 }
 
 function resolveObject(
-  expression: import("typescript").Expression | undefined,
+  expression: Expression | undefined,
   scope: Scope,
-): import("typescript").ObjectLiteralExpression | undefined {
-  const ts = require("typescript") as typeof import("typescript");
+): ObjectExpression | undefined {
   let current = expression;
   const visited = new Set<string>();
   while (current) {
     current = unwrap(current, scope);
-    if (ts.isObjectLiteralExpression(current)) return current;
-    if (!ts.isIdentifier(current)) return undefined;
-    if (visited.has(current.text)) return undefined;
-    visited.add(current.text);
-    current = scope.declarations.get(current.text);
+    if (current.type === "ObjectExpression") return current;
+    if (current.type !== "Identifier") return undefined;
+    if (visited.has(current.name)) return undefined;
+    visited.add(current.name);
+    current = scope.declarations.get(current.name);
   }
   return undefined;
 }
 
-function unwrap(
-  expression: import("typescript").Expression,
-  scope: Scope,
-): import("typescript").Expression {
-  const ts = require("typescript") as typeof import("typescript");
+function unwrap(expression: Expression, scope: Scope): Expression {
   let current = expression;
-  while (true) {
-    if (
-      ts.isAsExpression(current) ||
-      ts.isSatisfiesExpression(current) ||
-      ts.isParenthesizedExpression(current)
-    ) {
-      current = current.expression;
-    } else if (isDefineToolCall(current, scope)) {
-      current = current.arguments[0] as import("typescript").Expression;
-    } else {
-      return current;
-    }
-  }
+  while (isDefineToolCall(current, scope)) current = current.arguments[0] as Expression;
+  return current;
 }
 
 /**
  * `defineTool(tool)` returns `tool` unchanged, so its name is the argument's name. Only the
  * `defineTool` imported from "@plico-ai/sdk" counts, under any local name or through a namespace import.
  */
-function isDefineToolCall(
-  expression: import("typescript").Expression,
-  scope: Scope,
-): expression is import("typescript").CallExpression {
-  const ts = require("typescript") as typeof import("typescript");
-  if (!ts.isCallExpression(expression) || expression.arguments.length !== 1) return false;
-  const callee = expression.expression;
-  if (ts.isIdentifier(callee)) return scope.defineTools.has(callee.text);
+function isDefineToolCall(expression: Expression, scope: Scope): expression is CallExpression {
+  if (expression.type !== "CallExpression" || expression.arguments.length !== 1) return false;
+  if (expression.arguments[0]?.type === "SpreadElement") return false;
+  const { callee } = expression;
+  if (callee.type === "Identifier") return scope.defineTools.has(callee.name);
   return (
-    ts.isPropertyAccessExpression(callee) &&
-    ts.isIdentifier(callee.expression) &&
-    scope.namespaces.has(callee.expression.text) &&
-    callee.name.text === "defineTool"
+    callee.type === "MemberExpression" &&
+    !callee.computed &&
+    callee.object.type === "Identifier" &&
+    scope.namespaces.has(callee.object.name) &&
+    callee.property.type === "Identifier" &&
+    callee.property.name === "defineTool"
   );
 }
 

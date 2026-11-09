@@ -38,7 +38,8 @@
   "dependencies": {
     "@plico-ai/contracts": "workspace:*",
     "@plico-ai/sdk": "workspace:*",
-    "typescript": "^6.0.3"
+    "acorn": "^8.19.0",
+    "esbuild": "~0.28.2"
   },
   "engines": {
     "node": ">=22.18.0"
