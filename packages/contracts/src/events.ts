@@ -24,7 +24,13 @@ export interface PlicoEventPayloads {
     metadata?: Record<string, JsonValue>;
     context?: Record<string, JsonValue>;
   };
-  "instructions.composed": { length: number; sources: string[]; content: string };
+  "instructions.composed": {
+    length: number;
+    sources: string[];
+    content: string;
+    /** The skills the run started with, so a resumed run keeps them. Absent on older runs. */
+    skills?: Array<{ name: string; description: string; source: string; body: string }>;
+  };
   "tools.discovered": {
     tools: Array<{
       source: string;

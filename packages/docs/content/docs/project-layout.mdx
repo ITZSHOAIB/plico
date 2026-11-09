@@ -46,6 +46,10 @@ content after a restart. `load_skill` only returns files from `skills/`, and no 
 use that name. `plico validate` rejects a skill with no description, a skill folder with no `SKILL.md`, and a
 flat `skills/<name>.md` file, with a message naming where to move it.
 
+A run keeps the instructions and skills it started with. If you edit `agent.md` or a skill while a
+run waits for an approval, the run continues with the old text and only new runs use the edit.
+Changing a tool a waiting run uses still ends it with `run.failed`.
+
 ## Configuration
 
 Wrap the config in `defineConfig` from `plico` to get editor types. It returns its

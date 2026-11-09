@@ -34,6 +34,11 @@ was loaded. Keep `.env` out of git.
 Set `model.apiKeyEnv` to read the key from another variable. Set `model.baseURL` to change the
 endpoint. For `openai` and `openai-compatible`, `OPENAI_BASE_URL` is the fallback.
 
+## Long conversations
+
+When a thread outgrows the model's context window, the run fails with a clear message to start a
+new thread or choose a model with a larger context. Plico does not retry this error.
+
 ## Other providers
 
 `openai-compatible` reaches any server that speaks the OpenAI chat API:

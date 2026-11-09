@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { isAbsolute, resolve } from "node:path";
 import { type Span, SpanStatusCode } from "@opentelemetry/api";
-import { readSkills, validateProject } from "@plico/core";
+import { validateProject } from "@plico/core";
 import {
   createEngine,
   createMemoryJournal,
@@ -12,11 +12,11 @@ import {
 } from "../engine/index.js";
 import { RunWaitingError, runtimeErrorPayload } from "../errors.js";
 import { InMemoryEventLog } from "../events.js";
-import { composeInstructions } from "../instructions.js";
 import type { Metadata } from "../storage/metadata.js";
 import { discoverTools } from "../tools/index.js";
 import type { DryRunScriptStep, RunProjectOptions, RunResult } from "../types/index.js";
 import { finalizeRun } from "./finalize.js";
+import { pinInstructions } from "./pinned-instructions.js";
 import { runDefaultDryRun } from "./strategies/default-dry.js";
 import { runProviderBackedRun } from "./strategies/provider.js";
 import { runScriptedDryRun } from "./strategies/scripted.js";
@@ -232,13 +232,7 @@ async function runLoop(
   };
 
   try {
-    const { skills } = await readSkills(project.root);
-    const instructions = await composeInstructions(project, skills);
-    await events.append("instructions.composed", {
-      length: instructions.content.length,
-      sources: instructions.sources,
-      content: instructions.content,
-    });
+    const { instructions, skills } = await pinInstructions(project, events);
 
     const tools = await discoverTools(project);
     await events.append("tools.discovered", {

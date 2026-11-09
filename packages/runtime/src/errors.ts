@@ -36,6 +36,7 @@ export type ModelErrorKind =
   | "overloaded"
   | "auth"
   | "bad_request"
+  | "context_length"
   | "aborted"
   | "network";
 

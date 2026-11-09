@@ -170,6 +170,11 @@ export function createAiSdkModelProvider(options: AiSdkProviderOptions): ModelPr
             throw new ModelProviderError("rate_limit", "Model provider rate limit reached.");
           if (status === 503 || (status !== undefined && status >= 500))
             throw new ModelProviderError("overloaded", "Model provider is unavailable.");
+          if (status !== undefined && status >= 400 && isContextLengthError(error))
+            throw new ModelProviderError(
+              "context_length",
+              "The conversation is too long for the model's context window. Start a new thread, or choose a model with a larger context.",
+            );
           if (status !== undefined && status >= 400)
             throw new ModelProviderError(
               "bad_request",
@@ -180,4 +185,12 @@ export function createAiSdkModelProvider(options: AiSdkProviderOptions): ModelPr
       }
     },
   };
+}
+
+const CONTEXT_LENGTH =
+  /context[_ ]length|context window|prompt is too long|too many tokens|exceeds? the maximum (number of )?tokens|input token count/i;
+
+/** Providers word this differently, so match the code and message they return for an over-long input. */
+function isContextLengthError(error: APICallError): boolean {
+  return CONTEXT_LENGTH.test(`${error.message} ${error.responseBody ?? ""}`);
 }

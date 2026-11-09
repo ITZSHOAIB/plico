@@ -10,6 +10,7 @@ import { Button } from "../ui/Button";
 import { Icon } from "../ui/Icon";
 import { CodeBlock, EmptyState, Notice, titleClass } from "../ui/Page";
 import { StatusBadge } from "../ui/StatusBadge";
+import { formatUsage, sumUsage } from "../usage";
 import { ReplayControls } from "./ReplayControls";
 import { type RunTabMode, RunTabs } from "./RunTabs";
 
@@ -50,6 +51,7 @@ function SelectedRunView({
     error?.payload.message ?? error?.payload.issues?.map((issue) => issue.message).join(", ");
   const toolCalls = visibleEvents.filter((event) => event.type === "tool.call").length;
   const elapsed = duration(shownRun);
+  const tokens = formatUsage(sumUsage(visibleEvents));
   const approvalRequest =
     replay.isLatest && eventsLoaded && selectedRun.status === "waiting"
       ? pendingApproval(events)
@@ -93,6 +95,7 @@ function SelectedRunView({
           {elapsed && <MetaItem label="Duration" value={elapsed} />}
           <MetaItem label="Events" value={String(visibleEvents.length)} />
           <MetaItem label="Tool calls" value={String(toolCalls)} />
+          {tokens && <MetaItem label="Tokens" value={tokens} />}
           {shownRun.metadata && (
             <MetaItem label="Metadata" value={formatMetadata(shownRun.metadata)} />
           )}

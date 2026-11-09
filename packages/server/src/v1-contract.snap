@@ -351,6 +351,7 @@
           "path": "string",
           "projectName": "string",
           "projectRoot": "string",
+          "skills": [],
           "snapshotId": "string",
           "sources": [
             "string"
@@ -430,6 +431,7 @@
         "path": "string",
         "projectName": "string",
         "projectRoot": "string",
+        "skills": [],
         "snapshotId": "string",
         "sources": [
           "string"

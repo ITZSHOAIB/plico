@@ -160,7 +160,10 @@ describe("crash recovery", () => {
     const marks = join(root, "marks.txt");
     await writeFile(marks, "");
     await killRunMidTool(root, databasePath, marks);
-    await writeFile(join(root, "agent.md"), "# Demo, edited while the run was down\n");
+    await writeFile(
+      join(root, "tools", "mark.tool.ts"),
+      tool("mark", "").replace('description: "x"', 'description: "edited while the run was down"'),
+    );
     const store = createSqliteEventStore({ databasePath });
 
     process.env.PLICO_MARKS = marks;
