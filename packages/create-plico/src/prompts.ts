@@ -1,4 +1,4 @@
-import { cancel, intro, isCancel, outro, spinner, text } from "@clack/prompts";
+import { cancel, intro, isCancel, outro, select, spinner, text } from "@clack/prompts";
 
 export interface ScaffoldPrompts {
   intro(message: string): void;
@@ -7,6 +7,10 @@ export interface ScaffoldPrompts {
     message: string;
     placeholder?: string;
     defaultValue?: string;
+  }): Promise<string | symbol>;
+  select(options: {
+    message: string;
+    options: Array<{ value: string; label: string }>;
   }): Promise<string | symbol>;
   spinner(): {
     start(message: string): void;
@@ -20,6 +24,7 @@ export const defaultScaffoldPrompts: ScaffoldPrompts = {
   intro,
   outro,
   text,
+  select: (options) => select(options),
   spinner,
   cancel,
   isCancel,

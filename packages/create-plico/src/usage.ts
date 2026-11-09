@@ -1,7 +1,7 @@
 import { createRequire } from "node:module";
 
 export const USAGE: string = [
-  "Usage: create-plico [directory] [project name]",
+  "Usage: create-plico [directory] [project name] [--provider anthropic|openai|google|openai-compatible]",
   "       create-plico --help | --version",
 ].join("\n");
 

@@ -181,4 +181,23 @@ describe("internal-ops-agent example", () => {
     });
     expect(result.output).toContain("Artifact workspace");
   });
+
+  it("configures a model provider, so provider runs only need a key", async () => {
+    const result = await validateProject("examples/internal-ops-agent");
+
+    expect(result.project?.config.model).toMatchObject({ provider: "anthropic" });
+    expect(await readFile("examples/internal-ops-agent/.env.example", "utf8")).toContain(
+      "ANTHROPIC_API_KEY=",
+    );
+  });
+
+  it("holds close_ticket for approval before it changes anything", async () => {
+    const result = await runProject("examples/internal-ops-agent", {
+      script: [{ type: "tool.call", toolName: "close_ticket", arguments: { ticketId: "TCK-1" } }],
+    });
+
+    expect(result.status).toBe("waiting");
+    expect(result.events.map((event) => event.type)).toContain("approval.requested");
+    expect(result.events.map((event) => event.type)).not.toContain("artifact.file.written");
+  });
 });

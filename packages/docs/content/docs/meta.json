@@ -12,6 +12,7 @@
     "threads",
     "backend",
     "http-api",
-    "cli"
+    "cli",
+    "troubleshooting"
   ]
 }
