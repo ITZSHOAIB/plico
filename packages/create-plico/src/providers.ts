@@ -7,6 +7,8 @@ interface ProviderSetup {
   model: string;
   /** The environment variable the provider reads its key from. Absent for a local server. */
   apiKeyEnv?: string;
+  /** A value to prefill in `.env.example`, for a server that ignores the key. */
+  placeholderKey?: string;
   baseURL?: string;
   /** The AI SDK adapter package the project installs. Absent when none is needed. */
   adapter?: string;
@@ -34,6 +36,9 @@ export const PROVIDER_SETUP: Record<ScaffoldProvider, ProviderSetup> = {
   "openai-compatible": {
     label: "OpenAI-compatible server (Ollama, OpenRouter, LiteLLM)",
     model: "llama3.1",
+    // The adapter needs some key. Ollama ignores it, so the scaffold supplies a placeholder.
+    apiKeyEnv: "OLLAMA_API_KEY",
+    placeholderKey: "ollama",
     baseURL: "http://localhost:11434/v1",
   },
 };

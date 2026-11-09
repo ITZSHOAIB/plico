@@ -8,26 +8,26 @@ This example includes a declared `create_ticket.tool.ts` module that stages a Ma
 
 ## Run it with a model
 
-The config uses `anthropic`. Install `@ai-sdk/anthropic`, copy `.env.example` to `.env`, add your key, then from the repo root:
+The config uses `anthropic`. Install `@ai-sdk/anthropic`, copy `.env.example` to `.env`, add your key, then, from the repository root:
 
 ```sh
-pnpm --filter @plico/cli exec plico readiness examples/internal-ops-agent
-pnpm --filter @plico/cli exec plico serve --studio examples/internal-ops-agent
+node packages/cli/dist/cli.js readiness examples/internal-ops-agent
+node packages/cli/dist/cli.js serve --studio examples/internal-ops-agent
 ```
 
 In Studio, start a thread and ask for "a ticket for VPN down": the run calls `create_ticket` and the summary shows under Artifacts. Then ask to close it. `close_ticket` requires approval, so the run waits until you approve it in Studio. Each reply shows its token use, and the thread header totals them.
 
-Validate this project from the repo root with:
+Build first (`pnpm install && pnpm build`). Run every command below from the repository root, which is where `examples/internal-ops-agent` resolves. Validate this project with:
 
 ```sh
-pnpm --filter @plico/cli exec plico validate examples/internal-ops-agent
+node packages/cli/dist/cli.js validate examples/internal-ops-agent
 ```
 
 Persist and inspect the checked-in smoke run:
 
 ```sh
-pnpm --filter @plico/cli exec plico run --dry --persist --script examples/internal-ops-agent/evals/smoke.script.json examples/internal-ops-agent
-pnpm --filter @plico/cli exec plico runs examples/internal-ops-agent
-pnpm --filter @plico/cli exec plico events <run-id> examples/internal-ops-agent
-pnpm --filter @plico/cli exec plico serve --db examples/internal-ops-agent/.plico/plico.sqlite examples/internal-ops-agent
+node packages/cli/dist/cli.js run --dry --persist --script examples/internal-ops-agent/evals/smoke.script.json examples/internal-ops-agent
+node packages/cli/dist/cli.js runs examples/internal-ops-agent
+node packages/cli/dist/cli.js events <run-id> examples/internal-ops-agent
+node packages/cli/dist/cli.js serve --db examples/internal-ops-agent/.plico/plico.sqlite examples/internal-ops-agent
 ```

@@ -14,7 +14,12 @@ export function configFile(projectName: string, provider?: ScaffoldProvider): st
           "  model: {",
           `    provider: ${JSON.stringify(provider)},`,
           `    name: ${JSON.stringify(setup.model)},`,
-          ...(setup.baseURL ? [`    baseURL: ${JSON.stringify(setup.baseURL)},`] : []),
+          ...(setup.baseURL
+            ? [
+                `    baseURL: ${JSON.stringify(setup.baseURL)},`,
+                `    apiKeyEnv: ${JSON.stringify(setup.apiKeyEnv)},`,
+              ]
+            : []),
           "  },",
         ]
       : []),
@@ -48,9 +53,10 @@ export function envExampleFile(provider?: ScaffoldProvider): string {
     return "# Copy to .env and add a model provider key when you configure one in plico.config.ts.\n";
   return [
     "# Copy to .env. Plico loads it for `plico run`, `plico serve` and `plico readiness`.",
-    setup.apiKeyEnv
-      ? `${setup.apiKeyEnv}=`
-      : `# ${setup.label} needs no key by default. Set model.apiKeyEnv if your server wants one.`,
+    ...(setup.placeholderKey
+      ? [`# ${setup.label} ignores the key, but the adapter needs a value.`]
+      : []),
+    `${setup.apiKeyEnv}=${setup.placeholderKey ?? ""}`,
     "",
   ].join("\n");
 }
