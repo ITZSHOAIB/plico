@@ -36,3 +36,27 @@ it("plico run reads credentials from the project .env", async () => {
     .payload.message;
   expect(message).not.toContain("OPENAI_API_KEY");
 });
+
+it("plico readiness reads credentials from the project .env", async () => {
+  const root = await mkdtemp(join(tmpdir(), "plico-cli-env-ready-"));
+  for (const dir of ["skills", "tools", "evals", "artifacts", "memory"])
+    await mkdir(join(root, dir));
+  await writeFile(
+    join(root, "plico.config.ts"),
+    'export default { schemaVersion: 1, name: "Env", model: { provider: "anthropic", name: "m" } };',
+  );
+  await writeFile(join(root, "agent.md"), "# Env\n\nAnswer from the project.\n");
+  await writeFile(join(root, ".env"), "ANTHROPIC_API_KEY=from-file\n");
+  vi.stubEnv("ANTHROPIC_API_KEY", "");
+  delete process.env.ANTHROPIC_API_KEY;
+  const log = vi.spyOn(console, "log").mockImplementation(() => {});
+
+  await main(["node", "plico", "readiness", "--json", root]);
+
+  const report = JSON.parse(String(log.mock.calls[0]?.[0]));
+  const find = (subsystem: string) =>
+    report.diagnostics.find((d: { subsystem: string }) => d.subsystem === subsystem);
+  expect(find("env.loaded")?.severity).toBe("ok");
+  expect(find("provider.credentials")?.severity).toBe("ok");
+  expect(JSON.stringify(report)).not.toContain("from-file");
+});

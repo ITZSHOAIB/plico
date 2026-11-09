@@ -92,7 +92,17 @@ export function createAiSdkModelProvider(options: AiSdkProviderOptions): ModelPr
             "auth",
             `Missing model provider credential: set ${options.apiKeyEnv}.`,
           );
-        const model = await options.createModel(apiKey);
+        // Setup problems (a missing adapter package, a broken provider module) are local and
+        // actionable, so their message is kept. They are not a network failure and not retried.
+        let model: LanguageModel;
+        try {
+          model = await options.createModel(apiKey);
+        } catch (error) {
+          throw new ModelProviderError(
+            "bad_request",
+            error instanceof Error ? error.message : "Model provider setup failed.",
+          );
+        }
         const response = streamText({
           model,
           messages: toMessages(request),

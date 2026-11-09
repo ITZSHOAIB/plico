@@ -27,7 +27,7 @@ export default defineConfig({
 
 ## Keys and .env
 
-`plico run` and `plico serve` load `.env` from the project folder. A variable already set in
+`plico run`, `plico serve` and `plico readiness` load `.env` from the project folder. A variable already set in
 the shell wins over the file. Values are never logged, and `plico readiness` says when a `.env`
 was loaded. Keep `.env` out of git.
 
