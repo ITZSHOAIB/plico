@@ -19,9 +19,24 @@ export default defineTool({
   name: "add",
   description: "Add two numbers.",
   inputSchema: z.object({ a: z.number(), b: z.number().default(0) }),
-  handler: ({ input }) => input.a + input.b,
+  capabilities: [],
+  approval: { required: false },
+  handler: ({ a, b }) => a + b,
 });
 ```
+
+## Fields
+
+| Field | Meaning |
+| --- | --- |
+| `name` | The name the model calls. Unique across the project; `list_files`, `read_file`, `write_file`, `edit_file` and `load_skill` are reserved. |
+| `description` | Tells the model when to use the tool. |
+| `inputSchema` | Zod or JSON Schema for the arguments. |
+| `capabilities` | Required list of labels for what the tool touches, such as `["ticket:write"]`. Plico records it in `tools.discovered` and does not enforce it. |
+| `approval` | Required. `{ required: true, reason }` holds each call for a person. See [Approvals](/docs/approvals). |
+| `handler` | `(input, ctx)`. `input` is the parsed arguments; `ctx` has `artifacts`, `context`, `signal` and an idempotency key. |
+
+A tool must export its definition as the file default.
 
 ## Input schemas
 

@@ -21,10 +21,11 @@ Plico is a developer preview, so `0.x` versions follow these rules:
 - **Patch releases fix bugs and do not break either.**
 
 A caret range on a `0.x` version stops at the next minor: `^0.1.0` accepts `0.1.x` but not `0.2.0`.
-The `create-plico` scaffold uses that range for `@plico-ai/cli`, so a new minor is an explicit
-step:
+The `create-plico` scaffold uses that range for `@plico-ai/cli` and `@plico-ai/sdk`, so a new
+minor is an explicit step:
 
 ```bash
+npm install @plico-ai/sdk@latest
 npm install --save-dev @plico-ai/cli@latest
 ```
 
