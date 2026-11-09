@@ -65,7 +65,7 @@ For anything else, name the provider after a file in `providers/`. It exports a 
 returns an AI SDK language model:
 
 ```ts title="providers/acme.ts"
-import { defineProvider } from "plico";
+import { defineProvider } from "@plico-ai/sdk";
 import { createAcme } from "@acme/ai-sdk-provider";
 
 export default defineProvider(({ model, apiKey, baseURL }) =>

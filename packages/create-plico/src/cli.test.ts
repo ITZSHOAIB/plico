@@ -37,7 +37,7 @@ describe("create-plico main", () => {
     expect(logSpy).toHaveBeenCalledWith(`Created Plico scaffold in ${root}`);
     const config = await readFile(join(root, "plico.config.ts"), "utf8");
     expect(config).toContain('name: "Support Tools"');
-    expect(config).toContain('import { defineConfig } from "plico";');
+    expect(config).toContain('import { defineConfig } from "@plico-ai/sdk";');
     expect(config).toContain("export default defineConfig({");
     expect(JSON.parse(await readFile(join(root, "package.json"), "utf8"))).toMatchObject({
       type: "module",

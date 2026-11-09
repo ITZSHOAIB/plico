@@ -11,7 +11,7 @@ The project contract, runtime spine, durable event log, native HTTP API, bundled
 - Build on `pnpm`, ESM-only TypeScript, `tsc`, and Vitest.
 - Keep `plico.config.ts` as the project anchor.
 - Required project files/directories are `agent.md`, `skills/`, `tools/`, `evals/`, `artifacts/`, and `memory/`.
-- Current packages are `@plico-ai/contracts` (types only), `plico` (the `defineConfig` and `defineTool` authoring helpers, depending on contracts only), `@plico-ai/core`, `@plico-ai/runtime`, `@plico-ai/server`, `@plico-ai/cli`, `@plico-ai/studio`, `@plico-ai/docs` (the private website: homepage and docs, Fumadocs on a Next.js static export), and `create-plico`. Dependency direction: contracts <- plico <- core <- runtime <- server <- cli; studio depends on contracts only.
+- Current packages are `@plico-ai/contracts` (types only), `@plico-ai/sdk` (the `defineConfig` and `defineTool` authoring helpers, depending on contracts only), `@plico-ai/core`, `@plico-ai/runtime`, `@plico-ai/server`, `@plico-ai/cli`, `@plico-ai/studio`, `@plico-ai/docs` (the private website: homepage and docs, Fumadocs on a Next.js static export), and `create-plico`. Dependency direction: contracts <- sdk <- core <- runtime <- server <- cli; studio depends on contracts only.
 - `@plico-ai/core` owns `loadProject(root)` and `validateProject(root)`.
 - `@plico-ai/cli` currently exposes `plico validate [path]`, `plico run --dry`, `plico runs`, `plico events`, `plico eval`, `plico readiness`, and `plico serve`.
 - `@plico-ai/server` owns the thin native HTTP API over the runtime and event store.

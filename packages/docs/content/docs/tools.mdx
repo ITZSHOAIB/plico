@@ -8,11 +8,11 @@ Tools are loaded from their `.tool.ts` files. They can import sibling TypeScript
 modules and npm packages installed in the project. `create-plico` includes a
 `package.json` with `type: "module"` for ESM tool imports.
 
-Wrap a tool in `defineTool` from `plico` to get editor types. `defineTool` infers the
+Wrap a tool in `defineTool` from `@plico-ai/sdk` to get editor types. `defineTool` infers the
 handler `input` from `inputSchema` and returns its argument unchanged.
 
 ```ts title="tools/add.tool.ts"
-import { defineTool } from "plico";
+import { defineTool } from "@plico-ai/sdk";
 import { z } from "zod";
 
 export default defineTool({

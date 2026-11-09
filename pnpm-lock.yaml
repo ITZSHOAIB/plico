@@ -72,9 +72,9 @@ importers:
       '@plico-ai/contracts':
         specifier: workspace:*
         version: link:../contracts
-      plico:
+      '@plico-ai/sdk':
         specifier: workspace:*
-        version: link:../plico
+        version: link:../sdk
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
@@ -144,12 +144,6 @@ importers:
         specifier: ^6.0.3
         version: 6.0.3
 
-  packages/plico:
-    dependencies:
-      '@plico-ai/contracts':
-        specifier: workspace:*
-        version: link:../contracts
-
   packages/runtime:
     dependencies:
       '@ai-sdk/openai-compatible':
@@ -207,6 +201,12 @@ importers:
       zod:
         specifier: 3.25.76
         version: 3.25.76
+
+  packages/sdk:
+    dependencies:
+      '@plico-ai/contracts':
+        specifier: workspace:*
+        version: link:../contracts
 
   packages/server:
     dependencies:

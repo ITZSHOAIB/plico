@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { defineTool } from "plico";
+import { defineTool } from "@plico-ai/sdk";
 
 export default defineTool({
   name: "create_ticket",

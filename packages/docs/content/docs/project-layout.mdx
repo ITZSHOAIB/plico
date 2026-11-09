@@ -54,11 +54,11 @@ TypeScript files in `tools/`, and a change to any of them while a run waits ends
 
 ## Configuration
 
-Wrap the config in `defineConfig` from `plico` to get editor types. It returns its
+Wrap the config in `defineConfig` from `@plico-ai/sdk` to get editor types. It returns its
 argument unchanged, and Plico finds it without a `node_modules` in the project.
 
 ```ts title="plico.config.ts"
-import { defineConfig } from "plico";
+import { defineConfig } from "@plico-ai/sdk";
 
 export default defineConfig({
   schemaVersion: 1,

@@ -1,6 +1,7 @@
 import { readdir, readFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { join } from "node:path";
+import { SPECIFIER } from "./authoring.js";
 import { getProjectPaths, getProjectRelativePaths } from "./layout.js";
 import type { ValidationIssue } from "./types.js";
 
@@ -72,9 +73,9 @@ export async function validateToolNames(root: string): Promise<ValidationIssue[]
 
 interface Scope {
   declarations: Map<string, import("typescript").Expression>;
-  /** Local names bound to `defineTool` from "plico", including `import { defineTool as x }`. */
+  /** Local names bound to `defineTool` from "@plico-ai/sdk", including `import { defineTool as x }`. */
   defineTools: Set<string>;
-  /** Local names bound to the whole module, as in `import * as plico from "plico"`. */
+  /** Local names bound to the whole module, as in `import * as plico from "@plico-ai/sdk"`. */
   namespaces: Set<string>;
 }
 
@@ -111,7 +112,7 @@ function readAuthoringImport(
   const ts = require("typescript") as typeof import("typescript");
   const bindings = statement.importClause?.namedBindings;
   if (!bindings || !ts.isStringLiteral(statement.moduleSpecifier)) return;
-  if (statement.moduleSpecifier.text !== "plico") return;
+  if (statement.moduleSpecifier.text !== SPECIFIER) return;
   if (ts.isNamespaceImport(bindings)) {
     scope.namespaces.add(bindings.name.text);
     return;
@@ -211,7 +212,7 @@ function unwrap(
 
 /**
  * `defineTool(tool)` returns `tool` unchanged, so its name is the argument's name. Only the
- * `defineTool` imported from "plico" counts, under any local name or through a namespace import.
+ * `defineTool` imported from "@plico-ai/sdk" counts, under any local name or through a namespace import.
  */
 function isDefineToolCall(
   expression: import("typescript").Expression,

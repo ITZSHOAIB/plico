@@ -3,7 +3,7 @@ import { PROVIDER_SETUP, type ScaffoldProvider } from "./providers.js";
 export function configFile(projectName: string, provider?: ScaffoldProvider): string {
   const setup = provider ? PROVIDER_SETUP[provider] : undefined;
   return [
-    'import { defineConfig } from "plico";',
+    'import { defineConfig } from "@plico-ai/sdk";',
     "",
     "export default defineConfig({",
     "  schemaVersion: 1,",
@@ -39,7 +39,7 @@ export function packageFile(version: string, provider?: ScaffoldProvider): strin
         validate: "plico validate .",
         eval: "plico eval .",
       },
-      dependencies: { plico: `^${version}`, ...(adapter ? { [adapter]: "latest" } : {}) },
+      dependencies: { "@plico-ai/sdk": `^${version}`, ...(adapter ? { [adapter]: "latest" } : {}) },
       devDependencies: { "@plico-ai/cli": `^${version}` },
     },
     null,
@@ -116,7 +116,7 @@ export function toolsReadmeFile(): string {
     "sends JSON Schema to the model. Parsed Zod values, including defaults, reach the handler. Add",
     "`zod` to this project's dependencies before importing it in a tool.",
     "",
-    'Wrap a tool in `defineTool` from `"plico"` to type the handler `input` from its `inputSchema`.',
+    'Wrap a tool in `defineTool` from `"@plico-ai/sdk"` to type the handler `input` from its `inputSchema`.',
     "",
   ].join("\n");
 }

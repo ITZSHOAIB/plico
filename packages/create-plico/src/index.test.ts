@@ -81,7 +81,7 @@ describe("createInternalOpsScaffold", () => {
       eval: "plico eval .",
     });
     expect(pkg.devDependencies).toHaveProperty("@plico-ai/cli");
-    expect(pkg.dependencies).toHaveProperty("plico");
+    expect(pkg.dependencies).toHaveProperty(["@plico-ai/sdk"]);
     expect(await readFile(join(root, ".gitignore"), "utf8")).toEqual(
       expect.stringContaining(".plico/"),
     );

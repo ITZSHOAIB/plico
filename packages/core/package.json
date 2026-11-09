@@ -37,7 +37,7 @@
   },
   "dependencies": {
     "@plico-ai/contracts": "workspace:*",
-    "plico": "workspace:*",
+    "@plico-ai/sdk": "workspace:*",
     "typescript": "^6.0.3"
   },
   "engines": {
