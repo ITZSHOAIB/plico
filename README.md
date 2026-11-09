@@ -38,7 +38,9 @@ command, and `@plico-ai/server` for `createPlico`. There is no `@plico` scope, a
 
 ## Local Development
 
-Plico needs Node 22.18 or later (CI tests 22.18 and 24) and `pnpm`.
+Plico needs Node 22.18 or later (CI tests 22.18 and 24) and `pnpm`. Runs are stored with Node's
+built-in `node:sqlite`, which Node still marks experimental; the `plico` command hides that
+warning, and a host that embeds Plico sees it once at startup.
 
 Install dependencies:
 

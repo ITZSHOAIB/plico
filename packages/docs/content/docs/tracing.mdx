@@ -1,0 +1,49 @@
+---
+title: OpenTelemetry tracing
+description: The spans Plico emits for every run, and how to export them.
+icon: Activity
+---
+
+Plico emits OpenTelemetry spans for every run through `@opentelemetry/api`. Plico ships no
+exporter. Without a tracer provider the spans are no-ops, so tracing costs nothing until you
+turn it on.
+
+## Turn it on
+
+Register a tracer provider before you start Plico. A backend that embeds Plico does this in
+its own startup code, the way it does for the rest of the app. The tracer is named
+`@plico-ai/runtime`.
+
+```ts
+import { NodeSDK } from "@opentelemetry/sdk-node";
+import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
+
+new NodeSDK({ traceExporter: new OTLPTraceExporter() }).start();
+```
+
+Runs started by `plico run` or `plico serve` on the command line do not register a provider,
+so they emit no spans. To trace them, embed Plico with `createPlico`; see
+[Use Plico from your backend](/docs/backend).
+
+## Spans
+
+| Span | Meaning |
+| --- | --- |
+| `plico.run` | One per run, with the attribute `plico.run.id`. |
+| `plico.step` | One per durable step of the run, with `plico.step.name`. Child of `plico.run`. |
+| `chat <model>` | One model call. Sets `gen_ai.operation.name` to `chat`, `gen_ai.request.model` and `gen_ai.provider.name`. |
+| `execute_tool <tool>` | One tool call. Sets `gen_ai.operation.name` to `execute_tool` and `gen_ai.tool.name`. |
+| `plico.attempt` | Any other step attempt. Every attempt sets `plico.step.attempt`. |
+
+The `gen_ai.*` attributes follow the OpenTelemetry GenAI conventions, so tools that read them
+show Plico's model and tool calls without extra setup. A failed step or run sets the span
+status to error.
+
+## Waiting and recovered runs
+
+A run that waits for an approval, or that a restart resumes, continues in a new `plico.run`
+span. The new span carries a link to the span of the execution before it, so a trace backend
+can follow one run across restarts.
+
+Tracing records timing and outcome. The full history of a run, with inputs and outputs, stays
+in its event log. Read it with `plico events` (see [CLI](/docs/cli)) or `GET /v1/runs/<run-id>/events`.
