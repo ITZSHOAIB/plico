@@ -2,6 +2,7 @@
   "name": "@plico/server",
   "version": "0.0.0",
   "description": "Plico native HTTP API over the runtime and event store",
+  "license": "Apache-2.0",
   "homepage": "https://plico.sohab.dev",
   "repository": {
     "type": "git",
@@ -27,6 +28,7 @@
     }
   },
   "files": [
+    "NOTICE",
     "dist"
   ],
   "dependencies": {
