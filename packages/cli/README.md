@@ -1,18 +1,23 @@
 # @plico-ai/cli
 
-CLI entrypoints for validating Plico projects and running the deterministic dry runtime.
+The `plico` command: validate a project, run it with a scripted or real model, inspect saved runs, run evals and readiness checks, and serve the HTTP API and Studio.
+
+```sh
+npm install --save-dev @plico-ai/cli
+npx plico validate
+```
 
 ## Commands
 
 - `plico validate [path]`
-- `plico validate --json [path]`
-- `plico run --dry [path]`
-- `plico run --dry --json [path]`
-- `plico run --dry --script <file> [path]`
-- `plico cancel <runId> [--db <path>] [--json] [path]`
+- `plico run [--message <text>] [path]` runs the agent with its configured model
+- `plico run --dry [--persist] [--script <file>] [path]` runs with a scripted model, no key needed
+- `plico runs [path]` and `plico events <runId> [--after <sequence>] [path]`
+- `plico cancel <runId> [path]`
+- `plico eval [path]` and `plico readiness [path]`
+- `plico serve [--studio] [--inspect] [path]`
 
-`plico validate` keeps its current behavior. `plico run` is dry-run only in this release and uses the local runtime package for deterministic instruction composition, tool discovery, scripted tool execution, and approval blocking.
-
+Most commands take `--json` and `--db <path>`. `plico --version` prints the version. The full reference is at [plico.sohab.dev/docs/cli](https://plico.sohab.dev/docs/cli).
 
 ## Durable runs
 
