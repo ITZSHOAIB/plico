@@ -1,0 +1,21 @@
+{
+  "$schema": "../node_modules/@changesets/config/schema.json",
+  "changelog": "@changesets/cli/changelog",
+  "commit": false,
+  "fixed": [
+    [
+      "@plico-ai/contracts",
+      "@plico-ai/sdk",
+      "@plico-ai/core",
+      "@plico-ai/runtime",
+      "@plico-ai/server",
+      "@plico-ai/cli",
+      "create-plico"
+    ]
+  ],
+  "linked": [],
+  "access": "public",
+  "baseBranch": "main",
+  "updateInternalDependencies": "patch",
+  "privatePackages": { "version": false, "tag": false }
+}

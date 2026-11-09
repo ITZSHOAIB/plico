@@ -1,0 +1,115 @@
+name: Release
+
+# Releases go through a "Version Packages" pull request. Changesets collects the notes on every
+# change; merging that pull request publishes the seven packages together. See docs/releasing.md.
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+# Two releases must never publish at once.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  # Opens or updates the "Version Packages" pull request while changesets are waiting on main.
+  version-pr:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.12.4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Open or update the Version Packages pull request
+        uses: changesets/action@v1
+        with:
+          version: pnpm version-packages
+          commit: "chore: version packages"
+          title: "chore: version packages"
+        env:
+          # A pull request opened with the default token does not start CI. Add a RELEASE_TOKEN
+          # secret (a fine-grained token with contents and pull requests write) so its checks run.
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
+
+  # Runs when the Version Packages pull request is merged, or by hand to finish a release that
+  # stopped halfway. A person must approve the `npm-publish` environment before anything is sent.
+  publish:
+    if: >-
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
+      contains(github.event.head_commit.message, 'chore: version packages')
+    runs-on: ubuntu-latest
+    environment: npm-publish
+    permissions:
+      contents: write
+      # Lets npm trade this run's identity for a short-lived publish token and sign provenance.
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.12.4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+
+      # Trusted publishing needs npm 11.5.1 or later.
+      - name: Update npm
+        run: npm install --global npm@^11.5.1 && npm --version
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm build
+
+      - name: Check the packed tarballs install and run
+        run: pnpm smoke:tarballs
+
+      - name: Publish to npm
+        run: pnpm publish:packages
+
+      - name: Create the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=$(node -p "require('./packages/cli/package.json').version")
+          if gh release view "v$version" >/dev/null 2>&1; then
+            echo "Release v$version already exists."
+            exit 0
+          fi
+          # The notes are the newest section of the CLI changelog; every package repeats it.
+          awk -v header="## $version" '$0 == header { found = 1; next } found && /^## / { exit } found' \
+            packages/cli/CHANGELOG.md > release-notes.md
+          flags=()
+          case "$version" in *-*) flags+=(--prerelease) ;; esac
+          gh release create "v$version" --target "$GITHUB_SHA" --title "v$version" --notes-file release-notes.md "${flags[@]}"

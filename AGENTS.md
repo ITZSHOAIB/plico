@@ -48,6 +48,7 @@ Use small vertical slices:
 - Add dependencies only when they improve developer workflow or remove real maintenance cost.
 - Keep generated projects valid through `validateProject`.
 - For every implementation change, check `README.md` and the docs pages in `packages/docs/content/docs` for affected instructions, examples, and feature status. Update relevant pages in the same change so they match the implemented behavior.
+- A change users of the published packages can see adds a changeset with `pnpm changeset`; see `docs/releasing.md`.
 
 ## Verification
 
