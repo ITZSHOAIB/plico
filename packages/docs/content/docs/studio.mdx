@@ -9,11 +9,15 @@ over production data, because it can approve tool calls and cancel runs.
 
 Start the bundled Studio with `plico serve --studio <project>`. Beside a backend that embeds Plico, add `--inspect` so Studio only reads; see [Use Plico from your backend](/docs/backend).
 
+Studio has seven views in its left rail: Chat, Overview, Runs (the timeline, raw events and
+replay), Instructions, Artifacts, Evals and Readiness.
+
 ## Approvals
 
 Studio shows the run's event history and, when a tool call needs approval, its
 reason and input arguments. Approve the call to resume the run or deny it to stop
-the run before the tool executes. Each decision is recorded in the run's event log.
+the run before the tool executes. Each decision is recorded in the run's event log. See
+[Approvals](/docs/approvals) for the policy and the other ways to decide.
 The run inspector also lets you cancel active runs.
 
 ## Chat

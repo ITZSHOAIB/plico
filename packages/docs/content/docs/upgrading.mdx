@@ -1,0 +1,79 @@
+---
+title: Upgrading
+description: What a Plico upgrade changes, and how to handle runs and saved data.
+icon: RefreshCw
+---
+
+## Versions
+
+All seven published packages share one version: `@plico-ai/contracts`, `sdk`, `core`, `runtime`,
+`server`, `cli`, and `create-plico`. Move them together. Release notes for each version are on the
+[GitHub releases page](https://github.com/ITZSHOAIB/plico/releases) and in each package's
+`CHANGELOG.md`.
+
+Plico is a developer preview, so `0.x` versions follow these rules:
+
+- **The HTTP API under `/v1` takes additive changes only.** New routes, fields and event types can
+  appear. Nothing is removed or renamed under `/v1`.
+- **The TypeScript exports can change in any `0.x` minor release.** That covers `@plico-ai/sdk`
+  (`defineTool`, `defineConfig`) and `createPlico` from `@plico-ai/server`. Breaking changes are
+  marked in the release notes.
+- **Patch releases fix bugs and do not break either.**
+
+A caret range on a `0.x` version stops at the next minor: `^0.1.0` accepts `0.1.x` but not `0.2.0`.
+The `create-plico` scaffold uses that range for `@plico-ai/cli` and `@plico-ai/sdk`, so a new
+minor is an explicit step:
+
+```bash
+npm install @plico-ai/sdk@latest
+npm install --save-dev @plico-ai/cli@latest
+```
+
+If your backend imports `@plico-ai/server` or `@plico-ai/sdk`, upgrade them to the same version.
+
+## Saved runs
+
+Runs live in a SQLite database, `.plico/plico.sqlite` by default.
+
+- **Opening an older database upgrades it.** A writable open migrates the schema in place.
+- **A database from a newer Plico is refused.** Plico stops with "Database uses a newer schema"
+  rather than guess, so do not roll back after upgrading a database you want to keep. Restore a
+  backup instead.
+- **Read-only inspection does not migrate.** `plico serve --inspect` refuses an older database
+  until a normal start has upgraded it. See [Use Plico from your backend](/docs/backend).
+- **A database with no migration path is refused too**, with a message telling you to delete it or
+  choose another path with `--db`.
+
+Copy `.plico/plico.sqlite` before you upgrade a database that holds runs you care about.
+
+## Runs that are waiting
+
+A run waiting for an [approval](/docs/approvals) can stay parked across a restart or an upgrade.
+Plico prefers to stop a run over continuing it differently from what a person approved:
+
+- A resumed run keeps the instructions and skills it started with, so editing `agent.md` or a
+  skill does not change it.
+- A resumed run whose TypeScript tools changed ends with `run.failed` before the tool runs.
+
+The simplest upgrade path is to decide or cancel waiting runs first. List them with `plico runs`
+and look for the `waiting` status, or open Studio.
+
+## Cancel a stranded run
+
+A run that cannot continue, for example one waiting on a tool you have since changed, stays in the
+list until you end it:
+
+```bash
+plico runs .                      # find the run id
+plico cancel <run-id> .           # cancel it
+```
+
+The same is `POST /v1/runs/<run-id>/cancel` over HTTP, and `plico.runs.cancel(runId)` from your
+backend. A cancelled run writes `run.cancelled` and keeps its events.
+
+## Your project files
+
+Your `agent.md`, skills, tools and config are yours, and a Plico upgrade does not rewrite them.
+`plico validate` after an upgrade shows whether the new version accepts them. Names Plico reserves
+for later releases, such as `agents/`, `workflows/` and the `entry` config key, are listed in
+[Project layout](/docs/project-layout#reserved-names).

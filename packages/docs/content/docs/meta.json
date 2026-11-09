@@ -5,6 +5,7 @@
     "---Build---",
     "project-layout",
     "tools",
+    "approvals",
     "providers",
     "artifacts",
     "---Run---",
@@ -13,7 +14,11 @@
     "backend",
     "http-api",
     "cli",
+    "events",
     "tracing",
-    "troubleshooting"
+    "upgrading",
+    "troubleshooting",
+    "---More---",
+    "compare"
   ]
 }

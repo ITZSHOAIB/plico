@@ -34,12 +34,14 @@ The thread outgrew the model. Start a new thread or choose a model with a larger
 ## A run is stuck on waiting
 
 The run is waiting for an approval. Open it in Studio, or send the decision to
-`POST /v1/runs/<run-id>/signal`. See [Studio](/docs/studio).
+`POST /v1/runs/<run-id>/signal`. See [Approvals](/docs/approvals). A waiting run stops by itself
+after `approvals.timeoutMs`, 30 minutes by default. To end one now, run `plico cancel <run-id>`.
 
 ## "Project changed during run"
 
 A run that was waiting resumed after a tool file under `tools/` changed. Instructions and skills
-are pinned, so editing them does not cause this. Start a new run.
+are pinned, so editing them does not cause this. Start a new run. See
+[Upgrading](/docs/upgrading#runs-that-are-waiting).
 
 ## Studio shows no runs
 

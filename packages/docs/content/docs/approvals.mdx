@@ -1,0 +1,105 @@
+---
+title: Approvals
+description: Hold a tool call until a person approves it.
+icon: ShieldCheck
+---
+
+A tool that can do damage should wait for a person. When the model calls it, Plico records the
+request, parks the run, and runs the tool only after someone approves. The wait is part of the
+[event log](/docs/events), so it survives a restart of the process.
+
+## Require approval
+
+Declare it on the tool, with an optional reason that is shown to whoever decides:
+
+```ts title="tools/close-ticket.tool.ts"
+import { defineTool } from "@plico-ai/sdk";
+
+export default defineTool({
+  name: "close_ticket",
+  description: "Close a support ticket. This cannot be undone.",
+  inputSchema: {
+    type: "object",
+    properties: { ticketId: { type: "string" } },
+    required: ["ticketId"],
+    additionalProperties: false,
+  },
+  capabilities: ["ticket:write"],
+  approval: { required: true, reason: "Closing a ticket cannot be undone." },
+  handler: async ({ ticketId }) => ({ ticketId, status: "closed" }),
+});
+```
+
+## Set a policy in the config
+
+`plico.config.ts` can raise or lower the bar for the whole project:
+
+```ts title="plico.config.ts"
+export default defineConfig({
+  schemaVersion: 1,
+  name: "My agent",
+  model: { provider: "anthropic", name: "claude-sonnet-5-5" },
+  approvals: {
+    default: "required", // every tool waits unless it says otherwise
+    tools: { create_ticket: "none" }, // except this one
+    timeoutMs: 10 * 60 * 1000, // give up after 10 minutes
+  },
+});
+```
+
+| Key | Meaning |
+| --- | --- |
+| `default` | `"none"` (the default) or `"required"` for tools with no override. |
+| `tools` | Per-tool override, `"required"` or `"none"`. |
+| `timeoutMs` | How long a run waits for a decision. The default is 30 minutes. |
+
+The config can add a requirement but never remove one: a tool that declares
+`approval: { required: true }` still waits when the config says `"none"`. The
+[Readiness](/docs/studio#readiness) view warns about overrides that name a missing tool or
+conflict with a tool's own requirement.
+
+## What happens during a wait
+
+1. The model calls the tool. Plico records `tool.call`, then `approval.requested` with a
+   `requestId`, the tool name, its arguments and the reason.
+2. The run stops with `run.waiting`. Its status is `waiting`. No tool code has run.
+3. A decision arrives. Plico records `approval.decided` and, if `approved` is `true`, runs the
+   tool and carries on.
+
+Only an explicit `approved: true` lets the tool run. A denial, or anything else, ends the run
+with `run.error` and `run.failed` in the `approval` phase, and the tool never runs. A timeout ends
+it the same way, with no `approval.decided` event.
+
+## Decide
+
+**In Studio**, open the run, read the arguments and the reason, and choose **Approve tool call** or **Deny tool call**.
+See [Studio](/docs/studio).
+
+**Over HTTP**, send a signal named after the request:
+
+```bash
+curl -X POST http://127.0.0.1:3000/v1/runs/<run-id>/signal \
+  -H "content-type: application/json" \
+  -d '{ "name": "approval:<requestId>", "value": { "approved": true } }'
+```
+
+The response is `{ "result": "accepted" }`. `"ignored"` means the decision changed nothing: the run had already finished, or the request
+was already decided. `"unknown"` means there is no such run.
+
+**From your backend**, call `plico.approvals.decide(runId, requestId, approved, { context })`.
+`context` records who decided on `approval.decided`. A client cannot supply it: Plico drops any
+`context` on a signal that comes over HTTP, so only your backend can say who approved. See
+[Use Plico from your backend](/docs/backend) and [Threads](/docs/threads#host-data-metadata-and-context).
+
+## Approvals in evals
+
+Approval policy applies in evals the same way it does in a run, so a scripted case that calls a
+tool needing approval is held until the script decides. See [CLI](/docs/cli).
+
+## While a run waits
+
+A waiting run keeps the instructions and skills it started with. Edit `agent.md` or a skill and
+it continues with the old text; only new runs use the edit. A change to any TypeScript file in
+`tools/` ends the waiting run with `run.failed` before the tool runs, because Plico will not run
+different code from what the person approved. See [Project layout](/docs/project-layout#skills)
+and [Upgrading](/docs/upgrading).

@@ -52,3 +52,31 @@ With `plico serve --inspect` (`inspect: true` for `servePlico`) the server only 
 nothing, `GET /health` returns `{ "ok": true, "inspection": true }`, and every request other than
 `GET` or `HEAD` is refused with 403 `inspection.read_only`. See
 [Use Plico from your backend](/docs/backend).
+
+## Routes
+
+Every route is under `/v1`. Errors are JSON with an `error.code` and `error.message`.
+
+| Route | Purpose |
+| --- | --- |
+| `GET /health` | Liveness. |
+| `GET /v1/project` | The loaded project: its root and config. |
+| `GET /v1/instructions` | The composed instructions. |
+| `GET /v1/readiness` | Readiness diagnostics. |
+| `POST /v1/runs` | Start a run. Returns 202 and the `runId`. |
+| `POST /v1/runs/dry` | Run the project without a model and return the result. |
+| `GET /v1/runs` | List runs. |
+| `GET /v1/runs/<run-id>` | One run. |
+| `GET /v1/runs/<run-id>/events` | The run's events. `?after=<sequence>` returns only newer ones. See [Events](/docs/events). |
+| `GET /v1/runs/<run-id>/events/stream` | The same events as Server-Sent Events. |
+| `POST /v1/runs/<run-id>/cancel` | Cancel a run. |
+| `POST /v1/runs/<run-id>/signal` | Send a signal, such as an [approval](/docs/approvals) decision. |
+| `GET /v1/runs/<run-id>/workspace` | The run's artifact files and versions. Sub-routes `/files/<path>`, `/diffs`, `/exports` and `/snapshots/<id>` are in [Artifacts](/docs/artifacts). |
+| `POST /v1/threads`, `GET /v1/threads` | Create and list threads. |
+| `GET /v1/threads/<id>`, `PATCH /v1/threads/<id>` | Read or rename a thread. |
+| `GET /v1/threads/<id>/messages`, `POST /v1/threads/<id>/messages` | Read history and send a message. See [Threads](/docs/threads). |
+| `GET /v1/threads/<id>/workspace` | The thread's shared artifact workspace. |
+| `POST /v1/eval`, `GET /v1/eval`, `GET /v1/eval/<name>` | Run evals and read the latest report or one case. |
+
+`/v1/project`, `/v1/instructions`, `/v1/readiness`, `/v1/eval` and `/v1/runs/dry` are not served on a
+[mounted, scoped API](/docs/backend).

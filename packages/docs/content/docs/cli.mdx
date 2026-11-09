@@ -4,20 +4,29 @@ description: The plico commands.
 icon: Terminal
 ---
 
+Run `plico --version` to print the installed version. Every command takes an optional project `[path]` and defaults to the current folder.
+
 | Command | What it does |
 | --- | --- |
 | `plico validate [path]` | Validates a project and prints diagnostics. |
-| `plico run --dry [path]` | Runs the project with a scripted model. |
-| `plico cancel <run-id> <project>` | Cancels an active persisted run. |
-| `plico runs` | Lists saved runs. |
-| `plico events` | Prints a run's event log. |
-| `plico eval` | Runs the project's scripted evals. |
-| `plico readiness` | Reports readiness diagnostics. |
+| `plico run [--message <text>] [path]` | Runs the agent with its configured model. |
+| `plico run --dry [--persist] [--script <file>] [path]` | Runs with a scripted model, so it needs no key. |
+| `plico runs [path]` | Lists saved runs. |
+| `plico events <run-id> [--after <sequence>] [path]` | Prints a run's event log. |
+| `plico cancel <run-id> [path]` | Cancels an active persisted run. |
+| `plico eval [path]` | Runs the project's scripted evals. |
+| `plico readiness [path]` | Reports readiness diagnostics. |
 | `plico serve [path]` | Starts the HTTP API. |
+
+Common flags: `--json` prints machine-readable output, and `--db <path>` points at a database other
+than `.plico/plico.sqlite`. `plico run` without `--dry` needs a configured model; see
+[Model providers](/docs/providers). A dry run prints its events but only saves them with
+`--persist`.
 
 ## serve
 
-`plico serve --studio <project>` also serves the bundled Studio. Other options:
+`plico serve --studio <project>` also serves the bundled Studio. `--host` and `--port` choose the
+address; the default is `127.0.0.1:3000`. Other options:
 
 - `--allow-remote` exposes the server on another host. See [HTTP API](/docs/http-api).
 - `--allow-script` lets API callers send scripted runs. Their tool steps use the output in the script and never run handlers. See [HTTP API](/docs/http-api).
