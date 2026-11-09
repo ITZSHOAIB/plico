@@ -1,4 +1,5 @@
 import { createFetchHandler, createNodeHandler } from "../mount.js";
+import { withThreadTitles } from "../thread-titles.js";
 import { followEvents } from "./events.js";
 import { cancelRun, decideApproval, listRuns, startRun } from "./runs.js";
 import {
@@ -28,9 +29,10 @@ export function internalsOf(plico: Plico): PlicoInternals {
 
 /** Builds the programmatic API over stores that already exist. `onClose` releases what they hold. */
 export function assemblePlico(
-  deps: AppDeps,
+  appDeps: AppDeps,
   onClose: () => void | Promise<void> = () => {},
 ): Plico {
+  const deps: AppDeps = { ...appDeps, eventStore: withThreadTitles(appDeps) };
   const stopper = new AbortController();
   let closing: Promise<void> | undefined;
   const plico: Plico = {

@@ -20,6 +20,34 @@ export function setUserTitle(
 }
 
 /**
+ * Stores a title a titler wrote after a reply. It never replaces a user's title and, like the
+ * keyword titler, stops after the first exchanges. Returns whether the title changed.
+ */
+export function setGeneratedTitle(
+  db: DatabaseSync,
+  threadId: string,
+  title: string,
+  timestamp: string,
+): boolean {
+  const thread = db
+    .prepare("SELECT title, title_source AS source FROM threads WHERE thread_id = ?")
+    .get(threadId) as { title: string | null; source: string | null } | undefined;
+  if (!thread || thread.source === "user" || thread.title === title) return false;
+  const replies = db
+    .prepare(
+      "SELECT COUNT(*) AS count FROM thread_messages WHERE thread_id = ? AND role = 'assistant'",
+    )
+    .get(threadId) as { count: number };
+  if (replies.count > retitledExchanges) return false;
+  db.prepare("UPDATE threads SET title = ?, title_source = 'generated' WHERE thread_id = ?").run(
+    title,
+    threadId,
+  );
+  appendThreadEvent(db, threadId, "thread.titled", { title, source: "generated" }, timestamp);
+  return true;
+}
+
+/**
  * Names the thread from its transcript. Called inside the transaction that stores a reply, where
  * a title is only a convenience: if naming fails, the reply is still stored and the run completes.
  */

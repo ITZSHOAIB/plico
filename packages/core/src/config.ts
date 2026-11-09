@@ -125,6 +125,11 @@ function normalizeProjectConfig(value: unknown, configPath: string): ProjectConf
       normalized.execution.leaseMs = config.execution.leaseMs;
   }
 
+  if (config.threads !== undefined) {
+    normalized.threads = {};
+    if (config.threads.title !== undefined) normalized.threads.title = config.threads.title;
+  }
+
   if (config.approvals !== undefined) {
     normalized.approvals = {};
     if (config.approvals.default !== undefined)
@@ -253,6 +258,20 @@ function validateProjectConfigShape(value: unknown): ValidationIssue[] {
       issues.push({
         path: relativePaths.configFile,
         message: "Expected execution.leaseMs to be a positive integer",
+        severity: "error",
+      });
+    }
+  }
+  if (Object.hasOwn(value, "threads")) {
+    const threads = value.threads;
+    if (
+      !isRecord(threads) ||
+      Array.isArray(threads) ||
+      (Object.hasOwn(threads, "title") && threads.title !== "keywords" && threads.title !== "model")
+    ) {
+      issues.push({
+        path: relativePaths.configFile,
+        message: 'Expected threads.title to be "keywords" or "model"',
         severity: "error",
       });
     }

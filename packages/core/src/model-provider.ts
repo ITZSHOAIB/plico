@@ -28,6 +28,18 @@ export async function findProjectProviderFile(
   return undefined;
 }
 
+/** The `threads/title.ts` module that names threads, or `undefined` when the project has none. */
+export async function findProjectThreadTitleFile(root: string): Promise<string | undefined> {
+  for (const extension of PROVIDER_EXTENSIONS) {
+    const file = join(root, "threads", `title${extension}`);
+    try {
+      await access(file);
+      return file;
+    } catch {}
+  }
+  return undefined;
+}
+
 /** `plico validate` fails on a provider that is neither native nor supplied by the project. */
 export async function validateModelProvider(
   root: string,

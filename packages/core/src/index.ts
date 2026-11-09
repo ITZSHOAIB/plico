@@ -10,6 +10,7 @@ export {
 } from "./layout.js";
 export {
   findProjectProviderFile,
+  findProjectThreadTitleFile,
   NATIVE_MODEL_PROVIDERS,
 } from "./model-provider.js";
 export { readSkills, type Skill, type SkillsResult } from "./skills.js";

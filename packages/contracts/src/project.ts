@@ -24,6 +24,8 @@ export interface ProjectConfig {
     retryDelayMs?: number;
   };
   execution?: { leaseMs?: number };
+  /** Thread naming. `keywords` is the default; `model` asks the configured model to write titles. */
+  threads?: { title?: "keywords" | "model" };
   approvals?: {
     default?: "none" | "required";
     timeoutMs?: number;

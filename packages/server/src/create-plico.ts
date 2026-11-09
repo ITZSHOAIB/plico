@@ -12,6 +12,7 @@ import {
 import { assemblePlico } from "./app/assemble.js";
 import type { Plico } from "./app/types.js";
 import { recoverPlicoState, resumeQueuedRuns } from "./recovery.js";
+import { withThreadTitles } from "./thread-titles.js";
 
 export interface CreatePlicoOptions {
   /** The project folder. Its files define the agent; nothing else can. */
@@ -60,7 +61,7 @@ export async function openPlico(options: CreatePlicoOptions, inspect: boolean): 
   let closing = false;
   const recoveryOptions = {
     projectRoot,
-    eventStore,
+    eventStore: withThreadTitles({ projectRoot, eventStore, threadStore, provider }),
     threadStore,
     engine,
     ...(provider ? { provider } : {}),
