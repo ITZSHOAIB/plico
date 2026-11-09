@@ -1,6 +1,6 @@
 {
   "name": "@plico-ai/cli",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "The plico command line: validate, run, eval, readiness and serve with Studio",
   "license": "Apache-2.0",
   "homepage": "https://plico.sohab.dev",
