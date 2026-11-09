@@ -10,7 +10,7 @@ const kit = [
   {
     name: "Approvals",
     text: "Pause a tool call until someone approves it in Studio or over the API.",
-    href: "/docs/studio",
+    href: "/docs/approvals",
   },
   {
     name: "Artifacts",
