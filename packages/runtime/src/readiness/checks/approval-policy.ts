@@ -1,4 +1,4 @@
-import type { LoadedProject } from "@plico/core";
+import type { LoadedProject } from "@plico-ai/core";
 import type { DeclaredTool, ReadinessDiagnostic } from "../../types/index.js";
 import { makeDiagnostic } from "../diagnostic.js";
 

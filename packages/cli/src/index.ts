@@ -1,1 +1,1 @@
-export { validateProject } from "@plico/core";
+export { validateProject } from "@plico-ai/core";

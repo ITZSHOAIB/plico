@@ -1,4 +1,4 @@
-import { type Engine, type EventStore, runFailureEvents } from "@plico/runtime";
+import { type Engine, type EventStore, runFailureEvents } from "@plico-ai/runtime";
 import type { Metadata } from "./app/metadata.js";
 
 /**

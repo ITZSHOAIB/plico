@@ -1,4 +1,4 @@
-import { checkReadiness } from "@plico/runtime";
+import { checkReadiness } from "@plico-ai/runtime";
 import { jsonResponse } from "../responses.js";
 import type { Route } from "./types.js";
 

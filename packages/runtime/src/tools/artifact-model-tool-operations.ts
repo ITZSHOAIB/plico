@@ -1,4 +1,4 @@
-import type { ArtifactFileMetadata } from "@plico/contracts";
+import type { ArtifactFileMetadata } from "@plico-ai/contracts";
 import mime from "mime";
 import picomatch from "picomatch";
 import { validateArtifactPath } from "../run/artifact-tool-context.js";

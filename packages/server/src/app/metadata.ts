@@ -1,4 +1,4 @@
-import type { JsonValue } from "@plico/contracts";
+import type { JsonValue } from "@plico-ai/contracts";
 import { PlicoError } from "./errors.js";
 
 export type Metadata = Record<string, JsonValue>;

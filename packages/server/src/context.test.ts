@@ -3,13 +3,13 @@ import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { PlicoEvent } from "@plico/contracts";
+import type { PlicoEvent } from "@plico-ai/contracts";
 import {
   createSqliteEngine,
   createSqliteEventStore,
   createSqliteThreadStore,
   modelProviderAccountKey,
-} from "@plico/runtime";
+} from "@plico-ai/runtime";
 import { describe, expect, it, vi } from "vitest";
 import { createPlico, type Plico } from "./index.js";
 import { createTestServer } from "./testing/test-server.js";

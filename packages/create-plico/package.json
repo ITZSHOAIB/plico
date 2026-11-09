@@ -38,7 +38,7 @@
   ],
   "dependencies": {
     "@clack/prompts": "^1.6.0",
-    "@plico/core": "workspace:*"
+    "@plico-ai/core": "workspace:*"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --noEmit",
@@ -46,7 +46,7 @@
     "test": "vitest run"
   },
   "devDependencies": {
-    "@plico/runtime": "workspace:*"
+    "@plico-ai/runtime": "workspace:*"
   },
   "engines": {
     "node": ">=22.18.0"

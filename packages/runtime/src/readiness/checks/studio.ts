@@ -14,7 +14,7 @@ export async function checkStudio(studioPath: string | undefined): Promise<Readi
       makeDiagnostic(
         "warning",
         "studio.assets",
-        "Studio assets not found. Build them with: pnpm --filter @plico/studio build",
+        "Studio assets not found. Build them with: pnpm --filter @plico-ai/studio build",
         studioPath,
       ),
     ];

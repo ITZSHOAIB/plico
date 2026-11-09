@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { resolve } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
-import type { Thread, ThreadEvent, ThreadMessage } from "@plico/contracts";
+import type { Thread, ThreadEvent, ThreadMessage } from "@plico-ai/contracts";
 import { type Metadata, matchesMetadata, parseMetadata } from "../metadata.js";
 import { openDatabase } from "./open.js";
 import { appendThreadEvent } from "./thread-log.js";

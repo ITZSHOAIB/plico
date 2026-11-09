@@ -1,10 +1,10 @@
 # Cloudflare Pages Deployment
 
-The site deploys as a static site to the URL below. `@plico/docs` is a Fumadocs Next.js static export that serves both the homepage at `/` and the docs at `/docs`.
+The site deploys as a static site to the URL below. `@plico-ai/docs` is a Fumadocs Next.js static export that serves both the homepage at `/` and the docs at `/docs`.
 
 - Production URL: `https://plico.sohab.dev`
 - Cloudflare Pages project: `plico`
-- Package: `@plico/docs`
+- Package: `@plico-ai/docs`
 - Build output: `packages/docs/out`
 
 `packages/docs/lib/shared.ts` sets `siteUrl` to `https://plico.sohab.dev`.
@@ -25,7 +25,7 @@ Create the Pages project from the Cloudflare dashboard:
 | Production branch | `main` |
 | Root directory | `/` |
 | Framework preset | `None` |
-| Build command | `pnpm --filter @plico/docs build` |
+| Build command | `pnpm --filter @plico-ai/docs build` |
 | Build output directory | `packages/docs/out` |
 
 Set these environment variables in the Pages project if Cloudflare does not infer them:
@@ -61,13 +61,13 @@ Do not create only the DNS record without adding `plico.sohab.dev` as a Pages cu
 For a one-off manual deployment from your local machine:
 
 ```sh
-pnpm --filter @plico/docs deploy:pages
+pnpm --filter @plico-ai/docs deploy:pages
 ```
 
 For a preview deployment:
 
 ```sh
-pnpm --filter @plico/docs deploy:pages:preview
+pnpm --filter @plico-ai/docs deploy:pages:preview
 ```
 
 These commands build the site into `packages/docs/out` and upload it with Wrangler. You must be authenticated with Cloudflare first:

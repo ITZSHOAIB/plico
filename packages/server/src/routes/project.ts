@@ -1,4 +1,4 @@
-import { composeInstructions } from "@plico/runtime";
+import { composeInstructions } from "@plico-ai/runtime";
 import { loadProjectOrThrow } from "../project.js";
 import { jsonResponse } from "../responses.js";
 import type { Route } from "./types.js";

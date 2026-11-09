@@ -1,6 +1,6 @@
 import { pathToFileURL } from "node:url";
-import type { ProviderInput } from "@plico/contracts";
-import { findProjectProviderFile } from "@plico/core";
+import type { ProviderInput } from "@plico-ai/contracts";
+import { findProjectProviderFile } from "@plico-ai/core";
 import type { LanguageModel } from "ai";
 import { register } from "tsx/esm/api";
 import type { ModelProvider } from "../types/index.js";

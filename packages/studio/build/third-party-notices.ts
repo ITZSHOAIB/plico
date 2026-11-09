@@ -36,7 +36,7 @@ export function thirdPartyNotices(moduleIds: Iterable<string>, preamble: string)
         body: `${heading}\n\n${licenceText(root) ?? "No licence file shipped."}`,
       };
     })
-    .filter((entry) => !entry.name.startsWith("@plico/"))
+    .filter((entry) => !entry.name.startsWith("@plico-ai/"))
     .sort((a, b) => a.name.localeCompare(b.name));
   const rule = `\n\n${"-".repeat(72)}\n\n`;
   const sections = [preamble.trim(), ...entries.map((entry) => entry.body)].filter(Boolean);

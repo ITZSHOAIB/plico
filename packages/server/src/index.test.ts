@@ -2,7 +2,7 @@ import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { createServer, type RequestListener } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createSqliteEventStore, runProject } from "@plico/runtime";
+import { createSqliteEventStore, runProject } from "@plico-ai/runtime";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { servePlico } from "./index.js";
 import { createTestServer } from "./testing/test-server.js";

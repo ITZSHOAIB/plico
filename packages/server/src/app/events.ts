@@ -1,5 +1,5 @@
-import type { PlicoEvent, RunStatus } from "@plico/contracts";
-import type { PlicoEventType } from "@plico/runtime";
+import type { PlicoEvent, RunStatus } from "@plico-ai/contracts";
+import type { PlicoEventType } from "@plico-ai/runtime";
 import { PlicoError } from "./errors.js";
 import { inScope } from "./scope.js";
 import type { AppDeps, EventFollowOptions } from "./types.js";

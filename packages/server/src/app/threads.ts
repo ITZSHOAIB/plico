@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { resolve } from "node:path";
-import type { Thread, ThreadArtifactWorkspace, ThreadMessage } from "@plico/contracts";
-import { buildArtifactWorkspace, runProject, ThreadBusyError } from "@plico/runtime";
+import type { Thread, ThreadArtifactWorkspace, ThreadMessage } from "@plico-ai/contracts";
+import { buildArtifactWorkspace, runProject, ThreadBusyError } from "@plico-ai/runtime";
 import { finishFailedThreadRun } from "../thread-failure.js";
 import { PlicoError } from "./errors.js";
 import type { Metadata } from "./metadata.js";

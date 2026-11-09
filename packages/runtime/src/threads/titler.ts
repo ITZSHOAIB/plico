@@ -1,6 +1,6 @@
 import { pathToFileURL } from "node:url";
-import type { ProjectConfig } from "@plico/contracts";
-import { findProjectThreadTitleFile } from "@plico/core";
+import type { ProjectConfig } from "@plico-ai/contracts";
+import { findProjectThreadTitleFile } from "@plico-ai/core";
 import { register } from "tsx/esm/api";
 import type { ModelProvider } from "../types/index.js";
 import type { TitleMessage } from "./suggest-title.js";

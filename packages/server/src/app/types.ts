@@ -1,12 +1,12 @@
 import type { RequestListener } from "node:http";
-import type { PlicoEvent, RunSummary, Thread, ThreadMessage } from "@plico/contracts";
+import type { PlicoEvent, RunSummary, Thread, ThreadMessage } from "@plico-ai/contracts";
 import type {
   DryRunScriptStep,
   Engine,
   EventStore,
   ModelProvider,
   ThreadStore,
-} from "@plico/runtime";
+} from "@plico-ai/runtime";
 import type { MountOptions } from "../mount.js";
 import type { Metadata } from "./metadata.js";
 

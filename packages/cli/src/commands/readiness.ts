@@ -1,4 +1,4 @@
-import { checkReadiness, loadProjectEnv } from "@plico/runtime";
+import { checkReadiness, loadProjectEnv } from "@plico-ai/runtime";
 import { lastPositional, parseArgs, readStringOption } from "../args.js";
 import { errorMessage } from "../errors.js";
 import { formatReadinessReport } from "../format/readiness.js";

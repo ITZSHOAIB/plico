@@ -4,7 +4,7 @@ export type {
   ValidationIssue,
   ValidationResult,
   ValidationSeverity,
-} from "@plico/contracts";
+} from "@plico-ai/contracts";
 
 export type ProjectDirectoryRole = keyof ProjectLayoutDirectories;
 

@@ -11,10 +11,10 @@ The project contract, runtime spine, durable event log, native HTTP API, bundled
 - Build on `pnpm`, ESM-only TypeScript, `tsc`, and Vitest.
 - Keep `plico.config.ts` as the project anchor.
 - Required project files/directories are `agent.md`, `skills/`, `tools/`, `evals/`, `artifacts/`, and `memory/`.
-- Current packages are `@plico/contracts` (types only), `plico` (the `defineConfig` and `defineTool` authoring helpers, depending on contracts only), `@plico/core`, `@plico/runtime`, `@plico/server`, `@plico/cli`, `@plico/studio`, `@plico/docs` (the private website: homepage and docs, Fumadocs on a Next.js static export), and `create-plico`. Dependency direction: contracts <- plico <- core <- runtime <- server <- cli; studio depends on contracts only.
-- `@plico/core` owns `loadProject(root)` and `validateProject(root)`.
-- `@plico/cli` currently exposes `plico validate [path]`, `plico run --dry`, `plico runs`, `plico events`, `plico eval`, `plico readiness`, and `plico serve`.
-- `@plico/server` owns the thin native HTTP API over the runtime and event store.
+- Current packages are `@plico-ai/contracts` (types only), `plico` (the `defineConfig` and `defineTool` authoring helpers, depending on contracts only), `@plico-ai/core`, `@plico-ai/runtime`, `@plico-ai/server`, `@plico-ai/cli`, `@plico-ai/studio`, `@plico-ai/docs` (the private website: homepage and docs, Fumadocs on a Next.js static export), and `create-plico`. Dependency direction: contracts <- plico <- core <- runtime <- server <- cli; studio depends on contracts only.
+- `@plico-ai/core` owns `loadProject(root)` and `validateProject(root)`.
+- `@plico-ai/cli` currently exposes `plico validate [path]`, `plico run --dry`, `plico runs`, `plico events`, `plico eval`, `plico readiness`, and `plico serve`.
+- `@plico-ai/server` owns the thin native HTTP API over the runtime and event store.
 - `create-plico` creates the internal-ops pilot scaffold.
 
 Build only what the current epic covers. Do not add real provider calls, threads, approvals, cancel, artifact semantics, MCP, memory, AG-UI, or React UI unless the work belongs to that feature's epic.
@@ -43,7 +43,7 @@ Use small vertical slices:
 - Keep package boundaries clear: core has contracts, CLI has command behavior, create package writes scaffolds.
 - Prefer simple public interfaces over broad framework abstractions.
 - Keep source files focused: one responsibility per module, roughly under 250 lines. Add commands, routes, readiness checks, and views as new modules and register them; do not grow dispatchers or `App.tsx`.
-- Shared wire types live in `@plico/contracts`; never redefine them in a consumer.
+- Shared wire types live in `@plico-ai/contracts`; never redefine them in a consumer.
 - Wire changes follow `product/adrs/0006-wire-contract-versioning.md`. Update the snapshot in `packages/server/src/contract.test.ts` deliberately, never to silence a failure.
 - Add dependencies only when they improve developer workflow or remove real maintenance cost.
 - Keep generated projects valid through `validateProject`.

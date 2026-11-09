@@ -4,7 +4,7 @@ import type {
   ToolApprovalPolicy,
   ToolDefinition,
   ToolHandlerContext,
-} from "@plico/contracts";
+} from "@plico-ai/contracts";
 import type { InferToolInput, SchemaInput } from "./infer.js";
 
 export type {
@@ -14,7 +14,7 @@ export type {
   ToolArtifactContext,
   ToolDefinition,
   ToolHandlerContext,
-} from "@plico/contracts";
+} from "@plico-ai/contracts";
 export type { InferToolInput } from "./infer.js";
 
 /** A tool as written in `tools/*.tool.ts`, with the handler input typed from `inputSchema`. */

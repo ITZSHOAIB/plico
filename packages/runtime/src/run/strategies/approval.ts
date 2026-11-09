@@ -1,4 +1,4 @@
-import type { JsonValue } from "@plico/contracts";
+import type { JsonValue } from "@plico-ai/contracts";
 import type { RunContext } from "../../engine/index.js";
 import { RunSuspended } from "../../engine/index.js";
 import { RuntimeDiagnosticError, RunWaitingError } from "../../errors.js";

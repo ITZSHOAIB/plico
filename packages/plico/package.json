@@ -35,7 +35,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@plico/contracts": "workspace:*"
+    "@plico-ai/contracts": "workspace:*"
   },
   "engines": {
     "node": ">=22.18.0"

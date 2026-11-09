@@ -1,4 +1,4 @@
-import { createSqliteEventStore, runEvals } from "@plico/runtime";
+import { createSqliteEventStore, runEvals } from "@plico-ai/runtime";
 import { lastPositional, parseArgs, readStringOption } from "../args.js";
 import { errorMessage } from "../errors.js";
 import { formatEvalSummary } from "../format/eval.js";

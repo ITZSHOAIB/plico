@@ -2,7 +2,7 @@ import {
   type DryRunScriptStep,
   normalizeScript as normalize,
   ScriptValidationError,
-} from "@plico/runtime";
+} from "@plico-ai/runtime";
 import { HttpError } from "./errors.js";
 
 export function normalizeScript(value: unknown): DryRunScriptStep[] {

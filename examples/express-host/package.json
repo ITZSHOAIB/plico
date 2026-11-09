@@ -1,5 +1,5 @@
 {
-  "name": "@plico/example-express-host",
+  "name": "@plico-ai/example-express-host",
   "private": true,
   "type": "module",
   "version": "0.0.0",
@@ -8,7 +8,7 @@
     "start": "tsx src/server.ts"
   },
   "dependencies": {
-    "@plico/server": "workspace:*",
+    "@plico-ai/server": "workspace:*",
     "express": "5.1.0"
   },
   "devDependencies": {

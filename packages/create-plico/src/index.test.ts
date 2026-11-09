@@ -2,8 +2,8 @@ import { copyFile, mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises"
 import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { getProjectPaths, validateProject } from "@plico/core";
-import { createConfiguredModelProvider, loadProjectEnv, runProject } from "@plico/runtime";
+import { getProjectPaths, validateProject } from "@plico-ai/core";
+import { createConfiguredModelProvider, loadProjectEnv, runProject } from "@plico-ai/runtime";
 import { describe, expect, it } from "vitest";
 import { createInternalOpsScaffold } from "./index.js";
 
@@ -80,7 +80,7 @@ describe("createInternalOpsScaffold", () => {
       validate: "plico validate .",
       eval: "plico eval .",
     });
-    expect(pkg.devDependencies).toHaveProperty("@plico/cli");
+    expect(pkg.devDependencies).toHaveProperty("@plico-ai/cli");
     expect(pkg.dependencies).toHaveProperty("plico");
     expect(await readFile(join(root, ".gitignore"), "utf8")).toEqual(
       expect.stringContaining(".plico/"),

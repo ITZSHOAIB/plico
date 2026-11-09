@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
-import type { PlicoEvent, ThreadMessage } from "@plico/contracts";
+import type { PlicoEvent, ThreadMessage } from "@plico-ai/contracts";
 import { appendThreadEvent } from "./thread-log.js";
 import { retitleThread } from "./thread-title.js";
 

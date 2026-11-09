@@ -27,7 +27,7 @@ does not prevent recovery. A mismatched account leaves the message queued rather
 than sending its content to a different account.
 
 A host that embeds Plico calls `createPlico({ projectRoot, databasePath })` from
-`@plico/server`. It opens the thread store, run store, engine and provider from the
+`@plico-ai/server`. It opens the thread store, run store, engine and provider from the
 project and the database path, recovers interrupted runs, resumes queued ones, and
 returns `plico.threads` (create, get, list, rename, messages, send), `plico.runs`
 (start, get, list, cancel, events) and `plico.approvals`. Call `await plico.close()`

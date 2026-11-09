@@ -1,4 +1,4 @@
-import { validateProject } from "@plico/core";
+import { validateProject } from "@plico-ai/core";
 import { lastPositional, type ParsedArgs, parseArgs } from "../args.js";
 import { errorMessage } from "../errors.js";
 

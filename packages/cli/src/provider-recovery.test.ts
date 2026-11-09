@@ -128,7 +128,7 @@ it("leaves an interrupted run untouched when the provider credential changes", a
       },
     ),
   ).toThrow();
-  const { createSqliteEventStore } = await import("@plico/runtime");
+  const { createSqliteEventStore } = await import("@plico-ai/runtime");
   const store = createSqliteEventStore({ databasePath, readOnly: true });
   const before = await store.getRun("old-account");
   vi.spyOn(console, "log").mockImplementation(() => {});
@@ -252,7 +252,7 @@ it("recovers a matching provider run when the server starts", async () => {
       ),
     ]);
     expect(body).toContain("resume me");
-    const { createSqliteEventStore } = await import("@plico/runtime");
+    const { createSqliteEventStore } = await import("@plico-ai/runtime");
     const store = createSqliteEventStore({ databasePath, readOnly: true });
     await vi.waitFor(
       async () =>
@@ -341,7 +341,7 @@ it("keeps interruption handling active while an older run is recovering", {
     const listener = process.listeners("SIGINT").find((item) => !prior.includes(item));
     expect(listener).toBeDefined();
     if (listener) Reflect.apply(listener, process, ["SIGINT"]);
-    const { createSqliteEventStore } = await import("@plico/runtime");
+    const { createSqliteEventStore } = await import("@plico-ai/runtime");
     const store = createSqliteEventStore({ databasePath, readOnly: true });
     await vi.waitFor(
       async () => expect(await store.getRun("older")).toMatchObject({ status: "cancelled" }),

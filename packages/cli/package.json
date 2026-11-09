@@ -1,5 +1,5 @@
 {
-  "name": "@plico/cli",
+  "name": "@plico-ai/cli",
   "version": "0.0.0",
   "description": "The plico command line: validate, run, eval, readiness and serve with Studio",
   "homepage": "https://plico.sohab.dev",
@@ -37,12 +37,12 @@
     "dist"
   ],
   "dependencies": {
-    "@plico/core": "workspace:*",
-    "@plico/server": "workspace:*",
-    "@plico/runtime": "workspace:*"
+    "@plico-ai/core": "workspace:*",
+    "@plico-ai/server": "workspace:*",
+    "@plico-ai/runtime": "workspace:*"
   },
   "devDependencies": {
-    "@plico/studio": "workspace:*"
+    "@plico-ai/studio": "workspace:*"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --noEmit",

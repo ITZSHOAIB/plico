@@ -1,4 +1,4 @@
-import type { Engine } from "@plico/runtime";
+import type { Engine } from "@plico-ai/runtime";
 
 /** Keep track of the requested and recovered runs until all execution settles. */
 export function cancelOnInterrupt(

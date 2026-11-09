@@ -1,4 +1,4 @@
-import type { Engine, EventStore, ModelProvider, ThreadStore } from "@plico/runtime";
+import type { Engine, EventStore, ModelProvider, ThreadStore } from "@plico-ai/runtime";
 import type { AppDeps } from "../app/types.js";
 
 export interface RouteContext {

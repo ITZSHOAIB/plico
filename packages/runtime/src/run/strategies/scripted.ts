@@ -1,4 +1,4 @@
-import type { ProjectConfig } from "@plico/contracts";
+import type { ProjectConfig } from "@plico-ai/contracts";
 import { RunCancelled, type RunContext } from "../../engine/index.js";
 import { RuntimeDiagnosticError } from "../../errors.js";
 import type { InMemoryEventLog } from "../../events.js";

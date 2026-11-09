@@ -4,7 +4,7 @@ import type {
   ArtifactFileMetadata,
   PlicoEvent,
   PlicoEventPayloads,
-} from "@plico/contracts";
+} from "@plico-ai/contracts";
 import {
   artifactFileMetadata,
   buildArtifactWorkspace,

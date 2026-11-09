@@ -14,17 +14,17 @@ Plans 0001 through 0003 remain aligned with the PRD dependency order:
 
 ## Key Decisions
 
-- Add a new `@plico/server` package, but keep it thin. HTTP is a real boundary; it should not be folded into `@plico/runtime`.
-- Keep `@plico/runtime` responsible for execution, event model, event store contracts, SQLite persistence, and replay reads.
-- Keep `@plico/server` responsible for HTTP request parsing, route behavior, response envelopes, and status codes over runtime/storage APIs.
-- Keep `@plico/cli` responsible for command-line wiring only.
-- Do not add separate `@plico/storage`, `@plico/events`, API type, replay, or SQLite packages in this phase.
+- Add a new `@plico-ai/server` package, but keep it thin. HTTP is a real boundary; it should not be folded into `@plico-ai/runtime`.
+- Keep `@plico-ai/runtime` responsible for execution, event model, event store contracts, SQLite persistence, and replay reads.
+- Keep `@plico-ai/server` responsible for HTTP request parsing, route behavior, response envelopes, and status codes over runtime/storage APIs.
+- Keep `@plico-ai/cli` responsible for command-line wiring only.
+- Do not add separate `@plico-ai/storage`, `@plico-ai/events`, API type, replay, or SQLite packages in this phase.
 - Use built-in `node:sqlite` for the local SQLite adapter because the repo currently targets a modern Node runtime and should stay dependency-light.
 - Persist only runs and native events in this phase. Threads, messages, artifacts, approvals, usage, and provider-specific model state remain future read models or storage extensions.
 
 ## Runtime and Persistence Changes
 
-Extend `@plico/runtime` with an event-store contract and local SQLite implementation:
+Extend `@plico-ai/runtime` with an event-store contract and local SQLite implementation:
 
 - Export an `EventStore` interface that can create/update run summaries, append native events, list runs, read one run, and read ordered events.
 - Export `createSqliteEventStore({ databasePath })` as the default local persistence implementation.
@@ -47,7 +47,7 @@ Events remain the canonical source of truth. The `runs` table is a small indexed
 
 ## CLI Changes
 
-Extend `@plico/cli` while preserving existing behavior:
+Extend `@plico-ai/cli` while preserving existing behavior:
 
 - `plico run --dry [path]` remains non-persistent unless `--persist` is passed.
 - `plico run --dry --persist [--db <file>] [--script <file>] [path]` runs the dry runtime, persists the run and events, and prints the run ID.
@@ -59,7 +59,7 @@ The default local database path is `<project>/.plico/plico.sqlite`. Add `.plico/
 
 ## Server Changes
 
-Create `@plico/server` as a small package with a native JSON API:
+Create `@plico-ai/server` as a small package with a native JSON API:
 
 - Export `createPlicoServer({ projectRoot, eventStore })`.
 - Export `servePlico({ projectRoot, databasePath, host, port })`.
@@ -92,9 +92,9 @@ This phase intentionally does not add live SSE. Replayable stored events are eno
 
 The implementation should be split into a few large, independently useful tracer-bullet issues:
 
-1. Durable native event log in `@plico/runtime`.
+1. Durable native event log in `@plico-ai/runtime`.
 2. CLI-persisted dry runs and replay commands.
-3. Thin `@plico/server` native HTTP API.
+3. Thin `@plico-ai/server` native HTTP API.
 4. End-to-end internal-ops persistence and HTTP demo path.
 
 Each issue should cut through public behavior and tests, not just one internal layer. The goal is a small number of substantial tasks that are clear enough for AFK implementation agents.
@@ -118,7 +118,7 @@ CLI tests:
 - `events <run-id> --json` returns ordered native events.
 - `events <run-id> --after <n>` returns only later events.
 - Missing databases, malformed cursors, and unknown run IDs fail with actionable messages.
-- `serve` wires project root, host, port, and database options into `@plico/server`.
+- `serve` wires project root, host, port, and database options into `@plico-ai/server`.
 
 Server tests:
 
@@ -136,9 +136,9 @@ Example coverage:
 Verification:
 
 - `pnpm exec vitest run <focused test files>`
-- `pnpm --filter @plico/runtime build`
-- `pnpm --filter @plico/server build`
-- `pnpm --filter @plico/cli build`
+- `pnpm --filter @plico-ai/runtime build`
+- `pnpm --filter @plico-ai/server build`
+- `pnpm --filter @plico-ai/cli build`
 
 ## Assumptions
 

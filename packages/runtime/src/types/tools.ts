@@ -1,4 +1,4 @@
-import type { JsonSchema, ToolDefinition } from "@plico/contracts";
+import type { JsonSchema, ToolDefinition } from "@plico-ai/contracts";
 
 export type {
   JsonSchema,
@@ -11,7 +11,7 @@ export type {
   ToolInputSchema,
   ZodInputParseResult,
   ZodInputSchema,
-} from "@plico/contracts";
+} from "@plico-ai/contracts";
 
 export type ToolInputParseResult =
   | { success: true; value: unknown }

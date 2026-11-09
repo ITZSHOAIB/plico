@@ -18,7 +18,7 @@ import type {
   RunResult,
   RunStatus,
   RunSummary,
-} from "@plico/contracts";
+} from "@plico-ai/contracts";
 
 export type { ArtifactFileInput } from "./artifacts.js";
 export type { EvalCase, EvalExpectation, RunEvalsOptions } from "./evals.js";

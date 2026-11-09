@@ -1,5 +1,5 @@
 import { join } from "node:path";
-import { getProjectPaths, getProjectRelativePaths, type LoadedProject } from "@plico/core";
+import { getProjectPaths, getProjectRelativePaths, type LoadedProject } from "@plico-ai/core";
 import { discoverToolFiles, loadToolFile } from "../../tools/index.js";
 import type { DeclaredTool, ReadinessDiagnostic } from "../../types/index.js";
 import { makeDiagnostic } from "../diagnostic.js";

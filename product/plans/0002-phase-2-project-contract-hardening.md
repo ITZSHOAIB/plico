@@ -14,7 +14,7 @@ Resolved decisions:
 
 ## Implementation Changes
 
-Harden `@plico/core`:
+Harden `@plico-ai/core`:
 
 - Replace regex config parsing with trusted local execution of `plico.config.ts` using the existing `tsx` ESM API.
 - Keep the public core surface centered on `loadProject(root)` and `validateProject(root)`.
@@ -28,7 +28,7 @@ Extend validation:
 - Generated placeholder content should validate cleanly.
 - Emit warnings for weak starter content where useful, but do not claim deployment readiness yet.
 
-Update `@plico/cli`:
+Update `@plico-ai/cli`:
 
 - Preserve `plico validate [path]` as the primary command.
 - Add `--json` for machine-readable validation output.
@@ -39,7 +39,7 @@ Refine `create-plico` and the example project:
 
 - Keep the internal-ops pilot scaffold as the single canonical template.
 - Generate meaningful starter `agent.md`, one Markdown skill, tool documentation placeholder, smoke eval, memory placeholder, artifacts directory, and README.
-- Ensure the generated scaffold validates cleanly through `@plico/core`.
+- Ensure the generated scaffold validates cleanly through `@plico-ai/core`.
 - Do not define executable TypeScript tool exports yet.
 
 ## Test Plan

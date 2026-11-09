@@ -2,7 +2,7 @@ import { existsSync } from "node:fs";
 import { mkdir, mkdtemp, readdir, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createSqliteEventStore, runProject } from "@plico/runtime";
+import { createSqliteEventStore, runProject } from "@plico-ai/runtime";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { main } from "./cli.js";
 

@@ -35,7 +35,7 @@ importers:
 
   examples/express-host:
     dependencies:
-      '@plico/server':
+      '@plico-ai/server':
         specifier: workspace:*
         version: link:../../packages/server
       express:
@@ -51,17 +51,17 @@ importers:
 
   packages/cli:
     dependencies:
-      '@plico/core':
+      '@plico-ai/core':
         specifier: workspace:*
         version: link:../core
-      '@plico/runtime':
+      '@plico-ai/runtime':
         specifier: workspace:*
         version: link:../runtime
-      '@plico/server':
+      '@plico-ai/server':
         specifier: workspace:*
         version: link:../server
     devDependencies:
-      '@plico/studio':
+      '@plico-ai/studio':
         specifier: workspace:*
         version: link:../studio
 
@@ -69,7 +69,7 @@ importers:
 
   packages/core:
     dependencies:
-      '@plico/contracts':
+      '@plico-ai/contracts':
         specifier: workspace:*
         version: link:../contracts
       plico:
@@ -84,11 +84,11 @@ importers:
       '@clack/prompts':
         specifier: ^1.6.0
         version: 1.6.0
-      '@plico/core':
+      '@plico-ai/core':
         specifier: workspace:*
         version: link:../core
     devDependencies:
-      '@plico/runtime':
+      '@plico-ai/runtime':
         specifier: workspace:*
         version: link:../runtime
 
@@ -146,7 +146,7 @@ importers:
 
   packages/plico:
     dependencies:
-      '@plico/contracts':
+      '@plico-ai/contracts':
         specifier: workspace:*
         version: link:../contracts
 
@@ -158,10 +158,10 @@ importers:
       '@opentelemetry/api':
         specifier: 1.9.0
         version: 1.9.0
-      '@plico/contracts':
+      '@plico-ai/contracts':
         specifier: workspace:*
         version: link:../contracts
-      '@plico/core':
+      '@plico-ai/core':
         specifier: workspace:*
         version: link:../core
       ai:
@@ -213,13 +213,13 @@ importers:
       '@hono/node-server':
         specifier: 2.1.6
         version: 2.1.6(hono@4.13.17)
-      '@plico/contracts':
+      '@plico-ai/contracts':
         specifier: workspace:*
         version: link:../contracts
-      '@plico/core':
+      '@plico-ai/core':
         specifier: workspace:*
         version: link:../core
-      '@plico/runtime':
+      '@plico-ai/runtime':
         specifier: workspace:*
         version: link:../runtime
       diff:
@@ -262,7 +262,7 @@ importers:
         specifier: ^4.3.4
         version: 4.3.4
     devDependencies:
-      '@plico/contracts':
+      '@plico-ai/contracts':
         specifier: workspace:*
         version: link:../contracts
       '@testing-library/dom':

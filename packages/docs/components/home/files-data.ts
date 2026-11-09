@@ -50,7 +50,7 @@ export const sources: SourceFile[] = [
   },
 ];
 
-/** A trimmed run. Event types match the canonical event log in `@plico/contracts`. */
+/** A trimmed run. Event types match the canonical event log in `@plico-ai/contracts`. */
 export const events = [
   { type: "run.started", detail: "support-agent" },
   { type: "instructions.composed", detail: "2 sources" },

@@ -3,7 +3,7 @@ import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import { createSqliteEventStore } from "@plico/runtime";
+import { createSqliteEventStore } from "@plico-ai/runtime";
 import { expect, it } from "vitest";
 import { servePlico } from "./index.js";
 

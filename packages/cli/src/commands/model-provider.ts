@@ -1,5 +1,5 @@
-import type { ProjectConfig } from "@plico/core";
-import { createConfiguredModelProvider, type ModelProvider } from "@plico/runtime";
+import type { ProjectConfig } from "@plico-ai/core";
+import { createConfiguredModelProvider, type ModelProvider } from "@plico-ai/runtime";
 
 export function resolveModelProvider(
   model: ProjectConfig["model"],

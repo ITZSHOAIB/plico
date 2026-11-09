@@ -20,9 +20,9 @@ This is intentionally a large vertical slice. It should advance the PRD across S
 
 ## Key Decisions
 
-- Add a bundled `@plico/studio` package using Vite and React.
-- Keep `@plico/studio` separate from a future public `@plico/react` embedding package.
-- Serve Studio from `@plico/server` and wire it through `plico serve`, rather than generating Studio files into each Plico project.
+- Add a bundled `@plico-ai/studio` package using Vite and React.
+- Keep `@plico-ai/studio` separate from a future public `@plico-ai/react` embedding package.
+- Serve Studio from `@plico-ai/server` and wire it through `plico serve`, rather than generating Studio files into each Plico project.
 - Add native SSE for Plico events before AG-UI mapping.
 - Add a minimal v1 artifact workspace contract based on versioned virtual files and native artifact events.
 - Add scripted trace evals before provider-backed evals or LLM judges.
@@ -31,7 +31,7 @@ This is intentionally a large vertical slice. It should advance the PRD across S
 
 ## Runtime, Events, and Artifacts
 
-Extend `@plico/runtime` with a minimal artifact workspace that is event-log primary:
+Extend `@plico-ai/runtime` with a minimal artifact workspace that is event-log primary:
 
 - Add artifact event types:
   - `artifact.workspace.created`
@@ -47,7 +47,7 @@ The artifact workspace should remain deliberately small, but it must be a real c
 
 ## Native Streaming and Server API
 
-Extend `@plico/server` with native streaming and Studio/read-model endpoints:
+Extend `@plico-ai/server` with native streaming and Studio/read-model endpoints:
 
 - Add `GET /v1/runs/:runId/events/stream?after=<sequence>` for native Plico SSE.
 - Replay stored events after the requested cursor before following live events when a run is active. (Replay shipped here; live following moved to #69.)
@@ -69,7 +69,7 @@ The server remains a thin native HTTP API over runtime/storage/read-model contra
 
 ## CLI, Studio, Evals, and Readiness
 
-Extend `@plico/cli`:
+Extend `@plico-ai/cli`:
 
 - `plico serve [--studio] [--host <host>] [--port <port>] [--db <file>] [path]`
 - `plico eval [--json] [--db <file>] [path]`
@@ -97,7 +97,7 @@ Extend `@plico/cli`:
 - report whether server and Studio configuration is locally usable
 - return machine-readable JSON in `--json` mode
 
-Add `@plico/studio` as a dense local inspection workbench with screens for:
+Add `@plico-ai/studio` as a dense local inspection workbench with screens for:
 
 - project overview
 - run timeline from persisted/native events
@@ -166,10 +166,10 @@ Studio tests:
 Verification:
 
 - `pnpm exec vitest run <focused test files>`
-- `pnpm --filter @plico/runtime build`
-- `pnpm --filter @plico/server build`
-- `pnpm --filter @plico/cli build`
-- `pnpm --filter @plico/studio build`
+- `pnpm --filter @plico-ai/runtime build`
+- `pnpm --filter @plico-ai/server build`
+- `pnpm --filter @plico-ai/cli build`
+- `pnpm --filter @plico-ai/studio build`
 - root `pnpm test` when shared contracts or workspace config change
 
 ## Assumptions
@@ -186,7 +186,7 @@ Verification:
 - Real model provider calls.
 - Vercel AI SDK integration.
 - AG-UI mapping.
-- Public `@plico/react` package.
+- Public `@plico-ai/react` package.
 - Auth, rate limits, tenant model, and production deployment adapters.
 - Postgres adapter.
 - Binary artifact storage, full diffs, export flows, object storage, and sandboxed file execution.

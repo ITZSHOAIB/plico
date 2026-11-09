@@ -7,7 +7,7 @@ An Express app that mounts a Plico agent under `/plico` and keeps each user's th
 - `src/app.test.ts` shows user `bob` getting `404` for user `ann`'s thread.
 
 ```sh
-pnpm --filter @plico/example-express-host start
+pnpm --filter @plico-ai/example-express-host start
 curl -X POST localhost:3000/plico/v1/threads -H 'x-user-id: ann' -H 'content-type: application/json' -d '{}'
 ```
 

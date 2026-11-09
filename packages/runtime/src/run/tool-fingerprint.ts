@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
-import { getProjectPaths } from "@plico/core";
+import { getProjectPaths } from "@plico-ai/core";
 
 async function toolFiles(directory: string): Promise<string[]> {
   const entries = await readdir(directory, { withFileTypes: true });

@@ -1,5 +1,5 @@
-import type { PlicoEvent, RunSummary } from "@plico/contracts";
-import { type DryRunScriptStep, type RunResult, runProject } from "@plico/runtime";
+import type { PlicoEvent, RunSummary } from "@plico-ai/contracts";
+import { type DryRunScriptStep, type RunResult, runProject } from "@plico-ai/runtime";
 import { PlicoError } from "./errors.js";
 import { readMetadata } from "./metadata.js";
 import { inScope, scopedFilter, scopedMetadata } from "./scope.js";

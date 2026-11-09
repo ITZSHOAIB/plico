@@ -6,7 +6,7 @@ import {
   recoverRuns,
   runProject,
   type ThreadStore,
-} from "@plico/runtime";
+} from "@plico-ai/runtime";
 import { finishFailedThreadRun } from "./thread-failure.js";
 
 interface RecoveryOptions {

@@ -1,5 +1,5 @@
 import type { DatabaseSync } from "node:sqlite";
-import type { PlicoEvent } from "@plico/contracts";
+import type { PlicoEvent } from "@plico-ai/contracts";
 import { artifactContentBytes, hashArtifactContent } from "../../artifacts.js";
 import { acquireOwner } from "./owner-lock.js";
 import { projectThreadEvent } from "./project-thread.js";

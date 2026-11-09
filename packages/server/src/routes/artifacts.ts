@@ -3,7 +3,7 @@ import {
   type PlicoEvent,
   readArtifactSnapshot,
   readArtifactVersion,
-} from "@plico/runtime";
+} from "@plico-ai/runtime";
 import { createTwoFilesPatch } from "diff";
 import { requireRun } from "../app/runs.js";
 import { HttpError } from "../errors.js";

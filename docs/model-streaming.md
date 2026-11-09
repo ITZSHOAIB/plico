@@ -15,7 +15,7 @@ to use a compatible gateway.
 The OpenAI-compatible adapter is also available through the runtime API.
 
 ```ts
-import { createOpenAICompatibleProvider, runProject } from "@plico/runtime";
+import { createOpenAICompatibleProvider, runProject } from "@plico-ai/runtime";
 
 const provider = createOpenAICompatibleProvider({ model: "your-model" });
 const result = await runProject(".", { provider, message: "Hello" });

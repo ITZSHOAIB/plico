@@ -1,4 +1,4 @@
-import type { ProjectConfig } from "@plico/contracts";
+import type { ProjectConfig } from "@plico-ai/contracts";
 
 type ModelConfig = NonNullable<ProjectConfig["model"]>;
 

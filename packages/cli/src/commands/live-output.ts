@@ -1,4 +1,4 @@
-import type { EventStore } from "@plico/runtime";
+import type { EventStore } from "@plico-ai/runtime";
 
 /** Forward committed model text as it arrives, separating attempts on retries. */
 export function streamModelOutput(store: EventStore): EventStore {

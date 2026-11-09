@@ -1,4 +1,4 @@
-import type { LoadedProject } from "@plico/core";
+import type { LoadedProject } from "@plico-ai/core";
 import type { InMemoryEventLog } from "../../events.js";
 
 export async function runDefaultDryRun(

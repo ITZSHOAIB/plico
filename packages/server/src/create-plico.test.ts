@@ -1,8 +1,8 @@
 import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { PlicoEvent } from "@plico/contracts";
-import { createSqliteEventStore } from "@plico/runtime";
+import type { PlicoEvent } from "@plico-ai/contracts";
+import { createSqliteEventStore } from "@plico-ai/runtime";
 import { describe, expect, it } from "vitest";
 import { createPlico } from "./index.js";
 import { createTestServer } from "./testing/test-server.js";

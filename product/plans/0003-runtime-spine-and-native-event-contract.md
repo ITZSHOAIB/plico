@@ -10,8 +10,8 @@ This phase proves the PRD/ADR dependency chain without jumping ahead to Studio, 
 
 Issue 9 lands the runtime spine only:
 
-- Add dependency-light `@plico/runtime`.
-- Validate and load projects through `@plico/core` before execution.
+- Add dependency-light `@plico-ai/runtime`.
+- Validate and load projects through `@plico-ai/core` before execution.
 - Expose `runProject(root)` for provider-free deterministic dry runs.
 - Compose `agent.md` plus all `skills/*.md` files in sorted order.
 - Return the final run result and complete in-memory event log.
@@ -22,8 +22,8 @@ Tool discovery, scripted dry runs, approvals, and `plico run` CLI behavior remai
 
 ## Key Changes
 
-- Add `@plico/runtime`.
-- Keep `@plico/core` focused on project loading and validation.
+- Add `@plico-ai/runtime`.
+- Keep `@plico-ai/core` focused on project loading and validation.
 - Define the first public runtime APIs:
   - `runProject(root, input, options)`
   - `composeInstructions(project)`

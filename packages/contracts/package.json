@@ -1,5 +1,5 @@
 {
-  "name": "@plico/contracts",
+  "name": "@plico-ai/contracts",
   "version": "0.0.0",
   "description": "Types-only shared contracts (events, runs, artifacts, evals, readiness) for Plico packages",
   "homepage": "https://plico.sohab.dev",

@@ -1,5 +1,5 @@
 import { readFile } from "node:fs/promises";
-import { type DryRunScriptStep, normalizeScript } from "@plico/runtime";
+import { type DryRunScriptStep, normalizeScript } from "@plico-ai/runtime";
 import { errorMessage } from "./errors.js";
 
 export async function loadDryRunScript(scriptPath: string): Promise<DryRunScriptStep[]> {

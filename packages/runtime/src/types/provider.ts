@@ -1,4 +1,4 @@
-import type { JsonValue, ModelToolCall } from "@plico/contracts";
+import type { JsonValue, ModelToolCall } from "@plico-ai/contracts";
 import type { JsonSchema } from "./tools.js";
 
 export interface ProviderMessage {
@@ -10,7 +10,7 @@ export interface ProviderMessage {
   providerMetadata?: JsonValue;
 }
 
-export type { ModelToolCall } from "@plico/contracts";
+export type { ModelToolCall } from "@plico-ai/contracts";
 
 export interface ModelRequest {
   messages: ProviderMessage[];

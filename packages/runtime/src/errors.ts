@@ -1,4 +1,4 @@
-import type { PlicoEventPayloads } from "@plico/contracts";
+import type { PlicoEventPayloads } from "@plico-ai/contracts";
 
 export class RuntimeDiagnosticError extends Error {
   constructor(readonly payload: PlicoEventPayloads["run.error"]) {

@@ -1,4 +1,4 @@
-import { type EvalReport, type EventStore, runEvals } from "@plico/runtime";
+import { type EvalReport, type EventStore, runEvals } from "@plico-ai/runtime";
 import { HttpError } from "../errors.js";
 import { jsonResponse } from "../responses.js";
 import type { Route } from "./types.js";

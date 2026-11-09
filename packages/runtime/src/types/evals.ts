@@ -1,4 +1,4 @@
-import type { RunStatus } from "@plico/contracts";
+import type { RunStatus } from "@plico-ai/contracts";
 import type { DryRunScriptStep } from "./script.js";
 import type { EventStore } from "./store.js";
 

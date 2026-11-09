@@ -62,7 +62,7 @@ The dependency order for 0006 is therefore:
 - Treat threads and messages as durable read models derived from native events and storage projections, not as a separate source of truth.
 - Normalize TypeScript tools and MCP tools into the same `DeclaredTool` shape before the model sees them.
 - Add explicit local memory before automatic memory extraction, vector search, or hosted memory services.
-- Add `@plico/react` only when the app API and stream contract are stable enough to consume.
+- Add `@plico-ai/react` only when the app API and stream contract are stable enough to consume.
 - Add a non-React client layer only if React implementation proves that transport/state code would otherwise be duplicated.
 - Keep the first deployment target framework-neutral and Node-first. Do not make Next.js, Vercel, Cloudflare Workers, or any hosted platform the v1 deployment contract.
 
@@ -74,7 +74,7 @@ A developer can run the internal-ops Plico project against a real configured mod
 
 ### Scope
 
-Add a model provider contract owned by `@plico/runtime`:
+Add a model provider contract owned by `@plico-ai/runtime`:
 
 - Define provider-neutral request, response, stream, tool-call, tool-result, and usage types.
 - Pass composed instructions, conversation messages, normalized tools, max steps, and cancellation signals into the provider port.
@@ -84,7 +84,7 @@ Add a model provider contract owned by `@plico/runtime`:
 Add a default provider adapter path:
 
 - Add a small AI SDK-backed adapter package or module only after the Plico model port exists.
-- Keep provider SDK dependencies out of `@plico/core`.
+- Keep provider SDK dependencies out of `@plico-ai/core`.
 - Keep AI SDK-specific types out of persisted native events, project files, Studio responses, and React surfaces.
 - Support OpenAI-compatible gateway-style configuration through the same adapter path where practical.
 
@@ -266,7 +266,7 @@ Add AG-UI mapping:
 - Map native Plico events into AG-UI-compatible frontend events.
 - Preserve native event IDs or stable cursor metadata for reconnect and replay.
 - Keep native Plico streams as the full-fidelity debugging and audit contract.
-- Expose AG-UI endpoints or adapters from `@plico/server` without replacing native endpoints.
+- Expose AG-UI endpoints or adapters from `@plico-ai/server` without replacing native endpoints.
 - Add compatibility fixtures that prove the mapping is deterministic.
 
 Add a fetch-based client layer if needed:
@@ -275,7 +275,7 @@ Add a fetch-based client layer if needed:
 - Keep the client transport small and framework-neutral if React would otherwise duplicate the logic.
 - Do not make the client a second runtime or state source.
 
-Add `@plico/react`:
+Add `@plico-ai/react`:
 
 - Headless hooks for thread state, run state, event streaming, approvals, and artifacts.
 - Focused components for chat, artifact viewer, approval panel, and tool timeline.
@@ -293,7 +293,7 @@ Add an embedding example:
 1. AG-UI mapping from native Plico events with fixture tests.
 2. AG-UI server endpoint or adapter with replay/resume behavior.
 3. Plico client transport for threads, runs, streams, approvals, and artifacts if needed.
-4. `@plico/react` headless hooks and focused components.
+4. `@plico-ai/react` headless hooks and focused components.
 5. Internal-ops React embedding example.
 
 ### Phase Gate
@@ -411,11 +411,11 @@ Studio and React tests should cover:
 Run the narrowest checks first inside each phase:
 
 - `pnpm exec vitest run <focused test files>`
-- `pnpm --filter @plico/runtime build`
-- `pnpm --filter @plico/server build`
-- `pnpm --filter @plico/cli build`
-- `pnpm --filter @plico/studio build`
-- `pnpm --filter @plico/react build` once the package exists
+- `pnpm --filter @plico-ai/runtime build`
+- `pnpm --filter @plico-ai/server build`
+- `pnpm --filter @plico-ai/cli build`
+- `pnpm --filter @plico-ai/studio build`
+- `pnpm --filter @plico-ai/react build` once the package exists
 - adapter package builds once provider, MCP, or storage adapter packages exist
 
 Run broader checks when shared contracts change:

@@ -2,7 +2,7 @@ import { mkdir, mkdtemp, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { loadProject } from "@plico/core";
+import { loadProject } from "@plico-ai/core";
 import { describe, expect, it } from "vitest";
 import {
   buildArtifactWorkspace,
@@ -29,7 +29,7 @@ function fromComplete(provider: {
   };
 }
 
-function withoutDeltas(events: import("@plico/contracts").PlicoEvent[]) {
+function withoutDeltas(events: import("@plico-ai/contracts").PlicoEvent[]) {
   return events.filter((event) => event.type !== "model.delta" && event.type !== "model.attempt");
 }
 

@@ -1,4 +1,4 @@
-import { createSqliteEventStore } from "@plico/runtime";
+import { createSqliteEventStore } from "@plico-ai/runtime";
 import { parseArgs, parseCursor, readNumberOption, readStringOption } from "../args.js";
 import { errorMessage } from "../errors.js";
 import { formatEvents } from "../format/events.js";

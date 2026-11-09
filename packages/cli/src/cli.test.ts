@@ -4,7 +4,7 @@ import { access, mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { createSqliteEventStore } from "@plico/runtime";
+import { createSqliteEventStore } from "@plico-ai/runtime";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { main } from "./cli.js";
 
@@ -98,7 +98,7 @@ describe("main", () => {
     const root = await mkdtemp(join(tmpdir(), "plico-cli-cancel-"));
     await writeValidProject(root);
     const databasePath = join(root, "state.sqlite");
-    const { createSqliteEngine } = await import("@plico/runtime");
+    const { createSqliteEngine } = await import("@plico-ai/runtime");
     const engine = createSqliteEngine({ databasePath });
     const store = createSqliteEventStore({ databasePath });
     await store.appendEvent({

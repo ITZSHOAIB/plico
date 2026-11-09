@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
-import type { ThreadEvent } from "@plico/contracts";
+import type { ThreadEvent } from "@plico-ai/contracts";
 
 /** Appends to a thread's own event stream and returns the new sequence number. */
 export function appendThreadEvent(

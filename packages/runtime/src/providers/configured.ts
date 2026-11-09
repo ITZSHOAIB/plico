@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
-import type { ProjectConfig } from "@plico/contracts";
-import { NATIVE_MODEL_PROVIDERS } from "@plico/core";
+import type { ProjectConfig } from "@plico-ai/contracts";
+import { NATIVE_MODEL_PROVIDERS } from "@plico-ai/core";
 import type { LanguageModel } from "ai";
 import type { ModelProvider } from "../types/index.js";
 import { createAiSdkModelProvider } from "./ai-sdk.js";
