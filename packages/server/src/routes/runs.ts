@@ -29,7 +29,8 @@ export const runRoutes: Route[] = [
       return jsonResponse(
         202,
         await startRun(app, {
-          ...(script === undefined ? {} : { script }),
+          // A script sent over HTTP comes from the caller, so its tool steps never run handlers.
+          ...(script === undefined ? {} : { script, mockTools: true }),
           metadata: body.metadata,
         }),
       );
@@ -41,7 +42,10 @@ export const runRoutes: Route[] = [
     pattern: /^\/v1\/runs\/dry$/,
     handler: async ({ app, allowScript, request }) => {
       const script = readScript(await readJsonBody(request), allowScript);
-      return jsonResponse(200, await runDry(app, script === undefined ? {} : { script }));
+      return jsonResponse(
+        200,
+        await runDry(app, script === undefined ? {} : { script, mockTools: true }),
+      );
     },
   },
   {

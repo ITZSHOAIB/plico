@@ -26,7 +26,7 @@ async function openPlico(): Promise<Plico> {
   return createPlico({ projectRoot: root, databasePath: join(root, "state.sqlite") });
 }
 
-const whoScript = [{ type: "tool.call", toolName: "who", arguments: {} }];
+const whoScript = [{ type: "tool.call", toolName: "who", arguments: {}, result: {} }];
 const byUser = (request: Request) => ({ userId: request.headers.get("x-user") ?? "" });
 
 type Handler = (request: Request) => Promise<Response>;
@@ -157,8 +157,8 @@ describe("mounted API with scope", () => {
           method: "POST",
           body: {
             script: [
-              { type: "tool.call", toolName: "who", arguments: {} },
-              { type: "tool.call", toolName: "archive", arguments: {} },
+              { type: "tool.call", toolName: "who", arguments: {}, result: {} },
+              { type: "tool.call", toolName: "archive", arguments: {}, result: {} },
             ],
           },
         }),

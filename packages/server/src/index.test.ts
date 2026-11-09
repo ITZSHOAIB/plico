@@ -126,7 +126,7 @@ async function jsonRequest(
 }
 
 describe("createTestServer", () => {
-  it("returns a running run immediately and exposes events while a tool executes", async () => {
+  it("exposes a host-started run's events over HTTP while a tool executes", async () => {
     const root = await mkdtemp(join(tmpdir(), "plico-live-api-"));
     await writeValidProject(root);
     await writeFile(
@@ -146,13 +146,10 @@ describe("createTestServer", () => {
     });
     Object.assign(globalThis, { __plicoLiveGate: gate });
     try {
-      const response = await jsonRequest(baseUrl, "/v1/runs", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ script: [{ type: "tool.call", toolName: "slow", arguments: {} }] }),
+      // Scripts sent over HTTP never run handlers, so the host starts this one in process.
+      const { runId } = await serverApi.plico.runs.start({
+        script: [{ type: "tool.call", toolName: "slow", arguments: {} }],
       });
-      expect(response.status).toBe(202);
-      const { runId } = response.body as { runId: string };
       expect(await jsonRequest(baseUrl, `/v1/runs/${runId}`)).toMatchObject({
         status: 200,
         body: { status: "running", endedAt: null },
@@ -250,7 +247,12 @@ describe("createTestServer", () => {
       body: JSON.stringify({
         script: [
           { type: "assistant.output", content: "I will create the ticket." },
-          { type: "tool.call", toolName: "create_ticket", arguments: { title: "VPN down" } },
+          {
+            type: "tool.call",
+            toolName: "create_ticket",
+            arguments: { title: "VPN down" },
+            result: { ticketId: "TCK-8" },
+          },
         ],
       }),
     });

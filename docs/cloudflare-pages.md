@@ -25,8 +25,10 @@ Create the Pages project from the Cloudflare dashboard:
 | Production branch | `main` |
 | Root directory | `/` |
 | Framework preset | `None` |
-| Build command | `pnpm --filter @plico-ai/docs build` |
+| Build command | `pnpm build:docs` |
 | Build output directory | `packages/docs/out` |
+
+`pnpm build:docs` is a root script that builds `@plico-ai/docs`, so renaming the package only changes `package.json`, not the Pages settings.
 
 Set these environment variables in the Pages project if Cloudflare does not infer them:
 

@@ -7,7 +7,12 @@ import type { AppDeps } from "./types.js";
 
 export async function startRun(
   deps: AppDeps,
-  options: { script?: DryRunScriptStep[]; metadata?: unknown; context?: unknown } = {},
+  options: {
+    script?: DryRunScriptStep[];
+    mockTools?: boolean;
+    metadata?: unknown;
+    context?: unknown;
+  } = {},
 ): Promise<{ runId: string }> {
   const metadata = scopedMetadata(deps, readMetadata(options.metadata));
   const context = readMetadata(options.context, "context") ?? deps.context;
@@ -21,6 +26,7 @@ export async function startRun(
     eventStore: deps.eventStore,
     engine: deps.engine,
     ...(options.script === undefined ? {} : { script: options.script }),
+    ...(options.mockTools === true ? { mockTools: true } : {}),
     ...(metadata === undefined ? {} : { metadata }),
     ...(context === undefined ? {} : { context }),
     onStarted: resolveStarted,
@@ -31,10 +37,11 @@ export async function startRun(
 /** Runs the project to the end without a model and returns its result. */
 export function runDry(
   deps: AppDeps,
-  options: { script?: DryRunScriptStep[] } = {},
+  options: { script?: DryRunScriptStep[]; mockTools?: boolean } = {},
 ): Promise<RunResult> {
   return runProject(deps.projectRoot, {
     ...(options.script === undefined ? {} : { script: options.script }),
+    ...(options.mockTools === true ? { mockTools: true } : {}),
     eventStore: deps.eventStore,
     engine: deps.engine,
   });

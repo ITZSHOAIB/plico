@@ -61,7 +61,11 @@ export async function runProject(
     ...(options.context === undefined ? {} : { context: options.context }),
     ...(options.history === undefined ? {} : { history: options.history }),
     ...(options.script === undefined ? {} : { script: options.script }),
-    ...(options.mockTools === true ? { mockTools: true } : {}),
+    // Always recorded for a script, so recovery can tell a run that may call handlers from one
+    // journaled before this flag existed.
+    ...(options.script !== undefined || options.mockTools === true
+      ? { mockTools: options.mockTools === true }
+      : {}),
     ...(options.providerRecoveryKey === undefined
       ? {}
       : { providerRecoveryKey: options.providerRecoveryKey }),
@@ -127,9 +131,17 @@ export async function recoverRuns(
       try {
         const result =
           input.message === undefined
-            ? await runLoop(ctx, journaled, withoutProvider, span)
+            ? isLegacyScript(input)
+              ? await failRecovery(ctx, journaled, options, "recovery", legacyScriptMessage)
+              : await runLoop(ctx, journaled, withoutProvider, span)
             : options.provider === undefined
-              ? await failMissingProvider(ctx, journaled, options)
+              ? await failRecovery(
+                  ctx,
+                  journaled,
+                  options,
+                  "provider",
+                  "Cannot recover provider-backed run without a provider.",
+                )
               : await runLoop(ctx, journaled, options, span);
         if (result.status === "failed") span.setStatus({ code: SpanStatusCode.ERROR });
         return result;
@@ -154,10 +166,23 @@ function projectIdentity(root: string): string {
   return process.platform === "win32" ? absolute.toLowerCase() : absolute;
 }
 
-async function failMissingProvider(
+const legacyScriptMessage =
+  "This scripted run was started by an older Plico that did not record whether its tools may run, so it is not resumed. Start it again.";
+
+/**
+ * A script journaled before runs recorded `mockTools`. It may have come from an API caller, so
+ * resuming it could run handlers that caller should never reach; it fails instead.
+ */
+function isLegacyScript(input: RunInput): boolean {
+  return input.script !== undefined && !("mockTools" in input);
+}
+
+async function failRecovery(
   ctx: RunContext,
   input: RunInput,
   options: RunProjectOptions,
+  phase: string,
+  message: string,
 ): Promise<RunResult> {
   const events = await InMemoryEventLog.open(ctx.runId, options.eventStore);
   const validation = await validateProject(input.root);
@@ -169,11 +194,8 @@ async function failMissingProvider(
     options.onStarted?.(ctx.runId);
   }
   events.continueAfterReplay();
-  await events.append("run.error", {
-    phase: "provider",
-    message: "Cannot recover provider-backed run without a provider.",
-  });
-  await events.append("run.failed", { phase: "provider" });
+  await events.append("run.error", { phase, message });
+  await events.append("run.failed", { phase });
   return finalizeRun({
     runId: ctx.runId,
     projectRoot: input.displayRoot ?? input.root,
