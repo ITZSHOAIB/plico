@@ -1,7 +1,7 @@
 // Packs every published package, installs the tarballs into an empty project, and runs the
 // commands a new user would. Build first (`pnpm build`): `pnpm pack` takes whatever is in `dist`.
 import { execFileSync, spawn } from "node:child_process";
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { cp, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -124,6 +124,13 @@ try {
   }
   const project = await install(join(work, "project"), ["@plico-ai/cli", "@plico-ai/sdk"]);
   const creator = await install(join(work, "creator"), ["create-plico"]);
+  // Plico reads config and tool files with esbuild, so installing it must not pull in the 24 MB
+  // TypeScript compiler.
+  for (const directory of [project, creator])
+    check(
+      !existsSync(join(directory, "node_modules", "typescript")),
+      `typescript is not installed in ${directory === project ? "the project" : "the creator"}`,
+    );
 
   const bin = (name, ...args) => run("npx", ["--no-install", name, ...args], { cwd: project });
   const version = bin("plico", "--version").trim();

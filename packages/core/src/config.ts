@@ -1,5 +1,5 @@
 import { readFile, stat } from "node:fs/promises";
-import { createRequire } from "node:module";
+import { transform } from "esbuild";
 import { rewriteAuthoringImports } from "./authoring.js";
 import { configLoadMessage, missingFileMessage, ProjectConfigError } from "./errors.js";
 import { getProjectPaths, getProjectRelativePaths } from "./layout.js";
@@ -50,24 +50,17 @@ async function readProjectConfig(configPath: string): Promise<ProjectConfig> {
 
 async function importTranspiledProjectConfig(configPath: string): Promise<unknown> {
   const source = await readFile(configPath, "utf8");
-  const { transpileModule, ModuleKind, ScriptTarget } = getTypeScript();
-  const transpiled = transpileModule(source, {
-    compilerOptions: {
-      module: ModuleKind.ESNext,
-      target: ScriptTarget.ES2022,
-      verbatimModuleSyntax: true,
-    },
-    fileName: configPath,
+  const transpiled = await transform(source, {
+    loader: "ts",
+    format: "esm",
+    target: "es2022",
+    sourcefile: configPath,
   });
 
-  const code = rewriteAuthoringImports(transpiled.outputText, configPath);
+  const code = rewriteAuthoringImports(transpiled.code, configPath);
   const encoded = Buffer.from(code, "utf8").toString("base64");
   const moduleUrl = `data:text/javascript;base64,${encoded}`;
   return import(moduleUrl);
-}
-
-function getTypeScript(): typeof import("typescript") {
-  return createRequire(import.meta.url)("typescript") as typeof import("typescript");
 }
 
 function readDefaultExport(configModule: unknown, configPath: string): unknown {

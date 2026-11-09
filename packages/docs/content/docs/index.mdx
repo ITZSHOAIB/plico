@@ -11,8 +11,9 @@ inspectable agent app.
 <Callout>
   Plico needs Node 22.18 or later. CI tests 22.18 and 24. Plico keeps runs in Node's built-in
   `node:sqlite`, which Node still marks experimental. The `plico` command hides that warning; a
-  host that embeds Plico with `createPlico` sees it once at startup. Plico installs TypeScript
-  and `tsx` (about 35 MB together) so it can read `plico.config.ts` and tool files without a build step.
+  host that embeds Plico with `createPlico` sees it once at startup. Plico reads
+  `plico.config.ts` and tool files with `esbuild` and `tsx`, so you need no build step and Plico does not install the TypeScript
+  compiler. Add `typescript` to your own project if you want to type-check tools with `tsc`.
 </Callout>
 
 ## Why Plico?
