@@ -1,0 +1,90 @@
+---
+title: Events
+description: The event log every run writes, and how to read it.
+icon: Activity
+---
+
+Every run writes one ordered log of events. Studio's timeline, replay, evals, streaming and the
+HTTP API are all views of that log, so the log is the source of truth for what an agent did.
+
+## The shape of an event
+
+```json
+{
+  "schemaVersion": 1,
+  "streamType": "run",
+  "streamId": "run-096c2fa2-814b-49a8-ac26-8b64c930d8a9",
+  "runId": "run-096c2fa2-814b-49a8-ac26-8b64c930d8a9",
+  "id": "…",
+  "sequence": 5,
+  "timestamp": "2026-11-09T12:07:17.039Z",
+  "type": "tool.call",
+  "payload": { "toolName": "create_ticket", "arguments": { "title": "VPN down" } }
+}
+```
+
+`sequence` orders events within a run and is what you pass as a cursor. `schemaVersion` is the
+version of the saved event, not of the HTTP API. The types are in `@plico-ai/contracts` as
+`PlicoEvent`.
+
+## Event types
+
+| Event | When it is written |
+| --- | --- |
+| `run.started` | A run begins. Carries the project name and any host `metadata` and `context`. |
+| `instructions.composed` | `agent.md` and the skills are combined. Records the exact text the run uses. |
+| `tools.discovered` | The project's tools are loaded, with their schemas and approval policy. |
+| `input.received` | The user message a model-backed run starts from. |
+| `model.request` | Plico sends messages and tool definitions to the model. |
+| `model.attempt` | A model call starts. A retry is a new attempt. |
+| `model.delta` | A streamed piece of the reply. |
+| `model.response` | The model's full reply, with token usage and any tool calls. |
+| `assistant.output` | Text the agent says to the user. |
+| `tool.call` | The agent calls a tool, with its arguments. |
+| `tool.result` | The tool's result. |
+| `approval.requested` | A tool needs a decision. See [Approvals](/docs/approvals). |
+| `approval.decided` | A person approved or denied. May record who decided. |
+| `artifact.workspace.created` | The run gets an artifact workspace. |
+| `artifact.file.written` | A file version is written, with its path, hash and version. |
+| `artifact.snapshot.created` | A workspace snapshot is recorded, with its file count. |
+| `run.waiting` | The run is parked on a decision. |
+| `run.completed` | The run finished, with its final output. |
+| `run.cancelled` | The run was cancelled. |
+| `run.error` | Something went wrong, with its phase and a message. |
+| `run.failed` | The run ended in failure. Follows `run.error`. |
+
+Not every run writes every type. A dry run has no `model.*` events, and a run with no tools has no
+`tool.*` or `approval.*` events.
+
+## Read the log
+
+**From the command line:**
+
+```bash
+plico runs .               # list saved runs
+plico events <run-id> .    # print one run's events
+```
+
+**Over HTTP:**
+
+- `GET /v1/runs/<run-id>/events` returns the events as JSON. Add `?after=<sequence>` to get only
+  newer ones.
+- `GET /v1/runs/<run-id>/events/stream` is a Server-Sent Events stream. A reconnecting client
+  sends `Last-Event-ID`, or `?after=`, and gets the events it missed.
+
+**From your backend**, `plico.runs.events(runId, { after })` is an async iterator over the same
+events. See [Use Plico from your backend](/docs/backend).
+
+**In Studio**, the run view shows them as a timeline, with the raw JSON beside it and replay
+controls to step through a finished run. See [Studio](/docs/studio).
+
+## Stored data and stability
+
+Runs are stored in SQLite at `.plico/plico.sqlite` in the project, or wherever `--db` points.
+The log is append-only: Plico adds events and never edits one.
+
+The HTTP API under `/v1` takes additive changes only, so a new event type or payload field can
+appear in a minor release. Write consumers that ignore types and fields they do not know. See
+[Upgrading](/docs/upgrading) for what else can change in a `0.x` release.
+
+Events can include tool arguments, results and host `context`. Keep secrets out of all three.

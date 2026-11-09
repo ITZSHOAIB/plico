@@ -1,0 +1,64 @@
+---
+title: How Plico compares
+description: Where Plico fits among TypeScript agent tools, and what it does not do yet.
+icon: Scale
+---
+
+Plico is a developer preview, and the field is crowded. This page says what Plico is for, what it
+does today, and when another tool is the better choice. It describes other projects only from
+their public documentation, and they move fast, so check theirs.
+
+## What Plico is for
+
+Plico treats an agent as **a folder of files** you review like code: Markdown instructions and
+skills, TypeScript tools, config, evals. Around that folder it gives you the parts you would
+otherwise build yourself:
+
+- **One event log** per run, which Studio, replay, evals and the HTTP API all read.
+- **Human approval** that waits across a process restart.
+- **Studio**, a local web UI to chat, inspect runs, decide approvals and review artifact versions.
+- **A versioned artifact workspace** with diffs and export.
+- **Local SQLite** with no account, gateway or hosted service.
+- **Embedding**: `createPlico` runs inside your own backend and leaves authentication to you.
+
+## Where it sits
+
+| Project | What it is | How Plico differs |
+| --- | --- | --- |
+| [Vercel AI SDK](https://ai-sdk.dev) | A provider-agnostic toolkit for model calls, streaming and UI. | A library you call from code. Plico uses its provider packages and adds the project folder, run log and Studio on top. |
+| [Mastra](https://mastra.ai) | A TypeScript framework with agents, graph workflows, memory, MCP, evals and observability. | Mastra is broader today. Plico is narrower and file-first: the project is a folder, not a code-defined graph. |
+| [OpenAI Agents SDK](https://openai.github.io/openai-agents-js/) | A lightweight SDK for multi-agent workflows with handoffs, guardrails and tracing. | Built around code-defined multi-agent flows. Plico runs one agent per project, with files as the contract. |
+| [LangGraph](https://docs.langchain.com/oss/javascript/langgraph/overview) | A low-level orchestration framework for stateful agents. | Lower level and more flexible. Plico is higher level and opinionated about layout. |
+| [eve](https://eve.dev) | Vercel's file-first agent framework, close to 1.0 when this was written. | The closest in spirit: an agent folder, tools, skills, durable sessions, approvals and evals. eve is further along. |
+
+## What Plico does not do yet
+
+Plico's scope is deliberately small for `0.1`. These are not in the packages today:
+
+- **MCP and external connections.** Tools are TypeScript files in `tools/`.
+- **Agent memory.** The `memory/` folder is required in the layout, but the agent does not read or
+  write it yet.
+- **Multi-agent and workflows.** One agent per project. `agents/`, `workflows/` and the `entry`
+  config key are reserved for later; see [Project layout](/docs/project-layout#reserved-names).
+- **Context compaction.** A long thread is sent to the model as it stands.
+- **Chat channels** such as Slack, and a React component kit. Studio is the UI, and it is a local
+  development tool, not something to deploy over production data.
+- **Hosted infrastructure.** Plico runs where you run it. Persistence is SQLite on that machine.
+
+The remaining plan lives in the [GitHub milestones](https://github.com/ITZSHOAIB/plico/milestones).
+
+## When to choose something else
+
+- You need MCP servers, graph workflows or multi-agent handoffs now: look at Mastra, LangGraph or
+  the OpenAI Agents SDK.
+- You want chat channels such as Slack out of the box: look at eve.
+- You only need model calls and streaming inside an app you already have: the AI SDK on its own is
+  enough.
+
+## When Plico fits
+
+- You want the agent reviewed in pull requests, with instructions and tools as files.
+- You want to see exactly what a run did, replay it, and stop a risky tool call for a person.
+- You want it local and self-hosted, with an HTTP API you can embed behind your own login.
+
+Start with the [Quickstart](/docs/quickstart).
