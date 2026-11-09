@@ -51,9 +51,28 @@
     "node": ">=22.18.0"
   },
   "devDependencies": {
+    "@ai-sdk/anthropic": "^4.0.99",
+    "@ai-sdk/google": "^4.0.114",
+    "@ai-sdk/openai": "^4.0.111",
     "@opentelemetry/context-async-hooks": "2.0.1",
     "@opentelemetry/sdk-trace-base": "2.0.1",
     "@types/picomatch": "^4.0.3",
     "zod": "3.25.76"
+  },
+  "peerDependencies": {
+    "@ai-sdk/anthropic": "^4.0.99",
+    "@ai-sdk/google": "^4.0.114",
+    "@ai-sdk/openai": "^4.0.111"
+  },
+  "peerDependenciesMeta": {
+    "@ai-sdk/anthropic": {
+      "optional": true
+    },
+    "@ai-sdk/google": {
+      "optional": true
+    },
+    "@ai-sdk/openai": {
+      "optional": true
+    }
   }
 }

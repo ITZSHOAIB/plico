@@ -53,7 +53,7 @@ export async function openPlico(options: CreatePlicoOptions, inspect: boolean): 
         ...(leaseMs === undefined ? {} : { leaseMs }),
       });
   const model = validation.project?.config.model;
-  const provider = model ? createConfiguredModelProvider(model) : undefined;
+  const provider = model ? createConfiguredModelProvider(model, options.projectRoot) : undefined;
   const providerRecoveryKey = model ? modelProviderRecoveryKey(model) : undefined;
   const providerAccountKey = model ? modelProviderAccountKey(model) : undefined;
   const threadStore = createSqliteThreadStore({ databasePath, readOnly: inspect });

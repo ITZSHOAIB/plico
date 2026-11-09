@@ -5,6 +5,7 @@
     "---Build---",
     "project-layout",
     "tools",
+    "providers",
     "artifacts",
     "---Run---",
     "studio",

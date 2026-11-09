@@ -3,6 +3,7 @@ import { ARTIFACT_TOOL_NAMES, SKILL_TOOL_NAME, validateProject } from "@plico/co
 import {
   createSqliteEngine,
   createSqliteEventStore,
+  loadProjectEnv,
   type ModelProvider,
   modelProviderRecoveryKey,
   recoverRuns,
@@ -32,6 +33,7 @@ export async function runCommand(args: string[]): Promise<number> {
     const json = parsed.flags.has("--json");
     const persist = parsed.flags.has("--persist") || !dry;
     const target = lastPositional(parsed, process.cwd());
+    loadProjectEnv(target);
     const scriptPath = readStringOption(parsed, "--script");
     const dbPath = readStringOption(parsed, "--db");
     let message = readStringOption(parsed, "--message");
@@ -47,7 +49,7 @@ export async function runCommand(args: string[]): Promise<number> {
       ? message === undefined
         ? undefined
         : createFakeProvider()
-      : resolveModelProvider(validation?.project?.config.model);
+      : resolveModelProvider(validation?.project?.config.model, target);
     if (!dry) message = await resolveMessage(message);
     const recoveryKey = dry
       ? "plico:dry-fake:v1"

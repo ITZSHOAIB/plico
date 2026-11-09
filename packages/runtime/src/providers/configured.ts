@@ -1,34 +1,66 @@
 import { createHash } from "node:crypto";
 import type { ProjectConfig } from "@plico/contracts";
+import { NATIVE_MODEL_PROVIDERS } from "@plico/core";
+import type { LanguageModel } from "ai";
 import type { ModelProvider } from "../types/index.js";
+import { createAiSdkModelProvider } from "./ai-sdk.js";
 import { createOpenAICompatibleProvider } from "./openai-compatible.js";
+import { createProjectModuleProvider } from "./project-module.js";
+import { nativeProvider, resolveModelEndpoint } from "./registry.js";
 
 type ModelConfig = NonNullable<ProjectConfig["model"]>;
 
 export function supportsModelProvider(provider: string): boolean {
-  return provider === "openai" || provider === "openai-compatible";
+  return NATIVE_MODEL_PROVIDERS.includes(provider);
 }
 
-export function createConfiguredModelProvider(model: ModelConfig): ModelProvider | undefined {
-  if (!supportsModelProvider(model.provider)) return undefined;
-  return createOpenAICompatibleProvider({
+/**
+ * The model port for a project's configured model. A provider outside the native list comes from
+ * `providers/<name>.ts` and needs the project root; without it there is no adapter.
+ */
+export function createConfiguredModelProvider(
+  model: ModelConfig,
+  projectRoot?: string,
+): ModelProvider | undefined {
+  const { apiKeyEnv, baseURL } = resolveModelEndpoint(model);
+  const native = nativeProvider(model.provider);
+  if (native)
+    return createAiSdkModelProvider({
+      apiKeyEnv,
+      createModel: async (apiKey) =>
+        (await native.create({
+          model: model.name,
+          apiKey: apiKey ?? "",
+          baseURL,
+        })) as LanguageModel,
+    });
+  if (model.provider === "openai-compatible")
+    return createOpenAICompatibleProvider({
+      model: model.name,
+      baseURL,
+      ...(apiKeyEnv ? { apiKeyEnv } : {}),
+    });
+  if (!projectRoot) return undefined;
+  return createProjectModuleProvider(projectRoot, model.provider, {
     model: model.name,
-    ...(process.env.OPENAI_BASE_URL ? { baseURL: process.env.OPENAI_BASE_URL } : {}),
+    apiKeyEnv,
+    ...(model.baseURL ? { baseURL: model.baseURL } : {}),
   });
+}
+
+function hashParts(parts: string[]): string {
+  return createHash("sha256").update(JSON.stringify(parts)).digest("hex");
 }
 
 /** Hash the provider target and credential without storing either secret in the journal. */
 export function modelProviderRecoveryKey(model: ModelConfig): string {
-  return createHash("sha256")
-    .update(
-      JSON.stringify([
-        model.provider,
-        model.name,
-        process.env.OPENAI_BASE_URL || "https://api.openai.com/v1",
-        process.env.OPENAI_API_KEY ?? "",
-      ]),
-    )
-    .digest("hex");
+  const { apiKeyEnv, baseURL } = resolveModelEndpoint(model);
+  return hashParts([
+    model.provider,
+    model.name,
+    baseURL,
+    (apiKeyEnv ? process.env[apiKeyEnv] : "") ?? "",
+  ]);
 }
 
 /**
@@ -36,13 +68,6 @@ export function modelProviderRecoveryKey(model: ModelConfig): string {
  * configured model must not strand its reservation.
  */
 export function modelProviderAccountKey(model: ModelConfig): string {
-  return createHash("sha256")
-    .update(
-      JSON.stringify([
-        model.provider,
-        process.env.OPENAI_BASE_URL || "https://api.openai.com/v1",
-        process.env.OPENAI_API_KEY ?? "",
-      ]),
-    )
-    .digest("hex");
+  const { apiKeyEnv, baseURL } = resolveModelEndpoint(model);
+  return hashParts([model.provider, baseURL, (apiKeyEnv ? process.env[apiKeyEnv] : "") ?? ""]);
 }

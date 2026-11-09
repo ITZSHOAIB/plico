@@ -57,9 +57,11 @@ import { defineConfig } from "plico";
 export default defineConfig({
   schemaVersion: 1,
   name: "My agent",
-  model: { provider: "fake", name: "test" },
+  model: { provider: "anthropic", name: "claude-sonnet-5-5" },
 });
 ```
+
+See [Model providers](/docs/providers) for the `model` settings.
 
 Set `artifacts.access` to `read-write`, `read-only`, or `off` to control which
 artifact tools the model sees. See [Artifacts](/docs/artifacts).

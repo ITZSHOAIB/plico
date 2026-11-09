@@ -1,5 +1,5 @@
 import { describe, expect, expectTypeOf, it } from "vitest";
-import { defineConfig, defineTool } from "./index.js";
+import { defineConfig, defineProvider, defineTool } from "./index.js";
 
 // A Zod-shaped schema, so the test needs no zod install.
 interface FakeZod<T> {
@@ -107,5 +107,13 @@ describe("defineConfig", () => {
     defineConfig({ schemaVersion: "1", name: "Demo" });
     // @ts-expect-error unknown top-level key
     defineConfig({ schemaVersion: 1, name: "Demo", modle: {} });
+  });
+});
+
+describe("defineProvider", () => {
+  it("returns the function unchanged", () => {
+    const provider = (input: { model: string }) => ({ id: input.model });
+
+    expect(defineProvider(provider)).toBe(provider);
   });
 });

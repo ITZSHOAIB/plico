@@ -7,6 +7,7 @@ import {
   getProjectRelativePaths,
   REQUIRED_PROJECT_DIRECTORIES,
 } from "./layout.js";
+import { validateModelProvider } from "./model-provider.js";
 import { validateSkills } from "./skills.js";
 import { validateToolNames } from "./tool-name-validation.js";
 import type { LoadedProject, ValidationIssue, ValidationResult } from "./types.js";
@@ -110,6 +111,9 @@ export async function validateProject(root: string): Promise<ValidationResult> {
 
   errors.push(...(await validateToolNames(root)));
   errors.push(...(await validateSkills(root)));
+  errors.push(
+    ...(await validateModelProvider(root, project.config.model, relativePaths.configFile)),
+  );
 
   return {
     ok: errors.length === 0,

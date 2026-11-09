@@ -18,6 +18,7 @@ Today this repo can:
 - export text and binary run artifacts with `GET /v1/runs/<run-id>/workspace/exports?path=<path>` as file downloads
 - review artifact previews, compare versions, and download files in Studio
 - run provider-backed conversations with streamed Markdown replies, review approvals, and cancel active runs in Studio
+- choose `anthropic`, `google`, `openai` or `openai-compatible` (OpenRouter, LiteLLM, Ollama), load keys from a project `.env`, and add a provider in `providers/`
 - check approval policy references and conflicts through readiness diagnostics
 - generate the internal-ops starter with `create-plico`
 

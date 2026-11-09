@@ -22,7 +22,7 @@ it("starts a provider run from a thread message and persists its answer", async 
     await mkdir(join(root, dir));
   await writeFile(
     join(root, "plico.config.ts"),
-    'export default { schemaVersion: 1, name: "Demo", model: { provider: "fake", name: "test" } };',
+    'export default { schemaVersion: 1, name: "Demo", model: { provider: "openai-compatible", name: "test" } };',
   );
   await writeFile(join(root, "agent.md"), "instructions");
   const databasePath = join(root, "state.sqlite");

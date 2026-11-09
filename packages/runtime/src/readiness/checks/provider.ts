@@ -1,5 +1,5 @@
 import type { ProjectConfig, ReadinessDiagnostic } from "@plico/contracts";
-import { supportsModelProvider } from "../../providers/configured.js";
+import { resolveModelEndpoint } from "../../providers/registry.js";
 import { makeDiagnostic } from "../diagnostic.js";
 
 export function checkProvider(model: ProjectConfig["model"]): ReadinessDiagnostic[] {
@@ -12,21 +12,21 @@ export function checkProvider(model: ProjectConfig["model"]): ReadinessDiagnosti
         "plico.config.ts",
       ),
     ];
-  if (!supportsModelProvider(model.provider))
+  const { apiKeyEnv } = resolveModelEndpoint(model);
+  if (!apiKeyEnv)
     return [
       makeDiagnostic(
-        "warning",
-        "provider.config",
-        `Provider ${model.provider} is not supported by the available adapter.`,
-        "plico.config.ts",
+        "ok",
+        "provider.credentials",
+        "The project supplies its own provider credentials.",
       ),
     ];
-  if (!process.env.OPENAI_API_KEY)
+  if (!process.env[apiKeyEnv])
     return [
       makeDiagnostic(
         "warning",
         "provider.credentials",
-        "Set OPENAI_API_KEY to run the configured model.",
+        `Set ${apiKeyEnv} to run the configured model.`,
       ),
     ];
   return [
