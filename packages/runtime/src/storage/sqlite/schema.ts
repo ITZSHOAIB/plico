@@ -105,6 +105,11 @@ const migrations: ReadonlyArray<{ from: number; to: number; sql: string }> = [
     to: 13,
     sql: `ALTER TABLE threads ADD COLUMN metadata_json TEXT; ALTER TABLE runs ADD COLUMN metadata_json TEXT; ALTER TABLE thread_runs ADD COLUMN context_json TEXT;`,
   },
+  {
+    from: 13,
+    to: 14,
+    sql: `ALTER TABLE threads ADD COLUMN title_revision INTEGER NOT NULL DEFAULT 0;`,
+  },
 ];
 
 function readSchemaVersion(

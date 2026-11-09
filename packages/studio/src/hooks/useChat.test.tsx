@@ -29,6 +29,28 @@ function inspector(events: PlicoEvent[]): RunInspector {
   } as unknown as RunInspector;
 }
 
+it("picks up a title written after the reply finished", async () => {
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+  try {
+    vi.mocked(api.fetchThreads)
+      .mockResolvedValueOnce([untitled])
+      .mockResolvedValueOnce([untitled])
+      .mockResolvedValue([{ ...untitled, title: "Berlin VPN" }]);
+    const { result, rerender } = renderHook(({ events }) => useChat(inspector(events)), {
+      initialProps: { events: [] as PlicoEvent[] },
+    });
+    await waitFor(() => expect(result.current.threads).toHaveLength(1));
+    await act(() => result.current.chooseThread("t1"));
+
+    rerender({ events: [{ id: "e1", type: "run.completed" } as PlicoEvent] });
+    await act(() => vi.advanceTimersByTimeAsync(60_000));
+
+    expect(result.current.threads[0]?.title).toBe("Berlin VPN");
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
 it("keeps a rename when an older thread-list refresh arrives afterwards", async () => {
   let resolveRefresh!: (threads: Thread[]) => void;
   vi.mocked(api.fetchThreads)

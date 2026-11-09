@@ -10,6 +10,10 @@ import {
 import type { Thread, ThreadMessage } from "../types";
 import type { RunInspector } from "./useRunInspector";
 
+// A model titler may take up to 30 seconds, so look for its title about that long.
+const titleRetryMs = 2_000;
+const titleRetries = 15;
+
 export function useChat(inspector: RunInspector) {
   const { clear, selectRun, selectedRun, events } = inspector;
   const [threads, setThreads] = useState<Thread[]>([]);
@@ -27,6 +31,9 @@ export function useChat(inspector: RunInspector) {
   // Counts renames so a thread-list response that started before one cannot undo it.
   const renameCount = useRef(0);
   const renamedAt = useRef(new Map<string, number>());
+  const timers = useRef<Array<ReturnType<typeof setInterval>>>([]);
+
+  useEffect(() => () => timers.current.forEach(clearInterval), []);
 
   useEffect(() => {
     let active = true;
@@ -141,17 +148,34 @@ export function useChat(inspector: RunInspector) {
     const revision = messageRevision.current;
     // The reply is when a thread gets named, so pick the new title up with the transcript.
     const refreshStarted = renameCount.current;
-    void fetchThreads().then(
-      (result) =>
-        setThreads((current) =>
-          current.map((thread) =>
-            (renamedAt.current.get(thread.id) ?? 0) > refreshStarted
-              ? thread
-              : (result.find((item) => item.id === thread.id) ?? thread),
-          ),
-        ),
-      () => undefined,
-    );
+    const refreshThreads = () =>
+      fetchThreads().then(
+        (result) => {
+          setThreads((current) =>
+            current.map((thread) =>
+              (renamedAt.current.get(thread.id) ?? 0) > refreshStarted
+                ? thread
+                : (result.find((item) => item.id === thread.id) ?? thread),
+            ),
+          );
+          return result.find((item) => item.id === selected)?.title;
+        },
+        () => undefined,
+      );
+    // Model-written titles land after the run completes, so keep looking for a short while.
+    void refreshThreads().then((first) => {
+      let attempts = 0;
+      const timer = setInterval(() => {
+        if (selection.current !== generation || ++attempts > titleRetries) {
+          clearInterval(timer);
+          return;
+        }
+        void refreshThreads().then((title) => {
+          if (title !== first) clearInterval(timer);
+        });
+      }, titleRetryMs);
+      timers.current.push(timer);
+    });
     void fetchThreadMessages(selected).then(
       (history) => {
         if (selection.current === generation && messageRevision.current === revision)

@@ -29,10 +29,13 @@ export function withThreadTitles(deps: {
 
   async function name(runId: string): Promise<void> {
     const threadId = await threadStore?.getThreadForRun(runId);
-    const write = await resolve();
-    if (!threadStore || !threadId || !write) return;
-    const title = await write(await threadStore.getMessages(threadId));
-    if (title) await threadStore.setGeneratedTitle(threadId, title);
+    if (!threadStore || !threadId) return;
+    // Ask the store first so a user-titled or finished thread never pays for a title.
+    const request = await threadStore.getTitleRequest(threadId);
+    const write = request && (await resolve());
+    if (!request || !write) return;
+    const title = await write(request.messages);
+    if (title) await threadStore.setGeneratedTitle(threadId, title, request.revision);
   }
 
   return {
