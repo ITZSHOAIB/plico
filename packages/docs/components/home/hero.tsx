@@ -7,7 +7,7 @@ export function Hero() {
       <div className="ph-hero-copy">
         <p className="ph-badge">
           <i aria-hidden />
-          In development. Not on npm yet.
+          Developer preview · 0.1 on npm
         </p>
         <h1>
           Build AI agents <em>from files</em>.
@@ -25,11 +25,11 @@ export function Hero() {
           </Link>
         </div>
         <div className="ph-command">
-          <span className="ph-command-label">after release</span>
+          <span className="ph-command-label">get started</span>
           <code>
-            <span aria-hidden>$ </span>npx create-plico my-agent
+            <span aria-hidden>$ </span>npm create plico@latest my-agent
           </code>
-          <Link href="/docs/quickstart">Build from source today</Link>
+          <Link href="/docs/quickstart">Follow the quickstart</Link>
         </div>
       </div>
       <div className="ph-hero-art">

@@ -9,7 +9,7 @@ import { gitConfig, siteUrl } from "@/lib/shared";
 
 const title = "Plico: build AI agents from files";
 const description =
-  "Plico is a TypeScript kit, in development, that turns a folder of Markdown and tools into a working AI agent with the harness included.";
+  "Plico is a TypeScript kit that turns a folder of Markdown and tools into a working AI agent with the harness included: runs, an event log, approvals, evals and a local Studio.";
 
 export const metadata: Metadata = {
   title: { absolute: title },

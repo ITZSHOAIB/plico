@@ -9,8 +9,7 @@ export function StartSection() {
         Your agent is <em>one folder</em> away.
       </Heading>
       <p className="ph-section-lede">
-        Build the repository, scaffold a project and run it with a scripted model. No API key
-        needed.
+        Scaffold a project with one command and run it with a scripted model. No API key needed.
       </p>
       <div className="ph-actions">
         <Link href="/docs/quickstart" className="ph-btn ph-btn-primary">

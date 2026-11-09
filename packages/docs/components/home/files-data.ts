@@ -41,6 +41,8 @@ export const sources: SourceFile[] = [
       '    properties: { title: { type: "string" } },',
       '    required: ["title"],',
       "  },",
+      '  capabilities: ["ticket:write"],',
+      "  approval: { required: false },",
       "  handler: async (input, { artifacts }) => {",
       '    await artifacts.write("tickets/new.md", input.title);',
       '    return { ticketId: "TCK-1042" };',
