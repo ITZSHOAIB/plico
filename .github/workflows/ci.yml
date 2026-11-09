@@ -90,3 +90,8 @@ jobs:
 
       - name: Install the packed tarballs and run the CLI
         run: pnpm smoke:tarballs
+
+      - name: Dry-run the publish script
+        run: node scripts/publish-packages.mjs
+        env:
+          PLICO_PUBLISH_DRY_RUN: "1"

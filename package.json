@@ -13,13 +13,17 @@
     "test": "vitest run",
     "smoke:tarballs": "node scripts/smoke-tarballs.mjs",
     "test:watch": "vitest",
-    "prepare": "husky"
+    "prepare": "husky",
+    "changeset": "changeset",
+    "version-packages": "changeset version",
+    "publish:packages": "node scripts/publish-packages.mjs"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx,mjs,cjs,json}": "biome check --write --no-errors-on-unmatched --files-ignore-unknown=true"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.1",
+    "@changesets/cli": "3.0.3",
     "@types/node": "^26.0.1",
     "husky": "9.1.7",
     "lint-staged": "17.0.8",
