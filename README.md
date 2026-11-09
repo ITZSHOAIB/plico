@@ -1,12 +1,8 @@
 <div align="center">
 
-<img src=".github/assets/mark.svg" width="72" alt="Plico" />
+<img src=".github/assets/banner.svg" alt="Plico: your agent is a folder of files." />
 
-# Plico
-
-**Your agent is a folder of files.**
-
-A TypeScript-first agent app kit. Write instructions in Markdown and tools in TypeScript,
+**A TypeScript-first agent app kit.** Write instructions in Markdown and tools in TypeScript,
 and get an agent you can run, inspect, approve and replay.
 
 [![npm](https://img.shields.io/npm/v/@plico-ai/cli?color=0f6e5c&label=npm)](https://www.npmjs.com/package/@plico-ai/cli)
@@ -29,6 +25,18 @@ npx plico run --dry .      # no API key needed
 ```
 
 Add a key to `.env`, run `npm run dev`, and chat with your agent in Studio.
+
+<p align="center">
+  <img src=".github/assets/studio.png" alt="Plico Studio showing the event timeline of a run: instructions composed, a tool call, its result, and the artifact it wrote." width="900" />
+</p>
+
+Studio ships inside `@plico-ai/cli`. Every row above is one event from the run's log.
+
+## How it works
+
+<p align="center">
+  <img src=".github/assets/how-it-works.svg" alt="Your project files run through Plico, which writes one event log that Studio, the HTTP API, evals and OpenTelemetry all read." />
+</p>
 
 ## What a project looks like
 

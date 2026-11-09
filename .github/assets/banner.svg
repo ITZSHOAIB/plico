@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 360" width="1280" height="360" role="img" aria-labelledby="t d">
+  <title id="t">Plico</title>
+  <desc id="d">Plico: your agent is a folder of files.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0d1211"/>
+      <stop offset="1" stop-color="#0b0d0d"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.82" cy="0.1" r="0.7">
+      <stop offset="0" stop-color="#62bfa8" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#62bfa8" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse">
+      <path d="M32 0H0V32" fill="none" stroke="#62bfa8" stroke-opacity="0.07"/>
+    </pattern>
+  </defs>
+  <rect width="1280" height="360" rx="20" fill="url(#bg)"/>
+  <rect width="1280" height="360" rx="20" fill="url(#grid)"/>
+  <rect width="1280" height="360" rx="20" fill="url(#glow)"/>
+  <rect x="0.5" y="0.5" width="1279" height="359" rx="19.5" fill="none" stroke="#262c2b"/>
+
+  <!-- mark -->
+  <g transform="translate(96 96)">
+    <rect width="104" height="104" rx="24" fill="#0f6e5c"/>
+    <path d="M67 11 93 37H73a6 6 0 0 1-6-6Z" fill="#62bfa8"/>
+    <text x="50" y="76" font-family="Inter, 'Segoe UI', Arial, Helvetica, sans-serif" font-size="64" font-weight="700" text-anchor="middle" fill="#ffffff">P</text>
+  </g>
+
+  <!-- wordmark and tagline -->
+  <text x="232" y="168" font-family="Inter, 'Segoe UI', Arial, Helvetica, sans-serif" font-size="84" font-weight="700" letter-spacing="-2" fill="#e7ecea">Plico</text>
+  <text x="234" y="214" font-family="Inter, 'Segoe UI', Arial, Helvetica, sans-serif" font-size="30" fill="#8dd4c2">Your agent is a folder of files.</text>
+  <text x="234" y="256" font-family="Inter, 'Segoe UI', Arial, Helvetica, sans-serif" font-size="20" fill="#a0aaa7">Markdown and TypeScript in. A runnable, inspectable agent out.</text>
+
+  <!-- folder motif -->
+  <g transform="translate(880 70)" font-family="'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace" font-size="17">
+    <rect width="320" height="220" rx="14" fill="#111414" stroke="#262c2b"/>
+    <circle cx="22" cy="22" r="5" fill="#262c2b"/><circle cx="40" cy="22" r="5" fill="#262c2b"/><circle cx="58" cy="22" r="5" fill="#262c2b"/>
+    <text x="24" y="66" fill="#62bfa8">my-agent/</text>
+    <text x="42" y="94" fill="#e7ecea">agent.md</text>
+    <text x="42" y="120" fill="#e7ecea">plico.config.ts</text>
+    <text x="42" y="146" fill="#e7ecea">skills/</text>
+    <text x="42" y="172" fill="#e7ecea">tools/</text>
+    <text x="42" y="198" fill="#e7ecea">evals/</text>
+  </g>
+</svg>
