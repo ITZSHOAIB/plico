@@ -1,7 +1,7 @@
 import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { expect, it } from "vitest";
+import { expect, it, vi } from "vitest";
 import {
   createSqliteEngine,
   createSqliteEventStore,
@@ -9,6 +9,9 @@ import {
   type ModelRequest,
   runProject,
 } from "../index.js";
+
+// These resume runs that load tool files through tsx, which takes over 5s on a cold Windows runner.
+vi.setConfig({ testTimeout: 30_000 });
 
 async function scaffold(): Promise<string> {
   const root = await mkdtemp(join(tmpdir(), "plico-pinning-"));

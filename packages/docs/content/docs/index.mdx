@@ -8,7 +8,12 @@ Plico is a **TypeScript-first agent app kit**. A folder of Markdown instructions
 skills, TypeScript tools, config, evals, memory, and artifacts becomes a runnable,
 inspectable agent app.
 
-<Callout>Plico needs Node 22.18 or later.</Callout>
+<Callout>
+  Plico needs Node 22.18 or later. CI tests 22.18 and 24. Plico keeps runs in Node's built-in
+  `node:sqlite`, which Node still marks experimental. The `plico` command hides that warning; a
+  host that embeds Plico with `createPlico` sees it once at startup. Plico installs TypeScript
+  and `tsx` (about 35 MB together) so it can read `plico.config.ts` and tool files without a build step.
+</Callout>
 
 ## Why Plico?
 
