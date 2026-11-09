@@ -1,6 +1,6 @@
 {
   "name": "@plico-ai/runtime",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Plico runtime: linear agent runs, durable event log, tools, evals and readiness checks",
   "license": "Apache-2.0",
   "homepage": "https://plico.sohab.dev",
