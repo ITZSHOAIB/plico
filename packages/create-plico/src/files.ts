@@ -1,4 +1,7 @@
-export function configFile(projectName: string): string {
+import { PROVIDER_SETUP, type ScaffoldProvider } from "./providers.js";
+
+export function configFile(projectName: string, provider?: ScaffoldProvider): string {
+  const setup = provider ? PROVIDER_SETUP[provider] : undefined;
   return [
     'import { defineConfig } from "plico";',
     "",
@@ -6,13 +9,54 @@ export function configFile(projectName: string): string {
     "  schemaVersion: 1,",
     `  name: ${JSON.stringify(projectName)},`,
     '  template: "internal-ops",',
+    ...(provider && setup
+      ? [
+          "  model: {",
+          `    provider: ${JSON.stringify(provider)},`,
+          `    name: ${JSON.stringify(setup.model)},`,
+          ...(setup.baseURL ? [`    baseURL: ${JSON.stringify(setup.baseURL)},`] : []),
+          "  },",
+        ]
+      : []),
     "});",
     "",
   ].join("\n");
 }
 
-export function packageFile(): string {
-  return `${JSON.stringify({ private: true, type: "module" }, null, 2)}\n`;
+export function packageFile(version: string, provider?: ScaffoldProvider): string {
+  const adapter = provider ? PROVIDER_SETUP[provider].adapter : undefined;
+  return `${JSON.stringify(
+    {
+      private: true,
+      type: "module",
+      scripts: {
+        dev: "plico serve --studio .",
+        validate: "plico validate .",
+        eval: "plico eval .",
+      },
+      dependencies: { plico: `^${version}`, ...(adapter ? { [adapter]: "latest" } : {}) },
+      devDependencies: { "@plico/cli": `^${version}` },
+    },
+    null,
+    2,
+  )}\n`;
+}
+
+export function envExampleFile(provider?: ScaffoldProvider): string {
+  const setup = provider ? PROVIDER_SETUP[provider] : undefined;
+  if (!setup)
+    return "# Copy to .env and add a model provider key when you configure one in plico.config.ts.\n";
+  return [
+    "# Copy to .env. Plico loads it for `plico run`, `plico serve` and `plico readiness`.",
+    setup.apiKeyEnv
+      ? `${setup.apiKeyEnv}=`
+      : `# ${setup.label} needs no key by default. Set model.apiKeyEnv if your server wants one.`,
+    "",
+  ].join("\n");
+}
+
+export function gitignoreFile(): string {
+  return [".plico/", ".env", "node_modules/", ""].join("\n");
 }
 
 export function agentFile(projectName: string): string {

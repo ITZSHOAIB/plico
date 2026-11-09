@@ -57,6 +57,7 @@ describe("create-plico main", () => {
       intro: vi.fn(),
       outro: vi.fn(),
       text: vi.fn().mockResolvedValueOnce(root).mockResolvedValueOnce("My Project"),
+      select: vi.fn().mockResolvedValue("anthropic"),
       spinner: () => ({ start, stop }),
       cancel: vi.fn(),
       isCancel: (value): value is symbol => typeof value === "symbol",
@@ -68,6 +69,9 @@ describe("create-plico main", () => {
     expect(start).toHaveBeenCalledWith("Creating scaffold...");
     expect(stop).toHaveBeenCalledWith(`Created scaffold in ${root}`);
     expect(await readFile(join(root, "README.md"), "utf8")).toContain("# My Project");
+    expect(await readFile(join(root, "plico.config.ts"), "utf8")).toContain(
+      'provider: "anthropic"',
+    );
   });
 
   it("prints usage and exits 0 for --help without creating anything", async () => {
@@ -120,6 +124,29 @@ describe("create-plico main", () => {
 
     expect(exitCode).toBe(0);
     expect(out.join("\n")).toContain("Usage: create-plico");
+    expect(await exists(root)).toBe(false);
+  });
+
+  it("takes the provider from --provider", async () => {
+    const parent = await mkdtemp(join(tmpdir(), "plico-create-cli-"));
+    const root = join(parent, "app");
+    capture();
+
+    const exitCode = await main(["node", "create-plico", root, "--provider", "openai"]);
+
+    expect(exitCode).toBe(0);
+    expect(await readFile(join(root, "plico.config.ts"), "utf8")).toContain('provider: "openai"');
+  });
+
+  it("rejects an unknown provider before writing anything", async () => {
+    const parent = await mkdtemp(join(tmpdir(), "plico-create-cli-"));
+    const root = join(parent, "app");
+    const { err } = capture();
+
+    const exitCode = await main(["node", "create-plico", root, "--provider", "nope"]);
+
+    expect(exitCode).toBe(1);
+    expect(err.join("\n")).toContain("Unknown provider: nope");
     expect(await exists(root)).toBe(false);
   });
 });

@@ -67,4 +67,56 @@ describe("createInternalOpsScaffold", () => {
       "run.completed",
     ]);
   });
+
+  it("writes what the next documented commands need", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-create-"));
+
+    await createInternalOpsScaffold({ targetDir: root });
+
+    const pkg = JSON.parse(await readFile(join(root, "package.json"), "utf8"));
+    expect(pkg.scripts).toEqual({
+      dev: "plico serve --studio .",
+      validate: "plico validate .",
+      eval: "plico eval .",
+    });
+    expect(pkg.devDependencies).toHaveProperty("@plico/cli");
+    expect(pkg.dependencies).toHaveProperty("plico");
+    expect(await readFile(join(root, ".gitignore"), "utf8")).toEqual(
+      expect.stringContaining(".plico/"),
+    );
+    expect(await readFile(join(root, ".gitignore"), "utf8")).toEqual(
+      expect.stringContaining(".env\n"),
+    );
+    expect(await readFile(join(root, ".env.example"), "utf8")).toContain("# ");
+  });
+
+  it.each([
+    ["anthropic", "ANTHROPIC_API_KEY", "@ai-sdk/anthropic"],
+    ["openai", "OPENAI_API_KEY", "@ai-sdk/openai"],
+    ["google", "GOOGLE_GENERATIVE_AI_API_KEY", "@ai-sdk/google"],
+  ] as const)("scaffolds a valid project for the %s provider", async (provider, key, adapter) => {
+    const root = await mkdtemp(join(tmpdir(), "plico-create-"));
+
+    await createInternalOpsScaffold({ targetDir: root, provider });
+
+    const result = await validateProject(root);
+    expect(result.errors).toEqual([]);
+    expect(result.project?.config.model?.provider).toBe(provider);
+    expect(await readFile(join(root, ".env.example"), "utf8")).toContain(`${key}=`);
+    const pkg = JSON.parse(await readFile(join(root, "package.json"), "utf8"));
+    expect(pkg.dependencies).toHaveProperty(adapter);
+  });
+
+  it("scaffolds openai-compatible against a local server with no key", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-create-"));
+
+    await createInternalOpsScaffold({ targetDir: root, provider: "openai-compatible" });
+
+    const result = await validateProject(root);
+    expect(result.errors).toEqual([]);
+    expect(result.project?.config.model).toMatchObject({
+      provider: "openai-compatible",
+      baseURL: "http://localhost:11434/v1",
+    });
+  });
 });

@@ -3,6 +3,12 @@ import { basename } from "node:path";
 import { isDirectRun } from "./direct-run.js";
 import { createInternalOpsScaffold } from "./index.js";
 import { defaultScaffoldPrompts, type ScaffoldPrompts } from "./prompts.js";
+import {
+  isScaffoldProvider,
+  PROVIDER_CHOICES,
+  PROVIDER_SETUP,
+  type ScaffoldProvider,
+} from "./providers.js";
 import { readVersion, USAGE } from "./usage.js";
 
 function deriveProjectName(targetDir: string): string {
@@ -53,20 +59,36 @@ export async function main(
     return 0;
   }
 
-  const unknownOption = args.find((arg) => arg.startsWith("-"));
+  let providerName: string | undefined;
+  const positional: string[] = [];
+  const unknownOptions: string[] = [];
+  for (let index = 0; index < args.length; index++) {
+    const arg = args[index] as string;
+    if (arg === "--provider") providerName = args[++index] ?? "";
+    else if (arg.startsWith("--provider=")) providerName = arg.slice("--provider=".length);
+    else if (arg.startsWith("-")) unknownOptions.push(arg);
+    else positional.push(arg);
+  }
+  const unknownOption = unknownOptions[0];
   if (unknownOption !== undefined) {
     console.error(`Unknown option: ${unknownOption}`);
     console.error(USAGE);
     return 1;
   }
 
-  const [targetDir, projectName] = args;
+  if (providerName !== undefined && !isScaffoldProvider(providerName)) {
+    console.error(`Unknown provider: ${providerName}. Use ${PROVIDER_CHOICES.join(", ")}.`);
+    return 1;
+  }
+  const provider: ScaffoldProvider | undefined = providerName as ScaffoldProvider | undefined;
+  const [targetDir, projectName] = positional;
 
   if (targetDir) {
     try {
       await createInternalOpsScaffold({
         targetDir,
         projectName: projectName ?? deriveProjectName(targetDir),
+        ...(provider ? { provider } : {}),
       });
       console.log(`Created Plico scaffold in ${targetDir}`);
       return 0;
@@ -95,12 +117,27 @@ export async function main(
     return 1;
   }
 
+  const choice =
+    provider ??
+    (await prompts.select({
+      message: "Which model provider?",
+      options: [
+        ...PROVIDER_CHOICES.map((value) => ({ value, label: PROVIDER_SETUP[value].label })),
+        { value: "none", label: "None yet (dry runs only)" },
+      ],
+    }));
+  if (prompts.isCancel(choice)) {
+    prompts.cancel("Scaffold creation cancelled.");
+    return 1;
+  }
+
   const task = prompts.spinner();
   task.start("Creating scaffold...");
   try {
     await createInternalOpsScaffold({
       targetDir: promptedTargetDir,
       projectName: promptedProjectName,
+      ...(typeof choice === "string" && isScaffoldProvider(choice) ? { provider: choice } : {}),
     });
     task.stop(`Created scaffold in ${promptedTargetDir}`);
     prompts.outro(`Generated ${promptedProjectName}`);

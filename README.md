@@ -20,7 +20,7 @@ Today this repo can:
 - run provider-backed conversations with streamed Markdown replies, review approvals, and cancel active runs in Studio
 - choose `anthropic`, `google`, `openai` or `openai-compatible` (OpenRouter, LiteLLM, Ollama), load keys from a project `.env`, and add a provider in `providers/`
 - check approval policy references and conflicts through readiness diagnostics
-- generate the internal-ops starter with `create-plico`
+- generate the internal-ops starter with `create-plico`, choosing a model provider with `--provider` or the prompt
 
 See the milestones in GitHub Issues for the remaining planned capabilities.
 

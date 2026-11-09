@@ -1,46 +1,80 @@
 ---
 title: Quickstart
-description: Scaffold a project, validate it, and run it.
+description: Scaffold a project, validate it, run it with a model, and approve a tool call in Studio.
 icon: Rocket
 ---
 
-`create-plico` generates the internal-ops starter, and the `plico` CLI validates
-and runs it.
+`create-plico` generates the internal-ops starter and the `plico` CLI validates, runs and serves
+it. Plan on about 20 minutes. You need Node 22.18 or later and, for step 4, an API key.
 
 <Callout type="warn">
   Plico packages are not published to npm yet. Until they are, build the repository
   (`pnpm install && pnpm build`) and run the CLIs from `packages/create-plico/dist/cli.js`
-  and `packages/cli/dist/cli.js`.
+  and `packages/cli/dist/cli.js`. After release, `npm create plico` replaces the first.
 </Callout>
 
 <Steps>
   <Step>
-    ### Create and check a project
+    ### Create a project
 
     ```bash
-    create-plico my-agent
-    plico validate my-agent
-    plico run --dry my-agent
+    create-plico my-agent --provider anthropic
+    cd my-agent
+    npm install
     ```
 
-    `plico validate` reports diagnostics for missing files, duplicate tool names, and
-    invalid config. `plico run --dry` runs the project with a scripted model, so it
-    needs no API key.
+    `--provider` is `anthropic`, `openai`, `google` or `openai-compatible` (Ollama, OpenRouter,
+    LiteLLM). Leave it out and the prompt asks, or pick no provider and use dry runs only. The
+    scaffold has the project folders, a `package.json` with `dev`, `validate` and `eval`
+    scripts, a `.env.example` and a `.gitignore`.
   </Step>
   <Step>
-    ### Open Studio
+    ### Validate and dry run
 
     ```bash
-    plico serve --studio my-agent
+    npm run validate
+    npx plico run --dry .
     ```
 
-    Studio shows the run's event history and lets you chat, approve tool calls, and
-    browse artifacts. See [Studio](/docs/studio).
+    `plico validate` reports missing files, duplicate tool names and invalid config. A dry run
+    uses a scripted model, so it needs no key.
   </Step>
   <Step>
-    ### Use `--help`
+    ### Add your key
 
-    `plico validate --help` shows validation usage. Unknown flags are reported as
-    errors, and `plico runs` reports clearly when a project has no saved runs.
+    ```bash
+    cp .env.example .env
+    ```
+
+    Put the key in `.env`. Plico loads it for `plico run`, `plico serve` and `plico readiness`.
+    `npx plico readiness .` tells you what is still missing. See [Providers](/docs/providers).
+  </Step>
+  <Step>
+    ### Open Studio and chat
+
+    ```bash
+    npm run dev
+    ```
+
+    `plico serve` prints the address. Open it, start a thread, ask for something, and watch the run's events
+    stream in. See [Studio](/docs/studio) and [Threads](/docs/threads).
+  </Step>
+  <Step>
+    ### Approve a tool call
+
+    Add a tool with `approval: { required: true }` (see [Tools](/docs/tools)). When the model
+    calls it, the run waits and Studio shows the request. Approve it and the run continues.
+    `examples/internal-ops-agent` has a `close_ticket` tool that does this.
+  </Step>
+  <Step>
+    ### Check it in CI
+
+    ```bash
+    npm run eval
+    ```
+
+    Evals run scripted cases with no provider. See [CLI](/docs/cli).
   </Step>
 </Steps>
+
+If something fails, see [Troubleshooting](/docs/troubleshooting).

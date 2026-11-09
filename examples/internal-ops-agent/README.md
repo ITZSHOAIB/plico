@@ -6,6 +6,17 @@ Start with `agent.md`, then inspect `skills/`, `tools/`, `evals/`, `memory/`, an
 
 This example includes a declared `create_ticket.tool.ts` module that stages a Markdown ticket summary with `ctx.artifacts` when called, plus a matching `evals/smoke.script.json` for the offline dry-run path. Provider-backed runs use the same tool and write the summary into the artifact workspace.
 
+## Run it with a model
+
+The config uses `anthropic`. Install `@ai-sdk/anthropic`, copy `.env.example` to `.env`, add your key, then from the repo root:
+
+```sh
+pnpm --filter @plico/cli exec plico readiness examples/internal-ops-agent
+pnpm --filter @plico/cli exec plico serve --studio examples/internal-ops-agent
+```
+
+In Studio, start a thread and ask for "a ticket for VPN down": the run calls `create_ticket` and the summary shows under Artifacts. Then ask to close it. `close_ticket` requires approval, so the run waits until you approve it in Studio. Each reply shows its token use, and the thread header totals them.
+
 Validate this project from the repo root with:
 
 ```sh

@@ -5,6 +5,8 @@ import {
   agentFile,
   artifactsReadmeFile,
   configFile,
+  envExampleFile,
+  gitignoreFile,
   memoryReadmeFile,
   packageFile,
   projectReadmeFile,
@@ -13,6 +15,7 @@ import {
   triageSkillFile,
 } from "./files.js";
 import type { ScaffoldOptions } from "./types.js";
+import { readVersion } from "./usage.js";
 
 export async function createInternalOpsScaffold(options: ScaffoldOptions): Promise<void> {
   const root = options.targetDir;
@@ -28,8 +31,10 @@ export async function createInternalOpsScaffold(options: ScaffoldOptions): Promi
     ),
   );
 
-  await writeFile(projectPaths.configFile, configFile(projectName), "utf8");
-  await writeFile(join(root, "package.json"), packageFile(), "utf8");
+  await writeFile(projectPaths.configFile, configFile(projectName, options.provider), "utf8");
+  await writeFile(join(root, "package.json"), packageFile(readVersion(), options.provider), "utf8");
+  await writeFile(join(root, ".env.example"), envExampleFile(options.provider), "utf8");
+  await writeFile(join(root, ".gitignore"), gitignoreFile(), "utf8");
   await writeFile(projectPaths.agentFile, agentFile(projectName), "utf8");
   await mkdir(join(projectPaths.directories.skills, "triage"), { recursive: true });
   await writeFile(
