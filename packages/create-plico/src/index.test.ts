@@ -30,7 +30,7 @@ describe("createInternalOpsScaffold", () => {
       await readFile(join(projectPaths.directories.skills, "triage", "SKILL.md"), "utf8"),
     ).toContain("smallest safe next step");
     expect(await readFile(join(projectPaths.directories.tools, "readme.md"), "utf8")).toContain(
-      "file-first",
+      "`ctx` has `signal`, `idempotencyKey`, `artifacts` and",
     );
     expect(
       await readFile(join(projectPaths.directories.evals, "smoke.script.json"), "utf8"),
