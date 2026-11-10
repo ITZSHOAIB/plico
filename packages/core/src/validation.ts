@@ -2,6 +2,7 @@ import { readFile, stat } from "node:fs/promises";
 import { parseAgentFile, unknownAgentKeyWarnings } from "./agent-file.js";
 import { loadProject } from "./config.js";
 import { missingFileMessage, missingFileMessageFor, ProjectConfigError } from "./errors.js";
+import { validateEvalFiles } from "./eval-files.js";
 import {
   getProjectPaths,
   getProjectRelativePaths,
@@ -111,6 +112,7 @@ export async function validateProject(root: string): Promise<ValidationResult> {
 
   errors.push(...(await validateToolNames(root)));
   errors.push(...(await validateSkills(root)));
+  warnings.push(...(await validateEvalFiles(root)));
   errors.push(
     ...(await validateModelProvider(root, project.config.model, relativePaths.configFile)),
   );

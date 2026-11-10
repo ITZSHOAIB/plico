@@ -8,7 +8,7 @@ Run `plico --version` to print the installed version. Every command takes an opt
 
 | Command | What it does |
 | --- | --- |
-| `plico validate [path]` | Validates a project and prints diagnostics. |
+| `plico validate [path]` | Validates a project and prints diagnostics. It warns about files in `evals/` that `plico eval` would skip, such as `case.json`. |
 | `plico run [--message <text>] [path]` | Runs the agent with its configured model. |
 | `plico run --dry [--persist] [--script <file>] [path]` | Runs with a scripted model, so it needs no key. |
 | `plico runs [path]` | Lists saved runs. |
@@ -27,7 +27,8 @@ than `.plico/plico.sqlite`. `plico run` without `--dry` needs a configured model
 
 ## Scripts
 
-`plico run --dry --script <file>` replays a script instead of calling a model. A script is a JSON
+`plico run --dry --script <file>` replays a script instead of calling a model. Without `--script`, a dry run uses a
+built-in script that calls no tools. A script is a JSON
 array of steps:
 
 ```json
