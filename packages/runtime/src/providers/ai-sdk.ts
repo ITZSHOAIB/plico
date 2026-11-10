@@ -9,9 +9,9 @@ import {
   type ToolSet,
 } from "ai";
 import { ModelProviderError } from "../errors.js";
-import type { ModelProvider, ModelRequest } from "../types/index.js";
+import type { ModelChunk, ModelProvider, ModelRequest } from "../types/index.js";
 
-function toMessages(request: ModelRequest): ModelMessage[] {
+function toMessages(request: ModelRequest, replayReasoning: boolean): ModelMessage[] {
   return request.messages.map((message): ModelMessage => {
     if (message.role === "system" || message.role === "user")
       return { role: message.role, content: message.content };
@@ -32,6 +32,7 @@ function toMessages(request: ModelRequest): ModelMessage[] {
       metadata && typeof metadata === "object" && !Array.isArray(metadata) ? metadata : undefined;
     const adapter = envelope?.plicoAdapter;
     const reasoning =
+      replayReasoning &&
       adapter &&
       typeof adapter === "object" &&
       !Array.isArray(adapter) &&
@@ -83,6 +84,7 @@ export interface AiSdkProviderOptions {
 
 /** Wraps an AI SDK language model behind the Plico model port. Provider retries are off. */
 export function createAiSdkModelProvider(options: AiSdkProviderOptions): ModelProvider {
+  let replayReasoning = true;
   return {
     async *stream(request, { signal }) {
       try {
@@ -103,57 +105,15 @@ export function createAiSdkModelProvider(options: AiSdkProviderOptions): ModelPr
             error instanceof Error ? error.message : "Model provider setup failed.",
           );
         }
-        const response = streamText({
-          model,
-          messages: toMessages(request),
-          tools: toTools(request),
-          allowSystemInMessages: true,
-          maxRetries: 0,
-          streamRetries: 0,
-          abortSignal: signal,
-          onError: () => {},
-        });
-        let metadata: JsonValue | undefined;
-        let reasoning = "";
-        for await (const part of response.fullStream) {
-          if (part.type === "text-delta") yield { type: "text", text: part.text };
-          else if (part.type === "reasoning-delta") reasoning += part.text;
-          else if (part.type === "tool-call")
-            yield {
-              type: "tool.call",
-              call: {
-                id: part.toolCallId,
-                name: part.toolName,
-                arguments: part.input,
-                ...(part.providerMetadata
-                  ? { providerMetadata: part.providerMetadata as JsonValue }
-                  : {}),
-              },
-            };
-          else if (part.type === "finish-step")
-            metadata = part.providerMetadata as JsonValue | undefined;
-          else if (part.type === "error") throw part.error;
-          else if (part.type === "finish") {
-            if (part.finishReason !== "stop" && part.finishReason !== "tool-calls")
-              throw new ModelProviderError(
-                "bad_request",
-                `Model response did not complete (finish reason: ${part.finishReason}).`,
-              );
-            yield {
-              type: "finish",
-              usage: {
-                inputTokens: part.totalUsage.inputTokens ?? 0,
-                outputTokens: part.totalUsage.outputTokens ?? 0,
-              },
-              ...(!reasoning && metadata === undefined
-                ? {}
-                : {
-                    providerMetadata: {
-                      ...(metadata === undefined ? {} : { sdk: metadata }),
-                      ...(reasoning ? { plicoAdapter: { reasoning } } : {}),
-                    },
-                  }),
-            };
+        for (;;) {
+          try {
+            yield* consume(model, request, signal, replayReasoning);
+            return;
+          } catch (error) {
+            // Some servers (Groq) reject the reasoning text Plico replays after a tool call, and
+            // others (DeepSeek) need it. Try with it, and drop it for good once a server refuses.
+            if (!replayReasoning || !rejectsReasoning(error)) throw error;
+            replayReasoning = false;
           }
         }
       } catch (error) {
@@ -178,13 +138,87 @@ export function createAiSdkModelProvider(options: AiSdkProviderOptions): ModelPr
           if (status !== undefined && status >= 400)
             throw new ModelProviderError(
               "bad_request",
-              `Model provider rejected the request (HTTP ${status}).`,
+              `Model provider rejected the request (HTTP ${status})${providerDetail(error)}`,
             );
         }
         throw new ModelProviderError("network", "Model provider request failed.");
       }
     },
   };
+}
+
+async function* consume(
+  model: LanguageModel,
+  request: ModelRequest,
+  signal: AbortSignal,
+  replayReasoning: boolean,
+): AsyncGenerator<ModelChunk> {
+  const response = streamText({
+    model,
+    messages: toMessages(request, replayReasoning),
+    tools: toTools(request),
+    allowSystemInMessages: true,
+    maxRetries: 0,
+    streamRetries: 0,
+    abortSignal: signal,
+    onError: () => {},
+  });
+  let metadata: JsonValue | undefined;
+  let reasoning = "";
+  for await (const part of response.fullStream) {
+    if (part.type === "text-delta") yield { type: "text", text: part.text };
+    else if (part.type === "reasoning-delta") reasoning += part.text;
+    else if (part.type === "tool-call")
+      yield {
+        type: "tool.call",
+        call: {
+          id: part.toolCallId,
+          name: part.toolName,
+          arguments: part.input,
+          ...(part.providerMetadata
+            ? { providerMetadata: part.providerMetadata as JsonValue }
+            : {}),
+        },
+      };
+    else if (part.type === "finish-step") metadata = part.providerMetadata as JsonValue | undefined;
+    else if (part.type === "error") throw part.error;
+    else if (part.type === "finish") {
+      if (part.finishReason !== "stop" && part.finishReason !== "tool-calls")
+        throw new ModelProviderError(
+          "bad_request",
+          `Model response did not complete (finish reason: ${part.finishReason}).`,
+        );
+      yield {
+        type: "finish",
+        usage: {
+          inputTokens: part.totalUsage.inputTokens ?? 0,
+          outputTokens: part.totalUsage.outputTokens ?? 0,
+        },
+        ...(!reasoning && metadata === undefined
+          ? {}
+          : {
+              providerMetadata: {
+                ...(metadata === undefined ? {} : { sdk: metadata }),
+                ...(reasoning ? { plicoAdapter: { reasoning } } : {}),
+              },
+            }),
+      };
+    }
+  }
+}
+
+/** The provider's own explanation, such as an unknown model name. It never carries our credential. */
+function providerDetail(error: APICallError): string {
+  const message = error.message.replace(/\s+/g, " ").trim().slice(0, 200);
+  return message ? `: ${message}` : ".";
+}
+
+function rejectsReasoning(error: unknown): boolean {
+  return (
+    APICallError.isInstance(error) &&
+    error.statusCode === 400 &&
+    /reasoning_content/.test(error.responseBody ?? "")
+  );
 }
 
 const CONTEXT_LENGTH =

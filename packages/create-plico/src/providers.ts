@@ -29,7 +29,7 @@ export const PROVIDER_SETUP: Record<ScaffoldProvider, ProviderSetup> = {
   },
   google: {
     label: "Google",
-    model: "gemini-2.5-flash",
+    model: "gemini-3.5-flash",
     apiKeyEnv: "GOOGLE_GENERATIVE_AI_API_KEY",
     adapter: "@ai-sdk/google",
   },
