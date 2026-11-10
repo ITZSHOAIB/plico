@@ -328,3 +328,101 @@ it.skipIf(
   expect(result.status).toBe("completed");
   expect(result.output?.length).toBeGreaterThan(0);
 });
+
+it("retries without reasoning when the server rejects replayed reasoning_content", async () => {
+  const root = await scaffold(
+    "plico-provider-noreason-",
+    'export default { schemaVersion: 1, name: "Demo" };',
+  );
+  await writeFile(
+    join(root, "tools", "lookup.tool.ts"),
+    'export default { name: "lookup", description: "Find", inputSchema: { type: "object", properties: { query: { type: "string" } } }, capabilities: [], approval: { required: false }, handler: () => "found" };',
+  );
+  const sent: { messages: { role: string; reasoning_content?: string }[] }[] = [];
+  const sse = (delta: object, finish: string) =>
+    new Response(
+      `${[
+        {
+          id: "x",
+          object: "chat.completion.chunk",
+          created: 1,
+          model: "test",
+          choices: [{ index: 0, delta, finish_reason: null }],
+        },
+        {
+          id: "x",
+          object: "chat.completion.chunk",
+          created: 1,
+          model: "test",
+          choices: [{ index: 0, delta: {}, finish_reason: finish }],
+          usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 },
+        },
+      ]
+        .map((chunk) => `data: ${JSON.stringify(chunk)}\n\n`)
+        .join("")}data: [DONE]\n\n`,
+      { headers: { "content-type": "text/event-stream" } },
+    );
+  const strictFetch: typeof fetch = async (_url, init) => {
+    const body = JSON.parse(String(init?.body));
+    sent.push(body);
+    if (sent.length === 1)
+      return sse(
+        {
+          reasoning_content: "reasoning trace",
+          tool_calls: [
+            {
+              index: 0,
+              id: "call-1",
+              type: "function",
+              function: { name: "lookup", arguments: '{"query":"item"}' },
+            },
+          ],
+        },
+        "tool_calls",
+      );
+    if (body.messages.some((m: { reasoning_content?: string }) => m.reasoning_content))
+      return new Response(
+        JSON.stringify({
+          error: { message: "property 'reasoning_content' is unsupported" },
+        }),
+        { status: 400, headers: { "content-type": "application/json" } },
+      );
+    return sse({ content: "Done" }, "stop");
+  };
+  vi.stubEnv("PLICO_TEST_MODEL_KEY", "secret-key-123");
+  const provider = createOpenAICompatibleProvider({
+    model: "test",
+    apiKeyEnv: "PLICO_TEST_MODEL_KEY",
+    baseURL: "https://example.invalid/v1",
+    fetch: strictFetch,
+  });
+
+  const result = await runProject(root, { provider, message: "find item" });
+
+  expect(result.status).toBe("completed");
+  expect(result.output).toBe("Done");
+  expect(sent).toHaveLength(3);
+  expect(sent[2]?.messages.some((m) => m.reasoning_content)).toBe(false);
+});
+
+it("says why the provider rejected a request, so a wrong model name is easy to spot", async () => {
+  const root = await scaffold("plico-provider-404-");
+  const notFound: typeof fetch = async () =>
+    new Response(JSON.stringify({ error: { message: "models/old-model is not found" } }), {
+      status: 404,
+      headers: { "content-type": "application/json" },
+    });
+  vi.stubEnv("PLICO_TEST_MODEL_KEY", "secret-key-123");
+  const provider = createOpenAICompatibleProvider({
+    model: "old-model",
+    apiKeyEnv: "PLICO_TEST_MODEL_KEY",
+    baseURL: "https://example.invalid/v1",
+    fetch: notFound,
+  });
+
+  const result = await runProject(root, { provider, message: "hi" });
+
+  expect(result.status).toBe("failed");
+  expect(JSON.stringify(result.events)).toContain("HTTP 404): models/old-model is not found");
+  expect(JSON.stringify(result.events)).not.toContain("secret-key-123");
+});

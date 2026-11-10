@@ -59,7 +59,15 @@ model: { provider: "openai-compatible", name: "llama3.2",
 // Vercel AI Gateway
 model: { provider: "openai-compatible", name: "anthropic/claude-sonnet-5-5",
   baseURL: "https://ai-gateway.vercel.sh/v1", apiKeyEnv: "AI_GATEWAY_API_KEY" }
+
+// Groq
+model: { provider: "openai-compatible", name: "openai/gpt-oss-20b",
+  baseURL: "https://api.groq.com/openai/v1", apiKeyEnv: "GROQ_API_KEY" }
 ```
+
+Reasoning models return their reasoning text. Plico sends it back after a tool call, because some
+servers need it. A server that rejects it (Groq does) gets one retry without it, and Plico leaves
+it out for the rest of that run.
 
 For anything else, name the provider after a file in `providers/`. It exports a function that
 returns an AI SDK language model:

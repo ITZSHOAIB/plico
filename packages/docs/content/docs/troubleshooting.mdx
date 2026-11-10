@@ -27,6 +27,13 @@ Native providers load an optional adapter package. Install the one your provider
 `model.provider` is not `anthropic`, `openai`, `google` or `openai-compatible`, and there is
 no `providers/<name>.ts` file. Fix the name or add the module.
 
+## "Model provider rejected the request (HTTP 404)"
+
+The message ends with the provider's own explanation. The usual cause is a model name the provider no
+longer serves: model names get retired, and some providers still list a retired model. List the
+models your key can use (for Google, `GET /v1beta/models`; for OpenAI-compatible servers,
+`GET /models`) and set `model.name` in `plico.config.ts` to one of them.
+
 ## "The conversation is too long for the model's context window"
 
 The thread outgrew the model. Start a new thread or choose a model with a larger context.
