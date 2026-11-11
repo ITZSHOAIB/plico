@@ -12,6 +12,7 @@ import type { DeclaredTool, EventStore, ModelProvider, ModelRequest } from "../.
 import { runToolStep } from "../tool-step.js";
 import { nameToolStep } from "../tracing.js";
 import { awaitApproval } from "./approval.js";
+import { createToolRecovery } from "./tool-recovery.js";
 
 export async function runProviderBackedRun(
   ctx: RunContext,
@@ -59,6 +60,7 @@ export async function runProviderBackedRun(
   ];
 
   let output: string | undefined;
+  const recover = createToolRecovery(events, messages);
 
   for (let turn = 0; turn < maxSteps; turn++) {
     const modelRequest: ModelRequest = {
@@ -149,27 +151,35 @@ export async function runProviderBackedRun(
           message: `Artifact tool ${toolCall.name} is disabled by artifacts.access="${artifactAccess}".`,
         });
       }
-      const tool = toolsByName.get(toolCall.name);
-      if (!tool) {
-        throw new RuntimeDiagnosticError({
-          phase: "tool.validation",
-          toolName: toolCall.name,
-          message: `Provider requested unknown tool: ${toolCall.name}`,
-        });
-      }
-
       await events.append("tool.call", {
-        toolName: tool.name,
+        toolName: toolCall.name,
         arguments: toolCall.arguments,
       });
 
+      const tool = toolsByName.get(toolCall.name);
+      if (!tool) {
+        await recover.fromFailure(
+          new RuntimeDiagnosticError({
+            phase: "tool.validation",
+            toolName: toolCall.name,
+            message: `Provider requested unknown tool: ${toolCall.name}`,
+          }),
+          toolCall,
+        );
+        continue;
+      }
+
       const parsedInput = await tool.parseInput(toolCall.arguments);
       if (!parsedInput.success) {
-        throw new RuntimeDiagnosticError({
-          phase: "tool.validation",
-          toolName: tool.name,
-          message: `Tool ${tool.name} arguments invalid: ${parsedInput.error}`,
-        });
+        await recover.fromFailure(
+          new RuntimeDiagnosticError({
+            phase: "tool.validation",
+            toolName: tool.name,
+            message: `Tool ${tool.name} arguments invalid: ${parsedInput.error}`,
+          }),
+          toolCall,
+        );
+        continue;
       }
 
       const approval = decideApproval(tool, config);
@@ -204,11 +214,15 @@ export async function runProviderBackedRun(
         );
       } catch (error) {
         if (error instanceof RunCancelled) throw error;
-        throw new RuntimeDiagnosticError({
-          phase: "runtime",
-          toolName: tool.name,
-          message: error instanceof Error ? error.message : String(error),
-        });
+        await recover.fromFailure(
+          new RuntimeDiagnosticError({
+            phase: "runtime",
+            toolName: tool.name,
+            message: error instanceof Error ? error.message : String(error),
+          }),
+          toolCall,
+        );
+        continue;
       }
 
       messages.push({

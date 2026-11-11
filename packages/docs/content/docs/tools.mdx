@@ -49,6 +49,18 @@ defaults and transforms, reach the handler.
 Validation rejects duplicate names declared across `.tool.ts` files, and readiness
 reports the duplicate under tool discovery.
 
+## When a tool call fails
+
+In a run with a real model, a bad tool call does not end the run at once. An unknown tool
+name, arguments that fail `inputSchema`, or a handler that throws is returned to the model as
+the tool result, `{ "error": "<message>" }`, and the event log records it as a `tool.result`.
+The model can then correct the call. This matters most for small local models, which often
+send numbers as strings.
+
+A run allows 2 such failures. The third ends the run with the original error, in the same
+`run.error` event as before. Scripted runs (`plico run --dry --script`) and approval denials
+still fail immediately.
+
 ## Writing artifacts
 
 A tool can read, write, and list artifacts with `ctx.artifacts`: `read(path)`,
