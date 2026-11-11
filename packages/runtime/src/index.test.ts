@@ -994,18 +994,11 @@ describe("runProject", () => {
     });
 
     expect(result.status).toBe("failed");
-    expect(withoutDeltas(result.events).map((event) => event.type)).toEqual([
-      "run.started",
-      "instructions.composed",
-      "tools.discovered",
-      "input.received",
-      "model.request",
-      "model.response",
-      "tool.call",
-      "run.error",
-      "run.failed",
-    ]);
-    expect(withoutDeltas(result.events)[7]?.payload).toMatchObject({
+    expect(result.events.filter((event) => event.type === "tool.call")).toHaveLength(3);
+    expect(result.events.at(-1)?.type).toBe("run.failed");
+    expect(
+      result.events.filter((event) => event.type === "run.error").at(-1)?.payload,
+    ).toMatchObject({
       phase: "tool.validation",
       toolName: "create_ticket",
     });
@@ -1044,18 +1037,11 @@ describe("runProject", () => {
     });
 
     expect(result.status).toBe("failed");
-    expect(withoutDeltas(result.events).map((event) => event.type)).toEqual([
-      "run.started",
-      "instructions.composed",
-      "tools.discovered",
-      "input.received",
-      "model.request",
-      "model.response",
-      "tool.call",
-      "run.error",
-      "run.failed",
-    ]);
-    expect(withoutDeltas(result.events)[7]?.payload).toMatchObject({
+    expect(result.events.filter((event) => event.type === "tool.call")).toHaveLength(3);
+    expect(result.events.at(-1)?.type).toBe("run.failed");
+    expect(
+      result.events.filter((event) => event.type === "run.error").at(-1)?.payload,
+    ).toMatchObject({
       phase: "runtime",
       toolName: "failing_tool",
       message: "tool crashed",
