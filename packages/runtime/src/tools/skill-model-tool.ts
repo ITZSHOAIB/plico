@@ -1,6 +1,5 @@
-import { SKILL_TOOL_NAME, type Skill } from "@plico-ai/core";
+import { normalizeInputSchema, SKILL_TOOL_NAME, type Skill } from "@plico-ai/core";
 import type { DeclaredTool } from "../types/index.js";
-import { normalizeInputSchema } from "./schema.js";
 
 const source = "plico:skills";
 

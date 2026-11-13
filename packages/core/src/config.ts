@@ -112,6 +112,9 @@ function normalizeProjectConfig(value: unknown, configPath: string): ProjectConf
       normalized.model.retryDelayMs = config.model.retryDelayMs;
   }
 
+  if (config.input !== undefined) normalized.input = config.input;
+  if (config.output !== undefined) normalized.output = config.output;
+
   if (config.execution !== undefined) {
     normalized.execution = {};
     if (config.execution.leaseMs !== undefined)

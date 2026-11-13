@@ -26,8 +26,29 @@ Avoid them in your own projects so a later upgrade does not change what they mea
 
 ## agent.md frontmatter
 
-`agent.md` may start with a `---` frontmatter block. Plico strips it before the instructions go
-to the model, and `plico validate` warns on keys it does not know. No keys are defined yet.
+`agent.md` may start with a `---` YAML frontmatter block. Plico strips it before the instructions
+go to the model, and `plico validate` warns on keys it does not know. Invalid YAML is an error.
+
+| Key      | Value                                                                    |
+| -------- | ------------------------------------------------------------------------ |
+| `input`  | JSON Schema for what the agent accepts. Optional.                        |
+| `output` | JSON Schema for the structured result the agent returns. Optional.       |
+
+```md title="agent.md"
+---
+output:
+  type: object
+  required: [summary]
+  properties:
+    summary:
+      type: string
+---
+Summarize the incoming request.
+```
+
+`plico.config.ts` accepts the same `input` and `output` keys; the schema in `agent.md` wins when
+both are set. `plico validate` rejects a value that is not a valid schema. Today the schemas are
+validated and stored only: runs do not enforce them yet, so agents behave as before.
 
 ## Skills
 

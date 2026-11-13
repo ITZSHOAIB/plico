@@ -1,12 +1,16 @@
 import { createRequire } from "node:module";
 import { pathToFileURL } from "node:url";
+import type { JsonSchema, ZodInputSchema } from "@plico-ai/contracts";
 import { Ajv, type AnySchema, type ErrorObject, type ValidateFunction } from "ajv";
 import { zodToJsonSchema } from "zod-to-json-schema";
-import type { JsonSchema, ToolInputParseResult, ZodInputSchema } from "../types/index.js";
 
 const ajv = new Ajv({ allErrors: true, strict: false });
 const addFormats = createRequire(import.meta.url)("ajv-formats") as (instance: Ajv) => void;
 addFormats(ajv);
+
+export type ToolInputParseResult =
+  | { success: true; value: unknown }
+  | { success: false; error: string };
 
 export interface NormalizedInputSchema {
   jsonSchema: JsonSchema;

@@ -1,7 +1,6 @@
-import { ARTIFACT_TOOL_NAMES } from "@plico-ai/core";
+import { ARTIFACT_TOOL_NAMES, normalizeInputSchema } from "@plico-ai/core";
 import type { DeclaredTool, ToolDefinition } from "../types/index.js";
 import { editFile, listFiles, readFile, writeFile } from "./artifact-model-tool-operations.js";
-import { normalizeInputSchema } from "./schema.js";
 
 const source = "plico:artifacts";
 const maxListLimit = 1000;

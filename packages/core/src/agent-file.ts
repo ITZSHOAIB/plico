@@ -2,7 +2,7 @@ import { type Frontmatter, parseFrontmatter } from "./frontmatter.js";
 import type { ValidationIssue } from "./types.js";
 
 /** Frontmatter keys `agent.md` understands. Later features add keys here without breaking projects. */
-export const AGENT_FRONTMATTER_KEYS: readonly string[] = [];
+export const AGENT_FRONTMATTER_KEYS: readonly string[] = ["input", "output"];
 
 /** Splits `agent.md` into its frontmatter and the instructions the model sees. */
 export function parseAgentFile(text: string): Frontmatter {

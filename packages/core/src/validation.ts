@@ -9,6 +9,7 @@ import {
   REQUIRED_PROJECT_DIRECTORIES,
 } from "./layout.js";
 import { validateModelProvider } from "./model-provider.js";
+import { validateRunSchemas } from "./run-schemas.js";
 import { validateSkills } from "./skills.js";
 import { validateToolNames } from "./tool-name-validation.js";
 import type { LoadedProject, ValidationIssue, ValidationResult } from "./types.js";
@@ -53,6 +54,14 @@ export async function validateProject(root: string): Promise<ValidationResult> {
 
   if (typeof agentText === "string") {
     const agent = parseAgentFile(agentText);
+    if (agent.error) {
+      errors.push({
+        path: relativePaths.agentFile,
+        message: `Invalid frontmatter in ${relativePaths.agentFile}: ${agent.error}`,
+        severity: "error",
+      });
+    }
+    errors.push(...(await validateRunSchemas(relativePaths.agentFile, agent.data)));
     warnings.push(...unknownAgentKeyWarnings(relativePaths.agentFile, agent.data));
     agentText = agent.body;
     if (agentText.trim().length === 0) {
@@ -110,6 +119,7 @@ export async function validateProject(root: string): Promise<ValidationResult> {
     });
   }
 
+  errors.push(...(await validateRunSchemas(relativePaths.configFile, project.config)));
   errors.push(...(await validateToolNames(root)));
   errors.push(...(await validateSkills(root)));
   warnings.push(...(await validateEvalFiles(root)));
