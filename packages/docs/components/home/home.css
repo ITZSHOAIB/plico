@@ -285,6 +285,18 @@
   font-weight: 400;
 }
 
+/* Launch film */
+.ph-film {
+  margin-top: 2.5rem;
+}
+.ph-film video {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  background: var(--ph-paper-2);
+}
+
 /* Section heading */
 .ph-heading h2 {
   max-width: 44rem;

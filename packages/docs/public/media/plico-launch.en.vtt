@@ -1,0 +1,52 @@
+WEBVTT
+
+00:00.350 --> 00:04.930
+This is an agent app. It opens tickets, and it asks before it closes one.
+
+00:05.450 --> 00:07.600
+How much code is behind it?
+
+00:07.650 --> 00:11.630
+Almost none. Bring prompts and tools. Plico handles the harness.
+
+00:12.000 --> 00:14.230
+The agent is a few files.
+
+00:15.400 --> 00:17.590
+Instructions are Markdown.
+
+00:18.900 --> 00:20.850
+Skills are Markdown too.
+
+00:22.200 --> 00:25.800
+Tools are TypeScript, with human approval when you need it.
+
+00:27.000 --> 00:30.980
+The loop, the approvals, the state, the event log. Already built.
+
+00:31.550 --> 00:33.350
+Run npm run dev.
+
+00:33.400 --> 00:35.550
+A local Studio comes included.
+
+00:35.600 --> 00:36.900
+Chat with your agent.
+
+00:36.950 --> 00:40.800
+Inspect tool calls, approve them, and replay each step.
+
+00:43.600 --> 00:45.460
+Review the files it writes.
+
+00:46.100 --> 00:48.600
+Run scripted tests without a model.
+
+00:48.650 --> 00:50.940
+Catch setup issues before you ship.
+
+00:51.300 --> 00:54.480
+Bring prompts and tools. Plico handles the harness.
+
+00:54.600 --> 00:58.500
+Plico is open source. If it's useful, star it on GitHub.
