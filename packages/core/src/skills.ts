@@ -56,7 +56,7 @@ export async function readSkills(root: string): Promise<SkillsResult> {
     }
     const text = await readFile(join(directory, entry.name, SKILL_FILE), "utf8");
     const { data, body } = parseFrontmatter(text);
-    const description = data.description?.trim();
+    const description = typeof data.description === "string" ? data.description.trim() : "";
     if (!description) {
       issues.push({
         path: source,

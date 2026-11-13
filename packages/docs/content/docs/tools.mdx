@@ -40,7 +40,7 @@ A tool must export its definition as the file default.
 
 ## Input schemas
 
-Declare `inputSchema` with Zod 3, Zod 4, or JSON Schema. Plico validates tool calls
+Declare `inputSchema` with Zod 4 or JSON Schema. A project on `zod` 3.25 can import from `"zod/v4"`; Zod 3 schemas are rejected. Plico validates tool calls
 with that schema and sends JSON Schema to the model. Parsed Zod values, including
 defaults and transforms, reach the handler.
 

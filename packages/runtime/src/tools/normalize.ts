@@ -1,6 +1,6 @@
+import { normalizeInputSchema } from "@plico-ai/core";
 import { isRecord } from "../guards.js";
 import type { DeclaredTool } from "../types/index.js";
-import { normalizeInputSchema } from "./schema.js";
 
 export async function normalizeDeclaredTool(
   value: unknown,

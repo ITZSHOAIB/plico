@@ -1,3 +1,5 @@
+import type { ToolInputSchema } from "./tools.js";
+
 export type ValidationSeverity = "error" | "warning";
 
 export interface ValidationIssue {
@@ -23,6 +25,10 @@ export interface ProjectConfig {
     retries?: number;
     retryDelayMs?: number;
   };
+  /** Shape of the input the agent accepts. `input` in `agent.md` overrides it. */
+  input?: ToolInputSchema;
+  /** Shape of the structured result the agent returns. `output` in `agent.md` overrides it. */
+  output?: ToolInputSchema;
   execution?: { leaseMs?: number };
   /** Thread naming. `keywords` is the default; `model` asks the configured model to write titles. */
   threads?: { title?: "keywords" | "model" };
