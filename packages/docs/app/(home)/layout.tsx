@@ -11,7 +11,8 @@ export default function Layout({ children }: { children: ReactNode }) {
         links={[
           { text: "Docs", url: "/docs", active: "nested-url" },
           { text: "Quickstart", url: "/docs/quickstart" },
-          { text: "llms.txt", url: "/llms.txt" },
+          // A plain text file: the client router would fetch it as a page and land on /llms.
+          { text: "llms.txt", url: "/llms.txt", external: true },
         ]}
       >
         {children}

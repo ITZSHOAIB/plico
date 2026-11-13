@@ -20,8 +20,8 @@ export function StartSection() {
         </a>
       </div>
       <p className="ph-foot">
-        Agents: read <Link href="/llms.txt">/llms.txt</Link>, or send{" "}
-        <code>Accept: text/markdown</code> to any docs page.
+        Agents: read <a href="/llms.txt">/llms.txt</a>, or send <code>Accept: text/markdown</code>{" "}
+        to any docs page.
       </p>
     </section>
   );

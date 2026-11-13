@@ -10,7 +10,8 @@ export const metadata: Metadata = {
   title: { default: "Plico docs", template: "%s | Plico" },
   description:
     "Plico is a TypeScript-first agent app kit: a folder of Markdown and TypeScript becomes a runnable, inspectable agent app.",
-  icons: { apple: "/apple-icon.png" },
+  // Next adds app/favicon.ico itself; listing icons here replaces the app/icon.svg convention.
+  icons: { icon: { url: "/icon.svg", type: "image/svg+xml" }, apple: "/apple-icon.png" },
   openGraph: { siteName: appName, locale: "en_US", images: homeImageUrl },
   twitter: { card: "summary_large_image", images: homeImageUrl },
 };
