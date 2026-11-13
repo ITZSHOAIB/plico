@@ -59,7 +59,7 @@ export function Fold() {
         </span>
       </p>
       <figcaption>
-        <i>plico</i> (Latin): <em>I fold</em>. Your files, folded into an agent.
+        <i>plico</i> (Latin): <em>I fold</em>. Your prompts and tools, folded into an agent.
       </figcaption>
     </figure>
   );

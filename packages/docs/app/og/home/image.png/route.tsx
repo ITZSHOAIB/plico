@@ -4,7 +4,7 @@ export const dynamic = "force-static";
 
 export function GET() {
   return ogImage(
-    "Your agent is a folder of files.",
-    "Markdown and TypeScript in. A runnable, inspectable agent out.",
+    "Bring prompts and tools. Plico handles the harness.",
+    "The agent harness for TypeScript.",
   );
 }

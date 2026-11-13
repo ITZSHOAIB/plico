@@ -232,7 +232,7 @@ The long-term picture is a Vite-like experience for agents: a folder in Git is t
 
 ## Further Notes
 
-- Plico is the selected working name. The current tagline direction is "Plico: agents from files" or "Plico: build agents from Markdown and TypeScript."
+- Plico is the selected working name. The tagline, chosen 2026-11-13, is "Bring prompts and tools. Plico handles the harness." Earlier directions ("agents from files", "your agent is a folder of files") read as if Plico built agents from uploaded documents.
 - The name was chosen because it is short, memorable, developer-tool-friendly, and can carry the metaphor of folding project files into a runnable agent.
 - Package naming should likely follow a scoped namespace such as core, CLI, React, and Studio packages.
 - The strongest reason to build Plico is not the agent runtime alone. The strongest reason is the complete lifecycle from file-based authoring to local inspection, artifacts, persistence, API, frontend integration, evals, and deployment readiness.

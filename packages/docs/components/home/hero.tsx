@@ -10,11 +10,13 @@ export function Hero() {
           Developer preview · 0.1 on npm
         </p>
         <h1>
-          Build AI agents <em>from files</em>.
+          Bring prompts and tools. <br />
+          <em>Plico handles the harness.</em>
         </h1>
         <p className="ph-lede">
-          Write the job in Markdown, add skills and TypeScript tools, and Plico supplies the
-          harness: runs, an event log, approvals, artifacts, evals and a local Studio.
+          Write the job in Markdown and the tools in TypeScript. Plico gives your agent durable
+          runs, an event log, approvals, artifacts, evals and a local Studio, inside your backend or
+          on its own.
         </p>
         <div className="ph-actions">
           <Link href="/docs/quickstart" className="ph-btn ph-btn-primary">
