@@ -7,9 +7,9 @@ import { StatusSection } from "@/components/home/status-section";
 import { ViewsSection } from "@/components/home/views-section";
 import { appName, gitConfig, homeImageUrl, siteUrl } from "@/lib/shared";
 
-const title = "Plico: build AI agents from files";
+const title = "Plico: the agent harness for TypeScript";
 const description =
-  "Plico is a TypeScript kit that turns a folder of Markdown and tools into a working AI agent with the harness included: runs, an event log, approvals, evals and a local Studio.";
+  "Bring prompts and tools; Plico handles the harness. Write the job in Markdown and the tools in TypeScript, and Plico gives your agent durable runs, an event log, approvals, artifacts, evals and a local Studio.";
 
 export const metadata: Metadata = {
   title: { absolute: title },

@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src=".github/assets/banner.svg" alt="Plico: your agent is a folder of files." />
+<img src=".github/assets/banner.svg" alt="Plico: bring prompts and tools. Plico handles the harness." />
 
 **A TypeScript-first agent app kit.** Write instructions in Markdown and tools in TypeScript,
 and get an agent you can run, inspect, approve and replay.

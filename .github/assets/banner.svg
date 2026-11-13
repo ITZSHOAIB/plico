@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 360" width="1280" height="360" role="img" aria-labelledby="t d">
   <title id="t">Plico</title>
-  <desc id="d">Plico: your agent is a folder of files.</desc>
+  <desc id="d">Plico: bring prompts and tools. Plico handles the harness.</desc>
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#0d1211"/>
@@ -28,8 +28,9 @@
 
   <!-- wordmark and tagline -->
   <text x="232" y="168" font-family="Inter, 'Segoe UI', Arial, Helvetica, sans-serif" font-size="84" font-weight="700" letter-spacing="-2" fill="#e7ecea">Plico</text>
-  <text x="234" y="214" font-family="Inter, 'Segoe UI', Arial, Helvetica, sans-serif" font-size="30" fill="#8dd4c2">Your agent is a folder of files.</text>
-  <text x="234" y="256" font-family="Inter, 'Segoe UI', Arial, Helvetica, sans-serif" font-size="20" fill="#a0aaa7">Markdown and TypeScript in. A runnable, inspectable agent out.</text>
+  <text x="234" y="214" font-family="Inter, 'Segoe UI', Arial, Helvetica, sans-serif" font-size="30" fill="#e7ecea">Bring prompts and tools.</text>
+  <text x="234" y="252" font-family="Inter, 'Segoe UI', Arial, Helvetica, sans-serif" font-size="30" fill="#8dd4c2">Plico handles the harness.</text>
+  <text x="234" y="294" font-family="Inter, 'Segoe UI', Arial, Helvetica, sans-serif" font-size="20" fill="#a0aaa7">The agent harness for TypeScript.</text>
 
   <!-- folder motif -->
   <g transform="translate(880 70)" font-family="'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace" font-size="17">
