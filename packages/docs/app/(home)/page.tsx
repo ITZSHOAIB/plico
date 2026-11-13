@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { FilesSection } from "@/components/home/files-section";
+import { FilmSection } from "@/components/home/film-section";
 import { Hero } from "@/components/home/hero";
 import { KitSection } from "@/components/home/kit-section";
 import { StartSection } from "@/components/home/start-section";
@@ -47,6 +48,7 @@ export default function HomePage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
       <Hero />
+      <FilmSection />
       <FilesSection />
       <ViewsSection />
       <KitSection />
