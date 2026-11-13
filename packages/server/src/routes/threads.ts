@@ -64,6 +64,7 @@ export const threadRoutes: Route[] = [
         throw new HttpError(400, "message.invalid", "startRun must be a boolean.");
       const message = await sendMessage(ctx.app, threadId, body.content, {
         startRun: body.startRun !== false,
+        input: body.input,
       });
       return jsonResponse(201, message);
     },

@@ -22,6 +22,12 @@ and its successful answer is recorded as an assistant message.
   `Last-Event-ID` or `?after=`.
 - Without a configured provider the endpoint returns an actionable error. To store a
   message without starting a run, include `"startRun": false`.
+- An agent with an `input` schema (see [project layout](/docs/project-layout)) takes typed
+  input: post `{ "input": { ... } }`, with `content` optional. The input is validated before
+  anything is recorded. A bad or missing value returns `input.invalid` (HTTP 400) listing each
+  problem, such as `ticket: expected string`, and no run starts. The model sees `content`
+  followed by the input as JSON, or the JSON alone. An agent without a schema refuses `input`.
+  In a Node host, pass `{ input }` in the options of `plico.threads.send`.
 
 ## Titles
 

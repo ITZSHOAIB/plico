@@ -9,7 +9,7 @@ Run `plico --version` to print the installed version. Every command takes an opt
 | Command | What it does |
 | --- | --- |
 | `plico validate [path]` | Validates a project and prints diagnostics. It warns about files in `evals/` that `plico eval` would skip, such as `case.json`. |
-| `plico run [--message <text>] [path]` | Runs the agent with its configured model. |
+| `plico run [--message <text>] [--input <json> \| --input-file <path>] [path]` | Runs the agent with its configured model. `--input` carries typed input for an agent with an `input` schema. |
 | `plico run --dry [--persist] [--script <file>] [path]` | Runs with a scripted model, so it needs no key. |
 | `plico runs [path]` | Lists saved runs. |
 | `plico events <run-id> [--after <sequence>] [path]` | Prints a run's event log. |

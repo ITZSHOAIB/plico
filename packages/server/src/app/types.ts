@@ -44,6 +44,11 @@ export interface SendMessageOptions {
   /** Record the message without starting a run. Defaults to true. */
   startRun?: boolean;
   /**
+   * Typed input for an agent that declares an `input` schema. It is required then, and refused
+   * when the agent declares none. A bad value rejects with `input.invalid`.
+   */
+  input?: unknown;
+  /**
    * Host data passed to tools as `ctx.context` for the run this message starts, and recorded on its
    * `run.started` event. It must not carry secrets.
    */
@@ -64,7 +69,11 @@ export interface Plico {
      * Records a user message and, unless `startRun` is false, starts the run that answers it. The
      * returned message carries the `runId`. Rejects with `thread.busy` while another run is active.
      */
-    send(threadId: string, content: string, options?: SendMessageOptions): Promise<ThreadMessage>;
+    send(
+      threadId: string,
+      content: string | undefined,
+      options?: SendMessageOptions,
+    ): Promise<ThreadMessage>;
   };
   runs: {
     /**

@@ -47,8 +47,8 @@ Summarize the incoming request.
 ```
 
 `plico.config.ts` accepts the same `input` and `output` keys; the schema in `agent.md` wins when
-both are set. `plico validate` rejects a value that is not a valid schema. Today the schemas are
-validated and stored only: runs do not enforce them yet, so agents behave as before.
+both are set. `plico validate` rejects a value that is not a valid schema. A run is rejected when its input does not match the `input` schema, in the API and in
+`plico run --input`. The `output` schema is not enforced yet, so agents behave as before.
 
 ## Skills
 

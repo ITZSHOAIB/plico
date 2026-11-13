@@ -15,6 +15,7 @@ const statusByCode: Record<string, number> = {
   "thread.busy": 409,
   "thread.invalid_title": 400,
   "message.invalid": 400,
+  "input.invalid": 400,
   "request.invalid": 400,
   "threads.unavailable": 503,
   "threads.store_mismatch": 503,

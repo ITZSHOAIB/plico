@@ -1,5 +1,10 @@
 import { randomUUID } from "node:crypto";
-import { ARTIFACT_TOOL_NAMES, SKILL_TOOL_NAME, validateProject } from "@plico-ai/core";
+import {
+  ARTIFACT_TOOL_NAMES,
+  prepareRunMessage,
+  SKILL_TOOL_NAME,
+  validateProject,
+} from "@plico-ai/core";
 import {
   createSqliteEngine,
   createSqliteEventStore,
@@ -17,6 +22,7 @@ import { loadDryRunScript } from "../script-file.js";
 import { cancelOnInterrupt } from "./interrupt.js";
 import { streamModelOutput } from "./live-output.js";
 import { resolveMessage, resolveModelProvider } from "./model-provider.js";
+import { readRunInput } from "./run-input.js";
 
 export async function runCommand(args: string[]): Promise<number> {
   try {
@@ -25,6 +31,8 @@ export async function runCommand(args: string[]): Promise<number> {
       values: {
         "--script": { missing: "Missing script file after --script" },
         "--message": { missing: "Missing message text after --message" },
+        "--input": { missing: "Missing JSON after --input" },
+        "--input-file": { missing: "Missing file after --input-file" },
         "--db": { missing: "Missing database path after --db" },
       },
       rejectUnknown: true,
@@ -50,7 +58,14 @@ export async function runCommand(args: string[]): Promise<number> {
         ? undefined
         : createFakeProvider()
       : resolveModelProvider(validation?.project?.config.model, target);
-    if (!dry) message = await resolveMessage(message);
+    if (!dry) {
+      const prepared = await prepareRunMessage(target, {
+        content: message,
+        input: await readRunInput(parsed),
+      });
+      if (!prepared.ok) throw new Error(prepared.errors.join("\n"));
+      message = prepared.message ?? (await resolveMessage(undefined));
+    }
     const recoveryKey = dry
       ? "plico:dry-fake:v1"
       : validation?.project?.config.model
