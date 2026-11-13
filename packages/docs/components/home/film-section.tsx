@@ -38,7 +38,7 @@ export function FilmSection() {
             ref={video}
             slot="media"
             playsInline
-            preload="none"
+            preload="metadata"
             poster="/media/plico-launch.jpg"
             width={1920}
             height={1080}

@@ -300,7 +300,7 @@
   --media-control-background: transparent;
   --media-control-hover-background: rgb(255 255 255 / 0.08);
   --media-range-bar-color: #62bfa8;
-  --media-range-track-background: rgb(231 236 234 / 0.25);
+  --media-range-track-background: rgb(231 236 234 / 0.35);
   --media-range-thumb-background: #62bfa8;
   --media-time-range-buffered-color: rgb(231 236 234 / 0.4);
   --media-text-color: #e7ecea;
@@ -317,33 +317,26 @@
 }
 .ph-player media-control-bar {
   width: 100%;
-  background: #111414;
-  border-top: 1px solid #262c2b;
+  padding-top: 1.5rem;
+  background: linear-gradient(transparent, rgb(0 0 0 / 0.75));
   --media-font-size: 0.8rem;
 }
-/* Hide the bar until the film has started; the big button carries the first click. */
-.ph-player[mediapaused]:not([mediahasplayed]) media-control-bar {
-  display: none;
-}
+/* The familiar round play button, shown whenever the film is paused. */
 .ph-player-big {
   --media-primary-color: #ffffff;
-  --media-control-background: var(--ph-accent);
-  --media-control-hover-background: var(--ph-accent);
-  --media-button-icon-width: 2.25rem;
-  --media-button-icon-height: 2.25rem;
-  /* Bottom-left, clear of the logo and tagline on the poster. */
-  margin: auto auto clamp(0.75rem, 3vw, 1.75rem) clamp(0.75rem, 3vw, 1.75rem);
-  padding: 1rem 1.15rem;
-  border: 1px solid var(--ph-ink);
-  box-shadow: 4px 4px 0 var(--ph-ink);
+  --media-control-background: rgb(17 20 20 / 0.7);
+  --media-control-hover-background: rgb(17 20 20 / 0.85);
+  --media-button-icon-width: 2.5rem;
+  --media-button-icon-height: 2.5rem;
+  padding: 1.1rem;
+  border-radius: 50%;
   transition:
-    transform 0.12s,
-    box-shadow 0.12s,
+    background-color 0.15s,
     opacity 0.2s;
 }
-.ph-player-big:hover {
-  transform: translate(-1px, -1px);
-  box-shadow: 5px 5px 0 var(--ph-ink);
+.ph-player:not([mediapaused]) .ph-player-big {
+  opacity: 0;
+  pointer-events: none;
 }
 @media (max-width: 640px) {
   .ph-player {
@@ -352,19 +345,15 @@
     --media-button-icon-height: 20px;
   }
   .ph-player media-control-bar {
+    padding-top: 0.75rem;
     --media-font-size: 0.7rem;
     --media-control-height: 20px;
   }
   .ph-player-big {
-    --media-button-icon-width: 1.25rem;
-    --media-button-icon-height: 1.25rem;
-    padding: 0.55rem 0.65rem;
-    box-shadow: 3px 3px 0 var(--ph-ink);
+    --media-button-icon-width: 1.6rem;
+    --media-button-icon-height: 1.6rem;
+    padding: 0.7rem;
   }
-}
-.ph-player:not([mediapaused]) .ph-player-big {
-  opacity: 0;
-  pointer-events: none;
 }
 
 /* Section heading */
