@@ -289,12 +289,71 @@
 .ph-film {
   margin-top: 2.5rem;
 }
-.ph-film video {
+.ph-player {
   display: block;
   width: 100%;
-  height: auto;
   aspect-ratio: 16 / 9;
   background: var(--ph-paper-2);
+  --media-font-family: var(--font-mono);
+  --media-primary-color: #e7ecea;
+  --media-secondary-color: transparent;
+  --media-control-background: transparent;
+  --media-control-hover-background: rgb(255 255 255 / 0.08);
+  --media-range-bar-color: #62bfa8;
+  --media-range-track-background: rgb(231 236 234 / 0.35);
+  --media-range-thumb-background: #62bfa8;
+  --media-time-range-buffered-color: rgb(231 236 234 / 0.4);
+  --media-text-color: #e7ecea;
+}
+.ph-player video {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.ph-player-gestures {
+  align-self: stretch;
+  flex-grow: 1;
+  cursor: pointer;
+}
+.ph-player media-control-bar {
+  width: 100%;
+  padding-top: 1.5rem;
+  background: linear-gradient(transparent, rgb(0 0 0 / 0.75));
+  --media-font-size: 0.8rem;
+}
+/* The familiar round play button, shown whenever the film is paused. */
+.ph-player-big {
+  --media-primary-color: #ffffff;
+  --media-control-background: rgb(17 20 20 / 0.7);
+  --media-control-hover-background: rgb(17 20 20 / 0.85);
+  --media-button-icon-width: 2.5rem;
+  --media-button-icon-height: 2.5rem;
+  padding: 1.1rem;
+  border-radius: 50%;
+  transition:
+    background-color 0.15s,
+    opacity 0.2s;
+}
+.ph-player:not([mediapaused]) .ph-player-big {
+  opacity: 0;
+  pointer-events: none;
+}
+@media (max-width: 640px) {
+  .ph-player {
+    --media-control-padding: 6px;
+    --media-button-icon-width: 20px;
+    --media-button-icon-height: 20px;
+  }
+  .ph-player media-control-bar {
+    padding-top: 0.75rem;
+    --media-font-size: 0.7rem;
+    --media-control-height: 20px;
+  }
+  .ph-player-big {
+    --media-button-icon-width: 1.6rem;
+    --media-button-icon-height: 1.6rem;
+    padding: 0.7rem;
+  }
 }
 
 /* Section heading */
