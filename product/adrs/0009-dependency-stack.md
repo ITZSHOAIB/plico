@@ -13,7 +13,7 @@ Plico owns what makes it a product: the folder contract, the event contract, the
 | Agent loop | Own linear loop (ADR 0001) | accepted |
 | Event storage | Own append-only table, plain SQL behind a store interface; Kysely and Drizzle are fallbacks only | accepted |
 | MCP client | Official MCP client, wrapped in Plico's tool shape (ADR 0003) | accepted |
-| Tool input validation | Zod 3 and 4 schemas convert to JSON Schema; Ajv validates JSON Schema inputs | accepted |
+| Tool input validation | Zod 4 schemas convert to JSON Schema with Zod's own `toJSONSchema`; Ajv validates JSON Schema inputs. Zod 3 is not supported | accepted |
 | HTTP server | Hono with `overrideGlobalObjects: false`, behind the existing `/v1` routes (ADR 0006) | accepted |
 | Tracing | OpenTelemetry API with GenAI conventions; the host picks the SDK and exporter; content off by default | accepted |
 | Frontend protocol | Native events, with AG-UI as the default adapter and an AI SDK UI adapter (ADR 0004) | accepted |

@@ -2,7 +2,6 @@ import { createRequire } from "node:module";
 import { pathToFileURL } from "node:url";
 import type { JsonSchema, ZodInputSchema } from "@plico-ai/contracts";
 import { Ajv, type AnySchema, type ErrorObject, type ValidateFunction } from "ajv";
-import { zodToJsonSchema } from "zod-to-json-schema";
 
 const ajv = new Ajv({ allErrors: true, strict: false });
 const addFormats = createRequire(import.meta.url)("ajv-formats") as (instance: Ajv) => void;
@@ -106,7 +105,9 @@ async function convertZodSchema(
   toolPath: string,
 ): Promise<JsonSchema> {
   if (!isJsonObject(schema) || !("_zod" in schema)) {
-    return zodToJsonSchema(schema as Parameters<typeof zodToJsonSchema>[0]) as JsonSchema;
+    throw new Error(
+      `${source} uses a Zod 3 schema. Plico needs Zod 4: upgrade zod, or import from "zod/v4" (available in zod 3.25), or use JSON Schema`,
+    );
   }
 
   try {
