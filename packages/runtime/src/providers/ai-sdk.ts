@@ -5,6 +5,7 @@ import {
   jsonSchema,
   type LanguageModel,
   type ModelMessage,
+  Output,
   streamText,
   type ToolSet,
 } from "ai";
@@ -76,6 +77,7 @@ function toTools(request: ModelRequest): ToolSet {
 }
 
 export interface AiSdkProviderOptions {
+  supportsStructuredOutput?: boolean;
   /** The variable that holds the credential. Without one, the model is built with no key. */
   apiKeyEnv?: string | undefined;
   /** Builds the AI SDK model once the credential is known. */
@@ -86,6 +88,7 @@ export interface AiSdkProviderOptions {
 export function createAiSdkModelProvider(options: AiSdkProviderOptions): ModelProvider {
   let replayReasoning = true;
   return {
+    ...(options.supportsStructuredOutput ? { supportsStructuredOutput: true } : {}),
     async *stream(request, { signal }) {
       try {
         const apiKey = options.apiKeyEnv ? process.env[options.apiKeyEnv] : undefined;
@@ -157,6 +160,11 @@ async function* consume(
     model,
     messages: toMessages(request, replayReasoning),
     tools: toTools(request),
+    ...(request.outputSchema === undefined
+      ? {}
+      : {
+          output: Output.object({ schema: jsonSchema(request.outputSchema) }),
+        }),
     allowSystemInMessages: true,
     maxRetries: 0,
     streamRetries: 0,

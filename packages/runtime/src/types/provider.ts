@@ -15,6 +15,8 @@ export type { ModelToolCall } from "@plico-ai/contracts";
 export interface ModelRequest {
   messages: ProviderMessage[];
   maxSteps: number;
+  /** Final JSON value must match this schema; only sent to providers that support it. */
+  outputSchema?: JsonSchema;
   tools?: Array<{
     name: string;
     description: string;
@@ -38,5 +40,7 @@ export type ModelChunk =
   | { type: "finish"; usage: ModelResponse["usage"]; providerMetadata?: JsonValue };
 
 export interface ModelProvider {
+  /** Opt in only when this provider supports schema-constrained JSON responses. */
+  supportsStructuredOutput?: boolean;
   stream(request: ModelRequest, options: { signal: AbortSignal }): AsyncIterable<ModelChunk>;
 }

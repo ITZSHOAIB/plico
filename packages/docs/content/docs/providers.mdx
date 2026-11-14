@@ -34,6 +34,14 @@ was loaded. Keep `.env` out of git.
 Set `model.apiKeyEnv` to read the key from another variable. Set `model.baseURL` to change the
 endpoint. For `openai` and `openai-compatible`, `OPENAI_BASE_URL` is the fallback.
 
+## Structured results
+
+When the agent declares an `output` schema, `anthropic`, `google` and `openai` use their native
+structured response format for object schemas. Choose a model that supports that format.
+`openai-compatible` and project provider modules use a `submit_result` tool instead, as do
+non-object output schemas. Plico validates the final value in both paths. The tool path allows
+one repair turn for missing or invalid output. See [run schemas](/docs/project-layout#agentmd-frontmatter).
+
 ## Long conversations
 
 When a thread outgrows the model's context window, the run fails with a clear message to start a
