@@ -10,7 +10,7 @@ npx plico validate
 ## Commands
 
 - `plico validate [path]`
-- `plico run [--message <text>] [path]` runs the agent with its configured model
+- `plico run [--message <text>] [--input <json> | --input-file <path>] [path]` runs the agent with its configured model; `--input` is typed input for an agent with an `input` schema
 - `plico run --dry [--persist] [--script <file>] [path]` runs with a scripted model, no key needed
 - `plico runs [path]` and `plico events <runId> [--after <sequence>] [path]`
 - `plico cancel <runId> [path]`

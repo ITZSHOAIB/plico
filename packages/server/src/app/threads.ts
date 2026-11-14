@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { resolve } from "node:path";
 import type { Thread, ThreadArtifactWorkspace, ThreadMessage } from "@plico-ai/contracts";
+import { prepareRunMessage } from "@plico-ai/core";
 import { buildArtifactWorkspace, runProject, ThreadBusyError } from "@plico-ai/runtime";
 import { finishFailedThreadRun } from "../thread-failure.js";
 import { PlicoError } from "./errors.js";
@@ -90,7 +91,11 @@ export async function sendMessage(
 ): Promise<ThreadMessage> {
   const store = storeFor(deps);
   const thread = await requireThread(deps, threadId);
-  if (typeof content !== "string" || !content.trim())
+  const hasInput = options.input !== undefined;
+  if (
+    (hasInput && content !== undefined && typeof content !== "string") ||
+    (!hasInput && (typeof content !== "string" || !content.trim()))
+  )
     throw new PlicoError("message.invalid", "Message content must be a nonempty string.");
   const startRun = options.startRun !== false;
   const context = readMetadata(options.context, "context") ?? deps.context;
@@ -108,13 +113,24 @@ export async function sendMessage(
       "threads.store_mismatch",
       "Thread and run stores must use the same database.",
     );
+  let text = content;
+  if (startRun) {
+    const prepared = await prepareRunMessage(deps.projectRoot, {
+      content: content as string | undefined,
+      input: options.input,
+    });
+    if (!prepared.ok) throw new PlicoError("input.invalid", prepared.errors.join("; "));
+    text = prepared.message;
+  }
+  if (typeof text !== "string" || !text.trim())
+    throw new PlicoError("message.invalid", "Message content must be a nonempty string.");
   const runId = startRun ? `run-${randomUUID()}` : undefined;
   const providerKey = deps.providerAccountKey ?? deps.providerRecoveryKey;
   let message: ThreadMessage | undefined;
   try {
     message = await store.addMessage(
       thread.id,
-      content,
+      text,
       runId,
       providerKey
         ? {
@@ -136,7 +152,7 @@ export async function sendMessage(
       threadId: thread.id,
       ...(thread.metadata === undefined ? {} : { metadata: thread.metadata }),
       ...(context === undefined ? {} : { context }),
-      content,
+      content: text,
       history: history.map(({ role, content }) => ({ role, content })),
     });
   }
