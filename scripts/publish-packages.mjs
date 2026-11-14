@@ -99,7 +99,9 @@ export async function publishPackages({
         tag,
         "--registry=https://registry.npmjs.org",
       ];
-      if (dry) args.push("--dry-run");
+      // Newer npm checks registry version collisions even in dry runs. Force only that
+      // simulation so released tarballs are inspected; never relax real publish checks.
+      if (dry) args.push("--dry-run", "--force");
       execute("npm", args, { cwd: root, stdio: "inherit" });
       console.log(`${dry ? "dry run: would publish" : "published"} ${name}@${version} (${tag})`);
       published += 1;

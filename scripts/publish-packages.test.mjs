@@ -22,6 +22,7 @@ it("dry-runs every tarball, including released versions, without registry querie
   expect(commands.filter(([, operation]) => operation === "publish")).toHaveLength(2);
   for (const command of commands.filter(([, operation]) => operation === "publish")) {
     expect(command).toContain("--dry-run");
+    expect(command).toContain("--force");
   }
 });
 
@@ -38,6 +39,7 @@ it("skips published versions during recovery", async () => {
   expect(publishes).toHaveLength(1);
   expect(publishes[0][1][1]).toContain("plico-ai-sdk-0.1.2.tgz");
   expect(publishes[0][1]).not.toContain("--dry-run");
+  expect(publishes[0][1]).not.toContain("--force");
 });
 
 it("aborts before any publishing when a registry check fails", async () => {
