@@ -1,5 +1,21 @@
 # @plico-ai/server
 
+## 0.1.2
+
+### Patch Changes
+
+- 9b529c9: An agent with an `input` schema now takes typed input. `POST /v1/threads/:id/messages` and `plico.threads.send` accept `input`, and `plico run` accepts `--input` or `--input-file`. A missing or invalid value is rejected before any run starts: HTTP 400 `input.invalid` with each problem listed, or exit code 1 on the CLI.
+- Updated dependencies [959276e]
+- Updated dependencies [102dea6]
+- Updated dependencies [9b529c9]
+- Updated dependencies [c5f5a13]
+- Updated dependencies [c6d5eb9]
+- Updated dependencies [73426c2]
+- Updated dependencies [0ab0e80]
+  - @plico-ai/runtime@0.1.2
+  - @plico-ai/core@0.1.2
+  - @plico-ai/contracts@0.1.2
+
 ## 0.1.1
 
 ### Patch Changes

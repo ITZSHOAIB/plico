@@ -1,5 +1,24 @@
 # @plico-ai/cli
 
+## 0.1.2
+
+### Patch Changes
+
+- 959276e: Scripts can decide approvals: an `approval.decide` step (`approved: true` or `false`) right after a gated `tool.call` records the decision instead of waiting, so evals can cover the approved and denied paths. `--script` also accepts an eval case object, and script errors list the valid shapes. The `create-plico` scaffold now writes an `AGENTS.md` and `CLAUDE.md` for coding agents and prints the docs link.
+- 93befc9: Validate typed CLI run input before resolving the model provider so schema diagnostics take precedence over model configuration errors.
+- 9b529c9: An agent with an `input` schema now takes typed input. `POST /v1/threads/:id/messages` and `plico.threads.send` accept `input`, and `plico run` accepts `--input` or `--input-file`. A missing or invalid value is rejected before any run starts: HTTP 400 `input.invalid` with each problem listed, or exit code 1 on the CLI.
+- 73426c2: `plico validate` warns about files in `evals/` that `plico eval` would skip, such as a case saved as `name.json`. The scaffolded `tools/readme.md` now describes the full handler context. Docs note that a dry run without `--script` calls no tools.
+- Updated dependencies [959276e]
+- Updated dependencies [102dea6]
+- Updated dependencies [9b529c9]
+- Updated dependencies [c5f5a13]
+- Updated dependencies [c6d5eb9]
+- Updated dependencies [73426c2]
+- Updated dependencies [0ab0e80]
+  - @plico-ai/runtime@0.1.2
+  - @plico-ai/core@0.1.2
+  - @plico-ai/server@0.1.2
+
 ## 0.1.1
 
 ### Patch Changes

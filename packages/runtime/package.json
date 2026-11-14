@@ -1,6 +1,6 @@
 {
   "name": "@plico-ai/runtime",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Plico runtime: linear agent runs, durable event log, tools, evals and readiness checks",
   "license": "Apache-2.0",
   "homepage": "https://plico.sohab.dev",
@@ -53,8 +53,8 @@
     "@ai-sdk/anthropic": "^4.0.99",
     "@ai-sdk/google": "^4.0.114",
     "@ai-sdk/openai": "^4.0.111",
-    "@opentelemetry/context-async-hooks": "2.0.1",
-    "@opentelemetry/sdk-trace-base": "2.0.1",
+    "@opentelemetry/context-async-hooks": "2.8.0",
+    "@opentelemetry/sdk-trace-base": "2.8.0",
     "@types/picomatch": "^4.0.3",
     "zod": "4.6.7"
   },

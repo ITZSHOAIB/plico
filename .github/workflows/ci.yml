@@ -5,30 +5,60 @@ on:
     branches:
       - main
   pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
 
 jobs:
+  dependencies:
+    name: Dependency review
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Reject newly introduced vulnerable dependencies
+        uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          fail-on-severity: moderate
+          license-check: false
+
   validate:
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
-        # 22.18.0 is the engines floor; 24 is the current LTS line.
+        # Check the engines floor and the Node 24 line used for publishing.
         node: ["22.18.0", 24]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Validate workflow syntax and shell scripts
+        if: matrix.os == 'ubuntu-latest' && matrix.node == 24
+        run: |
+          curl --fail --location --retry 3 --output actionlint.tar.gz \
+            https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz
+          echo '8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8  actionlint.tar.gz' | sha256sum --check
+          tar -xzf actionlint.tar.gz actionlint
+          # GitHub supports queue: max; actionlint 1.7.12 has not added that field yet.
+          ./actionlint -ignore 'unexpected key .queue. for .concurrency. section'
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
         with:
           version: 10.12.4
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: ${{ matrix.node }}
           cache: pnpm
@@ -57,10 +87,12 @@ jobs:
 
       - name: Test (Windows)
         if: runner.os == 'Windows'
-        run: pnpm test --maxWorkers=2
+        # Shared Windows runners can exceed 5s during SQLite/filesystem/HTTP integration tests.
+        run: pnpm test --maxWorkers=2 --testTimeout=15000
 
   # Installs the packed tarballs into an empty project, as a published install would.
   smoke:
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
@@ -69,15 +101,17 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
         with:
           version: 10.12.4
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: ${{ matrix.node }}
           cache: pnpm
@@ -95,3 +129,22 @@ jobs:
         run: node scripts/publish-packages.mjs
         env:
           PLICO_PUBLISH_DRY_RUN: "1"
+
+  required:
+    name: CI required
+    if: always()
+    needs: [validate, smoke, dependencies]
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Require all validation and smoke jobs
+        env:
+          VALIDATE: ${{ needs.validate.result }}
+          SMOKE: ${{ needs.smoke.result }}
+          DEPENDENCIES: ${{ needs.dependencies.result }}
+          IS_PR: ${{ github.event_name == 'pull_request' }}
+        run: node scripts/check-ci-results.mjs
