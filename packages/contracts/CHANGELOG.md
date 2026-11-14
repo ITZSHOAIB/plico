@@ -1,5 +1,11 @@
 # @plico-ai/contracts
 
+## 0.1.3
+
+### Patch Changes
+
+- af1a206: Enforce agent output schemas with native structured responses or a submit_result tool with one repair turn. Record validated structuredOutput on completed runs and final events, pin the schema across resume, and report structured output in readiness.
+
 ## 0.1.2
 
 ### Patch Changes

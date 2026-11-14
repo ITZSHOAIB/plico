@@ -1,6 +1,6 @@
 {
   "name": "@plico-ai/server",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Plico native HTTP API over the runtime and event store",
   "license": "Apache-2.0",
   "homepage": "https://plico.sohab.dev",

@@ -1,6 +1,6 @@
 {
   "name": "@plico-ai/contracts",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Types-only shared contracts (events, runs, artifacts, evals, readiness) for Plico packages",
   "license": "Apache-2.0",
   "homepage": "https://plico.sohab.dev",
