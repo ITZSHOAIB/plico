@@ -13,7 +13,7 @@ CI runs the publish script with `PLICO_PUBLISH_DRY_RUN=1` on every pull request.
 
 Release runs are queued, never canceled by a later merge. Superseded PR CI runs are canceled to save contributor time; main CI runs are preserved. The Release run summary explains whether it is preparing a Version Packages PR or publishing a release, and links to the GitHub release when publishing succeeds. A green CI run alone does not mean a version was published; the GitHub release is the completion record.
 
-CODEOWNERS requests maintainer review for package manifests, changelogs, changesets and automation. This puts release approval on the Version Packages PR through GitHub's normal review request, where the versions and notes can be reviewed together. Approve it and enable auto-merge to let GitHub merge once required checks pass.
+CODEOWNERS requests maintainer review for package manifests, changelogs, changesets and automation. This puts release approval on the Version Packages PR through GitHub's normal review request, where the versions and notes can be reviewed together. Each ordinary merge to main force-updates the Version Packages PR, and because the ruleset dismisses stale approvals on push and requires approval of the last push, that update dismisses any earlier approval. Approve it and enable auto-merge after the last ordinary merge you want in the release; GitHub then merges once required checks pass.
 
 npm publishes with trusted publishing: the job asks npm for a short-lived token with its GitHub identity, so no npm token is stored in the repository, and npm attaches a provenance statement linking each package to the commit and workflow that built it.
 
