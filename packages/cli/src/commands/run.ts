@@ -53,11 +53,6 @@ export async function runCommand(args: string[]): Promise<number> {
     if (!dry && (!validation?.ok || !validation.project)) {
       throw new Error("Project is invalid. Run plico validate for details.");
     }
-    const provider = dry
-      ? message === undefined
-        ? undefined
-        : createFakeProvider()
-      : resolveModelProvider(validation?.project?.config.model, target);
     if (!dry) {
       const prepared = await prepareRunMessage(target, {
         content: message,
@@ -66,6 +61,11 @@ export async function runCommand(args: string[]): Promise<number> {
       if (!prepared.ok) throw new Error(prepared.errors.join("\n"));
       message = prepared.message ?? (await resolveMessage(undefined));
     }
+    const provider = dry
+      ? message === undefined
+        ? undefined
+        : createFakeProvider()
+      : resolveModelProvider(validation?.project?.config.model, target);
     const recoveryKey = dry
       ? "plico:dry-fake:v1"
       : validation?.project?.config.model

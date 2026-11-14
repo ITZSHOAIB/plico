@@ -44,6 +44,23 @@ it("refuses invalid --input before any run starts", async () => {
   }
 });
 
+it("reports invalid --input before missing model configuration", async () => {
+  const root = await typedProject();
+  await writeFile(
+    join(root, "plico.config.ts"),
+    'export default { schemaVersion: 1, name: "Demo" };',
+  );
+  const error = vi.spyOn(console, "error").mockImplementation(() => {});
+  try {
+    const code = await main(["node", "plico", "run", "--input", '{"ticket":7}', root]);
+
+    expect(code).toBe(1);
+    expect(error.mock.calls.flat().join("\n")).toContain("ticket: expected string");
+  } finally {
+    vi.restoreAllMocks();
+  }
+});
+
 it("refuses a run with no input when the agent requires it", async () => {
   const root = await typedProject();
   const error = vi.spyOn(console, "error").mockImplementation(() => {});

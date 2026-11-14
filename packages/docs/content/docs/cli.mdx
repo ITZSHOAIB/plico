@@ -25,6 +25,9 @@ than `.plico/plico.sqlite`. `plico run` without `--dry` needs a configured model
 [Model providers](/docs/providers). A dry run prints its events but only saves them with
 `--persist`.
 
+Typed input is validated before the model provider is resolved, so input schema diagnostics
+take precedence over model configuration errors.
+
 ## Scripts
 
 `plico run --dry --script <file>` replays a script instead of calling a model. Without `--script`, a dry run uses a
