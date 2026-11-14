@@ -1,115 +1,169 @@
 name: Release
-
-# Releases go through a "Version Packages" pull request. Changesets collects the notes on every
-# change; merging that pull request publishes the seven packages together. See docs/releasing.md.
+run-name: Release after CI · ${{ github.event.workflow_run.head_sha || inputs.release_sha || github.sha }}
 
 on:
-  push:
-    branches:
-      - main
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
   workflow_dispatch:
+    inputs:
+      release_sha:
+        description: "Full merge SHA of the Version Packages PR to retry (blank for main)"
+        required: false
+        type: string
 
-# Two releases must never publish at once.
+# Queue merges instead of replacing the single pending run. Never interrupt publishing.
 concurrency:
   group: release
   cancel-in-progress: false
+  queue: max
 
 permissions:
   contents: read
 
 jobs:
-  # Opens or updates the "Version Packages" pull request while changesets are waiting on main.
-  version-pr:
-    if: github.event_name == 'push'
+  context:
+    if: >-
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_repository.full_name == github.repository)
     runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+      actions: read
+    outputs:
+      sha: ${{ steps.context.outputs.sha }}
+      publish: ${{ steps.context.outputs.publish }}
+      latest: ${{ steps.context.outputs.latest }}
+    steps:
+      # Never download artifacts or execute code from the triggering workflow.
+      - name: Verify CI and identify the merged release PR
+        id: context
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ inputs.release_sha || github.event.workflow_run.head_sha || github.sha }}
+          MANUAL: ${{ github.event_name == 'workflow_dispatch' }}
+        run: |
+          [[ "$SHA" =~ ^[0-9a-f]{40}$ ]] || { echo 'Expected a full commit SHA'; exit 1; }
+          main=$(gh api "repos/$REPO/commits/main" --jq '.sha')
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+          echo "latest=$([[ "$SHA" == "$main" ]] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          passed=$(gh api "repos/$REPO/actions/workflows/ci.yml/runs?head_sha=$SHA&event=push&status=success" \
+            --jq '[.workflow_runs[] | select(.head_branch == "main")] | length')
+          test "$passed" -gt 0 || { echo 'Release commit must pass main CI first'; exit 1; }
+          candidates=$(gh api "repos/$REPO/commits/$SHA/pulls" --paginate --jq \
+            '.[] | select(.merged_at != null and .base.ref == "main" and .head.ref == "changeset-release/main" and .head.repo.full_name == .base.repo.full_name) | .merge_commit_sha')
+          pr=$(printf '%s\n' "$candidates" | grep -Fx "$SHA" || true)
+          publish=false
+          if test -n "$pr"; then
+            candidate=$(gh api "repos/$REPO/contents/packages/cli/package.json?ref=$SHA" --jq '.content' | base64 --decode | jq -r .version)
+            current=$(gh api "repos/$REPO/contents/packages/cli/package.json?ref=$main" --jq '.content' | base64 --decode | jq -r .version)
+            test "$candidate" = "$current" || { echo 'A newer release supersedes this commit; refusing to move npm tags backwards'; exit 1; }
+            publish=true
+          elif test "$MANUAL" = true; then
+            echo 'Recovery requires the merge SHA of a Version Packages PR'; exit 1
+          fi
+          echo "publish=$publish" >> "$GITHUB_OUTPUT"
+          if test "$publish" = true; then
+            echo "### Publishing the reviewed release at $SHA after successful main CI" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo '### CI passed. Updating the Version Packages PR; no packages will be published.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  version-pr:
+    needs: context
+    if: needs.context.outputs.publish == 'false' && needs.context.outputs.latest == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: write
       pull-requests: write
+      actions: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
-
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: main
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
         with:
           version: 10.12.4
-
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 24
           cache: pnpm
-
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-
       - name: Open or update the Version Packages pull request
-        uses: changesets/action@v1
+        id: changesets
+        uses: changesets/action@a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d # v1
         with:
           version: pnpm version-packages
           commit: "chore: version packages"
           title: "chore: version packages"
         env:
-          # A pull request opened with the default token does not start CI. Add a RELEASE_TOKEN
-          # secret (a fine-grained token with contents and pull requests write) so its checks run.
-          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
+      - name: Run CI on the Version Packages branch without a PAT
+        if: steps.changesets.outputs.hasChangesets == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run ci.yml --ref changeset-release/main
 
-  # Runs when the Version Packages pull request is merged, or by hand to finish a release that
-  # stopped halfway. Merging that pull request is the release approval; the environment allows main only.
   publish:
-    if: >-
-      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
-      contains(github.event.head_commit.message, 'chore: version packages')
+    needs: context
+    if: needs.context.outputs.publish == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     environment: npm-publish
     permissions:
       contents: write
-      # Lets npm trade this run's identity for a short-lived publish token and sign provenance.
       id-token: write
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
+      - name: Checkout the exact commit that passed CI
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ needs.context.outputs.sha }}
+          persist-credentials: false
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
         with:
           version: 10.12.4
-
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 24
-          cache: pnpm
           registry-url: https://registry.npmjs.org
-
-      # Trusted publishing needs npm 11.5.1 or later.
-      - name: Update npm
+      # Do not restore build/dependency caches in the publishing job.
+      - name: Update npm for trusted publishing
         run: npm install --global npm@^11.5.1 && npm --version
-
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-
       - name: Build
         run: pnpm build
-
       - name: Check the packed tarballs install and run
         run: pnpm smoke:tarballs
-
       - name: Publish to npm
         run: pnpm publish:packages
-
       - name: Create the GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
+          RELEASE_SHA: ${{ needs.context.outputs.sha }}
         run: |
           version=$(node -p "require('./packages/cli/package.json').version")
           if gh release view "v$version" >/dev/null 2>&1; then
             echo "Release v$version already exists."
             exit 0
           fi
-          # The notes are the newest section of the CLI changelog; every package repeats it.
           awk -v header="## $version" '$0 == header { found = 1; next } found && /^## / { exit } found' \
             packages/cli/CHANGELOG.md > release-notes.md
+          test -s release-notes.md || { echo 'Release changelog entry is missing'; exit 1; }
           flags=()
           case "$version" in *-*) flags+=(--prerelease) ;; esac
-          gh release create "v$version" --target "$GITHUB_SHA" --title "v$version" --notes-file release-notes.md "${flags[@]}"
+          gh release create "v$version" --target "$RELEASE_SHA" --title "v$version" --notes-file release-notes.md "${flags[@]}"
+          echo "### Published [v$version](https://github.com/$GITHUB_REPOSITORY/releases/tag/v$version)" >> "$GITHUB_STEP_SUMMARY"

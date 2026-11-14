@@ -4,3 +4,10 @@ packages:
 
 onlyBuiltDependencies:
   - esbuild
+
+# Patched floors for transitive dependencies whose parents still pin vulnerable releases.
+overrides:
+  "fast-uri@>=3.0.0 <3.1.9": "3.1.9"
+  "source-map-js@<1.2.2": "1.2.2"
+  "browserslist@<4.28.7": "4.28.7"
+  "baseline-browser-mapping@>=2.0.0 <2.11.0": "2.11.0"

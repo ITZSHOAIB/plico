@@ -9,7 +9,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const windows = process.platform === "win32";
@@ -29,18 +29,10 @@ function publicPackages() {
   return readdirSync(join(root, "packages"), { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
     .map((entry) => join(root, "packages", entry.name))
-    .flatMap((directory) => {
-      try {
-        return [
-          {
-            directory,
-            manifest: JSON.parse(readFileSync(join(directory, "package.json"), "utf8")),
-          },
-        ];
-      } catch {
-        return [];
-      }
-    })
+    .map((directory) => ({
+      directory,
+      manifest: JSON.parse(readFileSync(join(directory, "package.json"), "utf8")),
+    }))
     .filter(({ manifest }) => !manifest.private);
 }
 
@@ -61,37 +53,65 @@ function dependenciesFirst(packages) {
 }
 
 /** True when the registry already has this version. Only a 404 means "not yet"; anything else is an error. */
-function onRegistry(name, version) {
+function onRegistry(name, version, execute) {
   try {
-    return run("npm", ["view", `${name}@${version}`, "version"]).trim() === version;
+    return (
+      execute("npm", [
+        "view",
+        `${name}@${version}`,
+        "version",
+        "--registry=https://registry.npmjs.org",
+      ]).trim() === version
+    );
   } catch (error) {
     if (String(error.stderr).includes("E404")) return false;
     throw error;
   }
 }
 
-const work = await mkdtemp(join(tmpdir(), "plico-publish-"));
-try {
-  let published = 0;
-  for (const { directory, manifest } of dependenciesFirst(publicPackages())) {
-    const { name, version } = manifest;
-    if (onRegistry(name, version)) {
-      console.log(`skip ${name}@${version}: already on npm`);
-      continue;
-    }
-    run("pnpm", ["pack", "--pack-destination", work], { cwd: directory });
-    const tarball = join(work, `${name.replace("@", "").replace("/", "-")}-${version}.tgz`);
-    // A prerelease must not become the version `npm install` picks.
-    const tag = version.includes("-") ? "next" : "latest";
-    const args = ["publish", tarball, "--access", "public", "--tag", tag];
-    if (dryRun) args.push("--dry-run");
-    run("npm", args, { cwd: root });
-    console.log(`${dryRun ? "dry run: would publish" : "published"} ${name}@${version} (${tag})`);
-    published += 1;
+export async function publishPackages({
+  packages = publicPackages(),
+  execute = run,
+  dry = dryRun,
+} = {}) {
+  if (new Set(packages.map(({ manifest }) => manifest.version)).size !== 1) {
+    throw new Error("All public packages must share one version before publishing.");
   }
-  console.log(
-    `${published} package${published === 1 ? "" : "s"} ${dryRun ? "ready" : "published"}.`,
-  );
-} finally {
-  await rm(work, { recursive: true, force: true });
+  // Dry runs must inspect every tarball, even when the version is already on npm.
+  const pending = dry
+    ? packages
+    : packages.filter(({ manifest }) => !onRegistry(manifest.name, manifest.version, execute));
+  const work = await mkdtemp(join(tmpdir(), "plico-publish-"));
+  try {
+    let published = 0;
+    for (const { directory, manifest } of dependenciesFirst(pending)) {
+      const { name, version } = manifest;
+      execute("pnpm", ["pack", "--pack-destination", work], { cwd: directory });
+      const tarball = join(work, `${name.replace("@", "").replace("/", "-")}-${version}.tgz`);
+      // A prerelease must not become the version `npm install` picks.
+      const tag = version.includes("-") ? "next" : "latest";
+      const args = [
+        "publish",
+        tarball,
+        "--access",
+        "public",
+        "--tag",
+        tag,
+        "--registry=https://registry.npmjs.org",
+      ];
+      if (dry) args.push("--dry-run");
+      execute("npm", args, { cwd: root, stdio: "inherit" });
+      console.log(`${dry ? "dry run: would publish" : "published"} ${name}@${version} (${tag})`);
+      published += 1;
+    }
+    console.log(
+      `${published} package${published === 1 ? "" : "s"} ${dry ? "ready" : "published"}; ${packages.length - pending.length} already on npm.`,
+    );
+  } finally {
+    await rm(work, { recursive: true, force: true });
+  }
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
+  await publishPackages();
 }

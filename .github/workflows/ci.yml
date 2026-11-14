@@ -5,12 +5,34 @@ on:
     branches:
       - main
   pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
 
 jobs:
+  dependencies:
+    name: Dependency review
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Reject newly introduced vulnerable dependencies
+        uses: actions/dependency-review-action@2031cfc080254a8a887f58cffee85186f0e49e48 # v4
+        with:
+          fail-on-severity: moderate
+          license-check: false
+
   validate:
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
@@ -20,15 +42,27 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Validate workflow syntax and shell scripts
+        if: matrix.os == 'ubuntu-latest' && matrix.node == 24
+        run: |
+          curl --fail --location --retry 3 --output actionlint.tar.gz \
+            https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz
+          echo '8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8  actionlint.tar.gz' | sha256sum --check
+          tar -xzf actionlint.tar.gz actionlint
+          # GitHub supports queue: max; actionlint 1.7.12 has not added that field yet.
+          ./actionlint -ignore 'unexpected key .queue. for .concurrency. section'
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
         with:
           version: 10.12.4
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: ${{ matrix.node }}
           cache: pnpm
@@ -61,6 +95,7 @@ jobs:
 
   # Installs the packed tarballs into an empty project, as a published install would.
   smoke:
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
@@ -69,15 +104,17 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
         with:
           version: 10.12.4
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: ${{ matrix.node }}
           cache: pnpm
@@ -95,3 +132,24 @@ jobs:
         run: node scripts/publish-packages.mjs
         env:
           PLICO_PUBLISH_DRY_RUN: "1"
+
+  required:
+    name: CI required
+    if: always()
+    needs: [validate, smoke, dependencies]
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Require all validation and smoke jobs
+        env:
+          VALIDATE: ${{ needs.validate.result }}
+          SMOKE: ${{ needs.smoke.result }}
+          DEPENDENCIES: ${{ needs.dependencies.result }}
+          IS_PR: ${{ github.event_name == 'pull_request' }}
+        run: |
+          test "$VALIDATE" = success && test "$SMOKE" = success
+          if test "$IS_PR" = true; then
+            test "$DEPENDENCIES" = success
+          else
+            test "$DEPENDENCIES" = skipped
+          fi
