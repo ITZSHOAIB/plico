@@ -36,7 +36,7 @@
     "@plico-ai/contracts": "workspace:*",
     "@plico-ai/core": "workspace:*",
     "@plico-ai/runtime": "workspace:*",
-    "diff": "8.0.4",
+    "diff": "9.0.0",
     "hono": "4.13.17"
   },
   "scripts": {
