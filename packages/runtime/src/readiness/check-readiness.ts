@@ -7,6 +7,7 @@ import { checkEvals } from "./checks/evals.js";
 import { checkPersistence } from "./checks/persistence.js";
 import { checkProject } from "./checks/project.js";
 import { checkProvider } from "./checks/provider.js";
+import { checkRunOutput } from "./checks/run-output.js";
 import { checkServerConfig } from "./checks/server-config.js";
 import { checkStudio } from "./checks/studio.js";
 import { checkThreadStore } from "./checks/thread-store.js";
@@ -30,6 +31,7 @@ export async function checkReadiness(
   diagnostics.push(
     ...checkEnv(projectRoot),
     ...checkProvider(projectCheck.project.config.model),
+    ...(await checkRunOutput(projectCheck.project)),
     checkArtifactAccess(projectCheck.project.config),
     ...(await checkTools(projectCheck.project)),
     ...(await checkEvals(projectRoot, database.eventStore)),

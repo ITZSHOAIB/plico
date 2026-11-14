@@ -1,14 +1,14 @@
-import { randomUUID } from "node:crypto";
-import { setTimeout as delay } from "node:timers/promises";
-import type { ProjectConfig } from "@plico-ai/contracts";
+import type { JsonSchema, ProjectConfig } from "@plico-ai/contracts";
 import { ARTIFACT_TOOL_NAMES, type Skill } from "@plico-ai/core";
 import { RunCancelled, type RunContext } from "../../engine/index.js";
-import { ModelProviderError, RuntimeDiagnosticError } from "../../errors.js";
+import { RuntimeDiagnosticError } from "../../errors.js";
 import type { InMemoryEventLog } from "../../events.js";
 import { approvalTimeoutMs, decideApproval } from "../../policy/approval.js";
 import { createArtifactModelTools } from "../../tools/artifact-model-tools.js";
 import { createSkillModelTool } from "../../tools/skill-model-tool.js";
 import type { DeclaredTool, EventStore, ModelProvider, ModelRequest } from "../../types/index.js";
+import { requestModel } from "../model-step.js";
+import { createStructuredOutput, type ProviderRunOutput } from "../structured-output.js";
 import { runToolStep } from "../tool-step.js";
 import { nameToolStep } from "../tracing.js";
 import { awaitApproval } from "./approval.js";
@@ -26,8 +26,15 @@ export async function runProviderBackedRun(
   config: ProjectConfig,
   history: Array<Pick<import("../../types/index.js").ProviderMessage, "role" | "content">> = [],
   skills: Skill[] = [],
-): Promise<string> {
+  outputSchema?: JsonSchema,
+): Promise<ProviderRunOutput> {
   const maxSteps = model?.maxSteps ?? 10;
+  if (outputSchema !== undefined && tools.some((tool) => tool.name === "submit_result")) {
+    throw new RuntimeDiagnosticError({
+      phase: "output.validation",
+      message: "Tool name submit_result is reserved when the agent declares an output schema.",
+    });
+  }
   if (!message) {
     throw new RuntimeDiagnosticError({
       phase: "provider",
@@ -52,6 +59,17 @@ export async function runProviderBackedRun(
       description: tool.description,
       inputSchema: tool.inputSchema,
     }));
+  // Native response formats commonly require an object at the root. The result tool wraps
+  // other JSON values so primitives, arrays and boolean schemas work with every provider.
+  const nativeOutput =
+    provider.supportsStructuredOutput === true &&
+    typeof outputSchema === "object" &&
+    outputSchema.type === "object";
+  const structured =
+    outputSchema === undefined
+      ? undefined
+      : await createStructuredOutput(outputSchema, nativeOutput);
+  providerTools.push(...(structured?.tools ?? []));
 
   const messages: ModelRequest["messages"] = [
     { role: "system", content: instructions },
@@ -67,64 +85,14 @@ export async function runProviderBackedRun(
       messages,
       maxSteps,
       tools: providerTools,
+      ...(outputSchema !== undefined && nativeOutput ? { outputSchema } : {}),
     };
 
-    await events.append("model.request", {
-      ...(model ? { model: { provider: model.provider, name: model.name } } : {}),
-      messages: modelRequest.messages,
-      maxSteps: modelRequest.maxSteps,
-      tools: providerTools,
-    });
+    const modelResponse = await requestModel(ctx, provider, modelRequest, events, turn, model);
 
-    const modelResponse = await ctx.step(
-      `model:${turn}`,
-      async ({ signal, attempt }) => {
-        events.skipModelDeltas(turn);
-        if (attempt > 0)
-          await delay((model?.retryDelayMs ?? 100) * 2 ** (attempt - 1), undefined, { signal });
-        const attemptId = randomUUID();
-        await events.append("model.attempt", { turn, attemptId });
-        let content = "";
-        const toolCalls: NonNullable<import("../../types/index.js").ModelResponse["toolCalls"]> =
-          [];
-        let providerMetadata: import("@plico-ai/contracts").JsonValue | undefined;
-        let usage: import("../../types/index.js").ModelResponse["usage"] | undefined;
-        for await (const chunk of provider.stream(modelRequest, { signal })) {
-          if (chunk.type === "text") {
-            content += chunk.text;
-            await events.append("model.delta", { turn, attemptId, text: chunk.text });
-          } else if (chunk.type === "tool.call") toolCalls.push(chunk.call);
-          else {
-            usage = chunk.usage;
-            providerMetadata = chunk.providerMetadata;
-          }
-        }
-        if (signal.aborted) throw new RunCancelled();
-        if (!usage) throw new Error("Model stream ended without a finish.");
-        return {
-          content,
-          usage,
-          attemptId,
-          ...(providerMetadata === undefined ? {} : { providerMetadata }),
-          ...(toolCalls.length ? { toolCalls } : {}),
-        };
-      },
-      {
-        retries: model?.retries ?? 2,
-        shouldRetry: (error) => error instanceof ModelProviderError && error.retryable,
-      },
-    );
-    events.skipModelDeltas(turn);
-
-    await events.append("model.response", {
-      attemptId: modelResponse.attemptId,
-      ...(modelResponse.providerMetadata === undefined
-        ? {}
-        : { providerMetadata: modelResponse.providerMetadata }),
-      content: modelResponse.content,
-      usage: modelResponse.usage,
-      toolCalls: modelResponse.toolCalls,
-    });
+    const action = await structured?.handle(modelResponse, messages, events, turn + 1 < maxSteps);
+    if (action?.kind === "complete") return action.result;
+    if (action?.kind === "repair") continue;
 
     if (modelResponse.toolCalls === undefined || modelResponse.toolCalls.length === 0) {
       const finalContent = modelResponse.content;
@@ -132,7 +100,7 @@ export async function runProviderBackedRun(
         await events.append("assistant.output", { content: finalContent });
         output = finalContent;
       }
-      return output ?? finalContent;
+      return { output: output ?? finalContent };
     }
 
     messages.push({

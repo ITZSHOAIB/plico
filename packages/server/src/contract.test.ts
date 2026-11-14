@@ -163,6 +163,77 @@ function post(body: unknown): RequestInit {
   };
 }
 
+it("records additive structured output fields without changing legacy output", async () => {
+  await writeFile(
+    join(root, "agent.md"),
+    "---\noutput:\n  type: object\n  properties:\n    ticket:\n      type: string\n  required: [ticket]\n---\nTriage tickets.\n",
+  );
+  try {
+    const result = await runProject(root, {
+      message: "Triage",
+      eventStore,
+      provider: {
+        supportsStructuredOutput: true,
+        async *stream() {
+          yield { type: "text", text: '{"ticket":"T-1"}' };
+          yield { type: "finish", usage: { inputTokens: 1, outputTokens: 1 } };
+        },
+      },
+    });
+    expect(result.status).toBe("completed");
+    expect(result.output).toBe('{"ticket":"T-1"}');
+    const response = await fetch(`${baseUrl}/v1/runs/${result.runId}/events`);
+    expect(response.status).toBe(200);
+    const events = (await response.json()) as typeof result.events;
+    expect(
+      shapeOf({
+        structuredOutput: result.structuredOutput,
+        completed: events.find((event) => event.type === "run.completed")?.payload,
+        pinnedSchema: events.find((event) => event.type === "instructions.composed")?.payload
+          .outputSchema,
+        requestedSchema: events.find((event) => event.type === "model.request")?.payload
+          .outputSchema,
+      }),
+    ).toMatchInlineSnapshot(`
+      {
+        "completed": {
+          "output": "string",
+          "structuredOutput": {
+            "ticket": "string",
+          },
+        },
+        "pinnedSchema": {
+          "properties": {
+            "ticket": {
+              "type": "string",
+            },
+          },
+          "required": [
+            "string",
+          ],
+          "type": "string",
+        },
+        "requestedSchema": {
+          "properties": {
+            "ticket": {
+              "type": "string",
+            },
+          },
+          "required": [
+            "string",
+          ],
+          "type": "string",
+        },
+        "structuredOutput": {
+          "ticket": "string",
+        },
+      }
+    `);
+  } finally {
+    await writeFile(join(root, "agent.md"), "# Demo\n");
+  }
+});
+
 // A failure here means a wire shape changed. Additive changes: update the snapshot
 // with vitest -u. Breaking changes after the first publish: see product/adrs/0006.
 it("keeps the /v1 response shapes stable", async () => {

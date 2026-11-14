@@ -1,4 +1,4 @@
-import type { PlicoEvent, RunResult, RunStatus } from "@plico-ai/contracts";
+import type { JsonValue, PlicoEvent, RunResult, RunStatus } from "@plico-ai/contracts";
 import type { ValidationIssue } from "@plico-ai/core";
 import type { EventStore } from "../types/index.js";
 
@@ -10,6 +10,7 @@ export interface FinalizeRunInput {
   startedAt: string;
   events: PlicoEvent[];
   output?: string | undefined;
+  structuredOutput?: JsonValue | undefined;
   errors?: ValidationIssue[] | undefined;
   eventStore?: EventStore | undefined;
 }
@@ -20,6 +21,7 @@ export async function finalizeRun(input: FinalizeRunInput): Promise<RunResult> {
     runId: input.runId,
     status: input.status,
     ...(input.output === undefined ? {} : { output: input.output }),
+    ...(input.structuredOutput === undefined ? {} : { structuredOutput: input.structuredOutput }),
     events: input.events,
     ...(input.errors === undefined ? {} : { errors: input.errors }),
   };

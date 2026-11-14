@@ -28,6 +28,9 @@ than `.plico/plico.sqlite`. `plico run` without `--dry` needs a configured model
 Typed input is validated before the model provider is resolved, so input schema diagnostics
 take precedence over model configuration errors.
 
+For an agent with an `output` schema, `plico run --json` includes the validated value in
+`structuredOutput`. A scripted run's final output must be JSON matching that schema.
+
 ## Scripts
 
 `plico run --dry --script <file>` replays a script instead of calling a model. Without `--script`, a dry run uses a

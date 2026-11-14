@@ -1,7 +1,8 @@
-import type { ValidationIssue } from "@plico-ai/contracts";
+import type { JsonSchema, ValidationIssue } from "@plico-ai/contracts";
 import { type LoadedProject, readSkills, type Skill } from "@plico-ai/core";
 import type { InMemoryEventLog } from "../events.js";
 import { composeInstructions } from "../instructions.js";
+import { readOutputSchema } from "../output-schema.js";
 
 /**
  * Records the instructions and skills a run starts with. A run that resumes reuses what it
@@ -10,20 +11,28 @@ import { composeInstructions } from "../instructions.js";
 export async function pinInstructions(
   project: LoadedProject,
   events: InMemoryEventLog,
-): Promise<{ instructions: { content: string }; skills: Skill[] }> {
+): Promise<{ instructions: { content: string }; skills: Skill[]; outputSchema?: JsonSchema }> {
   const recorded = events.all().find((event) => event.type === "instructions.composed");
   if (recorded?.type === "instructions.composed") {
     await events.append("instructions.composed", recorded.payload);
     // Runs recorded before skills were pinned fall back to the skills on disk.
     const skills = recorded.payload.skills ?? (await readSkills(project.root)).skills;
-    return { instructions: { content: recorded.payload.content }, skills };
+    return {
+      instructions: { content: recorded.payload.content },
+      skills,
+      ...(recorded.payload.outputSchema === undefined
+        ? {}
+        : { outputSchema: recorded.payload.outputSchema }),
+    };
   }
   const { skills } = await readSkills(project.root);
   const instructions = await composeInstructions(project, skills);
+  const outputSchema = await readOutputSchema(project);
   await events.append("instructions.composed", {
     length: instructions.content.length,
     sources: instructions.sources,
     content: instructions.content,
+    ...(outputSchema === undefined ? {} : { outputSchema }),
     skills: skills.map(({ name, description, source, body }) => ({
       name,
       description,
@@ -31,7 +40,7 @@ export async function pinInstructions(
       body,
     })),
   });
-  return { instructions, skills };
+  return { instructions, skills, ...(outputSchema === undefined ? {} : { outputSchema }) };
 }
 
 /**
