@@ -55,7 +55,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
 
   # Runs when the Version Packages pull request is merged, or by hand to finish a release that
-  # stopped halfway. A person must approve the `npm-publish` environment before anything is sent.
+  # stopped halfway. Merging that pull request is the release approval; the environment allows main only.
   publish:
     if: >-
       (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
