@@ -1,5 +1,9 @@
 # Request maintainer review for changes to automation and publishing controls.
 /.github/ @ITZSHOAIB
 /scripts/ @ITZSHOAIB
+/package.json @ITZSHOAIB
 /pnpm-lock.yaml @ITZSHOAIB
-/.changeset/config.json @ITZSHOAIB
+/pnpm-workspace.yaml @ITZSHOAIB
+/.changeset/ @ITZSHOAIB
+/packages/*/package.json @ITZSHOAIB
+/packages/*/CHANGELOG.md @ITZSHOAIB
