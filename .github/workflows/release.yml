@@ -1,5 +1,5 @@
 name: Release
-run-name: Release after CI · ${{ github.event.workflow_run.head_sha || inputs.release_sha || github.sha }}
+run-name: Release after CI · ${{ github.event.workflow_run.display_title || inputs.release_sha || github.sha }}
 
 on:
   workflow_run:
@@ -24,6 +24,7 @@ permissions:
 
 jobs:
   context:
+    name: Check main CI and release intent
     if: >-
       (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
       (github.event.workflow_run.conclusion == 'success' &&
@@ -76,6 +77,7 @@ jobs:
           fi
 
   version-pr:
+    name: Prepare Version Packages PR
     needs: context
     if: needs.context.outputs.publish == 'false' && needs.context.outputs.latest == 'true'
     runs-on: ubuntu-latest
@@ -118,6 +120,7 @@ jobs:
         run: gh workflow run ci.yml --ref changeset-release/main
 
   publish:
+    name: Publish reviewed packages to npm
     needs: context
     if: needs.context.outputs.publish == 'true'
     runs-on: ubuntu-latest
