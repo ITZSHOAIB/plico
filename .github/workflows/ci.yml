@@ -91,7 +91,8 @@ jobs:
 
       - name: Test (Windows)
         if: runner.os == 'Windows'
-        run: pnpm test --maxWorkers=2
+        # Shared Windows runners can exceed 5s during SQLite/filesystem/HTTP integration tests.
+        run: pnpm test --maxWorkers=2 --testTimeout=15000
 
   # Installs the packed tarballs into an empty project, as a published install would.
   smoke:
@@ -140,16 +141,14 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - name: Require all validation and smoke jobs
         env:
           VALIDATE: ${{ needs.validate.result }}
           SMOKE: ${{ needs.smoke.result }}
           DEPENDENCIES: ${{ needs.dependencies.result }}
           IS_PR: ${{ github.event_name == 'pull_request' }}
-        run: |
-          test "$VALIDATE" = success && test "$SMOKE" = success
-          if test "$IS_PR" = true; then
-            test "$DEPENDENCIES" = success
-          else
-            test "$DEPENDENCIES" = skipped
-          fi
+        run: node scripts/check-ci-results.mjs

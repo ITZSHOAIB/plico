@@ -30,6 +30,8 @@ A change people who install the packages can see needs a changeset (`pnpm change
 
 Pull requests run validation and packed-install smoke checks on Linux and Windows, on Node 22.18 and 24. `CI required` summarizes the matrix results. Pushing another commit cancels the previous PR checks; main checks and release jobs are preserved. Fork PRs use read-only workflow permissions and may need the maintainer to approve their first workflow run.
 
+Windows CI limits test workers to two and gives each integration test 15 seconds to accommodate shared-runner filesystem and HTTP overhead. Assertion failures still fail the job; tests are not retried automatically.
+
 Merging a normal PR does not publish a package. After main CI passes, Changesets collects pending release notes in a Version Packages PR. Merging that PR is the release approval; successful main CI then starts publishing automatically.
 
 ## Try the example
