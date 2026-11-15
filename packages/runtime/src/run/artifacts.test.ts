@@ -161,35 +161,38 @@ it("does not load thread artifact history for a tool that does not use artifacts
 it.each([
   ["traversal path", "../x", "Uint8Array.from([1])"],
   ["oversized bytes", "large.bin", "new Uint8Array(1024 * 1024 + 1)"],
-])("rejects artifact writes with a %s without appending a write event", async (_label, path, contentExpression) => {
-  const root = await mkdtemp(join(tmpdir(), "plico-invalid-artifact-"));
-  for (const dir of ["skills", "tools", "evals", "artifacts", "memory"])
-    await mkdir(join(root, dir));
-  await writeFile(
-    join(root, "plico.config.ts"),
-    'export default { schemaVersion: 1, name: "Demo" };',
-  );
-  await writeFile(join(root, "agent.md"), "# Demo");
-  await writeFile(
-    join(root, "tools", "invalid.tool.ts"),
-    `export default {
+])(
+  "rejects artifact writes with a %s without appending a write event",
+  async (_label, path, contentExpression) => {
+    const root = await mkdtemp(join(tmpdir(), "plico-invalid-artifact-"));
+    for (const dir of ["skills", "tools", "evals", "artifacts", "memory"])
+      await mkdir(join(root, dir));
+    await writeFile(
+      join(root, "plico.config.ts"),
+      'export default { schemaVersion: 1, name: "Demo" };',
+    );
+    await writeFile(join(root, "agent.md"), "# Demo");
+    await writeFile(
+      join(root, "tools", "invalid.tool.ts"),
+      `export default {
     name: "invalid", description: "Try invalid write",
     inputSchema: { type: "object", properties: {}, additionalProperties: false },
     capabilities: [], approval: { required: false },
     handler: async (_input, { artifacts }) => artifacts.write(${JSON.stringify(path)}, ${contentExpression}),
   };`,
-  );
-  const run = await runProject(root, {
-    runId: `run-invalid-${String(path).replace(/[^a-z]/g, "")}`,
-    script: [{ type: "tool.call", toolName: "invalid", arguments: {} }],
-  });
+    );
+    const run = await runProject(root, {
+      runId: `run-invalid-${String(path).replace(/[^a-z]/g, "")}`,
+      script: [{ type: "tool.call", toolName: "invalid", arguments: {} }],
+    });
 
-  expect(run.status).toBe("failed");
-  expect(run.events.some((event) => event.type === "artifact.file.written")).toBe(false);
-  expect(run.events.find((event) => event.type === "run.error")).toMatchObject({
-    payload: { message: expect.stringMatching(/artifact path|artifact content.*1 MiB/i) },
-  });
-});
+    expect(run.status).toBe("failed");
+    expect(run.events.some((event) => event.type === "artifact.file.written")).toBe(false);
+    expect(run.events.find((event) => event.type === "run.error")).toMatchObject({
+      payload: { message: expect.stringMatching(/artifact path|artifact content.*1 MiB/i) },
+    });
+  },
+);
 
 it("encodes a Uint8Array returned by a tool as a tagged artifact value", async () => {
   const root = await mkdtemp(join(tmpdir(), "plico-tool-binary-result-"));

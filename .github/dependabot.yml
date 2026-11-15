@@ -11,6 +11,11 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    ignore:
+      # OTel SDK 2.x peers on @opentelemetry/api <1.10. A newer API minor in the runtime than the
+      # host registers makes the global API reject it, so Plico spans fall back to a no-op tracer.
+      - dependency-name: "@opentelemetry/api"
+        update-types: ["version-update:semver-minor"]
     groups:
       security:
         applies-to: security-updates

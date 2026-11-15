@@ -50,7 +50,7 @@ export function createMemoryJournal(): Journal {
     },
     async claimWaiting(runId, lease, expected) {
       const run = runs.get(runId);
-      if (!run || run.state !== "waiting") return false;
+      if (run?.state !== "waiting") return false;
       if (
         expected &&
         (run.lease.workerId !== expected.workerId || run.lease.until !== expected.until)

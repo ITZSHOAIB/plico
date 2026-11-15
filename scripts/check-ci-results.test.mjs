@@ -34,14 +34,14 @@ it.each([
   expect(result.stderr).toContain(`${job}=`);
 });
 
-it.each([
-  passing,
-  { ...passing, IS_PR: "false", DEPENDENCIES: "skipped" },
-])("accepts successful PR or main checks", (results) => {
-  const result = spawnSync(process.execPath, [script], {
-    env: { ...process.env, ...results },
-    encoding: "utf8",
-  });
-  expect(result.status).toBe(0);
-  expect(result.stderr).toBe("");
-});
+it.each([passing, { ...passing, IS_PR: "false", DEPENDENCIES: "skipped" }])(
+  "accepts successful PR or main checks",
+  (results) => {
+    const result = spawnSync(process.execPath, [script], {
+      env: { ...process.env, ...results },
+      encoding: "utf8",
+    });
+    expect(result.status).toBe(0);
+    expect(result.stderr).toBe("");
+  },
+);
