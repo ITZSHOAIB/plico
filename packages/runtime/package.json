@@ -53,7 +53,7 @@
     "@ai-sdk/anthropic": "^4.0.99",
     "@ai-sdk/google": "^4.0.114",
     "@ai-sdk/openai": "^4.0.111",
-    "@opentelemetry/context-async-hooks": "2.8.0",
+    "@opentelemetry/context-async-hooks": "3.1.1",
     "@opentelemetry/sdk-trace-base": "2.8.0",
     "@types/picomatch": "^4.0.3",
     "zod": "4.6.7"
