@@ -1,5 +1,14 @@
 # @plico-ai/cli
 
+## 0.1.3
+
+### Patch Changes
+
+- Updated dependencies [af1a206]
+  - @plico-ai/runtime@0.1.3
+  - @plico-ai/core@0.1.3
+  - @plico-ai/server@0.1.3
+
 ## 0.1.2
 
 ### Patch Changes
