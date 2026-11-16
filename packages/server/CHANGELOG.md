@@ -1,5 +1,15 @@
 # @plico-ai/server
 
+## 0.1.4
+
+### Patch Changes
+
+- 2197cc3: Expose typed run schemas and results: `GET /v1/schemas` returns the agent's `input` and `output` schemas as JSON Schema (also on scoped mounts), run summaries from `GET /v1/runs` and `GET /v1/runs/<run-id>` include `structuredOutput`, and Studio shows the declared schemas under Instructions and the validated result in the run inspector.
+- Updated dependencies [2197cc3]
+  - @plico-ai/contracts@0.1.4
+  - @plico-ai/core@0.1.4
+  - @plico-ai/runtime@0.1.4
+
 ## 0.1.3
 
 ### Patch Changes
