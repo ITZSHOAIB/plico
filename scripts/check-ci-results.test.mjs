@@ -3,7 +3,12 @@ import { fileURLToPath } from "node:url";
 import { expect, it } from "vitest";
 
 const script = fileURLToPath(new URL("./check-ci-results.mjs", import.meta.url));
-const passing = { VALIDATE: "success", SMOKE: "success", DEPENDENCIES: "success", IS_PR: "true" };
+const passing = {
+  VALIDATE: "success",
+  SMOKE: "success",
+  DEPENDENCIES: "success",
+  REVIEWS_DEPENDENCIES: "true",
+};
 
 it("rejects a matrix failure even when dependency review passes", () => {
   const result = spawnSync(process.execPath, [script], {
@@ -24,7 +29,7 @@ it.each([
   ["DEPENDENCIES", "failure"],
   ["DEPENDENCIES", "skipped"],
   ["DEPENDENCIES", "cancelled"],
-  ["IS_PR", ""],
+  ["REVIEWS_DEPENDENCIES", ""],
 ])("rejects %s=%s rather than silently passing", (job, state) => {
   const result = spawnSync(process.execPath, [script], {
     env: { ...process.env, ...passing, [job]: state },
@@ -36,8 +41,8 @@ it.each([
 
 it.each([
   passing,
-  { ...passing, IS_PR: "false", DEPENDENCIES: "skipped" },
-])("accepts successful PR or main checks", (results) => {
+  { ...passing, REVIEWS_DEPENDENCIES: "false", DEPENDENCIES: "skipped" },
+])("accepts successful reviewed or unreviewed checks", (results) => {
   const result = spawnSync(process.execPath, [script], {
     env: { ...process.env, ...results },
     encoding: "utf8",

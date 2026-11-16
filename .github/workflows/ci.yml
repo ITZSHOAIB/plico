@@ -15,15 +15,18 @@ permissions:
   contents: read
 
 jobs:
+  # Also runs when Release or the dependency changeset workflow dispatches CI on a PR branch.
   dependencies:
     name: Dependency review
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/main')
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - name: Reject newly introduced vulnerable dependencies
         uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
         with:
+          base-ref: ${{ github.event.pull_request.base.sha || 'main' }}
+          head-ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fail-on-severity: moderate
           license-check: false
 
@@ -146,5 +149,5 @@ jobs:
           VALIDATE: ${{ needs.validate.result }}
           SMOKE: ${{ needs.smoke.result }}
           DEPENDENCIES: ${{ needs.dependencies.result }}
-          IS_PR: ${{ github.event_name == 'pull_request' }}
+          REVIEWS_DEPENDENCIES: ${{ github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/main') }}
         run: node scripts/check-ci-results.mjs
