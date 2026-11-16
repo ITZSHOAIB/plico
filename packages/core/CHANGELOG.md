@@ -1,5 +1,13 @@
 # @plico-ai/core
 
+## 0.1.5
+
+### Patch Changes
+
+- bedb438: `plico.config.ts` can import local TypeScript modules and the project's installed packages, so Zod `input` and `output` schemas in the config now load and validate. Previously any import other than `@plico-ai/sdk` failed.
+- @plico-ai/contracts@0.1.5
+  - @plico-ai/sdk@0.1.5
+
 ## 0.1.4
 
 ### Patch Changes

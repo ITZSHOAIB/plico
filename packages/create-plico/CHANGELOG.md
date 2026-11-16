@@ -1,5 +1,12 @@
 # create-plico
 
+## 0.1.5
+
+### Patch Changes
+
+- Updated dependencies [bedb438]
+  - @plico-ai/core@0.1.5
+
 ## 0.1.4
 
 ### Patch Changes
