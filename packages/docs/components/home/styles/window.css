@@ -1,0 +1,59 @@
+/* Windows of the homepage's desktop, and the cables between them */
+.ph-window {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border: 1px solid var(--ph-line-strong);
+}
+.ph-window > .ph-shadow {
+  inset: -1px;
+}
+/* The paper is a layer over the shadow: in the window's own stacking context a background would sit under it */
+.ph-window::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--ph-paper);
+}
+
+/* A title bar's stripes: four hairlines, three px apart, across its middle */
+.ph-titlebar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  height: 1.75rem;
+  flex: none;
+  padding: 0 0.4rem;
+  border-bottom: 1px solid var(--ph-line-strong);
+}
+.ph-titlebar::before {
+  content: "";
+  position: absolute;
+  inset: 0 0.4rem;
+  height: 11px;
+  margin: auto 0;
+  background: linear-gradient(var(--ph-line-strong) 1px, transparent 1px) 0 0 / auto 3px;
+}
+.ph-titlebar-box {
+  position: relative;
+  width: 0.875rem;
+  height: 0.875rem;
+  flex: none;
+  border: 1px solid var(--ph-line-strong);
+  background: var(--ph-paper);
+}
+.ph-titlebar-title {
+  position: relative;
+  min-width: 0;
+  margin: 0 auto;
+  padding: 0 0.5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  background: var(--ph-paper);
+  font: 0.75rem / 1rem var(--font-mono);
+}

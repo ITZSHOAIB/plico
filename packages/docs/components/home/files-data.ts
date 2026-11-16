@@ -20,6 +20,9 @@ export const sources: SourceFile[] = [
     path: "skills/triage/SKILL.md",
     label: "Teach a workflow",
     lines: [
+      "---",
+      "description: Choose the smallest safe next step.",
+      "---",
       "# Triage a request",
       "",
       "1. Read the issue.",
@@ -52,15 +55,17 @@ export const sources: SourceFile[] = [
   },
 ];
 
-/** A trimmed run. Event types match the canonical event log in `@plico-ai/contracts`. */
-export const events = [
-  { type: "run.started", detail: "support-agent" },
-  { type: "instructions.composed", detail: "2 sources" },
-  { type: "tools.discovered", detail: "1 tool" },
-  { type: "model.request", detail: "1 tool offered" },
-  { type: "tool.call", detail: "create_ticket" },
-  { type: "artifact.file.written", detail: "tickets/new.md" },
-  { type: "tool.result", detail: '{ ticketId: "TCK-1042" }' },
-  { type: "assistant.output", detail: "Created TCK-1042." },
-  { type: "run.completed", detail: "completed" },
-];
+/** The anchor, as create-plico writes it for a project with no provider yet */
+export const config: SourceFile = {
+  path: "plico.config.ts",
+  label: "Anchor the project",
+  lines: [
+    'import { defineConfig } from "@plico-ai/sdk";',
+    "",
+    "export default defineConfig({",
+    "  schemaVersion: 1,",
+    '  name: "support-agent",',
+    '  template: "internal-ops",',
+    "});",
+  ],
+};

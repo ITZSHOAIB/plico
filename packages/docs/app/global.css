@@ -6,9 +6,31 @@
  * Plico brand: verdigris on stone neutrals with a faint green-grey tint. These are the same
  * values as Studio (packages/studio/src/theme/tokens.css); change them together.
  */
+/*
+ * Local fonts sized to Geist's metrics, so text set before Geist loads keeps its line breaks when
+ * it swaps in. Width matches next/font's measure (a weighted average of lowercase advances).
+ */
+@font-face {
+  font-family: "Geist Fallback";
+  src: local("Arial"), local("ArialMT"), local("Arimo"), local("Liberation Sans");
+  size-adjust: 106.28%;
+  ascent-override: 94.56%;
+  descent-override: 27.76%;
+  line-gap-override: 0%;
+}
+/* Courier New has Geist Mono's 0.6em advance; Consolas, the usual stand-in, is narrower */
+@font-face {
+  font-family: "Geist Mono Fallback";
+  src: local("Courier New"), local("CourierNewPSMT"), local("Cousine"), local("Liberation Mono");
+  ascent-override: 100.52%;
+  descent-override: 29.5%;
+  line-gap-override: 0%;
+}
+
 :root {
-  --font-sans: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: "Geist Mono Variable", ui-monospace, SFMono-Regular, Consolas, monospace;
+  --font-sans: "Geist Variable", "Geist Fallback", ui-sans-serif, system-ui, sans-serif;
+  --font-mono:
+    "Geist Mono Variable", "Geist Mono Fallback", ui-monospace, SFMono-Regular, Consolas, monospace;
 
   --plico-accent: #0f6e5c;
   --plico-accent-strong: #0a5547;

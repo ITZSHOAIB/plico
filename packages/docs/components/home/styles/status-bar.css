@@ -1,0 +1,118 @@
+/* The bar along the bottom: the page's event line, then a link to each figure */
+.ph-statusbar {
+  position: fixed;
+  inset: auto 0 0;
+  z-index: 40;
+  height: var(--ph-status-h);
+  border-top: 1px solid var(--ph-line-strong);
+  background: var(--ph-paper);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+.ph-statusbar-inner {
+  display: flex;
+  align-items: stretch;
+  max-width: var(--ph-max);
+  height: 100%;
+  margin: 0 auto;
+}
+.ph-statusbar-line {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  margin: 0;
+  padding: 0 0.75rem 0 var(--ph-gutter);
+  font: 400 0.82rem / 1 var(--font-pixel);
+  font-variant-numeric: tabular-nums;
+}
+/* Each line prints in: the paper over it steps off to the right */
+.ph-statusbar-text {
+  position: relative;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.ph-statusbar-text::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  translate: 100%;
+  background: var(--ph-paper);
+}
+.ph-statusbar-text b {
+  font-weight: 400;
+  color: var(--ph-muted);
+}
+.ph-statusbar-nav {
+  display: flex;
+  align-items: stretch;
+}
+.ph-statusbar-nav a {
+  display: flex;
+  align-items: center;
+  padding: 0 0.6rem;
+  border-left: 1px solid var(--ph-line-strong);
+}
+.ph-statusbar-nav a:hover {
+  background: var(--ph-ink);
+  color: var(--ph-paper);
+}
+.ph-statusbar-nav a[aria-current] {
+  background: var(--ph-hl);
+  color: var(--ph-ink);
+}
+.ph-statusbar-pause {
+  flex: none;
+  margin-right: var(--ph-gutter);
+  padding: 0 0.6rem;
+  border: 0;
+  border-inline: 1px solid var(--ph-line-strong);
+  background: none;
+  color: inherit;
+  font: 400 0.82rem / 1 var(--font-pixel);
+  cursor: pointer;
+}
+.ph-statusbar-pause:hover {
+  background: var(--ph-ink);
+  color: var(--ph-paper);
+}
+.ph-statusbar-pause[aria-pressed="true"] {
+  background: var(--ph-accent);
+  color: var(--ph-paper);
+}
+.ph-statusbar-pause:focus-visible,
+.ph-statusbar-nav a:focus-visible {
+  outline: 2px solid var(--ph-accent);
+  outline-offset: -2px;
+}
+@media (max-width: 860px) {
+  .ph-statusbar-nav {
+    display: none;
+  }
+}
+
+/* Paused, CSS animations hold their frame */
+.plico-home[data-paused] *,
+.plico-home[data-paused] *::before,
+.plico-home[data-paused] *::after {
+  /* biome-ignore lint/complexity/noImportantStyles: outranks every section's own animation */
+  animation-play-state: paused !important;
+}
+
+/* The theme switch dithers the new theme in */
+:root:has(.plico-home)::view-transition-old(root),
+:root:has(.plico-home)::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+:root:has(.plico-home)::view-transition-new(root) {
+  mask-size: 24px 24px;
+  animation: ph-dither-in 560ms linear both;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root:has(.plico-home)::view-transition-new(root) {
+    animation: none;
+  }
+}

@@ -1,0 +1,121 @@
+/* Hero: the pitch beside the computer running the harness, a ruler along its foot */
+.ph-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-rows: 1fr auto;
+  column-gap: 2rem;
+  min-height: calc(100svh - 3.5rem - var(--ph-status-h));
+  padding-block: 0;
+  border-top: 0;
+}
+.ph-hero > .ph-mark {
+  display: none;
+}
+.ph-hero-copy {
+  align-self: center;
+  padding-block: 3rem;
+}
+
+.ph-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin: 0 0 1.5rem;
+  font: 400 0.9rem / 1 var(--font-pixel);
+  color: var(--ph-muted);
+}
+
+.ph-hero h1 {
+  margin: 0;
+  font-size: clamp(2.5rem, 5.4vw, 4.6rem);
+  line-height: 1.04;
+  font-weight: 500;
+  letter-spacing: -0.045em;
+}
+.ph-hero h1 em {
+  font-weight: 500;
+}
+.ph-hero-lede {
+  max-width: 34rem;
+  margin: 1.5rem 0 0;
+  font-size: 1.08rem;
+  line-height: 1.6;
+  color: var(--ph-muted);
+}
+.ph-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 2rem;
+}
+.ph-hero-runs {
+  margin: 1.25rem 0 0;
+  font-size: 0.875rem;
+  color: var(--ph-muted);
+}
+.ph-hero-runs a {
+  color: var(--ph-ink);
+}
+
+/* The stage the computer stands on */
+.ph-stage {
+  position: relative;
+  display: grid;
+  min-height: 28rem;
+  padding-block: 2rem;
+}
+
+/* A ruler across the sheet: a tick every 24px, a long one every 240px */
+.ph-ruler {
+  grid-column: 1 / -1;
+  position: relative;
+  height: 2.5rem;
+  margin-inline: calc(var(--ph-gutter) * -1);
+  border-top: 1px solid var(--ph-line-strong);
+}
+.ph-ruler::before,
+.ph-ruler::after {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  background-position: var(--ph-gutter) 0;
+}
+.ph-ruler::before {
+  height: 6px;
+  background-image: repeating-linear-gradient(
+    to right,
+    var(--ph-line-strong) 0 1px,
+    transparent 1px 24px
+  );
+}
+.ph-ruler::after {
+  height: 10px;
+  background-image: repeating-linear-gradient(
+    to right,
+    var(--ph-line-strong) 0 1px,
+    transparent 1px 240px
+  );
+}
+
+@media (max-width: 900px) {
+  .ph-hero {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto auto;
+    min-height: 0;
+  }
+  .ph-hero-copy {
+    padding-block: 2.5rem 0;
+  }
+  .ph-stage {
+    min-height: 24rem;
+  }
+}
+@media (max-width: 520px) {
+  .ph-actions > * {
+    width: 100%;
+  }
+  .ph-stage {
+    min-height: 20rem;
+  }
+}

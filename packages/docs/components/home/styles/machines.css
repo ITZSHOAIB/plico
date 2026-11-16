@@ -1,0 +1,169 @@
+/*
+ * The six kit machines: line drawings in ink on the bay's paper, accent where something happens.
+ * Moving parts ease between steps; parts that come and go dither in and out.
+ */
+.ph-bay-stage text {
+  font-family: var(--font-pixel);
+}
+.ph-k-label {
+  font-size: 9px;
+  fill: var(--ph-ink);
+}
+.ph-k-note {
+  font-size: 8px;
+  fill: var(--ph-muted);
+}
+.ph-k-inv {
+  fill: var(--ph-paper);
+}
+.ph-k-tag {
+  font-size: 12px;
+  fill: var(--ph-accent);
+}
+
+.ph-k-belt {
+  stroke: var(--ph-ink);
+  stroke-width: 1.5;
+  stroke-dasharray: 6 3;
+}
+.ph-k-thin {
+  fill: none;
+  stroke: var(--ph-line-strong);
+}
+.ph-k-solid {
+  fill: var(--ph-ink);
+}
+.ph-k-card {
+  fill: var(--ph-paper);
+  stroke: var(--ph-ink);
+}
+.ph-k-card[data-tone="accent"],
+.ph-k-card[data-who="user"] {
+  fill: var(--ph-hl);
+}
+.ph-k-card[data-who="agent"] {
+  fill: var(--ph-ink);
+}
+
+/* motion: groups slide, things come and go in two steps */
+.ph-k-move,
+.ph-k-arm,
+.ph-k-switch circle,
+.ph-k-fill {
+  transition: transform 480ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+[data-gone] {
+  opacity: 0;
+}
+.ph-k-move,
+.ph-k-bead,
+.ph-k-export,
+.ph-k-stamp,
+.ph-k-diff {
+  transition:
+    transform 480ms cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 120ms steps(2);
+}
+
+/* approvals: the arm pivots on the post */
+.ph-k-arm {
+  transform-origin: 150px 66px;
+}
+.ph-k-stripe {
+  stroke: var(--ph-ink);
+  stroke-width: 6;
+  stroke-dasharray: 8 8;
+}
+.ph-k-lamp {
+  fill: var(--ph-accent);
+}
+.ph-k-lamp[data-blink] {
+  animation: ph-k-blink 0.5s steps(1) infinite;
+}
+@keyframes ph-k-blink {
+  50% {
+    fill: var(--ph-paper);
+  }
+}
+.ph-k-button rect {
+  fill: var(--ph-paper);
+  stroke: var(--ph-ink);
+}
+.ph-k-button[data-pressed] rect,
+.ph-k-button[data-done] rect {
+  fill: var(--ph-accent);
+}
+.ph-k-button[data-done] text {
+  fill: var(--ph-paper);
+}
+.ph-k-cursor {
+  fill: var(--ph-ink);
+  stroke: var(--ph-paper);
+  stroke-width: 0.8;
+}
+
+/* artifacts: the diff lines */
+.ph-k-diff {
+  opacity: 0;
+}
+.ph-k-diff[data-on] {
+  opacity: 1;
+}
+.ph-k-diff text {
+  font-size: 7.5px;
+  fill: var(--ph-muted);
+}
+.ph-k-diff text[data-tone="accent"] {
+  fill: var(--ph-accent);
+}
+
+/* threads */
+.ph-k-thread {
+  fill: none;
+  stroke: var(--ph-accent);
+  stroke-width: 1.5;
+  stroke-dasharray: 1;
+  transition: stroke-dashoffset 520ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* evals */
+.ph-k-tick {
+  fill: none;
+  stroke: var(--ph-accent);
+  stroke-width: 2;
+  stroke-dasharray: 1;
+  transition: stroke-dashoffset 260ms ease-out;
+}
+.ph-k-track {
+  fill: none;
+  stroke: var(--ph-line-strong);
+}
+.ph-k-fill {
+  fill: var(--ph-accent);
+  transform-box: fill-box;
+  transform-origin: left;
+}
+.ph-k-stamp rect {
+  fill: var(--ph-ink);
+}
+.ph-k-stamp text {
+  fill: var(--ph-paper);
+}
+
+/* readiness: a track and a knob a switch */
+.ph-k-switch circle {
+  fill: var(--ph-ink);
+}
+.ph-k-switch[data-on] .ph-k-card {
+  fill: var(--ph-accent);
+}
+.ph-k-switch[data-on] circle {
+  fill: var(--ph-paper);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ph-bay-stage * {
+    transition: none !important;
+    animation: none !important;
+  }
+}

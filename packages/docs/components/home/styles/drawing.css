@@ -1,0 +1,95 @@
+/*
+ * The Files figure's assembly drawing: isometric plates in paper and ink. Assembled they sit a
+ * plate's thickness apart; exploded each rises by --rise, its callout drawing on beside it.
+ */
+.ph-drawing {
+  display: block;
+  width: 100%;
+  max-width: 34rem;
+  height: auto;
+  justify-self: center;
+  overflow: visible;
+}
+.ph-plate-g {
+  transform: translateY(0);
+  transition: transform 520ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.ph-plate-g[data-up] {
+  transform: translateY(var(--rise));
+}
+.ph-plate-g[data-pick] {
+  cursor: pointer;
+}
+
+.ph-slab-top,
+.ph-slab-tab {
+  fill: var(--ph-panel);
+  stroke: var(--ph-ink);
+  stroke-width: 1;
+  stroke-linejoin: round;
+  transition: fill 125ms steps(2);
+}
+.ph-slab-left {
+  fill: var(--ph-ink);
+  stroke: var(--ph-ink);
+}
+.ph-slab-right {
+  fill: var(--ph-panel);
+  stroke: var(--ph-ink);
+}
+.ph-plate-g[data-lit] .ph-slab-top {
+  stroke: var(--ph-accent);
+}
+.ph-plate-g[data-active] .ph-slab-top,
+.ph-plate-g[data-scan] .ph-slab-top,
+.ph-plate-g[data-pick]:hover .ph-slab-top {
+  fill: var(--ph-hl);
+}
+.ph-plate-g[data-scan] .ph-slab-left {
+  fill: var(--ph-accent);
+}
+
+.ph-plate-name {
+  font: 400 12px var(--font-pixel);
+  fill: var(--ph-ink);
+}
+
+.ph-callout {
+  opacity: 0;
+  transition: opacity 125ms steps(2);
+}
+[data-up] > .ph-callout {
+  opacity: 1;
+}
+.ph-callout path {
+  fill: none;
+  stroke: var(--ph-line-strong);
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  transition: stroke-dashoffset 380ms 160ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+[data-up] > .ph-callout path {
+  stroke-dashoffset: 0;
+}
+.ph-callout rect {
+  fill: var(--ph-ink);
+}
+[data-lit] > .ph-callout rect {
+  fill: var(--ph-accent);
+}
+.ph-callout-name {
+  font: 400 12px var(--font-pixel);
+  fill: var(--ph-ink);
+}
+.ph-callout-note {
+  font: 11px var(--font-mono);
+  fill: var(--ph-muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ph-plate-g,
+  .ph-callout,
+  .ph-callout path {
+    transition: none;
+  }
+}
