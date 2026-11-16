@@ -61,7 +61,9 @@ export async function validateProject(root: string): Promise<ValidationResult> {
         severity: "error",
       });
     }
-    errors.push(...(await validateRunSchemas(relativePaths.agentFile, agent.data)));
+    errors.push(
+      ...(await validateRunSchemas(relativePaths.agentFile, projectPaths.agentFile, agent.data)),
+    );
     warnings.push(...unknownAgentKeyWarnings(relativePaths.agentFile, agent.data));
     agentText = agent.body;
     if (agentText.trim().length === 0) {
@@ -119,7 +121,9 @@ export async function validateProject(root: string): Promise<ValidationResult> {
     });
   }
 
-  errors.push(...(await validateRunSchemas(relativePaths.configFile, project.config)));
+  errors.push(
+    ...(await validateRunSchemas(relativePaths.configFile, project.configPath, project.config)),
+  );
   errors.push(...(await validateToolNames(root)));
   errors.push(...(await validateSkills(root)));
   warnings.push(...(await validateEvalFiles(root)));

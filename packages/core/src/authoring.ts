@@ -22,14 +22,6 @@ export function resolveAuthoringModule(fromFile: string): string {
   }
 }
 
-/** Point `import "@plico-ai/sdk"` in a transpiled project file at an absolute file URL. */
-export function rewriteAuthoringImports(code: string, fromFile: string): string {
-  return code.replace(
-    /(\bfrom\s*|\bimport\s*)(["'])@plico-ai\/sdk\2/g,
-    (_match, keyword: string) => `${keyword}${JSON.stringify(resolveAuthoringModule(fromFile))}`,
-  );
-}
-
 const ESM_HOOKS = `
 let fallback;
 export function initialize(data) { fallback = data.url; }

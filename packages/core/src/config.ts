@@ -1,6 +1,9 @@
-import { readFile, stat } from "node:fs/promises";
-import { transform } from "esbuild";
-import { rewriteAuthoringImports } from "./authoring.js";
+import { stat } from "node:fs/promises";
+import { isBuiltin } from "node:module";
+import { isAbsolute } from "node:path";
+import { pathToFileURL } from "node:url";
+import { build, type Plugin } from "esbuild";
+import { resolveAuthoringModule, SPECIFIER } from "./authoring.js";
 import { configLoadMessage, missingFileMessage, ProjectConfigError } from "./errors.js";
 import { getProjectPaths, getProjectRelativePaths } from "./layout.js";
 import type { LoadedProject, ProjectConfig, ValidationIssue } from "./types.js";
@@ -49,19 +52,50 @@ async function readProjectConfig(configPath: string): Promise<ProjectConfig> {
 }
 
 async function importTranspiledProjectConfig(configPath: string): Promise<unknown> {
-  const source = await readFile(configPath, "utf8");
-  const transpiled = await transform(source, {
-    loader: "ts",
+  const result = await build({
+    entryPoints: [configPath],
+    bundle: true,
+    write: false,
     format: "esm",
+    platform: "node",
     target: "es2022",
-    sourcefile: configPath,
+    logLevel: "silent",
+    plugins: [externalPackages(configPath)],
   });
-
-  const code = rewriteAuthoringImports(transpiled.code, configPath);
+  const code = result.outputFiles[0]?.text ?? "";
   const encoded = Buffer.from(code, "utf8").toString("base64");
   const moduleUrl = `data:text/javascript;base64,${encoded}`;
   return import(moduleUrl);
 }
+
+/**
+ * Local files the config imports are bundled in, so edits show on the next load. Packages stay
+ * external, resolved from the project to absolute file URLs, since a `data:` module cannot resolve
+ * bare specifiers itself.
+ */
+function externalPackages(configPath: string): Plugin {
+  return {
+    name: "plico-config-packages",
+    setup(pluginBuild) {
+      pluginBuild.onResolve({ filter: /^[^./]/ }, async (args) => {
+        if (args.pluginData === resolving || isAbsolute(args.path)) return undefined;
+        if (isBuiltin(args.path)) return { path: args.path, external: true };
+        if (args.path === SPECIFIER)
+          return { path: resolveAuthoringModule(configPath), external: true };
+        const resolved = await pluginBuild.resolve(args.path, {
+          kind: args.kind,
+          resolveDir: args.resolveDir,
+          importer: args.importer,
+          pluginData: resolving,
+        });
+        if (resolved.errors.length > 0) return { errors: resolved.errors };
+        return { path: pathToFileURL(resolved.path).href, external: true };
+      });
+    },
+  };
+}
+
+const resolving = Symbol("resolving");
 
 function readDefaultExport(configModule: unknown, configPath: string): unknown {
   const relativePaths = getProjectRelativePaths();
