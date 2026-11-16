@@ -60,6 +60,7 @@
   align-items: baseline;
   gap: 0.5rem;
   align-self: center;
+  flex: 1;
   min-width: 0;
   padding: 0.6rem 0.8rem;
   font: 0.85rem / 1.25rem var(--font-mono);
