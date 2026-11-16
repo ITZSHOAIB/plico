@@ -55,7 +55,7 @@ it("streams a provider response through a Plico run without live network access"
     baseURL: "https://example.invalid/v1",
     fetch: async () =>
       new Response(
-        chunks.map((chunk) => `data: ${JSON.stringify(chunk)}\n\n`).join("") + "data: [DONE]\n\n",
+        `${chunks.map((chunk) => `data: ${JSON.stringify(chunk)}\n\n`).join("")}data: [DONE]\n\n`,
         { headers: { "content-type": "text/event-stream" } },
       ),
   });
@@ -97,7 +97,7 @@ it("fails a run when the provider truncates its answer at the output limit", asy
     apiKeyEnv: "PLICO_TEST_MODEL_KEY",
     fetch: async () =>
       new Response(
-        chunks.map((chunk) => `data: ${JSON.stringify(chunk)}\n\n`).join("") + "data: [DONE]\n\n",
+        `${chunks.map((chunk) => `data: ${JSON.stringify(chunk)}\n\n`).join("")}data: [DONE]\n\n`,
         { headers: { "content-type": "text/event-stream" } },
       ),
   });
@@ -154,7 +154,7 @@ it("round trips tool calls and results through the provider protocol", async () 
       },
     ];
     return new Response(
-      chunks.map((chunk) => `data: ${JSON.stringify(chunk)}\n\n`).join("") + "data: [DONE]\n\n",
+      `${chunks.map((chunk) => `data: ${JSON.stringify(chunk)}\n\n`).join("")}data: [DONE]\n\n`,
       { headers: { "content-type": "text/event-stream" } },
     );
   };

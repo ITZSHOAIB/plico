@@ -39,14 +39,14 @@ it.each([
   expect(result.stderr).toContain(`${job}=`);
 });
 
-it.each([
-  passing,
-  { ...passing, REVIEWS_DEPENDENCIES: "false", DEPENDENCIES: "skipped" },
-])("accepts successful reviewed or unreviewed checks", (results) => {
-  const result = spawnSync(process.execPath, [script], {
-    env: { ...process.env, ...results },
-    encoding: "utf8",
-  });
-  expect(result.status).toBe(0);
-  expect(result.stderr).toBe("");
-});
+it.each([passing, { ...passing, REVIEWS_DEPENDENCIES: "false", DEPENDENCIES: "skipped" }])(
+  "accepts successful reviewed or unreviewed checks",
+  (results) => {
+    const result = spawnSync(process.execPath, [script], {
+      env: { ...process.env, ...results },
+      encoding: "utf8",
+    });
+    expect(result.status).toBe(0);
+    expect(result.stderr).toBe("");
+  },
+);
