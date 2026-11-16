@@ -1,4 +1,4 @@
-/** A file the scaffold writes, carried to the computer on its own disk */
+/** A file in an agent project, carried to the computer on its own disk */
 export interface AgentFile {
   /** the folder, printed small on the label */
   dir: string;
@@ -14,7 +14,7 @@ export const FILES: AgentFile[] = [
   { dir: "my-agent/", name: "plico.config.ts", role: "model" },
 ];
 
-/** The scaffold's default model, shown in the chat header */
+/** The scaffold's default Anthropic model, shown in the chat header */
 export const MODEL = "claude-sonnet-5-5";
 
 /** The question typed into the chat, and the reply that streams back */
@@ -25,7 +25,7 @@ export const ANSWER =
 /** The thread title Plico gives the conversation once the run completes */
 export const THREAD = "Duplicate charge on order 4471";
 
-/** The scaffold's example tool: it moves money, so it waits for a person */
+/** The example tool from the scaffold's guide: it moves money, so it waits for a person */
 export const TOOL = {
   name: "issue_refund",
   args: "{ order: 4471, amount: 49 }",

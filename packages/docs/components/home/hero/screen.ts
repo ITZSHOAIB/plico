@@ -20,7 +20,7 @@ function stepParts(state: "run" | "ok" | "wait", name: string, detail: string): 
     state === "run"
       ? el("span", "ph-spin")
       : el("span", `ph-step-${state}`, state === "ok" ? "✓" : "●");
-  return [mark, el("b", "", name), ` ${detail}`];
+  return [mark, el("b", "", name), el("span", "ph-step-detail", detail)];
 }
 
 export function createScreen(screen: HTMLElement) {

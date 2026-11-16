@@ -132,6 +132,11 @@
   font-weight: 500;
   color: var(--ph-ink);
 }
+.ph-step-detail {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .ph-chat-step .ph-spin {
   width: 0.45rem;
   height: 0.45rem;
