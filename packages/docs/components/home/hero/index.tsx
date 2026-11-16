@@ -11,7 +11,7 @@ const providers = [
   { name: "any OpenAI-compatible model", href: "/docs/providers" },
 ];
 
-/** A screen below the menu: the pitch beside a computer running the harness, a ruler along its foot */
+/** A screen below the menu: the pitch beside a computer that loads an agent from its files, a ruler along its foot */
 export function Hero() {
   return (
     <Figure id="plico" label="Plico" status="loading project" className="ph-hero">

@@ -1,115 +1,171 @@
 /**
- * The computer's engine. While the hero is on screen it reads one run back: an event a beat, each
- * printed on the screen, typed on a key, reported to the status bar and lighting its part down a
- * cable (every event lights the event log too). Then the cables pull out, the parts
- * go back in and the screen cats the Markdown. The title bar button takes over from the script
- * for good and swaps the two by hand. With reduced motion the server's frame stays until pressed.
+ * The hero's engine. While it is on screen it tells one story, over and over: the agent's files go
+ * into the drive disk by disk, the screen boots into a chat, the reader's question types itself
+ * on the keyboard, and the agent answers through a skill, an approval and a tool call, each step
+ * reported to the status bar. Then the disks eject and it starts again. With reduced motion the
+ * finished chat shows, still.
  */
-import { BEAT, play, TICK } from "../lib/beat";
+import { BEAT, play, reduced, TICK } from "../lib/beat";
 import { report } from "../lib/status";
-import { createCables } from "./cables";
-import { ALT, HEAD, LOG, MD, REST, ROWS } from "./rig-data";
+import { ALT, ANSWER, ASK, FILES, TITLES, TOOL, TOOL_RESULT } from "./rig-data";
+import { createScreen } from "./screen";
 
-const TITLES = ["the harness · running", "your Markdown files"];
-const LABELS = ["show the files", "show the harness"];
+const EASE_IN_OUT = "cubic-bezier(0.65, 0, 0.35, 1)";
 
 export function createRig(stage: HTMLElement): () => void {
   const rig = stage.querySelector<HTMLElement>(".ph-rig") as HTMLElement;
-  const screen = rig.querySelector("pre") as HTMLPreElement;
   const title = stage.querySelector<HTMLElement>("[data-title]") as HTMLElement;
-  const toggle = stage.querySelector<HTMLButtonElement>("[data-toggle]") as HTMLButtonElement;
+  const disks = [...rig.querySelectorAll<HTMLElement>(".ph-disk")];
+  const slot = rig.querySelector<HTMLElement>(".ph-pc-slot") as HTMLElement;
+  const led = rig.querySelector<HTMLElement>(".ph-pc-led") as HTMLElement;
   const keys = [...rig.querySelectorAll<HTMLElement>(".ph-pc-keys i")];
-  const cables = createCables(rig);
-  const timers = new Set<ReturnType<typeof setTimeout>>();
-  let folded = false;
+  const pointer = rig.querySelector<SVGElement>(".ph-pointer") as SVGElement;
+  const screen = createScreen(rig.querySelector(".ph-pc-screen") as HTMLElement);
 
-  const later = (fn: () => void, ms: number) => {
-    const t = setTimeout(() => {
-      timers.delete(t);
-      fn();
-    }, ms);
-    timers.add(t);
-  };
-
-  /** prints `rows`, commands in their own colour */
-  const paint = (rows: string[]) => {
-    screen.replaceChildren(
-      ...rows.flatMap((row, i) => {
-        const text = i ? `\n${row}` : row;
-        if (!row.startsWith("$")) return [text];
-        const cmd = document.createElement("span");
-        cmd.className = "ph-pc-cmd";
-        cmd.textContent = row;
-        return i ? ["\n", cmd] : [cmd];
-      }),
-    );
-  };
-
-  const fold = (next: boolean) => {
-    folded = next;
-    rig.toggleAttribute("data-folded", next);
-    rig.setAttribute("aria-label", ALT[next ? 1 : 0]);
-    title.textContent = TITLES[next ? 1 : 0];
-    toggle.textContent = LABELS[next ? 1 : 0];
-    toggle.toggleAttribute("data-on", next);
+  const scene = (name: keyof typeof TITLES, alt: 0 | 1) => {
+    title.textContent = TITLES[name];
+    rig.setAttribute("aria-label", ALT[alt]);
   };
 
   const press = () => {
     const key = keys[Math.floor(Math.random() * keys.length)];
-    key?.setAttribute("data-on", "");
-    later(() => key?.removeAttribute("data-on"), TICK);
+    const accent = getComputedStyle(rig).getPropertyValue("--ph-accent");
+    key?.animate({ background: [accent, accent] }, TICK);
   };
 
-  const light = (id: string) => {
-    const part = rig.querySelector<HTMLElement>(`[data-part="${id}"]`);
-    if (!part) return;
-    part.removeAttribute("data-hit");
-    void part.offsetWidth;
-    part.setAttribute("data-hit", "");
-    cables.pulse(id);
+  /** a disk flies to the drive, squares up over the slot and slides in; `back` ejects it */
+  const insert = (disk: HTMLElement, back = false) => {
+    const d = disk.getBoundingClientRect();
+    const s = slot.getBoundingClientRect();
+    const scale = s.width / d.width;
+    const dx = s.left + s.width / 2 - (d.left + d.width / 2);
+    const dy = s.top - d.bottom;
+    const frames: Keyframe[] = [
+      { transform: "none", opacity: 1 },
+      { transform: `translate(${dx}px, ${dy - 8}px) scale(${scale})`, opacity: 1, offset: 0.62 },
+      {
+        transform: `translate(${dx}px, ${dy + d.height * scale * 0.5}px) scale(${scale}, 0.02)`,
+        opacity: 0,
+      },
+    ];
+    if (back) frames.reverse();
+    const duration = back ? BEAT * 1.3 : BEAT * 1.9;
+    disk.animate(frames, { duration, easing: EASE_IN_OUT, fill: "forwards" });
+    return duration;
   };
 
-  // the first pass picks up where the server's frame left off
-  let from = REST.length;
+  /** the pointer glides onto `target` */
+  const point = (target: HTMLElement) => {
+    const r = target.getBoundingClientRect();
+    const base = rig.getBoundingClientRect();
+    pointer.style.translate = `${r.left - base.left + r.width * 0.55}px ${r.top - base.top + r.height * 0.5}px`;
+    pointer.setAttribute("data-on", "");
+  };
+
+  const click = (target: Element) =>
+    target.animate({ scale: [1, 0.9, 1] }, { duration: TICK * 1.5, easing: "ease-out" });
+
+  const reset = () => {
+    for (const disk of disks) for (const a of disk.getAnimations()) a.cancel();
+    pointer.removeAttribute("data-on");
+    led.removeAttribute("data-on");
+    screen.reset();
+    scene("idle", 0);
+  };
+
+  if (reduced()) {
+    for (const disk of disks) disk.style.visibility = "hidden";
+    screen.finished(ASK);
+    scene("done", 1);
+    return () => {};
+  }
+
   const script = play(stage, async (wait) => {
-    fold(false);
-    let rows = REST.slice(0, from);
-    paint([...HEAD, ...rows]);
-    await wait(BEAT);
-    for (const [line, id] of LOG.slice(from)) {
-      rows = [...rows, line].slice(-ROWS);
-      paint([...HEAD, ...rows]);
-      light(id);
-      if (id !== "log") light("log");
-      press();
-      report(stage, line);
-      await wait(BEAT * 1.2);
-    }
+    reset();
     await wait(BEAT * 3);
-    fold(true);
-    paint([]);
-    await wait(BEAT * 2);
-    for (let i = 1; i <= MD.length; i++) {
-      paint(MD.slice(0, i));
-      press();
-      await wait(TICK * 1.5);
-    }
-    report(stage, "2 Markdown files");
-    from = 0;
-    await wait(BEAT * 9);
-  });
 
-  const swap = () => {
-    script();
-    fold(!folded);
-    paint(folded ? MD : [...HEAD, ...REST]);
-  };
-  toggle.addEventListener("click", swap);
+    // the files go in, a disk each
+    scene("loading", 0);
+    screen.say("loading agent", "reading files…");
+    for (const [k, disk] of disks.entries()) {
+      await wait(insert(disk));
+      led.setAttribute("data-on", "");
+      screen.say("loading agent", `reading ${FILES[k]?.name}…`);
+      report(stage, `loaded ${FILES[k]?.name}`);
+      await wait(BEAT * 0.75);
+      led.removeAttribute("data-on");
+      screen.loaded(k);
+      await wait(BEAT * 0.45);
+    }
+    screen.say("support-agent ready", "starting chat…");
+    scene("ready", 0);
+    await wait(BEAT * 2.2);
+
+    // the chat boots and the question types itself
+    screen.chat();
+    scene("ready", 1);
+    await wait(BEAT * 1.8);
+    for (let i = 1; i <= ASK.length; i++) {
+      screen.type(ASK.slice(0, i));
+      press();
+      await wait(ASK[i - 1] === " " ? TICK * 0.55 : TICK * 0.3);
+    }
+    await wait(BEAT * 0.5);
+    click(screen.send);
+    await wait(TICK);
+    screen.sent(ASK);
+    scene("running", 1);
+    report(stage, "run.started");
+    await wait(BEAT * 0.7);
+
+    // the agent works: a skill, then a tool that waits for a person
+    const turn = screen.agent();
+    await wait(BEAT * 2.6);
+    const skill = screen.step(turn, "run", "load_skill", "triage");
+    report(stage, "tool.call load_skill");
+    await wait(BEAT * 1.4);
+    skill("ok", "triage");
+    await wait(BEAT * 0.7);
+    const tool = screen.step(turn, "wait", TOOL.name, TOOL.args);
+    await wait(BEAT * 0.8);
+    const { card, approve, approved } = screen.approval(turn);
+    report(stage, `approval.requested ${TOOL.name}`);
+    await wait(BEAT * 1.4);
+    point(approve);
+    await wait(BEAT * 1.5);
+    click(approve);
+    await wait(TICK * 1.5);
+    pointer.removeAttribute("data-on");
+    approved();
+    report(stage, "approval.decided approved");
+    tool("run", TOOL.args);
+    await wait(BEAT * 1.6);
+    card.remove();
+    turn.hidden = false;
+    tool("ok", `→ ${TOOL_RESULT}`);
+    report(stage, `tool.result ${TOOL.name}`);
+    await wait(BEAT);
+
+    // the reply streams in and the thread gets its title
+    const words = ANSWER.split(" ");
+    for (let i = 1; i <= words.length; i++) {
+      screen.answer(turn, words.slice(0, i).join(" "), i === words.length);
+      await wait(TICK * 0.45);
+    }
+    screen.titled();
+    scene("done", 1);
+    report(stage, "run.completed");
+    await wait(BEAT * 10);
+
+    // the disks come back out
+    screen.reset();
+    scene("idle", 0);
+    for (const disk of [...disks].reverse()) await wait(insert(disk, true));
+    await wait(BEAT);
+  });
 
   return () => {
     script();
-    cables.stop();
-    for (const t of timers) clearTimeout(t);
-    toggle.removeEventListener("click", swap);
+    reset();
   };
 }

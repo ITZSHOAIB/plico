@@ -1,0 +1,150 @@
+/*
+ * A 3.5" floppy drawn true: an SVG shell with rounded corners and the top right cut away, a hard
+ * shadow like the windows', a ridged metal shutter over the hub, a write-protect tab and a density
+ * hole, and a paper label ruled under a verdigris band. Everything is sized in the disk's own
+ * units, so a smaller disk is the same drawing.
+ */
+.ph-disk {
+  --ph-shell: #2c3331;
+  --ph-shell-hi: #434c4a;
+  --ph-metal: #cdd3d1;
+  --ph-metal-lo: #9ba4a2;
+  --ph-label: #f6f4ec;
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  container-type: inline-size;
+  transform-origin: 50% 100%;
+}
+.dark .ph-disk {
+  --ph-shell: #3a4341;
+  --ph-shell-hi: #56605e;
+  --ph-metal: #bcc4c2;
+  --ph-metal-lo: #87908e;
+  --ph-label: #e9e6dc;
+}
+
+.ph-disk-shell {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.ph-disk-drop {
+  fill: var(--ph-line-strong);
+}
+.ph-disk-body {
+  fill: var(--ph-shell);
+  stroke: var(--ph-ink);
+  stroke-width: 1.5px;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+/* light catching the top edge and the cut corner */
+.ph-disk-bevel {
+  fill: none;
+  stroke: var(--ph-shell-hi);
+  stroke-width: 1.5px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+/* the shutter: brushed metal from the top edge, its window onto the disk, the slide's ridge */
+.ph-disk-shutter {
+  position: absolute;
+  left: 22%;
+  top: 1%;
+  width: 56%;
+  height: 35%;
+  border: 1.5px solid var(--ph-ink);
+  border-top: 0;
+  border-radius: 0 0 2px 2px;
+  background:
+    repeating-linear-gradient(90deg, transparent 0 2px, rgb(255 255 255 / 0.2) 2px 3px),
+    linear-gradient(var(--ph-metal), var(--ph-metal-lo));
+}
+.ph-disk-shutter i {
+  position: absolute;
+  left: 58%;
+  top: 16%;
+  width: 16%;
+  height: 64%;
+  border: 1px solid var(--ph-ink);
+  border-radius: 1px;
+  background: #1b211f;
+}
+.ph-disk-shutter::after {
+  content: "";
+  position: absolute;
+  left: -24%;
+  top: 30%;
+  width: 22%;
+  height: 40%;
+  border: 1px solid var(--ph-ink);
+  border-left: 0;
+  border-radius: 0 1px 1px 0;
+  background: var(--ph-shell-hi);
+}
+
+/* write-protect tab, bottom left, slid half shut; density hole, bottom right */
+.ph-disk-hole {
+  position: absolute;
+  bottom: 5%;
+  width: 7%;
+  aspect-ratio: 1;
+  border: 1px solid var(--ph-ink);
+  border-radius: 1px;
+  background: var(--ph-paper-2);
+  overflow: hidden;
+}
+.ph-disk-hole-l {
+  left: 4%;
+}
+.ph-disk-hole-r {
+  right: 4%;
+}
+.ph-disk-hole-l::after {
+  content: "";
+  position: absolute;
+  inset: 0 0 45%;
+  background: var(--ph-shell-hi);
+}
+
+/* the label: paper under a verdigris band, ruled, folder small over the file name */
+.ph-disk-label {
+  position: absolute;
+  left: 13%;
+  right: 13%;
+  top: 45%;
+  bottom: 1%;
+  display: flex;
+  flex-direction: column;
+  gap: 2.5cqi;
+  padding: 7cqi 4cqi 0;
+  border: 1px solid var(--ph-ink);
+  border-bottom: 0;
+  border-radius: 3px 3px 0 0;
+  overflow: hidden;
+  color: #141a19;
+  background:
+    linear-gradient(var(--ph-accent) 0 4cqi, transparent 4cqi),
+    repeating-linear-gradient(transparent 0 11cqi, #dcd8cb 11cqi calc(11cqi + 1px)) 0 4cqi,
+    var(--ph-label);
+}
+.ph-disk-label small {
+  overflow: hidden;
+  font: 7cqi / 1 var(--font-mono);
+  letter-spacing: -0.01em;
+  color: #5c6664;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.ph-disk-label b {
+  overflow: hidden;
+  font: 400 10.2cqi / 1.12 var(--font-pixel);
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}

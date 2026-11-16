@@ -1,67 +1,53 @@
-/** A harness part plugged into the computer, on its left or right side */
-export interface Part {
-  id: string;
+/** A file the scaffold writes, carried to the computer on its own disk */
+export interface AgentFile {
+  /** the folder, printed small on the label */
+  dir: string;
   name: string;
-  detail: string;
-  side: "l" | "r";
+  /** what the file gives the agent, on the loader and the empty bay */
+  role: string;
 }
 
-export const PARTS: Part[] = [
-  { id: "providers", name: "providers", detail: "Anthropic · OpenAI · Google", side: "l" },
-  { id: "tools", name: "typed tools", detail: "create_ticket", side: "l" },
-  { id: "approvals", name: "approvals", detail: "ask before acting", side: "l" },
-  { id: "runs", name: "durable runs", detail: "cancel any run", side: "l" },
-  { id: "log", name: "event log", detail: "SQLite, every step", side: "r" },
-  { id: "artifacts", name: "artifacts", detail: "tickets/1042.md", side: "r" },
-  { id: "evals", name: "evals", detail: "plico eval, no API key", side: "r" },
-  { id: "studio", name: "Studio + API", detail: "plico serve", side: "r" },
+export const FILES: AgentFile[] = [
+  { dir: "my-agent/", name: "agent.md", role: "instructions" },
+  { dir: "skills/triage/", name: "SKILL.md", role: "skill" },
+  { dir: "tools/", name: "issue_refund.tool.ts", role: "tool" },
+  { dir: "my-agent/", name: "plico.config.ts", role: "model" },
 ];
 
-/** The run the screen reads back, as `plico events` lists it */
-export const RUN = "run-7f3a9c1e";
-export const HEAD = [`$ plico events ${RUN}`, `Events for ${RUN}`];
+/** The scaffold's default model, shown in the chat header */
+export const MODEL = "claude-sonnet-5-5";
 
-/**
- * Its events, a sequence number and a type each (the payloads left off), with the part each one
- * lights up. Every event also lands in the event log.
- */
-export const LOG: [line: string, part: string][] = [
-  ["1 run.started", "runs"],
-  ["2 instructions.composed", "log"],
-  ["3 model.request", "providers"],
-  ["6 model.response", "providers"],
-  ["7 tool.call", "tools"],
-  ["8 tool.result", "tools"],
-  ["9 approval.requested", "approvals"],
-  ["10 approval.decided", "approvals"],
-  ["11 artifact.file.written", "artifacts"],
-  ["14 assistant.output", "studio"],
-  ["15 run.completed", "runs"],
-];
+/** The question typed into the chat, and the reply that streams back */
+export const ASK = "Order 4471 was charged twice. Can you refund the duplicate?";
+export const ANSWER =
+  "Done. I refunded the duplicate $49.00 charge on order 4471. It should reach the card in 5 to 10 business days.";
 
-/** How many event lines the screen holds under its command */
-export const ROWS = 8;
+/** The thread title Plico gives the conversation once the run completes */
+export const THREAD = "Duplicate charge on order 4471";
 
-/** The first frame, on the server and with reduced motion: the run under way */
-export const REST = LOG.slice(0, ROWS).map(([line]) => line);
+/** The scaffold's example tool: it moves money, so it waits for a person */
+export const TOOL = {
+  name: "issue_refund",
+  args: "{ order: 4471, amount: 49 }",
+  reason: "Moves money.",
+};
+export const TOOL_RESULT = "refund re_4471 · succeeded";
 
-/** What the screen prints once the parts are put away: the Markdown you wrote */
-export const MD = [
-  "$ cat agent.md",
-  "# Support agent",
-  "Open a ticket when a refund is stuck.",
-  "Ask before closing anything.",
-  "",
-  "$ cat skills/triage/SKILL.md",
-  "---",
-  "description: Choose the smallest safe next step.",
-  "---",
-];
+/** The window's title as the story goes */
+export const TITLES = {
+  idle: "no agent loaded",
+  loading: "loading my-agent/",
+  ready: "support-agent",
+  running: "support-agent · run 1",
+  done: "support-agent · run completed",
+};
 
-export const KEYS = 42;
+/** Keys on the keyboard, the space bar among them */
+export const KEYS = 41;
+export const SPACE = 34;
 
-/** The rig's text alternative in each view: running, then folded */
+/** The rig's text alternative: before the files go in, then once the agent is chatting */
 export const ALT = [
-  "A computer running a Plico agent. Providers, typed tools, approvals, durable runs, the event log, artifacts, evals and Studio are plugged into it, and its screen lists the run's events.",
-  "The same computer with every part put away. Its screen prints agent.md and a skill's SKILL.md: the Markdown files the agent is made of.",
+  "A computer with no agent loaded, beside four floppy disks holding agent.md, a triage skill, an issue_refund tool and plico.config.ts.",
+  "The disks are in the computer and its screen shows a chat: asked to refund a duplicate charge, the agent loads its triage skill, waits for approval to call issue_refund, then confirms the refund.",
 ];

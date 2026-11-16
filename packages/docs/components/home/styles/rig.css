@@ -1,45 +1,24 @@
 /*
- * The hero's rig: the computer in the middle column, four harness parts either side, cables
- * between them on an SVG behind. Folded, the cables pull out and the parts slide back into the
- * computer. Below 34rem of window the parts stack under the computer, two a row, uncabled.
+ * The hero's rig: a desk of grid paper with the agent's disks in a `my-agent/` tray beside the
+ * computer. Each disk sits in a dashed bay that keeps its role once the disk is in the drive.
+ * Below 34rem of window the tray lines up above the computer.
  */
 .ph-rig-window {
   align-self: center;
   justify-self: center;
   width: 100%;
-  max-width: 40rem;
+  max-width: 42rem;
   container-type: inline-size;
-}
-.ph-rig-toggle {
-  position: relative;
-  flex: none;
-  min-height: 24px;
-  padding: 0 0.45rem;
-  border: 1px solid var(--ph-line-strong);
-  background: var(--ph-paper);
-  color: var(--ph-ink);
-  font: 400 0.72rem / 1 var(--font-pixel);
-  cursor: pointer;
-}
-.ph-rig-toggle:hover,
-.ph-rig-toggle[data-on] {
-  background: var(--ph-accent);
-  border-color: var(--ph-accent);
-  color: var(--ph-paper);
-}
-.ph-rig-toggle:focus-visible {
-  outline: 2px solid var(--ph-accent);
-  outline-offset: 2px;
 }
 
 .ph-rig {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-  grid-template-rows: repeat(4, auto);
-  align-content: center;
-  gap: 1.1rem 2.75rem;
-  min-height: 25rem;
+  grid-template-columns: auto auto;
+  justify-content: center;
+  align-items: center;
+  gap: 1.6rem;
+  min-height: 27rem;
   padding: 1.5rem 1rem;
   background: var(--ph-paper-2);
   background-image:
@@ -48,138 +27,82 @@
   background-size: 22px 22px;
 }
 
-.ph-rig-cables {
+.ph-tray {
+  position: relative;
+  padding: 1.3rem 0.7rem 0.75rem;
+  border: 1.5px dashed var(--ph-line-strong);
+  background: color-mix(in srgb, var(--ph-panel) 55%, transparent);
+}
+.ph-tray > b {
+  position: absolute;
+  left: 0.55rem;
+  top: -0.55rem;
+  padding: 0 0.3rem;
+  background: var(--ph-paper-2);
+  font: 400 0.72rem / 1 var(--font-pixel);
+}
+.ph-tray-bays {
+  display: grid;
+  grid-template-columns: repeat(2, 4.9rem);
+  gap: 0.9rem 0.7rem;
+}
+.ph-tray-bay {
+  position: relative;
+  aspect-ratio: 1;
+  outline: 1px dashed var(--ph-line);
+  outline-offset: 2px;
+}
+.ph-tray-bay > small {
   position: absolute;
   inset: 0;
-  width: 100%;
-  height: 100%;
-  overflow: visible;
-  pointer-events: none;
-}
-.ph-cable,
-.ph-cable-packet {
-  fill: none;
-  stroke-linecap: round;
-}
-.ph-cable {
-  stroke: var(--ph-ink-2);
-  stroke-width: 1.5;
-  stroke-dasharray: 1;
-  stroke-dashoffset: 0;
-  transition: stroke-dashoffset 700ms cubic-bezier(0.16, 1, 0.3, 1) 250ms;
-}
-.ph-cable-packet {
-  stroke: var(--ph-accent);
-  stroke-width: 3.5;
-  stroke-dasharray: 0.1 1.2;
-  stroke-dashoffset: 0.1;
-}
-.ph-rig[data-folded] .ph-cable {
-  stroke-dashoffset: 1;
-  transition-delay: 0ms;
-}
-
-.ph-part {
-  --in: 45%;
-  position: relative;
-  z-index: 1;
-  grid-row: var(--row);
-  align-self: center;
-  padding: 0.4rem 0.55rem;
-  border: 1px solid var(--ph-ink);
-  background: var(--ph-panel);
-  box-shadow: 3px 3px 0 var(--ph-line-strong);
-  font: 0.7rem / 1.35 var(--font-mono);
-  transition:
-    transform 900ms cubic-bezier(0.16, 1, 0.3, 1) calc(var(--row) * 50ms),
-    opacity 600ms calc(var(--row) * 50ms);
-}
-.ph-part[data-side="l"] {
-  grid-column: 1;
-}
-.ph-part[data-side="r"] {
-  --in: -45%;
-  grid-column: 3;
-}
-.ph-part b {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 0.4rem;
-  font: 400 0.8rem / 1.2 var(--font-pixel);
-}
-.ph-part small {
-  display: block;
-  margin-top: 0.15rem;
-  font-size: inherit;
+  display: grid;
+  place-items: center;
+  font: 0.48rem var(--font-mono);
   color: var(--ph-muted);
 }
-.ph-part-lamp {
-  flex: none;
-  width: 0.45rem;
-  height: 0.45rem;
-  border: 1px solid var(--ph-ink);
-  border-radius: 50%;
-  background: var(--ph-paper);
-}
-/* the plug: a block on the part's inner edge where its cable lands */
-.ph-part::before {
-  content: "";
+
+/* the reader's hand on the chat */
+.ph-pointer {
   position: absolute;
-  top: 50%;
-  width: 6px;
-  height: 10px;
-  margin-top: -5px;
-  background: var(--ph-ink);
-}
-.ph-part[data-side="l"]::before {
-  right: -7px;
-}
-.ph-part[data-side="r"]::before {
-  left: -7px;
-}
-.ph-part[data-hit] {
-  animation: ph-part-hit 700ms ease-out;
-}
-.ph-part[data-hit] .ph-part-lamp {
-  animation: ph-part-lamp 700ms steps(1);
-}
-@keyframes ph-part-hit {
-  from {
-    border-color: var(--ph-accent);
-    background: var(--ph-hl);
-    box-shadow: 3px 3px 0 var(--ph-accent);
-  }
-}
-@keyframes ph-part-lamp {
-  from {
-    background: var(--ph-accent);
-  }
-}
-.ph-rig[data-folded] .ph-part {
-  transform: translateX(var(--in)) scale(0.3);
+  z-index: 5;
+  top: 0;
+  left: 0;
+  width: 0.8rem;
   opacity: 0;
-  transition-delay: 0ms;
+  pointer-events: none;
+  transition:
+    translate 700ms cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 300ms;
+}
+.ph-pointer path {
+  fill: #fff;
+  stroke: #141a19;
+  stroke-width: 1.2;
+  stroke-linejoin: round;
+}
+.ph-pointer[data-on] {
+  opacity: 1;
 }
 
 @container (max-width: 34rem) {
   .ph-rig {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    grid-template-rows: none;
-    gap: 0.75rem;
-    padding: 1.25rem 0.9rem;
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: center;
+    gap: 1.1rem;
+    min-height: 0;
+    padding: 1.1rem 0.7rem;
   }
-  .ph-rig-cables,
-  .ph-part::before {
-    display: none;
+  .ph-tray {
+    padding: 1.1rem 0.5rem 0.5rem;
   }
-  .ph-part,
-  .ph-part[data-side] {
-    grid-row: auto;
-    grid-column: auto;
+  .ph-tray-bays {
+    grid-template-columns: repeat(4, 3.6rem);
+    gap: 0.5rem;
   }
-  .ph-rig[data-folded] .ph-part {
-    transform: translateY(-40%) scale(0.85);
-    opacity: 0.15;
+}
+@container (max-width: 17.5rem) {
+  .ph-tray-bays {
+    grid-template-columns: repeat(4, 3.1rem);
+    gap: 0.4rem;
   }
 }

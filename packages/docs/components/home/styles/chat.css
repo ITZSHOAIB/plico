@@ -1,0 +1,238 @@
+/* The chat on the computer's screen, laid out after Plico Studio's */
+.ph-chat {
+  --ph-warn: #8a5a0e;
+  --ph-warn-soft: #fbf1e0;
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  font: 0.56rem / 1.45 var(--font-sans);
+  animation: ph-chat-in 500ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.dark .ph-chat {
+  --ph-warn: #e0a95a;
+  --ph-warn-soft: #2a2013;
+}
+@keyframes ph-chat-in {
+  from {
+    opacity: 0;
+  }
+}
+.ph-chat .ph-shimmer {
+  --ph-sheen-lo: var(--ph-muted);
+  --ph-sheen-hi: var(--ph-ink);
+  font-weight: 500;
+}
+
+.ph-chat-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.6rem;
+  border-bottom: 1px solid var(--ph-line);
+}
+.ph-chat-head span {
+  min-width: 0;
+}
+.ph-chat-head b,
+.ph-chat-head small {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.ph-chat-head b {
+  font-size: 0.62rem;
+  font-weight: 600;
+}
+.ph-chat-head small {
+  font-size: 0.48rem;
+  color: var(--ph-muted);
+}
+.ph-chat-model {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 0.25rem;
+  font: 0.46rem var(--font-mono);
+  color: var(--ph-muted);
+}
+.ph-chat-model::before {
+  content: "";
+  width: 0.35rem;
+  height: 0.35rem;
+  border-radius: 50%;
+  background: var(--ph-accent);
+}
+
+.ph-chat-log {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 0.45rem;
+  min-height: 0;
+  padding: 0.5rem 0.7rem;
+  overflow: hidden;
+}
+.ph-chat-log > * {
+  animation: ph-msg-in 350ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes ph-msg-in {
+  from {
+    opacity: 0;
+    translate: 0 6px;
+  }
+}
+.ph-chat-empty {
+  margin: auto;
+  text-align: center;
+  color: var(--ph-muted);
+}
+.ph-chat-empty b {
+  display: block;
+  margin-bottom: 0.1rem;
+  font-size: 0.66rem;
+  font-weight: 600;
+  color: var(--ph-ink);
+}
+.ph-chat-you {
+  align-self: flex-end;
+  max-width: 78%;
+  padding: 0.3rem 0.5rem;
+  border: 1px solid var(--ph-line);
+  border-radius: 0.6rem 0.6rem 0.15rem 0.6rem;
+  background: var(--ph-paper-2);
+}
+.ph-chat-agent {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+.ph-chat-agent[hidden] {
+  display: none;
+}
+.ph-chat-step {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  width: fit-content;
+  max-width: 100%;
+  padding: 0.14rem 0.4rem;
+  border: 1px solid var(--ph-line);
+  border-radius: 0.3rem;
+  background: var(--ph-paper);
+  font: 0.5rem var(--font-mono);
+  color: var(--ph-muted);
+  white-space: nowrap;
+  overflow: hidden;
+}
+.ph-chat-step b {
+  font-weight: 500;
+  color: var(--ph-ink);
+}
+.ph-chat-step .ph-spin {
+  width: 0.45rem;
+  height: 0.45rem;
+}
+.ph-step-ok {
+  color: var(--ph-accent);
+}
+.ph-step-wait {
+  color: var(--ph-warn);
+}
+.ph-chat-approval {
+  padding: 0.4rem 0.5rem;
+  border: 1px solid color-mix(in srgb, var(--ph-warn) 45%, transparent);
+  border-radius: 0.4rem;
+  background: var(--ph-warn-soft);
+}
+.ph-chat-approval b {
+  display: block;
+  font-size: 0.58rem;
+  font-weight: 600;
+}
+.ph-chat-approval p {
+  margin: 0.1rem 0 0.3rem;
+  font-size: 0.52rem;
+}
+.ph-chat-approval p span {
+  color: var(--ph-muted);
+}
+.ph-chat-approval code {
+  font: 0.5rem var(--font-mono);
+}
+.ph-chat-btns {
+  display: flex;
+  gap: 0.3rem;
+}
+.ph-chat-btn {
+  padding: 0.16rem 0.45rem;
+  border: 1px solid var(--ph-line-strong);
+  border-radius: 0.3rem;
+  background: var(--ph-panel);
+  font: 500 0.5rem var(--font-sans);
+}
+.ph-chat-btn-primary {
+  border-color: var(--ph-accent);
+  background: var(--ph-accent);
+  color: var(--ph-panel);
+}
+.ph-chat-answer {
+  margin: 0;
+}
+
+.ph-chat-composer {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0 0.6rem 0.45rem;
+  padding: 0.3rem 0.3rem 0.3rem 0.55rem;
+  border: 1px solid var(--ph-line-strong);
+  border-radius: 0.55rem;
+  background: var(--ph-panel);
+}
+/* the end of what is being typed stays in view, the start runs off to the left */
+.ph-chat-composer span {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.ph-chat-composer span[data-overflow] {
+  justify-content: flex-end;
+}
+.ph-chat-composer span:empty::before {
+  content: "Message your agent…";
+  color: var(--ph-muted);
+}
+.ph-chat-composer span[data-typing]::after {
+  content: "|";
+  color: var(--ph-accent);
+}
+.ph-chat-send {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 0.95rem;
+  height: 0.95rem;
+  border-radius: 50%;
+  background: var(--ph-paper-2);
+  color: var(--ph-muted);
+  font-size: 0.55rem;
+  font-style: normal;
+  transition: background 200ms;
+}
+.ph-chat-send[data-ready] {
+  background: var(--ph-accent);
+  color: var(--ph-panel);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ph-chat,
+  .ph-chat-log > * {
+    animation: none;
+  }
+}

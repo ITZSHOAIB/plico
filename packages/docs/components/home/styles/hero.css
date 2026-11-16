@@ -1,4 +1,4 @@
-/* Hero: the pitch beside the computer running the harness, a ruler along its foot */
+/* Hero: the pitch beside the computer loading an agent from its files, a ruler along its foot */
 .ph-hero {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
