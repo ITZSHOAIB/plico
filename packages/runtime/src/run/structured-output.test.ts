@@ -43,6 +43,10 @@ it("validates a submitted result and records it on the final event", async () =>
     type: "run.completed",
     payload: { structuredOutput: { ticket: "T-1" } },
   });
+  expect(await store.getRun(result.runId)).toMatchObject({ structuredOutput: { ticket: "T-1" } });
+  expect(await store.listRuns()).toContainEqual(
+    expect.objectContaining({ structuredOutput: { ticket: "T-1" } }),
+  );
 });
 
 it("gives an invalid submitted result one repair turn with the schema diagnostic", async () => {

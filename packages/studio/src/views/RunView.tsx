@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ApprovalDecision } from "../components/ApprovalDecision";
 import { EventList } from "../components/EventList";
 import { RunCancellation } from "../components/RunCancellation";
+import { StructuredResult } from "../components/StructuredResult";
 import { formatMetadata } from "../format-metadata";
 import { useReplayPosition } from "../hooks/useReplayPosition";
 import type { StreamState } from "../hooks/useRunStream";
@@ -124,6 +125,7 @@ function SelectedRunView({
       {replay.isLatest && ["running", "waiting"].includes(selectedRun.status) && (
         <RunCancellation key={selectedRun.runId} runId={selectedRun.runId} />
       )}
+      <StructuredResult events={visibleEvents} />
       <RunTabs mode={mode} onChange={setMode} />
       <div
         role="tabpanel"

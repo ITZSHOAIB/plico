@@ -1,6 +1,9 @@
+import { readFile } from "node:fs/promises";
 import type { ToolInputSchema } from "@plico-ai/contracts";
-import { normalizeInputSchema } from "./schema.js";
-import type { ValidationIssue } from "./types.js";
+import { parseAgentFile } from "./agent-file.js";
+import { getProjectPaths } from "./layout.js";
+import { type NormalizedInputSchema, normalizeInputSchema } from "./schema.js";
+import type { LoadedProject, ValidationIssue } from "./types.js";
 
 export const RUN_SCHEMA_KEYS = ["input", "output"] as const;
 
@@ -27,4 +30,18 @@ export async function validateRunSchemas(
     }
   }
   return issues;
+}
+
+/** The agent's declared schemas. `agent.md` frontmatter wins over `plico.config.ts`. */
+export async function readRunSchemas(
+  project: LoadedProject,
+): Promise<Partial<Record<(typeof RUN_SCHEMA_KEYS)[number], NormalizedInputSchema>>> {
+  const { agentFile } = getProjectPaths(project.root);
+  const frontmatter = parseAgentFile(await readFile(agentFile, "utf8")).data;
+  const schemas: Partial<Record<(typeof RUN_SCHEMA_KEYS)[number], NormalizedInputSchema>> = {};
+  for (const key of RUN_SCHEMA_KEYS) {
+    const declared = frontmatter[key] ?? project.config[key];
+    if (declared !== undefined) schemas[key] = await normalizeInputSchema(declared, key, agentFile);
+  }
+  return schemas;
 }

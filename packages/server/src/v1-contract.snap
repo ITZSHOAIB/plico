@@ -396,6 +396,7 @@
       "string"
     ]
   },
+  "GET /v1/schemas": {},
   "GET /v1/runs": [
     {
       "endedAt": "string",
@@ -407,7 +408,10 @@
       "projectRoot": "string",
       "runId": "string",
       "startedAt": "string",
-      "status": "string"
+      "status": "string",
+      "structuredOutput": {
+        "ticket": "string"
+      }
     }
   ],
   "GET /v1/runs/:id": {

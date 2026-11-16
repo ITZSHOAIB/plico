@@ -1,4 +1,4 @@
-import type { ToolInputSchema } from "./tools.js";
+import type { JsonSchema, ToolInputSchema } from "./tools.js";
 
 export type ValidationSeverity = "error" | "warning";
 
@@ -45,6 +45,12 @@ export interface ProviderInput {
   /** The value of the variable named by `model.apiKeyEnv`, when the config names one. */
   apiKey?: string;
   baseURL?: string;
+}
+
+/** The agent's declared run schemas as JSON Schema, served by `GET /v1/schemas`. */
+export interface AgentSchemas {
+  input?: JsonSchema;
+  output?: JsonSchema;
 }
 
 export interface LoadedProject {

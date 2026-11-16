@@ -88,7 +88,7 @@ When the model calls `close_ticket`, the run pauses and Studio asks a person to 
 
 Declare an `output` schema in `agent.md` frontmatter or `plico.config.ts` to require a validated
 structured result. The final `run.completed` event and run result include `structuredOutput`;
-`output` stays text. See [run schemas](https://plico.sohab.dev/docs/project-layout#agentmd-frontmatter).
+`output` stays text. `GET /v1/schemas` lets clients discover the declared shapes. See [run schemas](https://plico.sohab.dev/docs/project-layout#agentmd-frontmatter).
 
 ## Why Plico
 

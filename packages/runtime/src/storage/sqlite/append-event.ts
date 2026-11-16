@@ -94,9 +94,15 @@ export function appendEventRecord(database: DatabaseSync, event: PlicoEvent): vo
           typeof event.payload.output === "string"
             ? event.payload.output
             : null;
+        const structuredOutput =
+          event.type === "run.completed" && event.payload.structuredOutput !== undefined
+            ? JSON.stringify(event.payload.structuredOutput)
+            : null;
         database
-          .prepare("UPDATE runs SET status = ?, ended_at = ?, output = ? WHERE run_id = ?")
-          .run(status, endedAt, output, event.runId);
+          .prepare(
+            "UPDATE runs SET status = ?, ended_at = ?, output = ?, structured_output_json = ? WHERE run_id = ?",
+          )
+          .run(status, endedAt, output, structuredOutput, event.runId);
         // Drop the owner once the run leaves running, including waiting; recovery only inspects running runs.
         database.prepare("DELETE FROM run_owners WHERE run_id = ?").run(event.runId);
       }

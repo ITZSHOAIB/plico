@@ -34,7 +34,7 @@ export function MainView({ view, data, inspector, evals, onOpenRun, onBackToRuns
   if (view === "instructions") {
     if (data.instructionsError) return <EmptyState alert>{data.instructionsError}</EmptyState>;
     return data.instructions ? (
-      <InstructionsView instructions={data.instructions} />
+      <InstructionsView instructions={data.instructions} schemas={data.schemas} />
     ) : (
       <EmptyState>Loading instructions…</EmptyState>
     );

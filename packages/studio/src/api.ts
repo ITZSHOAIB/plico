@@ -1,4 +1,5 @@
 import type {
+  AgentSchemas,
   ArtifactDiff,
   ArtifactSnapshotDetail,
   ArtifactWorkspace,
@@ -138,6 +139,10 @@ export async function requestRunCancellation(
 
 export function fetchInstructions(): Promise<ComposedInstructions> {
   return getJson("/v1/instructions");
+}
+
+export function fetchSchemas(): Promise<AgentSchemas> {
+  return getJson("/v1/schemas");
 }
 
 export function fetchArtifactWorkspace(runId: string): Promise<ArtifactWorkspace | null> {

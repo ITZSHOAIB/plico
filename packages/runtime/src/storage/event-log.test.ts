@@ -158,6 +158,7 @@ describe("event log streams", () => {
       ALTER TABLE threads DROP COLUMN title_revision;
       ALTER TABLE threads DROP COLUMN metadata_json;
       ALTER TABLE runs DROP COLUMN metadata_json;
+      ALTER TABLE runs DROP COLUMN structured_output_json;
       ALTER TABLE thread_runs DROP COLUMN context_json;
       UPDATE plico_meta SET value = '10' WHERE key = 'schema_version';
     `);

@@ -1,5 +1,5 @@
 import type { DatabaseSync } from "node:sqlite";
-import type { EvalReport, PlicoEvent, RunStatus, RunSummary } from "@plico-ai/contracts";
+import type { EvalReport, JsonValue, PlicoEvent, RunStatus, RunSummary } from "@plico-ai/contracts";
 import { runStreamType } from "../../events.js";
 import { parseMetadata } from "../metadata.js";
 
@@ -7,7 +7,7 @@ export function readRunSummaries(database: DatabaseSync): RunSummary[] {
   const rows = database
     .prepare(
       `
-        SELECT run_id, project_root, project_name, status, started_at, ended_at, output, metadata_json
+        SELECT run_id, project_root, project_name, status, started_at, ended_at, output, structured_output_json, metadata_json
         FROM runs
         ORDER BY started_at DESC, run_id DESC
       `,
@@ -21,7 +21,7 @@ export function readRunSummary(database: DatabaseSync, runId: string): RunSummar
   const row = database
     .prepare(
       `
-        SELECT run_id, project_root, project_name, status, started_at, ended_at, output, metadata_json
+        SELECT run_id, project_root, project_name, status, started_at, ended_at, output, structured_output_json, metadata_json
         FROM runs
         WHERE run_id = ?
       `,
@@ -134,6 +134,9 @@ function rowToRunSummary(row: Record<string, unknown>): RunSummary {
     startedAt: String(row.started_at),
     endedAt: row.ended_at === null ? null : String(row.ended_at),
     ...(row.output === null || row.output === undefined ? {} : { output: String(row.output) }),
+    ...(typeof row.structured_output_json === "string"
+      ? { structuredOutput: JSON.parse(row.structured_output_json) as JsonValue }
+      : {}),
     ...(metadata === undefined ? {} : { metadata }),
   };
 }
