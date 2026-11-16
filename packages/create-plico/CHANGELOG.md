@@ -1,5 +1,12 @@
 # create-plico
 
+## 0.1.4
+
+### Patch Changes
+
+- Updated dependencies [2197cc3]
+  - @plico-ai/core@0.1.4
+
 ## 0.1.3
 
 ### Patch Changes
