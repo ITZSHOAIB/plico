@@ -60,6 +60,12 @@ Run the narrowest useful check first:
 - `pnpm test` or root build only when cross-package behavior changed.
 - Before raising a PR, all relevant tests must pass.
 
+## Release marketing reminder
+
+After completing an epic or milestone, remind the maintainer in the completion summary to write a LinkedIn post about the shipped work for Plico marketing. Include the user-facing outcome and the relevant release, demo, or documentation link, distinguishing merged work from a published release. The maintainer writes and publishes the post.
+
+Offer the post image too: a new card in `product/brand/update-card/` (copy the latest in `cards/`, bump the number, render). Its README has the steps, the rules, and the post text structure.
+
 ## Agent skills
 
 ### Issue tracker
