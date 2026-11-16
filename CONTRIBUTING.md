@@ -26,7 +26,7 @@ CI also installs the packed tarballs into an empty project on Linux and Windows 
 pnpm smoke:tarballs
 ```
 
-A change people who install the packages can see needs a changeset (`pnpm changeset`). See [docs/releasing.md](docs/releasing.md).
+A change people who install the packages can see needs a changeset (`pnpm changeset`). Dependabot's npm PRs get theirs automatically. See [docs/releasing.md](docs/releasing.md).
 
 Pull requests run validation and packed-install smoke checks on Linux and Windows, on Node 22.18 and 24. `CI required` summarizes the matrix results. Pushing another commit cancels the previous PR checks; main checks and release jobs are preserved. Fork PRs use read-only workflow permissions and may need the maintainer to approve their first workflow run.
 

@@ -18,9 +18,8 @@ import type { DryRunScriptStep, RunProjectOptions, RunResult } from "../types/in
 import { finalizeRun } from "./finalize.js";
 import { ignoredWhenPinned, pinInstructions } from "./pinned-instructions.js";
 import { recordTools } from "./record-tools.js";
-import { runDefaultDryRun } from "./strategies/default-dry.js";
+import { runDryStrategy } from "./strategies/dry.js";
 import { runProviderBackedRun } from "./strategies/provider.js";
-import { runScriptedDryRun } from "./strategies/scripted.js";
 import {
   type StoredSpanContext,
   startRunSpan,
@@ -258,7 +257,7 @@ async function runLoop(
   };
 
   try {
-    const { instructions, skills } = await pinInstructions(project, events);
+    const { instructions, skills, outputSchema } = await pinInstructions(project, events);
 
     const tools = await discoverTools(project);
     await recordTools(project.root, tools, events);
@@ -277,23 +276,26 @@ async function runLoop(
             project.config,
             input.history,
             skills,
+            outputSchema,
           )
-        : input.script === undefined
-          ? await runDefaultDryRun(project, events)
-          : await runScriptedDryRun(
-              ctx,
-              input.script,
-              tools,
-              events,
-              options.eventStore,
-              project.config,
-              input.mockTools === true,
-            );
-    await events.append("run.completed", {
-      ...(output === undefined ? {} : { output }),
-    });
+        : await runDryStrategy(
+            ctx,
+            project,
+            tools,
+            events,
+            options.eventStore,
+            input.script,
+            input.mockTools === true,
+            outputSchema,
+          );
+    await events.append("run.completed", output);
 
-    return await finalizeRun({ ...summary, status: "completed", output, events: events.all() });
+    return await finalizeRun({
+      ...summary,
+      status: "completed",
+      ...output,
+      events: events.all(),
+    });
   } catch (error) {
     if (error instanceof RunWaitingError) {
       return finalizeRun({

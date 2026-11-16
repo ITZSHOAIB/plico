@@ -20,6 +20,9 @@ the run before the tool executes. Each decision is recorded in the run's event l
 [Approvals](/docs/approvals) for the policy and the other ways to decide.
 The run inspector also lets you cancel active runs.
 
+For an agent with an output schema, open the final `run.completed` event's JSON details to
+inspect its validated `structuredOutput` value.
+
 ## Chat
 
 In Chat, replies stream in as Markdown, **Stop** cancels the reply in progress, and
@@ -33,6 +36,8 @@ See [Threads](/docs/threads).
 The Readiness view reports approval policy overrides that reference missing tools or
 conflict with a tool's declared approval requirement. It also reports whether
 model-facing artifact tools are configured as `read-write`, `read-only`, or `off`.
+An agent with an output schema also has a `run.output` diagnostic confirming that final results
+are validated before completion.
 
 ## Artifacts
 

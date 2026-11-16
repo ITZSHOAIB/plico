@@ -19,6 +19,8 @@ export interface RunResult {
   runId: string;
   status: RunStatus;
   output?: string;
+  /** Validated final value when the agent declares an output schema. */
+  structuredOutput?: JsonValue;
   events: PlicoEvent[];
   errors?: ValidationIssue[];
 }

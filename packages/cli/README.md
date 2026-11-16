@@ -19,6 +19,9 @@ npx plico validate
 
 Most commands take `--json` and `--db <path>`. `plico --version` prints the version. The full reference is at [plico.sohab.dev/docs/cli](https://plico.sohab.dev/docs/cli).
 
+When the agent declares an `output` schema, `plico run --json` includes the validated
+`structuredOutput`. Scripted runs must return final JSON matching that schema too.
+
 ## Durable runs
 
 `plico run --dry --persist` resumes eligible interrupted runs in the selected database as it starts the requested run. It waits for each recovered execution to finish or reach a wait, reports recovery results on stderr, and uses the requested run's exit code. A waiting run needs a running host or a later persistent start to continue. `plico serve` adopts eligible runs at startup as well.

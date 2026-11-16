@@ -1,5 +1,6 @@
 import type { ArtifactContent } from "./artifacts.js";
 import type { ValidationIssue } from "./project.js";
+import type { JsonSchema } from "./tools.js";
 
 export type JsonValue =
   | null
@@ -30,6 +31,8 @@ export interface PlicoEventPayloads {
     content: string;
     /** The skills the run started with, so a resumed run keeps them. Absent on older runs. */
     skills?: Array<{ name: string; description: string; source: string; body: string }>;
+    /** The output schema the run started with. Absent on runs without structured output. */
+    outputSchema?: JsonSchema;
   };
   "tools.discovered": {
     tools: Array<{
@@ -45,6 +48,7 @@ export interface PlicoEventPayloads {
   };
   "input.received": { content: string };
   "model.request": {
+    outputSchema?: JsonSchema;
     model?: { provider: string; name: string };
     messages: Array<{
       role: string;
@@ -90,7 +94,7 @@ export interface PlicoEventPayloads {
     version?: number;
   };
   "artifact.snapshot.created": { snapshotId: string; fileCount: number };
-  "run.completed": { output?: string };
+  "run.completed": { output?: string; structuredOutput?: JsonValue };
   "run.waiting": { requestId: string; toolName: string; output?: string };
   "run.failed": { phase: string };
   "run.cancelled": Record<string, never>;

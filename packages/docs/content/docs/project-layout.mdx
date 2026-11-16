@@ -38,6 +38,7 @@ go to the model, and `plico validate` warns on keys it does not know. Invalid YA
 ---
 output:
   type: object
+  additionalProperties: false
   required: [summary]
   properties:
     summary:
@@ -48,7 +49,25 @@ Summarize the incoming request.
 
 `plico.config.ts` accepts the same `input` and `output` keys; the schema in `agent.md` wins when
 both are set. `plico validate` rejects a value that is not a valid schema. A run is rejected when its input does not match the `input` schema, in the API and in
-`plico run --input`. The `output` schema is not enforced yet, so agents behave as before.
+`plico run --input`.
+
+An `output` schema requires a validated structured result before the run completes. The final
+`run.completed` event and the result of `runProject` include `structuredOutput`, with the value as
+JSON. `output` remains text for existing consumers. Agents without schemas behave as before.
+
+Native providers receive an object output schema through their structured response format.
+Other providers, and schemas for arrays or primitive values, use Plico's `submit_result` tool
+with `{ result: value }`. An invalid or missing submission gets one repair turn, within
+`model.maxSteps`; another failure ends the run with an `output.validation` diagnostic.
+Invalid native output fails validation too. The `submit_result` tool name is reserved for
+agents that declare an output schema.
+
+Scripted and dry runs with an output schema must produce final text containing valid JSON that
+matches the schema. They have no model repair turn. The output schema is pinned when a run starts,
+so editing the project while it waits does not change the result it must return.
+
+Inspect `structuredOutput` in the final event's JSON details in Studio, or use `plico run --json`.
+`plico readiness` reports a `run.output` diagnostic when an output schema is declared.
 
 ## Skills
 

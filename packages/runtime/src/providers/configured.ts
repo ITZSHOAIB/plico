@@ -27,6 +27,7 @@ export function createConfiguredModelProvider(
   if (native)
     return createAiSdkModelProvider({
       apiKeyEnv,
+      supportsStructuredOutput: true,
       createModel: async (apiKey) =>
         (await native.create({
           model: model.name,

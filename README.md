@@ -86,6 +86,10 @@ export default defineTool({
 
 When the model calls `close_ticket`, the run pauses and Studio asks a person to approve it.
 
+Declare an `output` schema in `agent.md` frontmatter or `plico.config.ts` to require a validated
+structured result. The final `run.completed` event and run result include `structuredOutput`;
+`output` stays text. See [run schemas](https://plico.sohab.dev/docs/project-layout#agentmd-frontmatter).
+
 ## Why Plico
 
 - **File-first.** The project is a directory tree. No hidden state, no code generation, no build step.
