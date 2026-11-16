@@ -1,7 +1,7 @@
 # Eval scorers and the shape of Plico evals
 
 **Date:** 2026-11-16  
-**Status:** Decisions accepted 2026-11-17 and recorded in epic #145. The default judge is confirmed by the PoC below before it is built; ADR 0009's scorer row changes after the PoC.  
+**Status:** Decisions accepted 2026-11-17 and recorded in epic #145. PoC run 2026-11-17 (results below); the default judge awaits the owner's rulings on four labels. ADR 0009's scorer row changes after that.  
 **Baseline:** Plico `fbe4d95` (v0.1.5). Package data from the npm registry on this date; first-party docs for eve, the AI SDK, Arize Phoenix, Braintrust and Anthropic. No judge model was called.
 
 ## Recommendation
@@ -26,7 +26,7 @@ Audit 0005, layer 14, shortlisted it from package data only: scorer-only, no pla
 
 | Option | Version, licence | Weekly downloads | Stable releases since 1 Aug | Fit for Plico |
 | --- | --- | --- | --- | --- |
-| **Own judge on AI SDK `generateObject`** | none | n/a | n/a | Every Plico provider, reasons included, prompts are ours to test |
+| **Own judge on AI SDK `generateText` with `Output.object`** | none | n/a | n/a | Every Plico provider, reasons included, prompts are ours to test |
 | AI SDK `experimental_decide` | in `ai` 7 | n/a | n/a | Calibrated probabilities, but experimental, no reasons, no `openai-compatible` |
 | `autoevals` | 0.4.1, MIT | 0.68M | 2 | Tested prompt templates; OpenAI client only, bypasses the model port |
 | `@arizeai/phoenix-evals` | 2.7.1, Apache-2.0 | 0.01M | 7 | On AI SDK 7, but pins `ai` exactly and needs `@opentelemetry/api` ^1.10 (Plico pins 1.9) |
@@ -142,11 +142,55 @@ Readiness warns when the judge is the agent's own model, because a model grading
 
 One PoC, arms on the same scenarios, run against OpenAI and Anthropic:
 
-- **Arms:** (A) own judge on `generateObject`, (B) `experimental_decide`, (C) `autoevals` through its OpenAI client.
+- **Arms:** (A) own judge on `generateText` with `Output.object` (`generateObject` is deprecated in `ai` 7), (B) `experimental_decide`, (C) `autoevals` through its OpenAI client.
 - **Scenarios:** factuality against an expected answer; a three-level rubric; a yes-or-no criterion over a run's tool calls; one custom TypeScript scorer.
 - **Measure:** works through Plico's model port for both providers; a reason is returned; judge metadata is reproducible; dependency count; agreement with 20 hand-labelled outputs.
 
 Pass bar for the default: both providers through the model port, reasons, and agreement no worse than the best other arm.
+
+## PoC results
+
+Run 2026-11-17 in `D:\projects\plico-eval-judge-poc` (outside the repo; `results/REPORT.md` has every number). No package changed.
+
+**What ran.** Six arms with the same prompt wording: (A) own judge on `generateText` with `Output.object`, directly and (A-port) through the real `ModelProvider` from `createConfiguredModelProvider`; (B) `experimental_decide`; (C) `autoevals`; (D) `@arizeai/phoenix-evals`; (E) `openevals`, added as a further open-source option. No OpenAI or Anthropic credit was available, so the targets were each configured as a `plico.config.ts` model block:
+
+| Target | Stands in for | Adapter | Model | Used for |
+| --- | --- | --- | --- | --- |
+| groq | OpenAI | `@ai-sdk/openai` `.chat`, OpenAI client | `openai/gpt-oss-120b` | agreement |
+| ollama-anthropic | Anthropic | `@ai-sdk/anthropic` on Ollama's `/v1/messages` | `llama3.2` 3B | coverage only, too weak to rank judges |
+| gemini | a native non-OpenAI provider | `@ai-sdk/google` | `gemini-3.5-flash` | smoke only: the free tier allows 20 requests a day per model |
+
+Twenty labelled outputs (7 factuality, 7 rubric, 6 tool-call criteria, 8 borderline), two trials each, plus a custom TypeScript scorer behind the same interface.
+
+**Structural results.** These do not depend on the labels.
+
+| Arm | Through the port | Reason | Judge metadata | Packages added | Notes |
+| --- | --- | --- | --- | --- | --- |
+| A own judge | yes, all three targets, no new provider code | yes | model id, response id, usage, prompt, raw answer | 0 | port lacks temperature and the served model id |
+| B decide | no: needs a second factory, `decisionModel` | no | model id, usage, probabilities | 0 | fails on Groq (OpenAI adapter posts to `/decisions`, served only by OpenAI); Google adapter is built on `generateContent`, so it cannot reach `gemini-decision-1`; "exactly one value" errors on Ollama |
+| C autoevals | no: OpenAI client only | yes | the requested model and the choice | 28 | the Anthropic target had to switch to Ollama's OpenAI endpoint |
+| D phoenix | no: takes an AI SDK model | yes | label and explanation | 12 | pins `ai` 7.0.152 (a second copy), needs `@opentelemetry/api` 1.10 against Plico's 1.9 pin, uses the deprecated `generateObject` |
+| E openevals | no: a LangChain model per provider | yes | score and comment | 33 | brings LangChain, LangGraph and LangSmith |
+
+The custom scorer and a judge scorer returned the same result shape, and the custom scorer matched all six tool-call labels.
+
+**Agreement (groq, first trial).** A 16/20, A-port 17/20, C 18/20, D 19/20, E 18/20; B returned nothing. The arms agree with each other on 17 to 20 of the 20 cases without any label involved, and every disagreement with a label is on four rubric cases:
+
+- R7 (label 0, "try resetting your password again"): all five arms said 1.
+- R5 (label 1, apology and refund, no timing): A, C and E said 2.
+- R2 (label 1) and R4 (label 0): both A variants were one level more lenient.
+
+At n=20, agreement does not discriminate between the arms, and its ranking turns on these four labels, which the owner has not yet ruled on. D's lead over A is the prompt wording (A asks for step-by-step reasoning, Phoenix for a short explanation), not the mechanism: both make one structured call. The pass bar's agreement clause is therefore open, not met or failed.
+
+On Ollama, direct A succeeded 8 of 40 calls and A-port 33 of 40 on the same adapter: the 3B model often broke the schema. Noted, not investigated.
+
+**Corrections to this audit.** `generateObject` is deprecated in `ai` 7: the own judge uses `generateText` with `Output.object`, as the runtime already does for typed results. `experimental_decide` reaches fewer providers than "native on OpenAI, Google" suggests: through Plico's adapters it worked only on the Anthropic adapter here.
+
+**Open for the owner.**
+
+1. Rulings on R5, R7, R2 and R4. Agreement is re-scored from the saved verdicts without new calls.
+2. Whether the port gains a judge temperature and reports the served model id, or the judge records the configured model and accepts the provider's default temperature.
+3. Whether to accept the structural results as decisive, or first add a second Groq model or a larger local model.
 
 ## Decisions
 
@@ -175,14 +219,12 @@ Accepted by the owner on 2026-11-17:
 ## Implementor prompt
 
 ```text
-Run the eval-scorer PoC from product/audits/0019-eval-scorers-and-eval-design.md in a scratch
-folder outside the packages. Build three judge arms: (A) a judge on AI SDK generateObject with a
-{score, reason} schema, (B) AI SDK experimental_decide, (C) autoevals through its OpenAI client.
-Run each on the same four scenarios (factuality vs expected, three-level rubric, yes/no over a
-run's tool calls, one custom TypeScript scorer) against one OpenAI and one Anthropic model
-configured the way Plico's model port configures them. Hand-label 20 outputs first and report,
-per arm: provider coverage through the model port, whether a reason is returned, what judge
-metadata can be recorded, dependency count, and agreement with the labels. Do not change any
-package. Write the results as a "PoC results" section in the audit and stop for the owner's
-decision.
+Finish the judge decision for epic #145 from product/audits/0019-eval-scorers-and-eval-design.md,
+"PoC results". The PoC lives in D:\projects\plico-eval-judge-poc. Apply the owner's rulings on
+R2, R4, R5 and R7 to cases.ts, run `node report.ts` (it re-scores saved verdicts, no model calls),
+and update the agreement paragraph in the audit. If the owner accepts the own judge as the default,
+update ADR 0009's scorer row, then start slice 2 of #145 (Markdown cases, expect checks, mocks, the
+scorer interface and defineScorer) with TDD through `plico validate` and `plico eval`. Do not add
+autoevals, Phoenix or openevals as dependencies. If the owner asked for port changes (judge
+temperature, served model id), raise them as part of slice 3, not slice 2.
 ```
