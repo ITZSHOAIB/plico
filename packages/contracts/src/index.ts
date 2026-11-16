@@ -20,6 +20,7 @@ export type {
 } from "./events.js";
 export type { ComposedInstructions } from "./instructions.js";
 export type {
+  AgentSchemas,
   LoadedProject,
   ProjectConfig,
   ProviderInput,

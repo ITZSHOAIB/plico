@@ -1,7 +1,14 @@
-import type { ComposedInstructions } from "../types";
+import { JsonSection } from "../components/JsonSection";
+import type { AgentSchemas, ComposedInstructions } from "../types";
 import { CodeBlock, Page } from "../ui/Page";
 
-export function InstructionsView({ instructions }: { instructions: ComposedInstructions }) {
+export function InstructionsView({
+  instructions,
+  schemas = {},
+}: {
+  instructions: ComposedInstructions;
+  schemas?: AgentSchemas;
+}) {
   return (
     <Page
       label="Instructions"
@@ -12,6 +19,10 @@ export function InstructionsView({ instructions }: { instructions: ComposedInstr
         The system prompt your agent receives, composed from its Markdown files in order.
       </p>
       <CodeBlock className="text-fg">{instructions.content}</CodeBlock>
+      {schemas.input && <JsonSection className="mt-6" title="Input schema" value={schemas.input} />}
+      {schemas.output && (
+        <JsonSection className="mt-6" title="Output schema" value={schemas.output} />
+      )}
     </Page>
   );
 }

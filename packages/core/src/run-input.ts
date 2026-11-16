@@ -1,8 +1,5 @@
-import { readFile } from "node:fs/promises";
-import { parseAgentFile } from "./agent-file.js";
 import { loadProject } from "./config.js";
-import { getProjectPaths } from "./layout.js";
-import { normalizeInputSchema } from "./schema.js";
+import { readRunSchemas } from "./run-schemas.js";
 
 export type PreparedRunMessage = { ok: true; message?: string } | { ok: false; errors: string[] };
 
@@ -14,12 +11,9 @@ export async function prepareRunMessage(
   root: string,
   request: { content?: string | undefined; input?: unknown },
 ): Promise<PreparedRunMessage> {
-  const { config } = await loadProject(root);
-  const { agentFile } = getProjectPaths(root);
-  const frontmatter = parseAgentFile(await readFile(agentFile, "utf8")).data;
-  const declared = frontmatter.input ?? config.input;
+  const schema = (await readRunSchemas(await loadProject(root))).input;
 
-  if (declared === undefined) {
+  if (schema === undefined) {
     if (request.input !== undefined)
       return {
         ok: false,
@@ -30,10 +24,17 @@ export async function prepareRunMessage(
   if (request.input === undefined)
     return { ok: false, errors: ["input is required: this agent declares an input schema."] };
 
-  const schema = await normalizeInputSchema(declared, "input", agentFile);
   const parsed = await schema.parse(request.input);
   if (!parsed.success) return { ok: false, errors: parsed.error.split("; ") };
 
   const json = JSON.stringify(request.input, null, 2);
-  return { ok: true, message: request.content ? `${request.content}\n\nInput:\n${json}` : json };
+  return {
+    ok: true,
+    message: request.content
+      ? `${request.content}
+
+Input:
+${json}`
+      : json,
+  };
 }

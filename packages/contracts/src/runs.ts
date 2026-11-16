@@ -11,6 +11,8 @@ export interface RunSummary {
   startedAt: string;
   endedAt: string | null;
   output?: string;
+  /** Validated final value when the agent declares an output schema. */
+  structuredOutput?: JsonValue;
   /** Host data set when the run started and never changed. */
   metadata?: Record<string, JsonValue>;
 }

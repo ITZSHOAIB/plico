@@ -54,6 +54,8 @@ both are set. `plico validate` rejects a value that is not a valid schema. A run
 An `output` schema requires a validated structured result before the run completes. The final
 `run.completed` event and the result of `runProject` include `structuredOutput`, with the value as
 JSON. `output` remains text for existing consumers. Agents without schemas behave as before.
+`GET /v1/runs/<run-id>` and `GET /v1/runs` include `structuredOutput` too, and `GET /v1/schemas`
+returns the declared schemas as JSON Schema so clients can discover them.
 
 Native providers receive an object output schema through their structured response format.
 Other providers, and schemas for arrays or primitive values, use Plico's `submit_result` tool
@@ -66,7 +68,8 @@ Scripted and dry runs with an output schema must produce final text containing v
 matches the schema. They have no model repair turn. The output schema is pinned when a run starts,
 so editing the project while it waits does not change the result it must return.
 
-Inspect `structuredOutput` in the final event's JSON details in Studio, or use `plico run --json`.
+Studio shows the declared schemas under Instructions and a run's validated result in the run
+inspector. On the command line, use `plico run --json`.
 `plico readiness` reports a `run.output` diagnostic when an output schema is declared.
 
 ## Skills

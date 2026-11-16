@@ -1,6 +1,7 @@
 import { fireEvent, screen } from "@testing-library/react";
 import { vi } from "vitest";
 import type {
+  AgentSchemas,
   ArtifactSnapshotDetail,
   ArtifactWorkspace,
   ComposedInstructions,
@@ -170,6 +171,11 @@ const readiness: ReadinessReport = {
   ],
 };
 
+export const schemas: AgentSchemas = {
+  input: { type: "object", required: ["ticket"], properties: { ticket: { type: "string" } } },
+  output: { type: "object", properties: { priority: { type: "number" } } },
+};
+
 export function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status });
 }
@@ -200,6 +206,7 @@ export function stubApi(
     if (path === "/v1/project") return json({ project });
     if (path === "/v1/runs") return json(options.includeOtherRun ? [run, otherRun] : [run]);
     if (path === "/v1/instructions") return json(instructions);
+    if (path === "/v1/schemas") return json(schemas);
     if (path === "/v1/readiness") return json(readiness);
     if (path === `/v1/runs/${run.runId}`) return json(run);
     if (path === `/v1/runs/${run.runId}/events`) return json(runEvents);

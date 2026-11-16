@@ -62,11 +62,12 @@ Every route is under `/v1`. Errors are JSON with an `error.code` and `error.mess
 | `GET /health` | Liveness. |
 | `GET /v1/project` | The loaded project: its root and config. |
 | `GET /v1/instructions` | The composed instructions. |
+| `GET /v1/schemas` | The agent's `input` and `output` schemas as JSON Schema. Each is omitted when not declared. |
 | `GET /v1/readiness` | Readiness diagnostics. |
 | `POST /v1/runs` | Start a run. Returns 202 and the `runId`. |
 | `POST /v1/runs/dry` | Run the project without a model and return the result. |
 | `GET /v1/runs` | List runs. |
-| `GET /v1/runs/<run-id>` | One run. |
+| `GET /v1/runs/<run-id>` | One run, with `structuredOutput` when the agent declares an output schema. |
 | `GET /v1/runs/<run-id>/events` | The run's events. `?after=<sequence>` returns only newer ones. See [Events](/docs/events). |
 | `GET /v1/runs/<run-id>/events/stream` | The same events as Server-Sent Events. |
 | `POST /v1/runs/<run-id>/cancel` | Cancel a run. |
@@ -79,4 +80,4 @@ Every route is under `/v1`. Errors are JSON with an `error.code` and `error.mess
 | `POST /v1/eval`, `GET /v1/eval`, `GET /v1/eval/<name>` | Run evals and read the latest report or one case. |
 
 `/v1/project`, `/v1/instructions`, `/v1/readiness`, `/v1/eval` and `/v1/runs/dry` are not served on a
-[mounted, scoped API](/docs/backend).
+[mounted, scoped API](/docs/backend). `/v1/schemas` is, so clients there can discover the input a run accepts.

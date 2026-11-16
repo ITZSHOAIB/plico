@@ -229,6 +229,37 @@ it("records additive structured output fields without changing legacy output", a
         },
       }
     `);
+    const summary = await (await fetch(`${baseUrl}/v1/runs/${result.runId}`)).json();
+    const schemas = await (await fetch(`${baseUrl}/v1/schemas`)).json();
+    expect(shapeOf({ summary, schemas })).toMatchInlineSnapshot(`
+      {
+        "schemas": {
+          "output": {
+            "properties": {
+              "ticket": {
+                "type": "string",
+              },
+            },
+            "required": [
+              "string",
+            ],
+            "type": "string",
+          },
+        },
+        "summary": {
+          "endedAt": "string",
+          "output": "string",
+          "projectName": "string",
+          "projectRoot": "string",
+          "runId": "string",
+          "startedAt": "string",
+          "status": "string",
+          "structuredOutput": {
+            "ticket": "string",
+          },
+        },
+      }
+    `);
   } finally {
     await writeFile(join(root, "agent.md"), "# Demo\n");
   }
@@ -381,6 +412,7 @@ it("keeps the /v1 response shapes stable", async () => {
     "POST /v1/runs/dry": await shape("/v1/runs/dry", dryRun),
     "GET /v1/project": await shape("/v1/project"),
     "GET /v1/instructions": await shape("/v1/instructions"),
+    "GET /v1/schemas": await shape("/v1/schemas"),
     "GET /v1/runs": await shape("/v1/runs"),
     "GET /v1/runs/:id": await shape(runPath),
     "GET /v1/runs/:id/events": await shape(`${runPath}/events`),

@@ -2,7 +2,7 @@
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "./App";
-import { click, events, json, openRun, stubApi } from "./testing/fixtures";
+import { click, events, json, openRun, schemas, stubApi } from "./testing/fixtures";
 
 function posts(fetchMock: ReturnType<typeof stubApi>) {
   return fetchMock.mock.calls.filter(([, init]) => init?.method === "POST");
@@ -126,6 +126,19 @@ describe("instructions", () => {
 
     expect(await screen.findByText("# Agent instructions")).toBeTruthy();
     expect(screen.getByText("Sources: agent.md, skills/triage.md")).toBeTruthy();
+  });
+
+  it("shows the input and output schemas the agent declares", async () => {
+    stubApi();
+    render(<App />);
+    await screen.findByRole("region", { name: "Project overview" });
+
+    click("Instructions");
+
+    const input = await screen.findByRole("region", { name: "Input schema" });
+    expect(JSON.parse(input.querySelector("pre")?.textContent ?? "")).toEqual(schemas.input);
+    const output = screen.getByRole("region", { name: "Output schema" });
+    expect(JSON.parse(output.querySelector("pre")?.textContent ?? "")).toEqual(schemas.output);
   });
 });
 

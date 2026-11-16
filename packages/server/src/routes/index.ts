@@ -7,12 +7,14 @@ import { healthRoutes } from "./health.js";
 import { projectRoutes } from "./project.js";
 import { readinessRoutes } from "./readiness.js";
 import { runRoutes } from "./runs.js";
+import { schemaRoutes } from "./schemas.js";
 import { threadRoutes } from "./threads.js";
 import type { Route } from "./types.js";
 
 const routes: readonly Route[] = [
   ...healthRoutes,
   ...projectRoutes,
+  ...schemaRoutes,
   ...runRoutes,
   ...threadRoutes,
   ...artifactRoutes,

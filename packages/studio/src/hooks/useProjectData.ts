@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { fetchInstructions, fetchProject, fetchReadiness, fetchRuns } from "../api";
-import type { ComposedInstructions, LoadedProject, ReadinessReport, RunSummary } from "../types";
+import { fetchInstructions, fetchProject, fetchReadiness, fetchRuns, fetchSchemas } from "../api";
+import type {
+  AgentSchemas,
+  ComposedInstructions,
+  LoadedProject,
+  ReadinessReport,
+  RunSummary,
+} from "../types";
 
 export function useProjectData() {
   const latestRunRequest = useRef(0);
@@ -8,6 +14,7 @@ export function useProjectData() {
   const [project, setProject] = useState<LoadedProject | null>(null);
   const [runs, setRuns] = useState<RunSummary[]>([]);
   const [instructions, setInstructions] = useState<ComposedInstructions | null>(null);
+  const [schemas, setSchemas] = useState<AgentSchemas>({});
   const [readiness, setReadiness] = useState<ReadinessReport | null>(null);
   const [readinessError, setReadinessError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -47,6 +54,10 @@ export function useProjectData() {
     fetchInstructions()
       .then(setInstructions)
       .catch(() => setInstructionsError("Could not load instructions"));
+    // Schemas are optional detail on the Instructions view, so a failure only hides them.
+    fetchSchemas()
+      .then(setSchemas)
+      .catch(() => setSchemas({}));
     void loadRuns();
     void loadReadiness();
     const refresh = setInterval(() => {
@@ -65,6 +76,7 @@ export function useProjectData() {
     runsError,
     instructions,
     instructionsError,
+    schemas,
     readiness,
     readinessError,
     error,

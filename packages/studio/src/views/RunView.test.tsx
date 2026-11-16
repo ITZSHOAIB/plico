@@ -102,3 +102,27 @@ it("omits the token total for a run that called no model", () => {
   render(<RunView selectedRun={{ ...run, status: "completed" }} events={[]} />);
   expect(screen.queryByText("Tokens")).toBeNull();
 });
+
+it("shows the validated structured result once the run completes", () => {
+  const events = [
+    runEvent(1, "assistant.output", { content: '{"ticket":"T-1"}' }),
+    runEvent(2, "run.completed", {
+      output: '{"ticket":"T-1"}',
+      structuredOutput: { ticket: "T-1", priority: 2 },
+    }),
+  ];
+  render(<RunView selectedRun={{ ...run, status: "completed" }} events={events} />);
+  const result = screen.getByRole("region", { name: "Structured result" });
+  expect(JSON.parse(result.querySelector("pre")?.textContent ?? "")).toEqual({
+    ticket: "T-1",
+    priority: 2,
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Previous event" }));
+  expect(screen.queryByRole("region", { name: "Structured result" })).toBeNull();
+});
+
+it("shows no structured result for a run without an output schema", () => {
+  const events = [runEvent(1, "run.completed", { output: "Done" })];
+  render(<RunView selectedRun={{ ...run, status: "completed" }} events={events} />);
+  expect(screen.queryByRole("region", { name: "Structured result" })).toBeNull();
+});
