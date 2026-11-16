@@ -10,9 +10,13 @@ export const RUN_SCHEMA_KEYS = ["input", "output"] as const;
 /** Optional shapes an agent accepts and returns. Each is JSON Schema or a Zod schema. */
 export type RunSchemas = Partial<Record<(typeof RUN_SCHEMA_KEYS)[number], ToolInputSchema>>;
 
-/** One error per `input` or `output` value in `source` that is not a usable schema. */
+/**
+ * One error per `input` or `output` value in `source` that is not a usable schema. `path` labels the
+ * issue; `file` is the absolute path a Zod schema resolves its `zod` package from.
+ */
 export async function validateRunSchemas(
   path: string,
+  file: string,
   source: { input?: unknown; output?: unknown } | Record<string, unknown>,
 ): Promise<ValidationIssue[]> {
   const issues: ValidationIssue[] = [];
@@ -20,7 +24,7 @@ export async function validateRunSchemas(
     const value = (source as Record<string, unknown>)[key];
     if (value === undefined) continue;
     try {
-      await normalizeInputSchema(value, `${path} ${key}`, path);
+      await normalizeInputSchema(value, `${path} ${key}`, file);
     } catch (error) {
       issues.push({
         path,
@@ -41,7 +45,9 @@ export async function readRunSchemas(
   const schemas: Partial<Record<(typeof RUN_SCHEMA_KEYS)[number], NormalizedInputSchema>> = {};
   for (const key of RUN_SCHEMA_KEYS) {
     const declared = frontmatter[key] ?? project.config[key];
-    if (declared !== undefined) schemas[key] = await normalizeInputSchema(declared, key, agentFile);
+    if (declared === undefined) continue;
+    const file = frontmatter[key] === undefined ? project.configPath : agentFile;
+    schemas[key] = await normalizeInputSchema(declared, key, file);
   }
   return schemas;
 }

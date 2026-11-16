@@ -47,8 +47,8 @@ output:
 Summarize the incoming request.
 ```
 
-`plico.config.ts` accepts the same `input` and `output` keys; the schema in `agent.md` wins when
-both are set. `plico validate` rejects a value that is not a valid schema. A run is rejected when its input does not match the `input` schema, in the API and in
+`plico.config.ts` accepts the same `input` and `output` keys, as JSON Schema or Zod 4; the schema
+in `agent.md` wins when both are set. `plico validate` rejects a value that is not a valid schema. A run is rejected when its input does not match the `input` schema, in the API and in
 `plico run --input`.
 
 An `output` schema requires a validated structured result before the run completes. The final
@@ -117,6 +117,9 @@ export default defineConfig({
 ```
 
 See [Model providers](/docs/providers) for the `model` settings.
+
+The config can import local TypeScript modules and the project's installed packages, such as
+`zod` for `input` and `output` schemas. Plico reads imported local files again on each load.
 
 Set `artifacts.access` to `read-write`, `read-only`, or `off` to control which
 artifact tools the model sees. See [Artifacts](/docs/artifacts).
