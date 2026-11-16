@@ -11,11 +11,20 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    # Let new releases settle before proposing them. Security updates are not delayed.
+    cooldown:
+      default-days: 3
+    ignore:
+      # OTel SDK 2.x peers on @opentelemetry/api <1.10. A newer API minor in the runtime than the
+      # host registers makes the global API reject it, so Plico spans fall back to a no-op tracer.
+      - dependency-name: "@opentelemetry/api"
+        update-types: ["version-update:semver-minor"]
     groups:
       security:
         applies-to: security-updates
         patterns: ["*"]
-      maintenance:
+      # One weekly PR, majors included, so a single merge and approval covers every update.
+      weekly:
         applies-to: version-updates
         patterns: ["*"]
-        update-types: [minor, patch]
+        update-types: [major, minor, patch]

@@ -1,0 +1,58 @@
+name: Dependency changeset
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+# A newer Dependabot push replaces the branch, so finish only the latest run.
+concurrency:
+  group: dependency-changeset-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  changeset:
+    name: Add the patch changeset
+    if: >-
+      github.event.pull_request.user.login == 'dependabot[bot]' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      startsWith(github.head_ref, 'dependabot/npm_and_yarn/')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      actions: write
+    steps:
+      # Never install or run package scripts here: this job holds a write token on Dependabot's branch.
+      - name: Checkout the Dependabot branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+      - name: Write the changeset
+        id: changeset
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_REF: ${{ github.head_ref }}
+        run: echo "path=$(node scripts/dependency-changeset.mjs "$BASE_SHA" "$HEAD_REF")" >> "$GITHUB_OUTPUT"
+      # [dependabot skip] keeps Dependabot rebasing this PR; a rebase drops the commit and this job re-adds it.
+      - name: Commit, push and start CI
+        if: steps.changeset.outputs.path != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_REF: ${{ github.head_ref }}
+          CHANGESET: ${{ steps.changeset.outputs.path }}
+        run: |
+          git add -- "$CHANGESET"
+          if git diff --cached --quiet; then
+            echo 'The changeset is already up to date.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'chore: add changeset for dependency updates [dependabot skip]'
+          git push origin "HEAD:$HEAD_REF"
+          # Pushes made with the built-in token start no workflows, so run CI on the new head.
+          gh workflow run ci.yml --ref "$HEAD_REF"
