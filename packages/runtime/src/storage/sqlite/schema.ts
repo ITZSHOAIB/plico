@@ -113,7 +113,14 @@ const migrations: ReadonlyArray<{ from: number; to: number; sql: string }> = [
   {
     from: 14,
     to: 15,
-    sql: `ALTER TABLE runs ADD COLUMN structured_output_json TEXT;`,
+    // Runs completed before this column existed recorded their result on the run.completed event.
+    sql: `
+      ALTER TABLE runs ADD COLUMN structured_output_json TEXT;
+      UPDATE runs SET structured_output_json = (
+        SELECT payload_json -> '$.structuredOutput' FROM events
+        WHERE stream_type = 'run' AND stream_id = runs.run_id AND type = 'run.completed'
+      );
+    `,
   },
 ];
 

@@ -243,6 +243,28 @@ describe("schema migrations", () => {
     });
   });
 
+  it("backfills the structured result of runs completed before run summaries carried it", async () => {
+    const root = await scaffold();
+    await writeFile(
+      join(root, "plico.config.ts"),
+      'export default { schemaVersion: 1, name: "Demo", output: { type: "object" } } as const;\n',
+    );
+    const databasePath = join(root, "state.sqlite");
+    const run = await runProject(root, {
+      eventStore: createSqliteEventStore({ databasePath }),
+      script: [{ type: "assistant.output", content: '{"ticket":"T-1"}' }],
+    });
+    const database = new DatabaseSync(databasePath);
+    database.exec(`
+      ALTER TABLE runs DROP COLUMN structured_output_json;
+      UPDATE plico_meta SET value = '14' WHERE key = 'schema_version';
+    `);
+    database.close();
+
+    const store = createSqliteEventStore({ databasePath });
+    expect(await store.getRun(run.runId)).toMatchObject({ structuredOutput: { ticket: "T-1" } });
+  });
+
   it("upgrades a baseline database and preserves the migration effect", async () => {
     const root = await scaffold();
     const databasePath = join(root, "state.sqlite");
