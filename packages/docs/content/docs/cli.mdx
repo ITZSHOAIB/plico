@@ -89,7 +89,7 @@ model and its key, like `plico run`.
 | --- | --- |
 | `--mock-tools` | Take every tool result from the case's `.script.json` fixture; no handler runs. |
 | `--model <provider:model>` | Use this model for the run instead of the agent's, such as `openai:gpt-5-mini`. |
-| `--max-tokens <n>` | Stop starting cases once the suite has used this many tokens. Exits 1 if any case did not run. |
+| `--max-tokens <n>` | Cap the suite's tokens: no model call starts that is expected to pass the cap, even with runs going at once. Exits 1 if any case did not run. |
 | `--concurrency <n>` | Live runs at once. Defaults to 4. |
 
 ## Help and unknown flags

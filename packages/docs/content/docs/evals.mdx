@@ -115,7 +115,7 @@ leaves the run `waiting`; expect that with `status: waiting`.
 | --- | --- |
 | `trials: n` in the case | Runs the case n times. It passes only when every trial passes, and the result shows how many did, such as `2/3 trials passed.` |
 | `--model <provider:model>` | Runs the suite on another model, so comparing two models is two commands. |
-| `--max-tokens <n>` | Caps the tokens of the whole suite. Once reached, no case or trial starts, the rest are listed as `SKIP`, and `plico eval` exits 1. |
+| `--max-tokens <n>` | Caps the tokens of the whole suite. A model call starts only if it and the calls already running, each counted at the average call so far, fit under the cap. Once a call is refused, no case or trial starts, the rest (and any run cut off) are listed as `SKIP`, and `plico eval` exits 1. A single call can still use more than the average. |
 | `--concurrency <n>` | Live runs at once. Defaults to 4. |
 
 ## Custom scorers

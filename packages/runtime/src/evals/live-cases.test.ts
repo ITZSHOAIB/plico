@@ -179,14 +179,35 @@ expect:
     const provider = fakeProvider(() => [{ type: "text", text: "ok" }, finish(10)]);
 
     const summary = await runEvals(root, {
-      live: { provider, maxTokens: 15, concurrency: 1 },
+      live: { provider, maxTokens: 25, concurrency: 1 },
     });
 
     expect(summary).toMatchObject({ total: 1, passed: 1, tokenCapReached: true });
     expect(summary.skipped).toEqual([
-      { name: "b", reason: "Token cap of 15 reached after 1 of 2 trials." },
-      { name: "c", reason: "Token cap of 15 reached." },
+      { name: "b", reason: "Token cap of 25 reached after 1 of 2 trials." },
+      { name: "c", reason: "Token cap of 25 reached." },
     ]);
+  });
+
+  it("does not start model calls that would pass the token cap, even at once", async () => {
+    const root = await project(
+      Object.fromEntries(
+        ["a", "b", "c", "d"].map((name) => [`${name}.md`, "---\ninput: hi\n---\n"]),
+      ),
+    );
+    let calls = 0;
+    const provider = fakeProvider(
+      () => [{ type: "text", text: "ok" }, finish(10)],
+      () => calls++,
+    );
+
+    const summary = await runEvals(root, {
+      live: { provider, maxTokens: 15, concurrency: 4 },
+    });
+
+    expect(calls).toBe(1);
+    expect(summary).toMatchObject({ total: 1, passed: 1, tokenCapReached: true });
+    expect(summary.skipped).toHaveLength(3);
   });
 
   it("runs at most the given number of live runs at once", async () => {
@@ -200,6 +221,9 @@ expect:
       async *stream() {
         inFlight++;
         peak = Math.max(peak, inFlight);
+        // Hold each call until a second one joins, so the limit is reached however runs start.
+        for (let waited = 0; inFlight < 2 && waited < 2000; waited += 5)
+          await new Promise((resolve) => setTimeout(resolve, 5));
         await new Promise((resolve) => setTimeout(resolve, 20));
         inFlight--;
         yield { type: "text", text: "ok" };

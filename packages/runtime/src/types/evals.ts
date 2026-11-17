@@ -43,7 +43,10 @@ export interface LiveEvalOptions {
   providerRecoveryKey?: string;
   /** Take every tool result from the case's `.script.json` fixture; no handler runs. */
   mockTools?: boolean;
-  /** Agent tokens over the whole suite. Once reached, no case or trial starts. */
+  /**
+   * Agent tokens over the whole suite. No model call starts that is expected, at the average call so
+   * far, to pass it; once one is refused, no case or trial starts.
+   */
   maxTokens?: number;
   /** Live runs at once. Defaults to 4. */
   concurrency?: number;

@@ -13,10 +13,10 @@ import type {
   LiveEvalOptions,
   SkippedEvalCase,
 } from "../types/index.js";
-import { tokensUsed } from "./checks/index.js";
 import { combineTrials, type JudgedRun, judgeRun } from "./judge-case.js";
 import { liveToolResults } from "./live-tools.js";
 import { runPool } from "./pool.js";
+import { createTokenBudget } from "./token-budget.js";
 
 interface PlannedCase {
   evalCase: EvalCase;
@@ -61,15 +61,19 @@ export async function runLiveEvals(
   eventStore: EventStore | undefined,
 ): Promise<EvalRunSummary> {
   const { planned, skipped: unplanned } = await planCases(projectRoot, cases);
-  let spent = 0;
-  const canStart = () => live.maxTokens === undefined || spent < live.maxTokens;
+  const budget = live.maxTokens === undefined ? undefined : createTokenBudget(live.maxTokens);
 
   const runs = planned.flatMap(({ evalCase, message, trials }) =>
-    Array.from({ length: trials }, () => async (): Promise<JudgedRun> => {
+    Array.from({ length: trials }, () => async (): Promise<JudgedRun | undefined> => {
       const mockToolResult = liveToolResults(evalCase, live.mockTools === true);
+      let refused = false;
       const result = await runProject(projectRoot, {
         message,
-        provider: live.provider,
+        provider: budget
+          ? budget.meter(live.provider, () => {
+              refused = true;
+            })
+          : live.provider,
         runId: `eval-${evalCase.name.replace(/[^a-z0-9_-]/gi, "_")}-${crypto.randomUUID().slice(0, 8)}`,
         ...(live.providerRecoveryKey === undefined
           ? {}
@@ -77,11 +81,12 @@ export async function runLiveEvals(
         ...(mockToolResult === undefined ? {} : { mockToolResult }),
         ...(eventStore === undefined ? {} : { eventStore }),
       });
-      spent += tokensUsed(result);
+      // A run the cap cut off is not judged; its case is listed as skipped.
+      if (refused) return undefined;
       return judgeRun(evalsDir, evalCase, result, "live");
     }),
   );
-  const finished = await runPool(runs, live.concurrency ?? 4, canStart);
+  const finished = await runPool(runs, live.concurrency ?? 4, () => !budget?.exhausted);
 
   const results: EvalCaseResult[] = [];
   const skipped = [...unplanned];

@@ -1,8 +1,8 @@
 import type { RunResult } from "../../types/index.js";
 import type { CheckFinding, EvalCheck } from "./types.js";
 
-/** Agent tokens over every model response in the run. */
-export function tokensUsed(run: RunResult): number {
+/** Tokens over every model response in the run. */
+function tokensUsed(run: RunResult): number {
   return run.events.reduce(
     (total, event) =>
       event.type === "model.response"
