@@ -1,0 +1,117 @@
+/* Controls and small parts: buttons, links, the command, the glitch */
+/* Hover inverts at once: ink ground, paper type */
+.ph-invert:hover,
+.ph-invert:focus-visible {
+  background: var(--ph-ink);
+  color: var(--ph-paper);
+  outline: none;
+}
+
+.ph-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 2.75rem;
+  padding: 0 1.25rem;
+  border: 1px solid var(--ph-line-strong);
+  background: var(--ph-paper);
+  font-weight: 500;
+  font-size: 0.95rem;
+}
+.ph-btn:hover,
+.ph-btn:focus-visible {
+  background: var(--ph-ink);
+  color: var(--ph-paper);
+  outline: none;
+}
+.ph-btn-primary {
+  background: var(--ph-accent);
+  color: var(--ph-paper);
+  border-color: var(--ph-accent);
+}
+
+.ph-link {
+  display: inline-flex;
+  align-items: center;
+  height: 2.75rem;
+  padding: 0 0.5rem;
+  font-weight: 500;
+  text-decoration: underline;
+  text-decoration-color: var(--ph-line-strong);
+  text-underline-offset: 4px;
+}
+.ph-link:hover,
+.ph-link:focus-visible {
+  background: var(--ph-ink);
+  color: var(--ph-paper);
+  outline: none;
+}
+
+.ph-command {
+  display: flex;
+  align-items: stretch;
+  min-height: 2.75rem;
+  max-width: 100%;
+  border: 1px solid var(--ph-line-strong);
+  background: var(--ph-paper);
+}
+.ph-command code {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  align-self: center;
+  flex: 1;
+  min-width: 0;
+  padding: 0.6rem 0.8rem;
+  font: 0.85rem / 1.25rem var(--font-mono);
+}
+.ph-command code > span:first-child {
+  color: var(--ph-muted);
+  user-select: none;
+}
+.ph-command code span span {
+  white-space: nowrap;
+}
+.ph-command button {
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  flex: none;
+  border-left: 1px solid var(--ph-line-strong);
+}
+.ph-command svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+/* A word that glitches: two slices of it over itself */
+.ph-glitch {
+  position: relative;
+  display: inline-block;
+}
+.ph-glitch::before,
+.ph-glitch::after {
+  content: attr(data-text);
+  /* biome-ignore lint/suspicious/noDuplicateProperties: hidden from assistive tech where the alt syntax is supported */
+  content: attr(data-text) / "";
+  position: absolute;
+  inset: 0 -0.12em;
+  padding: 0 0.12em;
+  visibility: hidden;
+  background: var(--ph-paper);
+  white-space: nowrap;
+}
+
+@keyframes ph-caret {
+  50% {
+    opacity: 0;
+  }
+}
+.ph-caret {
+  display: inline-block;
+  width: 0.55em;
+  height: 1.1em;
+  vertical-align: text-bottom;
+  background: var(--ph-accent);
+  animation: ph-caret 1s steps(1, end) infinite;
+}

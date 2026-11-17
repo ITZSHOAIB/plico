@@ -1,0 +1,108 @@
+/*
+ * The hero's rig: a desk of grid paper with the agent's disks in a `my-agent/` tray beside the
+ * computer. Each disk sits in a dashed bay that keeps its role once the disk is in the drive.
+ * Below 34rem of window the tray lines up above the computer.
+ */
+.ph-rig-window {
+  align-self: center;
+  justify-self: center;
+  width: 100%;
+  max-width: 42rem;
+  container-type: inline-size;
+}
+
+.ph-rig {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto auto;
+  justify-content: center;
+  align-items: center;
+  gap: 1.6rem;
+  min-height: 27rem;
+  padding: 1.5rem 1rem;
+  background: var(--ph-paper-2);
+  background-image:
+    linear-gradient(var(--ph-line) 1px, transparent 1px),
+    linear-gradient(to right, var(--ph-line) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+
+.ph-tray {
+  position: relative;
+  padding: 1.3rem 0.7rem 0.75rem;
+  border: 1.5px dashed var(--ph-line-strong);
+  background: color-mix(in srgb, var(--ph-panel) 55%, transparent);
+}
+.ph-tray > b {
+  position: absolute;
+  left: 0.55rem;
+  top: -0.55rem;
+  padding: 0 0.3rem;
+  background: var(--ph-paper-2);
+  font: 400 0.72rem / 1 var(--font-pixel);
+}
+.ph-tray-bays {
+  display: grid;
+  grid-template-columns: repeat(2, 4.9rem);
+  gap: 0.9rem 0.7rem;
+}
+.ph-tray-bay {
+  position: relative;
+  aspect-ratio: 1;
+  outline: 1px dashed var(--ph-line);
+  outline-offset: 2px;
+}
+.ph-tray-bay > small {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font: 0.48rem var(--font-mono);
+  color: var(--ph-muted);
+}
+
+/* the reader's hand on the chat */
+.ph-pointer {
+  position: absolute;
+  z-index: 5;
+  top: 0;
+  left: 0;
+  width: 0.8rem;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    translate 700ms cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 300ms;
+}
+.ph-pointer path {
+  fill: #fff;
+  stroke: #141a19;
+  stroke-width: 1.2;
+  stroke-linejoin: round;
+}
+.ph-pointer[data-on] {
+  opacity: 1;
+}
+
+@container (max-width: 34rem) {
+  .ph-rig {
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: center;
+    gap: 1.1rem;
+    min-height: 0;
+    padding: 1.1rem 0.7rem;
+  }
+  .ph-tray {
+    padding: 1.1rem 0.5rem 0.5rem;
+  }
+  .ph-tray-bays {
+    grid-template-columns: repeat(4, 3.6rem);
+    gap: 0.5rem;
+  }
+}
+@container (max-width: 17.5rem) {
+  .ph-tray-bays {
+    grid-template-columns: repeat(4, 3.1rem);
+    gap: 0.4rem;
+  }
+}

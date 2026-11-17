@@ -1,0 +1,94 @@
+/* Start: the pitch beside the scaffold replay, the wordmark in ASCII below */
+.ph-start {
+  padding-bottom: 0;
+}
+.ph-start-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+  gap: 3rem;
+  align-items: center;
+}
+.ph-foot {
+  margin: 1.75rem 0 0;
+  font-size: 0.875rem;
+  color: var(--ph-muted);
+}
+.ph-foot a {
+  color: var(--ph-ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.ph-foot code {
+  font: 0.8rem var(--font-mono);
+}
+
+.ph-term-screen {
+  min-height: 21rem;
+  padding: 0.9rem 1rem;
+  font: 0.8rem / 1.35rem var(--font-mono);
+}
+.ph-term-screen p,
+.ph-term-screen button {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  text-align: left;
+  white-space: pre-wrap;
+  font: inherit;
+}
+.ph-term-bar {
+  color: var(--ph-muted);
+}
+.ph-term-screen [data-tone="dim"] {
+  color: var(--ph-muted);
+}
+.ph-term-screen [data-tone="accent"] .ph-term-bar,
+.ph-term-screen [data-tone="picked"] {
+  color: var(--ph-accent);
+}
+.ph-term-screen button:hover,
+.ph-term-screen button:focus-visible {
+  background: var(--ph-hl);
+  color: var(--ph-ink);
+  outline: none;
+}
+.ph-term-screen .ph-term-hint {
+  margin-top: 0.75rem;
+  font-family: var(--font-pixel);
+  color: var(--ph-muted);
+}
+
+/* The wordmark: ASCII art the width of the sheet, its type sized to fit the columns */
+.ph-ascii {
+  position: relative;
+  container-type: inline-size;
+  margin-top: clamp(3rem, 6vw, 5rem);
+  padding-top: clamp(1.5rem, 3vw, 2.5rem);
+  border-top: 1px solid var(--ph-line);
+  cursor: crosshair;
+  touch-action: pan-y;
+}
+.ph-ascii pre {
+  margin: 0;
+  /* 152 columns of a 0.6em-wide mono face across the box, up to 10px type */
+  font: 400 min(calc(100cqw / 152 / 0.6), 10px) / 1 var(--font-mono);
+  color: var(--ph-ink);
+  white-space: pre;
+  width: fit-content;
+  margin-inline: auto;
+  user-select: none;
+}
+.ph-ascii .ph-ascii-live {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  translate: -50% 0;
+  color: var(--ph-accent);
+}
+
+@media (max-width: 900px) {
+  .ph-start-grid {
+    grid-template-columns: 1fr;
+  }
+}

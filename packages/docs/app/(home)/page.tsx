@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
-import { FilesSection } from "@/components/home/files-section";
-import { FilmSection } from "@/components/home/film-section";
 import { Hero } from "@/components/home/hero";
-import { KitSection } from "@/components/home/kit-section";
-import { StartSection } from "@/components/home/start-section";
-import { StatusSection } from "@/components/home/status-section";
-import { ViewsSection } from "@/components/home/views-section";
+import { Views } from "@/components/home/sections/events";
+import { Files } from "@/components/home/sections/files";
+import { Film } from "@/components/home/sections/film";
+import { Kit } from "@/components/home/sections/kit";
+import { Start } from "@/components/home/sections/start";
+import { Today } from "@/components/home/sections/today";
 import { appName, gitConfig, homeImageUrl, siteUrl } from "@/lib/shared";
 
 const title = "Plico: the agent harness for TypeScript";
@@ -37,6 +37,9 @@ const jsonLd = {
   applicationCategory: "DeveloperApplication",
   operatingSystem: "Node.js 22.18 or later",
   codeRepository: `https://github.com/${gitConfig.user}/${gitConfig.repo}`,
+  license: "https://www.apache.org/licenses/LICENSE-2.0",
+  isAccessibleForFree: true,
+  offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
 };
 
 export default function HomePage() {
@@ -48,12 +51,12 @@ export default function HomePage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
       <Hero />
-      <FilmSection />
-      <FilesSection />
-      <ViewsSection />
-      <KitSection />
-      <StatusSection />
-      <StartSection />
+      <Film />
+      <Files />
+      <Views />
+      <Kit />
+      <Today />
+      <Start />
     </div>
   );
 }

@@ -1,0 +1,145 @@
+/*
+ * The computer's two faces. The loader: a pixel orb thinking, the files it needs ticked off as
+ * they load, a progress bar. The chat: Plico Studio's layout in small, a header with the model,
+ * the reader's bubble, the agent's tool calls and approval card, a composer.
+ */
+.ph-shimmer {
+  --ph-sheen-lo: #6f8a84;
+  --ph-sheen-hi: #e7f6f1;
+  background:
+    linear-gradient(
+      90deg,
+      var(--ph-sheen-lo) 0 35%,
+      var(--ph-sheen-hi) 50%,
+      var(--ph-sheen-lo) 65% 100%
+    )
+    0 0 / 300% 100%;
+  background-clip: text;
+  color: transparent;
+  animation: ph-shimmer 2.2s linear infinite;
+}
+@keyframes ph-shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: 0 0;
+  }
+}
+.ph-spin {
+  flex: none;
+  width: 0.55rem;
+  height: 0.55rem;
+  border: 1.5px solid var(--ph-hl);
+  border-top-color: var(--ph-accent);
+  border-radius: 50%;
+  animation: ph-spin 700ms linear infinite;
+}
+@keyframes ph-spin {
+  to {
+    rotate: 1turn;
+  }
+}
+
+/* ---------- the loader ---------- */
+.ph-boot {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  padding: 1rem;
+  text-align: center;
+  font: 0.62rem / 1.4 var(--font-mono);
+}
+.ph-boot-orb {
+  display: grid;
+  grid-template-columns: repeat(3, 0.42rem);
+  gap: 0.18rem;
+  margin-bottom: 0.2rem;
+}
+.ph-boot-orb i {
+  aspect-ratio: 1;
+  background: #62bfa8;
+  opacity: 0.18;
+  animation: ph-orb 1.6s steps(1) infinite;
+}
+@keyframes ph-orb {
+  0%,
+  30% {
+    opacity: 1;
+    box-shadow: 0 0 6px #62bfa8;
+  }
+  31% {
+    opacity: 0.18;
+    box-shadow: none;
+  }
+}
+.ph-boot b {
+  font: 400 0.9rem / 1 var(--font-pixel);
+  color: #e7f6f1;
+  letter-spacing: 0.04em;
+}
+.ph-boot-files {
+  display: grid;
+  gap: 0.18rem;
+  width: min(13.5rem, 100%);
+  margin: 0.3rem 0 0;
+  padding: 0;
+  text-align: left;
+}
+.ph-boot-files li {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  list-style: none;
+  color: #55706a;
+}
+.ph-boot-files li span::before {
+  content: "· ";
+}
+.ph-boot-files li[data-on] {
+  color: #cdeee4;
+}
+.ph-boot-files li[data-on] span::before {
+  content: "✓ ";
+  color: #62bfa8;
+}
+.ph-boot-files em {
+  font-style: normal;
+  color: #55706a;
+}
+.ph-boot-bar {
+  width: min(13.5rem, 100%);
+  height: 3px;
+  background: #22302d;
+}
+.ph-boot-bar i {
+  display: block;
+  width: 0;
+  height: 100%;
+  background: #62bfa8;
+  transition: width 500ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* one face at a time */
+.ph-pc-screen[data-mode="boot"] .ph-chat,
+.ph-pc-screen[data-mode="chat"] .ph-boot {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ph-shimmer,
+  .ph-spin,
+  .ph-boot-orb i {
+    animation: none;
+  }
+  .ph-shimmer {
+    color: var(--ph-sheen-lo);
+  }
+  .ph-boot-orb i {
+    opacity: 1;
+  }
+}

@@ -1,0 +1,125 @@
+/*
+ * Today's departures board: a feature per row and its status in split-flap cells. Live flaps are
+ * accent, next are dithered, planned are blank paper.
+ */
+.ph-board-totals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
+  margin: 0;
+  padding: 0.9rem 1.25rem;
+  border-bottom: 1px solid var(--ph-line-strong);
+  font-size: 0.9rem;
+  color: var(--ph-muted);
+}
+.ph-board-totals b {
+  font: 400 1.4rem / 1 var(--font-pixel);
+  color: var(--ph-ink);
+}
+.ph-board-totals [data-state="lit"] b {
+  color: var(--ph-accent);
+}
+
+.ph-board-rows {
+  display: grid;
+  grid-auto-flow: column;
+  grid-template-rows: repeat(8, auto);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ph-board-rows li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 2.75rem;
+  padding: 0.35rem 1.25rem;
+  border-bottom: 1px dashed var(--ph-line-strong);
+  font-size: 0.92rem;
+  line-height: 1.35;
+}
+.ph-board-rows li:nth-child(n + 9) {
+  border-left: 1px solid var(--ph-line-strong);
+}
+.ph-board-rows li[data-state="off"] > span:first-child {
+  color: var(--ph-muted);
+}
+
+.ph-flaps {
+  display: inline-flex;
+  flex: none;
+  gap: 2px;
+}
+.ph-flap {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 1.05rem;
+  height: 1.45rem;
+  overflow: hidden;
+  background: var(--ph-ink);
+  color: var(--ph-paper);
+  font: 400 0.85rem / 1 var(--font-pixel);
+  perspective: 6rem;
+}
+/* the hinge across the middle of each cell */
+.ph-flap::after {
+  content: "";
+  position: absolute;
+  inset: 50% 0 auto;
+  height: 1px;
+  background: var(--ph-paper);
+  opacity: 0.35;
+}
+.ph-flap > span {
+  animation: ph-flap 90ms ease-in;
+}
+@keyframes ph-flap {
+  from {
+    transform: rotateX(-80deg);
+    transform-origin: 50% 0;
+  }
+}
+[data-state="lit"] .ph-flap {
+  background: var(--ph-accent);
+  color: var(--ph-paper);
+}
+[data-state="dim"] .ph-flap {
+  background: var(--ph-ink-2);
+}
+.ph-flap[data-blank] {
+  opacity: 0.4;
+}
+[data-state="off"] .ph-flap {
+  background: var(--ph-paper-2);
+  color: var(--ph-muted);
+  box-shadow: inset 0 0 0 1px var(--ph-line-strong);
+}
+
+@media (max-width: 900px) {
+  .ph-board-rows {
+    grid-auto-flow: row;
+    grid-template-rows: none;
+    grid-template-columns: 1fr;
+  }
+  .ph-board-rows li:nth-child(n + 9) {
+    border-left: 0;
+  }
+}
+@media (max-width: 520px) {
+  .ph-board-rows li {
+    padding-inline: 0.9rem;
+  }
+  .ph-flap {
+    width: 0.9rem;
+    height: 1.3rem;
+    font-size: 0.75rem;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ph-flap > span {
+    animation: none;
+  }
+}
