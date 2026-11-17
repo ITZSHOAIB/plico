@@ -34,6 +34,7 @@ export type {
   ReadinessReport,
 } from "./readiness.js";
 export type { RunResult, RunStatus, RunSummary } from "./runs.js";
+export type { ScoreResult, ScorerDefinition, ScorerInput } from "./scorers.js";
 export type { Thread, ThreadEvent, ThreadMessage } from "./threads.js";
 export type {
   JsonSchema,

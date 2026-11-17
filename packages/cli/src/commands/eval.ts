@@ -37,7 +37,9 @@ export async function evalCommand(args: string[]): Promise<number> {
 
     if (summary.total === 0 && !parsed.flags.has("--allow-empty")) {
       console.error(
-        "No eval cases found, so nothing was tested. Add cases under evals/ or pass --allow-empty.",
+        summary.skipped.length > 0
+          ? `No eval case ran: ${summary.skipped.length} skipped for lack of a .script.json fixture. Add fixtures or pass --allow-empty.`
+          : "No eval cases found, so nothing was tested. Add cases under evals/ or pass --allow-empty.",
       );
       return 1;
     }

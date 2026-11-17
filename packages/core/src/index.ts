@@ -1,6 +1,15 @@
 export { AGENT_FRONTMATTER_KEYS, parseAgentFile } from "./agent-file.js";
 export { installAuthoringFallback } from "./authoring.js";
 export { loadProject } from "./config.js";
+export {
+  type EvalCaseDefinition,
+  type EvalCaseExpect,
+  type EvalScorerRef,
+  formatEvalCase,
+  type ParsedEvalCase,
+  parseEvalCase,
+} from "./eval-case.js";
+export { evalFileRole } from "./eval-files.js";
 export { type Frontmatter, parseFrontmatter } from "./frontmatter.js";
 export {
   getProjectPaths,

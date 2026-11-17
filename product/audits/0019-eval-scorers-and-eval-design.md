@@ -1,7 +1,7 @@
 # Eval scorers and the shape of Plico evals
 
 **Date:** 2026-11-16  
-**Status:** Decisions accepted 2026-11-17 and recorded in epic #145. PoC run 2026-11-17 (results below); the default judge awaits the owner's rulings on four labels. ADR 0009's scorer row changes after that.  
+**Status:** Decisions accepted 2026-11-17 and recorded in epic #145. PoC run 2026-11-17 (results below). The owner accepted the own judge as the default on 2026-11-17; ADR 0009's scorer row records it.  
 **Baseline:** Plico `fbe4d95` (v0.1.5). Package data from the npm registry on this date; first-party docs for eve, the AI SDK, Arize Phoenix, Braintrust and Anthropic. No judge model was called.
 
 ## Recommendation
@@ -186,11 +186,13 @@ On Ollama, direct A succeeded 8 of 40 calls and A-port 33 of 40 on the same adap
 
 **Corrections to this audit.** `generateObject` is deprecated in `ai` 7: the own judge uses `generateText` with `Output.object`, as the runtime already does for typed results. `experimental_decide` reaches fewer providers than "native on OpenAI, Google" suggests: through Plico's adapters it worked only on the Anthropic adapter here.
 
-**Open for the owner.**
+**Owner's rulings (2026-11-17).**
 
-1. Rulings on R5, R7, R2 and R4. Agreement is re-scored from the saved verdicts without new calls.
-2. Whether the port gains a judge temperature and reports the served model id, or the judge records the configured model and accepts the provider's default temperature.
-3. Whether to accept the structural results as decisive, or first add a second Groq model or a larger local model.
+1. Labels: R7 and R4 stay 0, R2 stays 1. R5 stays 1: rubric level 2 requires saying when the fix lands, and R5 gives no timing, the same gap as R2. The rubric's level 0 now says that staying on topic, apologising, "looking into it" or repeating a step that already failed is still Poor.
+2. The port is not extended in slice 2. The judge records the configured model and accepts the provider's default temperature; a `temperature` field and the served model id are a small port change in slice 3, following ADR 0006.
+3. The structural results are decisive: the own judge is the default. No further models were run.
+
+**Rubric re-run with the tightened level 0** (groq, 7 rubric cases, two trials each, `results/rubric-v2/groq.json`; `REPORT.md` covers the first run only). R7 and R4 now agree with their labels on every arm and trial except one trial each of C and D on R7. R2 and R5 are still judged one level too lenient (A on R2 both trials and R5 one trial, A-port on R5 both trials, C and E on R2, C on R5): the judges overlook the missing timing. That is a judge-prompt finding for slice 3, which should make each rubric level's required parts explicit, not a labelling problem.
 
 ## Decisions
 
@@ -219,12 +221,12 @@ Accepted by the owner on 2026-11-17:
 ## Implementor prompt
 
 ```text
-Finish the judge decision for epic #145 from product/audits/0019-eval-scorers-and-eval-design.md,
-"PoC results". The PoC lives in D:\projects\plico-eval-judge-poc. Apply the owner's rulings on
-R2, R4, R5 and R7 to cases.ts, run `node report.ts` (it re-scores saved verdicts, no model calls),
-and update the agreement paragraph in the audit. If the owner accepts the own judge as the default,
-update ADR 0009's scorer row, then start slice 2 of #145 (Markdown cases, expect checks, mocks, the
-scorer interface and defineScorer) with TDD through `plico validate` and `plico eval`. Do not add
-autoevals, Phoenix or openevals as dependencies. If the owner asked for port changes (judge
-temperature, served model id), raise them as part of slice 3, not slice 2.
+Build slice 2 of epic #145 from product/audits/0019-eval-scorers-and-eval-design.md, "How people
+write evals": Markdown eval cases with frontmatter (input, expect, mocks, trials, tags, judge,
+scorers) and criteria as body bullets, the expect checks, the scorer interface and defineScorer in
+@plico-ai/sdk, custom scorers in evals/scorers/, `plico eval promote` writing .md plus its
+.script.json fixture, and `plico validate` for all of it with line numbers. Scripted mode only:
+criteria are reported as skipped, and mocks are parsed and validated but used from slice 3. Keep
+EvalCaseResult and EvalReport unchanged until slice 4. Legacy *.script.json cases keep working.
+TDD through `plico validate` and `plico eval`. Do not add autoevals, Phoenix or openevals.
 ```

@@ -25,19 +25,23 @@ export async function validateCommand(args: string[]): Promise<number> {
 
   if (result.ok) {
     for (const warning of result.warnings) {
-      console.warn(`${warning.path}: ${warning.message}`);
+      console.warn(`${where(warning)}: ${warning.message}`);
     }
     console.log(`Valid Plico project: ${target}`);
     return 0;
   }
 
   for (const error of result.errors) {
-    console.error(`${error.path}: ${error.message}`);
+    console.error(`${where(error)}: ${error.message}`);
   }
 
   for (const warning of result.warnings) {
-    console.warn(`${warning.path}: ${warning.message}`);
+    console.warn(`${where(warning)}: ${warning.message}`);
   }
 
   return 1;
+}
+
+function where(issue: { path: string; line?: number }): string {
+  return issue.line === undefined ? issue.path : `${issue.path}:${issue.line}`;
 }

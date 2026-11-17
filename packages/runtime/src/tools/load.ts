@@ -14,12 +14,20 @@ let esmRegistered = false;
 let loadSequence = 0;
 
 export async function loadToolFile(toolPath: string, source: string): Promise<DeclaredTool> {
-  installAuthoringFallback();
-  const module = (await hasModulePackageScope(toolPath))
-    ? await importToolModule(toolPath)
-    : importCommonJsTool(toolPath);
+  const module = await importProjectModule(toolPath, "tools");
   const exportedTool = readDefaultExport(module, source);
   return normalizeDeclaredTool(exportedTool, source, toolPath);
+}
+
+/**
+ * Imports a project's TypeScript file fresh on every call. `scope` names the project folder whose
+ * cached CommonJS modules are dropped first, such as `tools`.
+ */
+export async function importProjectModule(path: string, scope: string): Promise<unknown> {
+  installAuthoringFallback();
+  return (await hasModulePackageScope(path))
+    ? await importToolModule(path)
+    : importCommonJsTool(path, scope);
 }
 
 async function importToolModule(toolPath: string): Promise<unknown> {
@@ -32,18 +40,18 @@ async function importToolModule(toolPath: string): Promise<unknown> {
   return import(url.href);
 }
 
-function importCommonJsTool(toolPath: string): unknown {
+function importCommonJsTool(toolPath: string, scope: string): unknown {
   if (!cjsRegistered) {
     registerCjs();
     cjsRegistered = true;
   }
   const require = createRequire(import.meta.url);
-  clearProjectToolCache(toolPath);
+  clearProjectToolCache(toolPath, scope);
   return tsxRequire(require.resolve(toolPath), import.meta.url);
 }
 
-function clearProjectToolCache(toolPath: string): void {
-  const toolsDirectory = findToolsDirectory(dirname(toolPath));
+function clearProjectToolCache(toolPath: string, scope: string): void {
+  const toolsDirectory = findScopeDirectory(dirname(toolPath), scope);
   for (const cachedPath of Object.keys(tsxRequire.cache)) {
     const sourcePath = cachedPath.split("?", 1)[0];
     if (!sourcePath) continue;
@@ -55,10 +63,10 @@ function clearProjectToolCache(toolPath: string): void {
   }
 }
 
-function findToolsDirectory(directory: string): string {
+function findScopeDirectory(directory: string, scope: string): string {
   if (directory === parse(directory).root) return directory;
-  if (directory.split(/[\\/]/).at(-1) === "tools") return directory;
-  return findToolsDirectory(dirname(directory));
+  if (directory.split(/[\\/]/).at(-1) === scope) return directory;
+  return findScopeDirectory(dirname(directory), scope);
 }
 
 async function hasModulePackageScope(filePath: string): Promise<boolean> {

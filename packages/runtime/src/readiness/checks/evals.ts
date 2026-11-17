@@ -35,9 +35,9 @@ export async function checkEvals(
       ? makeDiagnostic(
           "warning",
           "evals.fixtures",
-          "No .script.json eval fixtures found. Add evals to track behavior.",
+          "No eval cases found. Add evals to track behavior.",
         )
-      : makeDiagnostic("ok", "evals.fixtures", `${cases.length} eval fixture(s) found`);
+      : makeDiagnostic("ok", "evals.fixtures", `${cases.length} eval case(s) found`);
 
   return eventStore
     ? [fixtures, await readEvalResults(eventStore, await digestEvalFixtures(evalsDir))]
