@@ -86,8 +86,8 @@ would only grade the fixture. In live mode they all apply.
 `plico eval --live` sends each case's `input` to the configured model, the way
 `plico run --input` does, and runs the same `expect` checks and scorers on the result. It needs a
 model and its key in `plico.config.ts` and `.env`. A case without `input`, and a fixture on its own,
-is listed as `SKIP`. Live runs are not stored as the project's eval report, so
-`plico readiness` keeps reporting the scripted results.
+is listed as `SKIP`. Live runs save report files with their execution mode. The legacy readiness verdict
+continues to use scripted results; it also warns when the latest two report files use different judges.
 
 <Callout type="warn">
   Tools run for real in live mode unless the case mocks them. A tool that sends email or creates a
@@ -267,3 +267,41 @@ final text as `contains`. Add criteria as bullets afterwards. It refuses to over
 case and fails on an unknown run id. Files a tool wrote are not carried over.
 
 For a complete project with three cases, see [Example: a refund agent](/docs/refund-agent).
+
+## Saved reports and regressions
+
+Every scripted or live suite saves a schema version 2 JSON report at
+`.plico/evals/<id>.json`, with the mode, fixture digest, skipped cases, judge
+metadata, scores and every trial's events and output. Multi-trial cases show
+`passAtK` (1 if at least one trial passes); their overall verdict still requires
+all trials to pass. The existing `/v1/eval` routes keep their original shape.
+`GET /v1/evals/reports` lists saved reports, newest first, and
+`GET /v1/evals/reports/:id` reads one report including its transcripts.
+
+```sh
+plico eval --save-baseline
+# Commit evals/baseline.json to share the baseline with CI.
+plico eval --baseline evals/baseline.json --tolerance 0.05
+plico eval compare evals/baseline.json .plico/evals/<id>.json --tolerance 0.05
+plico eval rescore .plico/evals/<id>.json
+plico eval --format markdown
+plico eval --format junit
+```
+
+Comparisons show per-case score deltas. A missing baseline case or check, a new
+failing verdict, an incomplete suite, or a score drop beyond the absolute
+0?1 tolerance exits nonzero. Comparisons warn when fixtures, modes or judge
+models differ. A baseline writes a local file; commit it yourself.
+
+Rescoring applies the current case expectations and scorers to saved transcripts
+without calling the agent or tools. Live report rescoring can call the judge and
+incur provider usage; scripted reports continue to skip judged checks. Rescoring
+writes a new report and preserves the original. Missing cases or transcripts are
+errors. Markdown and JUnit formats support CI and exported reports.
+
+When a token cap interrupts a multi-trial case, it remains skipped and retains its
+finished trials in `skipped[].completedTrials`, including events and scores. It
+is not counted as a passing case. Report comparisons include newly added cases;
+a newly added failure exits nonzero. Report listings ignore unsupported schema
+versions in accordance with ADR 0006; explicitly reading an unsupported report
+file still gives a version error. Malformed supported reports remain errors.

@@ -113,6 +113,9 @@ export async function runLiveEvals(
     else
       skipped.push({
         name: evalCase.name,
+        ...(done.length === 0
+          ? {}
+          : { completedTrials: done.flatMap((run) => run.entry.trials ?? []) }),
         reason:
           done.length === 0
             ? `Token cap of ${live.maxTokens} reached.`

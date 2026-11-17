@@ -86,6 +86,17 @@ export async function judgeRun(
   if (result.output !== undefined) entry.output = result.output;
   if (diagnostics.length > 0) entry.diagnostics = diagnostics;
   if (scores.length > 0) entry.scores = scores;
+  entry.trials = [
+    {
+      ...entry,
+      scores,
+      events: result.events,
+      ...(result.structuredOutput === undefined
+        ? {}
+        : { structuredOutput: result.structuredOutput }),
+    },
+  ];
+  entry.passAtK = failures.length === 0 ? 1 : 0;
   return { entry, failures };
 }
 
@@ -105,6 +116,8 @@ export function combineTrials(trials: JudgedRun[]): ScoredEvalCaseResult {
   const notes = (shown.entry.diagnostics ?? []).filter((d) => !shown.failures.includes(d));
   return {
     ...shown.entry,
+    trials: trials.flatMap((trial) => trial.entry.trials ?? []),
+    passAtK: failing.length < trials.length ? 1 : 0,
     status: failing.length === 0 ? "pass" : "fail",
     diagnostics: [
       `${trials.length - failing.length}/${trials.length} trials passed.`,

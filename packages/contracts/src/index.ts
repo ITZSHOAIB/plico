@@ -9,7 +9,16 @@ export type {
   ArtifactWorkspace,
   ThreadArtifactWorkspace,
 } from "./artifacts.js";
-export type { EvalCaseResult, EvalReport, EvalSummary } from "./evals.js";
+export type {
+  EvalCaseResult,
+  EvalJudgeRecord,
+  EvalReport,
+  EvalReportV2,
+  EvalScore,
+  EvalSummary,
+  EvalTrial,
+  SkippedEvalCase,
+} from "./evals.js";
 export type {
   EventStreamType,
   JsonValue,

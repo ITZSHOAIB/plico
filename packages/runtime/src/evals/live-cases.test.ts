@@ -135,7 +135,7 @@ expect:
     const summary = await runEvals(root, { live: { provider: fakeProvider(ticketAgent) } });
 
     expect(summary.total).toBe(0);
-    expect(summary.skipped).toEqual([
+    expect(summary.skipped).toMatchObject([
       { name: "legacy", reason: expect.stringContaining("no input") },
       { name: "no-input", reason: expect.stringContaining("no input") },
     ]);
@@ -183,7 +183,11 @@ expect:
     });
 
     expect(summary).toMatchObject({ total: 1, passed: 1, tokenCapReached: true });
-    expect(summary.skipped).toEqual([
+    const [report] = await listEvalReports(root);
+    expect(report?.skipped.find((entry) => entry.name === "b")).toMatchObject({
+      completedTrials: [{ output: "ok", status: "pass", events: expect.any(Array) }],
+    });
+    expect(summary.skipped).toMatchObject([
       { name: "b", reason: "Token cap of 25 reached after 1 of 2 trials." },
       { name: "c", reason: "Token cap of 25 reached." },
     ]);
@@ -237,3 +241,21 @@ expect:
     expect(peak).toBe(2);
   });
 });
+
+it("saves every live trial and pass@k in the report file", async () => {
+  const root = await project({
+    "hello.md": "---\ninput: Hello\ntrials: 2\nexpect:\n  contains: Hello\n---\n",
+  });
+  const summary = await runEvals(root, {
+    live: { provider: fakeProvider(() => [{ type: "text", text: "Hello" }, finish()]) },
+  });
+  const reports = await listEvalReports(root);
+  expect(reports[0]).toMatchObject({
+    id: summary.reportId,
+    mode: "live",
+    passed: 1,
+    results: [{ passAtK: 1, trials: [{ output: "Hello" }, { output: "Hello" }] }],
+  });
+});
+
+import { listEvalReports } from "../index.js";

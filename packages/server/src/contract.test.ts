@@ -426,6 +426,13 @@ it("keeps the /v1 response shapes stable", async () => {
     ),
     "POST /v1/eval": await shape("/v1/eval", { method: "POST" }),
     "GET /v1/eval": await shape("/v1/eval"),
+    "GET /v1/evals/reports": await shape("/v1/evals/reports"),
+    "GET /v1/evals/reports/:id": await (async () => {
+      const reports = (await (await fetch(`${baseUrl}/v1/evals/reports`)).json()) as {
+        id: string;
+      }[];
+      return shape(`/v1/evals/reports/${reports[0]?.id}`);
+    })(),
     "GET /v1/eval/:name": await shape("/v1/eval/fail"),
     "GET /v1/readiness": await shape("/v1/readiness"),
     "POST /v1/runs": await shape("/v1/runs", post({})),
@@ -434,3 +441,19 @@ it("keeps the /v1 response shapes stable", async () => {
 
   await expect(`${JSON.stringify(shapes, null, 2)}\n`).toMatchFileSnapshot("./v1-contract.snap");
 }, 30_000);
+
+it("serves supported reports when an unsupported report version is stored alongside them", async () => {
+  const path = join(root, ".plico", "evals", "future-version.json");
+  await mkdir(join(root, ".plico", "evals"), { recursive: true });
+  await writeFile(path, JSON.stringify({ schemaVersion: 999, id: "future-version" }));
+  try {
+    const response = await fetch(`${baseUrl}/v1/evals/reports`);
+    expect(response.status).toBe(200);
+    const reports = (await response.json()) as { schemaVersion: number; id: string }[];
+    expect(reports.length).toBeGreaterThan(0);
+    expect(reports.every((report) => report.schemaVersion === 2)).toBe(true);
+    expect((await fetch(`${baseUrl}/v1/evals/reports/future-version`)).status).toBe(404);
+  } finally {
+    await unlink(path);
+  }
+});

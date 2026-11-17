@@ -1,4 +1,4 @@
-import { type EvalReport, type EventStore, runEvals } from "@plico-ai/runtime";
+import { type EvalReport, type EventStore, listEvalReports, runEvals } from "@plico-ai/runtime";
 import { HttpError } from "../errors.js";
 import { jsonResponse } from "../responses.js";
 import type { Route } from "./types.js";
@@ -14,6 +14,22 @@ async function readLatestReport(eventStore: EventStore): Promise<EvalReport> {
 
 export const evalRoutes: Route[] = [
   {
+    method: "GET",
+    hostOnly: true,
+    pattern: /^\/v1\/evals\/reports$/,
+    handler: async ({ projectRoot }) => jsonResponse(200, await listEvalReports(projectRoot)),
+  },
+  {
+    method: "GET",
+    hostOnly: true,
+    pattern: /^\/v1\/evals\/reports\/([^/]+)$/,
+    handler: async ({ projectRoot, params }) => {
+      const report = (await listEvalReports(projectRoot)).find((item) => item.id === params[0]);
+      if (!report) throw new HttpError(404, "eval.not_found", "Unknown eval report");
+      return jsonResponse(200, report);
+    },
+  },
+  {
     method: "POST",
     hostOnly: true,
     pattern: /^\/v1\/eval$/,
@@ -22,12 +38,15 @@ export const evalRoutes: Route[] = [
       const {
         skipped: _skipped,
         tokenCapReached: _capped,
+        reportId: _reportId,
         results,
         ...summary
       } = await runEvals(projectRoot, { eventStore });
       return jsonResponse(200, {
         ...summary,
-        results: results.map(({ scores: _scores, ...result }) => result),
+        results: results.map(
+          ({ scores: _scores, trials: _trials, passAtK: _pass, ...result }) => result,
+        ),
       });
     },
   },

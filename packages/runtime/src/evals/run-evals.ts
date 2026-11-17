@@ -4,10 +4,11 @@ import type { EvalRunSummary, RunEvalsOptions, ScoredEvalCaseResult } from "../t
 import { digestEvalFixtures, discoverEvalCases } from "./discover.js";
 import { judgeRun } from "./judge-case.js";
 import { runLiveEvals } from "./live.js";
+import { saveEvalReport } from "./reports.js";
 
 /**
- * Runs the cases in `evals/`. Scripted runs replay each case's fixture and store the report; live
- * runs (`options.live`) call the model and are not stored until reports carry their mode.
+ * Runs cases in `evals/` and saves a report file with scores and trial transcripts.
+ * Scripted runs also retain the legacy summary in the event store.
  */
 export async function runEvals(
   projectRoot: string,
@@ -15,8 +16,17 @@ export async function runEvals(
 ): Promise<EvalRunSummary> {
   const evalsDir = getProjectPaths(projectRoot).directories.evals;
   const cases = await discoverEvalCases(evalsDir);
-  if (options.live)
-    return runLiveEvals(projectRoot, evalsDir, cases, options.live, options.eventStore);
+  if (options.live) {
+    const summary = await runLiveEvals(
+      projectRoot,
+      evalsDir,
+      cases,
+      options.live,
+      options.eventStore,
+    );
+    const report = await saveEvalReport(projectRoot, "live", summary);
+    return { ...summary, reportId: report.id };
+  }
 
   const fixturesDigest = await digestEvalFixtures(evalsDir);
   const results: ScoredEvalCaseResult[] = [];
@@ -45,9 +55,13 @@ export async function runEvals(
     schemaVersion: 1,
     ...summary,
     // Stored reports gain scores in v2.
-    results: results.map(({ scores: _scores, ...result }) => result),
+    results: results.map(
+      ({ scores: _scores, trials: _trials, passAtK: _pass, ...result }) => result,
+    ),
     evaluatedAt: new Date().toISOString(),
     fixturesDigest,
   });
-  return { ...summary, skipped, tokenCapReached: false };
+  const result = { ...summary, skipped, tokenCapReached: false };
+  const report = await saveEvalReport(projectRoot, "scripted", result);
+  return { ...result, reportId: report.id };
 }

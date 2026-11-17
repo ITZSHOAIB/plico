@@ -554,6 +554,138 @@
     "schemaVersion": "number",
     "total": "number"
   },
+  "GET /v1/evals/reports": [
+    {
+      "evaluatedAt": "string",
+      "failed": "number",
+      "fixturesDigest": "string",
+      "id": "string",
+      "mode": "string",
+      "passed": "number",
+      "results": [
+        {
+          "description": "string",
+          "diagnostics": [
+            "string"
+          ],
+          "name": "string",
+          "output": "string",
+          "passAtK": "number",
+          "runId": "string",
+          "runStatus": "string",
+          "status": "string",
+          "trials": [
+            {
+              "description": "string",
+              "diagnostics": [
+                "string"
+              ],
+              "events": [
+                {
+                  "id": "string",
+                  "payload": {
+                    "content": "string",
+                    "fingerprint": "string",
+                    "length": "number",
+                    "output": "string",
+                    "projectName": "string",
+                    "projectRoot": "string",
+                    "skills": [],
+                    "sources": [
+                      "string"
+                    ],
+                    "tools": []
+                  },
+                  "runId": "string",
+                  "schemaVersion": "number",
+                  "sequence": "number",
+                  "streamId": "string",
+                  "streamType": "string",
+                  "timestamp": "string",
+                  "type": "string"
+                }
+              ],
+              "name": "string",
+              "output": "string",
+              "runId": "string",
+              "runStatus": "string",
+              "scores": [],
+              "status": "string"
+            }
+          ]
+        }
+      ],
+      "schemaVersion": "number",
+      "skipped": [],
+      "tokenCapReached": "boolean",
+      "total": "number"
+    }
+  ],
+  "GET /v1/evals/reports/:id": {
+    "evaluatedAt": "string",
+    "failed": "number",
+    "fixturesDigest": "string",
+    "id": "string",
+    "mode": "string",
+    "passed": "number",
+    "results": [
+      {
+        "description": "string",
+        "diagnostics": [
+          "string"
+        ],
+        "name": "string",
+        "output": "string",
+        "passAtK": "number",
+        "runId": "string",
+        "runStatus": "string",
+        "status": "string",
+        "trials": [
+          {
+            "description": "string",
+            "diagnostics": [
+              "string"
+            ],
+            "events": [
+              {
+                "id": "string",
+                "payload": {
+                  "content": "string",
+                  "fingerprint": "string",
+                  "length": "number",
+                  "output": "string",
+                  "projectName": "string",
+                  "projectRoot": "string",
+                  "skills": [],
+                  "sources": [
+                    "string"
+                  ],
+                  "tools": []
+                },
+                "runId": "string",
+                "schemaVersion": "number",
+                "sequence": "number",
+                "streamId": "string",
+                "streamType": "string",
+                "timestamp": "string",
+                "type": "string"
+              }
+            ],
+            "name": "string",
+            "output": "string",
+            "runId": "string",
+            "runStatus": "string",
+            "scores": [],
+            "status": "string"
+          }
+        ]
+      }
+    ],
+    "schemaVersion": "number",
+    "skipped": [],
+    "tokenCapReached": "boolean",
+    "total": "number"
+  },
   "GET /v1/eval/:name": {
     "diagnostics": [
       "string"

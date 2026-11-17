@@ -1,6 +1,8 @@
 import { access } from "node:fs/promises";
 import { getProjectPaths, getProjectRelativePaths } from "@plico-ai/core";
+import { compareEvalReports } from "../../evals/compare.js";
 import { digestEvalFixtures, discoverEvalCases } from "../../evals/discover.js";
+import { listEvalReports } from "../../evals/reports.js";
 import type { EvalCase, EvalReport, EventStore, ReadinessDiagnostic } from "../../types/index.js";
 import { makeDiagnostic } from "../diagnostic.js";
 
@@ -39,9 +41,27 @@ export async function checkEvals(
         )
       : makeDiagnostic("ok", "evals.fixtures", `${cases.length} eval case(s) found`);
 
-  return eventStore
+  const diagnostics = eventStore
     ? [fixtures, await readEvalResults(eventStore, await digestEvalFixtures(evalsDir))]
     : [fixtures];
+  try {
+    const [current, baseline] = await listEvalReports(projectRoot);
+    if (current && baseline) {
+      for (const warning of compareEvalReports(baseline, current).warnings.filter((w) =>
+        w.startsWith("Different judges"),
+      ))
+        diagnostics.push(makeDiagnostic("warning", "evals.comparison", warning));
+    }
+  } catch (error) {
+    diagnostics.push(
+      makeDiagnostic(
+        "error",
+        "evals.comparison",
+        `Could not read reports: ${(error as Error).message}`,
+      ),
+    );
+  }
+  return diagnostics;
 }
 
 async function readEvalResults(
