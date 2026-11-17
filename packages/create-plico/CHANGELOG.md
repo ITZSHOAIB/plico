@@ -1,5 +1,11 @@
 # create-plico
 
+## 0.5.1
+
+### Patch Changes
+
+- @plico-ai/core@0.5.1
+
 ## 0.5.0
 
 ### Patch Changes
