@@ -28,7 +28,7 @@ export function MainView({ view, data, inspector, evals, onOpenRun, onBackToRuns
   if (view === "chat") return <ChatView inspector={inspector} />;
 
   if (view === "overview") {
-    return <OverviewView data={data} evalReport={evals.report} />;
+    return <OverviewView data={data} evalReport={evals.latestReport} />;
   }
 
   if (view === "instructions") {

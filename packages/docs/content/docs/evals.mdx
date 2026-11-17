@@ -305,3 +305,23 @@ is not counted as a passing case. Report comparisons include newly added cases;
 a newly added failure exits nonzero. Report listings ignore unsupported schema
 versions in accordance with ADR 0006; explicitly reading an unsupported report
 file still gives a version error. Malformed supported reports remain errors.
+
+## Inspect reports in Studio
+
+Open **Evals** and choose a saved run from **Eval report**. The list shows that
+report?s case verdicts. Open a case to see scores, thresholds and reasons next to
+each trial?s recorded events and output. Expand judge details to inspect the
+requested model, prompt and raw answer. A saved transcript remains readable even
+when its original run is no longer available in the event store.
+
+Use **Compare with** to put two reports? case verdicts, outputs and scores side
+by side with per-score deltas (after minus before). Missing cases and scores are
+shown explicitly. Studio warns when execution modes, fixture digests or judges
+differ, and when a token cap left a report incomplete. The first selector is the
+before report; the comparison selector is the after report.
+
+Skipped cases appear with their reasons. Expand an interrupted case to inspect
+its completed trials; it remains skipped. **Run evals** executes the offline
+scripted suite and refreshes report history. Live evals run through the CLI and
+appear in Studio on refresh. Older projects with only the legacy report still
+show their latest results.

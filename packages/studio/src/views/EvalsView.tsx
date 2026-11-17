@@ -1,3 +1,5 @@
+import { EvalCaseScores } from "../components/evals/EvalCaseScores";
+import { EvalReportHistory } from "../components/evals/EvalReportHistory";
 import type { EvalsState } from "../hooks/useEvals";
 import { inspectionReason, useInspecting } from "../hooks/useInspection";
 import type { EvalCaseResult } from "../types";
@@ -33,12 +35,13 @@ export function EvalsView({ evals, onOpenRun }: EvalsViewProps) {
         actions={<Button onClick={() => onOpenRun(selected.runId)}>View run</Button>}
       >
         {error && <Notice>{error}</Notice>}
-        {selected.output && (
+        {!selected.trials?.length && selected.output && (
           <div className="mb-4">
             <h3 className={sectionHeadingClass}>Output</h3>
             <CodeBlock className="text-fg">{selected.output}</CodeBlock>
           </div>
         )}
+        <EvalCaseScores result={selected} />
         {selected.diagnostics?.length ? (
           <div>
             <h3 className={sectionHeadingClass}>Diagnostics</h3>
@@ -83,6 +86,13 @@ export function EvalsView({ evals, onOpenRun }: EvalsViewProps) {
       }
     >
       {error && <Notice>{error}</Notice>}
+      {report && "id" in report && (
+        <EvalReportHistory
+          reports={evals.reports}
+          report={report}
+          selectReport={evals.selectReport}
+        />
+      )}
       {report ? (
         <ul className={`m-0 list-none overflow-hidden p-0 ${panelClass}`}>
           {report.results.map((result) => {
