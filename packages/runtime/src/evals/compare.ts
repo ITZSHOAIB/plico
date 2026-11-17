@@ -31,7 +31,7 @@ export function compareEvalReports(
   if (baseline.mode !== current.mode) warnings.push("Reports use different execution modes.");
   if (baseline.fixturesDigest !== current.fixturesDigest)
     warnings.push("Eval fixtures differ between reports.");
-  const cases = baseline.results.map((before) => {
+  const cases: EvalComparison["cases"] = baseline.results.map((before) => {
     const after = current.results.find((r) => r.name === before.name);
     const deltas = (before.scores ?? []).map((score) => {
       const next = after?.scores?.find((s) => s.kind === score.kind && s.name === score.name);
@@ -60,6 +60,17 @@ export function compareEvalReports(
       regressed,
     };
   });
+  for (const added of current.results.filter(
+    (result) => !baseline.results.some((before) => before.name === result.name),
+  )) {
+    cases.push({
+      name: added.name,
+      before: "missing",
+      after: added.status,
+      deltas: [],
+      regressed: added.status === "fail",
+    });
+  }
   return {
     baselineId: baseline.id,
     currentId: current.id,

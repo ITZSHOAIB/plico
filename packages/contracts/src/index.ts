@@ -17,6 +17,7 @@ export type {
   EvalScore,
   EvalSummary,
   EvalTrial,
+  SkippedEvalCase,
 } from "./evals.js";
 export type {
   EventStreamType,

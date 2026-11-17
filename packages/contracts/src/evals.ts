@@ -57,6 +57,13 @@ export interface EvalTrial extends EvalCaseResult {
   structuredOutput?: import("./events.js").JsonValue;
 }
 
+export interface SkippedEvalCase {
+  name: string;
+  reason: string;
+  /** Completed trials retained when the case could not finish within the token cap. */
+  completedTrials?: EvalTrial[];
+}
+
 /** Saved report files; the original /v1/eval routes retain their v1 shape. */
 export interface EvalReportV2 extends EvalSummary {
   schemaVersion: 2;
@@ -64,7 +71,7 @@ export interface EvalReportV2 extends EvalSummary {
   mode: "scripted" | "live";
   evaluatedAt: string;
   fixturesDigest: string;
-  skipped: { name: string; reason: string }[];
+  skipped: SkippedEvalCase[];
   tokenCapReached: boolean;
   results: (EvalCaseResult & { scores?: EvalScore[]; trials?: EvalTrial[]; passAtK?: number })[];
 }

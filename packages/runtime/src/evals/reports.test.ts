@@ -137,3 +137,17 @@ it("readiness warns when the two latest reports use different judges", async () 
 });
 
 import { checkReadiness } from "../index.js";
+
+it("ignores unsupported report versions when listing saved reports", async () => {
+  const root = await mkdtemp(join(tmpdir(), "plico-report-version-"));
+  const dir = join(root, ".plico", "evals");
+  await mkdir(dir, { recursive: true });
+  await writeFile(join(dir, "current.json"), JSON.stringify(baseline));
+  await writeFile(join(dir, "future.json"), JSON.stringify({ schemaVersion: 999 }));
+  expect(await listEvalReports(root)).toEqual([baseline]);
+  await expect(readEvalReport(join(dir, "future.json"))).rejects.toThrow(
+    "Unsupported eval report version",
+  );
+});
+
+import { listEvalReports } from "../index.js";

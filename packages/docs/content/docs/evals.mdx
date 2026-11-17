@@ -298,3 +298,10 @@ without calling the agent or tools. Live report rescoring can call the judge and
 incur provider usage; scripted reports continue to skip judged checks. Rescoring
 writes a new report and preserves the original. Missing cases or transcripts are
 errors. Markdown and JUnit formats support CI and exported reports.
+
+When a token cap interrupts a multi-trial case, it remains skipped and retains its
+finished trials in `skipped[].completedTrials`, including events and scores. It
+is not counted as a passing case. Report comparisons include newly added cases;
+a newly added failure exits nonzero. Report listings ignore unsupported schema
+versions in accordance with ADR 0006; explicitly reading an unsupported report
+file still gives a version error. Malformed supported reports remain errors.

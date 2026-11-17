@@ -135,7 +135,7 @@ expect:
     const summary = await runEvals(root, { live: { provider: fakeProvider(ticketAgent) } });
 
     expect(summary.total).toBe(0);
-    expect(summary.skipped).toEqual([
+    expect(summary.skipped).toMatchObject([
       { name: "legacy", reason: expect.stringContaining("no input") },
       { name: "no-input", reason: expect.stringContaining("no input") },
     ]);
@@ -183,7 +183,11 @@ expect:
     });
 
     expect(summary).toMatchObject({ total: 1, passed: 1, tokenCapReached: true });
-    expect(summary.skipped).toEqual([
+    const [report] = await listEvalReports(root);
+    expect(report?.skipped.find((entry) => entry.name === "b")).toMatchObject({
+      completedTrials: [{ output: "ok", status: "pass", events: expect.any(Array) }],
+    });
+    expect(summary.skipped).toMatchObject([
       { name: "b", reason: "Token cap of 25 reached after 1 of 2 trials." },
       { name: "c", reason: "Token cap of 25 reached." },
     ]);

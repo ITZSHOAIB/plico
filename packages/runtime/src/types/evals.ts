@@ -28,12 +28,9 @@ export interface EvalCase {
   scorers?: EvalScorerRef[];
 }
 
-export interface SkippedEvalCase {
-  name: string;
-  reason: string;
-}
+import type { SkippedEvalCase } from "@plico-ai/contracts";
 
-export type { EvalJudgeRecord, EvalScore } from "@plico-ai/contracts";
+export type { EvalJudgeRecord, EvalScore, SkippedEvalCase } from "@plico-ai/contracts";
 /** A case result with its scores. Scores and trials are saved in report files. */
 export interface ScoredEvalCaseResult extends EvalCaseResult {
   scores?: import("@plico-ai/contracts").EvalScore[];

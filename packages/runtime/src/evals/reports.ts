@@ -25,10 +25,14 @@ export async function saveEvalReport(
   return report;
 }
 
+class UnsupportedReportVersionError extends Error {}
+
 export async function readEvalReport(file: string): Promise<EvalReportV2> {
   const report = JSON.parse(await readFile(file, "utf8")) as EvalReportV2;
+  if (report && report.schemaVersion !== 2)
+    throw new UnsupportedReportVersionError(`Unsupported eval report version: ${file}`);
   if (
-    report.schemaVersion !== 2 ||
+    !report ||
     typeof report.id !== "string" ||
     !Array.isArray(report.results) ||
     !["live", "scripted"].includes(report.mode)
@@ -46,9 +50,19 @@ export async function listEvalReports(root: string): Promise<EvalReportV2[]> {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") return [];
     throw error;
   }
-  const reports = await Promise.all(
-    files.filter((file) => file.endsWith(".json")).map((file) => readEvalReport(join(dir, file))),
+  const loaded = await Promise.all(
+    files
+      .filter((file) => file.endsWith(".json"))
+      .map(async (file) => {
+        try {
+          return await readEvalReport(join(dir, file));
+        } catch (error) {
+          if (error instanceof UnsupportedReportVersionError) return undefined;
+          throw error;
+        }
+      }),
   );
+  const reports = loaded.filter((report) => report !== undefined);
   return reports.sort(
     (a, b) => b.evaluatedAt.localeCompare(a.evaluatedAt) || a.id.localeCompare(b.id),
   );

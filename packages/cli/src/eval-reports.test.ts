@@ -37,3 +37,43 @@ it("saves a baseline, detects a regression and emits JUnit and Markdown", async 
   expect(log.mock.calls.flat().join("\n")).toContain('<failure message="Eval failed">');
   expect(await main(["node", "plico", "eval", "rescore", baseline, root])).toBe(1);
 });
+it("compares newly added passing and failing cases through the CLI", async () => {
+  const root = await mkdtemp(join(tmpdir(), "plico-compare-added-"));
+  const before = {
+    schemaVersion: 2,
+    id: "before",
+    mode: "scripted",
+    evaluatedAt: "2026-11-17",
+    fixturesDigest: "same",
+    total: 0,
+    passed: 0,
+    failed: 0,
+    results: [],
+    skipped: [],
+    tokenCapReached: false,
+  };
+  const baseline = join(root, "before.json");
+  const current = join(root, "after.json");
+  await writeFile(baseline, JSON.stringify(before));
+  const log = vi.spyOn(console, "log").mockImplementation(() => {});
+  vi.spyOn(console, "error").mockImplementation(() => {});
+  for (const status of ["pass", "fail"]) {
+    await writeFile(
+      current,
+      JSON.stringify({
+        ...before,
+        id: "after",
+        total: 1,
+        passed: status === "pass" ? 1 : 0,
+        failed: status === "fail" ? 1 : 0,
+        results: [{ name: "added", status, runId: "run", runStatus: "completed" }],
+      }),
+    );
+    expect(await main(["node", "plico", "eval", "compare", baseline, current, "--json"])).toBe(
+      status === "pass" ? 0 : 1,
+    );
+    expect(JSON.parse(String(log.mock.calls.at(-1)?.[0])).cases).toContainEqual(
+      expect.objectContaining({ name: "added", before: "missing", after: status }),
+    );
+  }
+});
