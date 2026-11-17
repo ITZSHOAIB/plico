@@ -7,8 +7,8 @@ icon: FlaskConical
 An eval case is a Markdown file that says what a run should do, plus a script of steps that Plico
 replays against your project. Replaying needs no model and no API key, so it is a good gate in CI.
 Scripted evals check your wiring: the tools exist, the approval rules hold, the run ends how you
-expect, the output has the right fields. Judging what a model would say needs a live run, which
-comes with `plico eval --live`.
+expect, the output has the right fields. To see what the model actually does, run the same cases
+with [`plico eval --live`](#live-runs).
 
 ```bash
 plico eval .
@@ -49,12 +49,12 @@ tags: [regression]
 ```
 
 `evals/<name>.script.json` next to it holds the steps scripted mode replays. A case without one is
-skipped by `plico eval` and listed as `SKIP`; it runs once `--live` ships.
+skipped by `plico eval` and listed as `SKIP`; it still runs with `--live`.
 
 | Key | Meaning |
 | --- | --- |
 | `expect` | Code checks over the whole run. See below. |
-| `input` | The typed input for the run, checked against `agent.md`'s `input` schema. Used by live runs. |
+| `input` | What the agent receives in a live run. Checked against `agent.md`'s `input` schema; without a schema, text is sent as the message. |
 | `mocks` | Fixed results for named tools in live runs, such as `create_ticket: { id: T-1 }`. |
 | `trials` | How many live runs the case gets. Defaults to 1. |
 | `tags` | Labels such as `regression`. |
@@ -79,6 +79,44 @@ skipped by `plico eval` and listed as `SKIP`; it runs once `--live` ships.
 
 In scripted mode, `maxTokens`, `maxLatencyMs` and the body's criteria are reported as skipped and do
 not fail the case: a script makes no model calls, and grading a script would only grade the fixture.
+In live mode the budgets apply. Criteria are still reported as skipped until the judge ships.
+
+## Live runs
+
+`plico eval --live` sends each case's `input` to the configured model, the way
+`plico run --input` does, and runs the same `expect` checks and scorers on the result. It needs a
+model and its key in `plico.config.ts` and `.env`. A case without `input`, and a fixture on its own,
+is listed as `SKIP`. Live runs are not stored as the project's eval report, so
+`plico readiness` keeps reporting the scripted results.
+
+<Callout type="warn">
+  Tools run for real in live mode unless the case mocks them. A tool that sends email or creates a
+  ticket does so on every live run.
+</Callout>
+
+Two ways keep tools from running:
+
+- **`mocks`** in the case gives a fixed result for each named tool, on every call:
+
+  ```yaml
+  input: VPN is down for the whole sales team
+  mocks:
+    create_ticket: { id: T-1 }
+  ```
+
+- **`--mock-tools`** takes every tool result from the case's `.script.json`, in order for each tool.
+  A call with no result left fails, and the model sees the error. A `"live": true` step runs that
+  call's handler. `mocks` still wins over the fixture.
+
+Approval policy applies as in a run. Nobody approves during an eval, so a tool that needs approval
+leaves the run `waiting`; expect that with `status: waiting`.
+
+| Option | Meaning |
+| --- | --- |
+| `trials: n` in the case | Runs the case n times. It passes only when every trial passes, and the result shows how many did, such as `2/3 trials passed.` |
+| `--model <provider:model>` | Runs the suite on another model, so comparing two models is two commands. |
+| `--max-tokens <n>` | Caps the tokens of the whole suite. Once reached, no case or trial starts, the rest are listed as `SKIP`, and `plico eval` exits 1. |
+| `--concurrency <n>` | Live runs at once. Defaults to 4. |
 
 ## Custom scorers
 

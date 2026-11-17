@@ -6,7 +6,8 @@ import { statusCheck } from "./status.js";
 import { toolsCheck } from "./tools.js";
 import type { EvalCheck } from "./types.js";
 
-export type { CheckFinding, EvalCheck } from "./types.js";
+export { tokensUsed } from "./budgets.js";
+export type { CheckFinding, EvalCheck, EvalMode } from "./types.js";
 
 /** The `expect` checks, in the order their findings are reported. */
 export const EVAL_CHECKS: readonly EvalCheck[] = [

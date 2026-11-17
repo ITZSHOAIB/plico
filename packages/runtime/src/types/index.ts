@@ -25,6 +25,7 @@ export type {
   EvalCase,
   EvalExpectation,
   EvalRunSummary,
+  LiveEvalOptions,
   RunEvalsOptions,
   SkippedEvalCase,
 } from "./evals.js";

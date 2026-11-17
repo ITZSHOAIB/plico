@@ -14,7 +14,7 @@ Run `plico --version` to print the installed version. Every command takes an opt
 | `plico runs [path]` | Lists saved runs. |
 | `plico events <run-id> [--after <sequence>] [path]` | Prints a run's event log. |
 | `plico cancel <run-id> [path]` | Cancels an active persisted run. |
-| `plico eval [path]` | Runs the project's scripted evals. |
+| `plico eval [path]` | Runs the project's evals: scripted by default, against the model with `--live`. |
 | `plico readiness [path]` | Reports readiness diagnostics. |
 | `plico serve [path]` | Starts the HTTP API. |
 
@@ -81,6 +81,16 @@ address; the default is `127.0.0.1:3000`. Other options:
 `<name>.script.json` fixture, and each fixture on its own. A Markdown case without a fixture is
 listed as skipped. It exits 1 when a case fails or when no case ran. `--allow-empty` accepts an
 empty `evals/` folder. See [Evals](/docs/evals) for the case format, approval cases and `--from-run`.
+
+`plico eval --live [path]` sends each case's `input` to the configured model instead. It needs a
+model and its key, like `plico run`.
+
+| Option | Meaning |
+| --- | --- |
+| `--mock-tools` | Take every tool result from the case's `.script.json` fixture; no handler runs. |
+| `--model <provider:model>` | Use this model for the run instead of the agent's, such as `openai:gpt-5-mini`. |
+| `--max-tokens <n>` | Stop starting cases once the suite has used this many tokens. Exits 1 if any case did not run. |
+| `--concurrency <n>` | Live runs at once. Defaults to 4. |
 
 ## Help and unknown flags
 

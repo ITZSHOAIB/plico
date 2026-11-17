@@ -42,6 +42,8 @@ function markdownCase(
   };
   if (fixture?.script) entry.script = fixture.script;
   if (definition.input !== undefined) entry.input = definition.input;
+  if (Object.keys(definition.mocks).length > 0) entry.mocks = definition.mocks;
+  if (definition.trials !== 1) entry.trials = definition.trials;
   return entry;
 }
 
