@@ -197,3 +197,9 @@ export function runEvals(): Promise<EvalSummary> {
 export function fetchReadiness(): Promise<ReadinessReport> {
   return getJson("/v1/readiness");
 }
+
+export async function fetchEvalReports(): Promise<import("@plico-ai/contracts").EvalReportV2[]> {
+  return (
+    (await getJsonOrNull<import("@plico-ai/contracts").EvalReportV2[]>("/v1/evals/reports")) ?? []
+  );
+}

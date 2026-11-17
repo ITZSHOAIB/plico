@@ -140,3 +140,5 @@ and commit it, then `plico eval --baseline evals/baseline.json --tolerance 0.05`
 to fail on regressions. See the [eval guide](packages/docs/content/docs/evals.mdx).
 
 Report comparisons include newly added cases. Incomplete live cases retain completed trial transcripts, and report listings ignore unsupported schema versions.
+
+Studio?s Evals view lets you browse saved reports, inspect trial transcripts with scores and judge reasons, and compare two reports side by side.

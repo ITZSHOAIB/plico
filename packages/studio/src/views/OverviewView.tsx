@@ -3,14 +3,14 @@ import { ReadinessDiagnostics } from "../components/ReadinessDiagnostics";
 import { ReadinessError } from "../components/ReadinessError";
 import { readinessSummaryText } from "../components/ReadinessSummary";
 import type { ProjectData } from "../hooks/useProjectData";
-import type { EvalReport, RunSummary } from "../types";
+import type { EvalSummary, RunSummary } from "../types";
 import { Button } from "../ui/Button";
 import { Icon, type IconName } from "../ui/Icon";
 import { EmptyState, Page, panelClass } from "../ui/Page";
 
 interface OverviewViewProps {
   data: ProjectData;
-  evalReport: EvalReport | null;
+  evalReport: EvalSummary | null;
 }
 
 function latestRunLabel(runs: RunSummary[]): string {
