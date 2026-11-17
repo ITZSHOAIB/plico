@@ -1,0 +1,27 @@
+{
+  "number": "NN",
+  "version": "X.Y.Z",
+  "headline": "Your release update\n*developer outcome.*",
+  "line": "One concrete sentence explaining what developers can do now.",
+  "status": "preview",
+  "tabs": ["Feature", "Studio", "API"],
+  "visual": {
+    "type": "factory",
+    "input": "{ input }",
+    "output": "{ result }",
+    "tags": [
+      {
+        "icon": "braces",
+        "label": "input"
+      },
+      {
+        "icon": "check",
+        "label": "checked"
+      },
+      {
+        "icon": "database",
+        "label": "saved"
+      }
+    ]
+  }
+}

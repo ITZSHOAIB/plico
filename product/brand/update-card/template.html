@@ -48,7 +48,7 @@
   .visual { position: relative; height: 430px; margin-bottom: 52px; }
   .visual canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
   .visual > svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
-  .visual.factory { height: 470px; margin-bottom: 44px; }
+  .visual.factory, .visual.custom { height: 470px; margin-bottom: 44px; }
   .tag { position: absolute; transform: translate(-50%, -50%); display: flex; align-items: center; gap: 8px;
     font-size: 20px; padding: 6px 12px; background: var(--bg); border: 1px solid #3a4441; white-space: nowrap; }
   .tag svg { width: 18px; height: 18px; stroke: var(--accent); fill: none; stroke-width: 2;
@@ -91,7 +91,7 @@
 
   <main>
     <div class="visual" id="visual"></div>
-    <h1 id="headline">Plico update</h1>
+    <h1 id="headline"></h1>
     <p class="line" id="line"></p>
     <div class="cmd" id="cmd"></div>
   </main>
@@ -107,10 +107,7 @@
   const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c]);
   // Seeded randomness, so a card renders the same every time.
   let seed = 7;
-  const rand = () => {
-    seed = (seed * 16807) % 2147483647;
-    return (seed - 1) / 2147483646;
-  };
+  const rand = () => ((seed = (seed * 16807) % 2147483647) - 1) / 2147483646;
 
   $("version").innerHTML = `<span>Update</span><b>${esc(data.number)}</b><i></i>v${esc(data.version)}`;
   $("headline").innerHTML = esc(data.headline).replace(/\*(.+?)\*/g, "<em>$1</em>").replace(/\n/g, "<br>");
@@ -122,7 +119,7 @@
 
   // Star field: sparse dots and a few accent pluses, kept clear of text and tags.
   function drawStars() {
-    const keepOut = [...document.querySelectorAll("h1, .line, .cmd, .tag, .visual.factory")].map((el) => {
+    const keepOut = [...document.querySelectorAll("h1, .line, .cmd, .tag, .visual.factory, .visual.custom")].map((el) => {
       const r = el.getBoundingClientRect();
       return [r.left - 24, r.top - 24, r.right + 24, r.bottom + 24];
     });
@@ -335,6 +332,14 @@
       box.append(el);
     });
   }
+
+  // A post-specific SVG illustration supplied by the renderer.
+  if (v.type === "svg") {
+    const box = $("visual");
+    box.classList.add("custom");
+    box.innerHTML = v.content ?? "";
+  }
+
   document.fonts.ready.then(drawStars);
 </script>
 </body>

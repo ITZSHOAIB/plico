@@ -1,0 +1,12 @@
+{
+  "number": "02",
+  "version": "0.5.1",
+  "headline": "Plico now supports\n*agent evals.*",
+  "line": "Score agent runs, compare baselines, and inspect failures in Studio.",
+  "status": "shipped",
+  "tabs": ["Evals", "Baselines", "Studio"],
+  "visual": {
+    "type": "svg",
+    "file": "illustration.svg"
+  }
+}
