@@ -200,6 +200,26 @@ scorers:
     expect(result?.scores?.[0]?.judge).not.toHaveProperty("temperature");
   });
 
+  it("retries a judge call the provider turned away for now", async () => {
+    const root = await project({ "vpn.md": "---\ninput: hi\n---\n- Polite\n" });
+    let calls = 0;
+    const busyJudge: ModelProvider = {
+      async *stream() {
+        if (calls++ === 0)
+          throw new ModelProviderError("rate_limit", "Model provider rate limit reached.");
+        yield { type: "text", text: choose("Y") };
+        yield finish(4);
+      },
+    };
+
+    const [result] = (
+      await runEvals(root, { live: { provider: agent, judgeProvider: () => busyJudge } })
+    ).results;
+
+    expect(calls).toBe(2);
+    expect(result?.status).toBe("pass");
+  });
+
   it("does not ask the judge about a run that failed", async () => {
     const root = await project({ "vpn.md": "---\ninput: hi\n---\n- Polite\n" });
     const asked: Array<{ ref: string } & ModelRequest> = [];

@@ -157,7 +157,9 @@ when it has one), each tool call with its arguments and result, and the files wr
 are shortened, with a note. For factuality it sees the input, the expected answer and the answer.
 
 Each check is one model call at temperature 0, asking for the judge's reasons and then one choice.
-A model that refuses temperature 0 is asked again at its default. A judge that cannot be reached, or
+A model that refuses temperature 0 is asked again at its default, and reasoning models that ignore
+temperature answer at theirs. A call the provider turns away for now, such as on a rate limit, is
+retried like the agent's, with the judge model's `retries` and `retryDelayMs`. A judge that cannot be reached, or
 answers off its choices, fails that check. A run that failed is not judged.
 
 The judge model is the first of these that is set:

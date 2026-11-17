@@ -1,3 +1,4 @@
+import { setTimeout as delay } from "node:timers/promises";
 import type { JsonValue } from "@plico-ai/contracts";
 import { ModelProviderError } from "../../errors.js";
 import type {
@@ -10,6 +11,12 @@ import type { JudgePrompt } from "./prompts.js";
 
 export const JUDGE_TEMPERATURE = 0;
 const JUDGE_TIMEOUT_MS = 120_000;
+
+/** How often a call the provider turned away for now is tried again, as for the agent's calls. */
+export interface JudgeRetries {
+  retries?: number;
+  retryDelayMs?: number;
+}
 
 export interface JudgeAnswer {
   choice: string;
@@ -34,6 +41,23 @@ async function call(
   return finish ? { raw, finish } : { raw };
 }
 
+/** `call`, tried again with backoff while the provider reports a retryable error. */
+async function callWithRetries(
+  provider: ModelProvider,
+  request: ModelRequest,
+  { retries = 2, retryDelayMs = 100 }: JudgeRetries,
+): ReturnType<typeof call> {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await call(provider, request);
+    } catch (error) {
+      if (!(error instanceof ModelProviderError && error.retryable) || attempt >= retries)
+        throw error;
+      await delay(retryDelayMs * 2 ** attempt);
+    }
+  }
+}
+
 /** Some reasoning models accept only their default temperature and reject the request. */
 const refusesTemperature = (error: unknown) =>
   error instanceof ModelProviderError &&
@@ -48,6 +72,7 @@ export async function askJudge(
   provider: ModelProvider,
   model: string,
   { prompt, scores }: JudgePrompt,
+  retries: JudgeRetries = {},
 ): Promise<JudgeAnswer> {
   const choices = Object.keys(scores);
   const outputSchema = {
@@ -64,11 +89,11 @@ export async function askJudge(
   let temperature: number | undefined = JUDGE_TEMPERATURE;
   let answered: Awaited<ReturnType<typeof call>>;
   try {
-    answered = await call(provider, { ...request, temperature });
+    answered = await callWithRetries(provider, { ...request, temperature }, retries);
   } catch (error) {
     if (!refusesTemperature(error)) throw error;
     temperature = undefined;
-    answered = await call(provider, request);
+    answered = await callWithRetries(provider, request, retries);
   }
   const { raw, finish } = answered;
   const record: EvalJudgeRecord = {

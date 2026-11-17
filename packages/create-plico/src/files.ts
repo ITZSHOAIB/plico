@@ -147,7 +147,7 @@ A case is a script plus an optional \`expect\`. It uses no model and no API key:
 
 Steps are \`assistant.output\` (\`content\`), \`tool.call\` (\`toolName\`, \`arguments\`, \`result\` is required because evals do not run handlers, or \`"live": true\` to run the handler), \`approval.decide\` (\`approved\`, right after a tool call that needs approval) and \`artifact.write\` (\`files\`). Leave out \`approval.decide\` and the run stops as \`waiting\`, so \`"expect": { "status": "waiting" }\` tests that a tool is held. \`approved: false\` ends the run as \`failed\`.
 
-To add checks beyond status and text, put an \`evals/<name>.md\` beside the fixture: \`expect\` in its frontmatter (\`status\`, \`contains\`, \`tool\`, \`notTool\`, \`artifact\`, \`output\`), custom scorers from \`evals/scorers/\` under \`scorers\`, and criteria as bullets. See https://plico.sohab.dev/docs/evals.
+To add checks beyond status and text, put an \`evals/<name>.md\` beside the fixture: \`expect\` in its frontmatter (\`status\`, \`contains\`, \`tool\`, \`notTool\`, \`artifact\`, \`output\`), custom scorers from \`evals/scorers/\` or a \`rubric\` or \`factuality\` check under \`scorers\`, and criteria as bullets, which a judge model grades in \`plico eval --live\`. See https://plico.sohab.dev/docs/evals.
 
 ## Check your work
 

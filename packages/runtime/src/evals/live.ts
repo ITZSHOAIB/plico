@@ -15,7 +15,7 @@ import type {
   ScoredEvalCaseResult,
   SkippedEvalCase,
 } from "../types/index.js";
-import { configuredJudge, configuredJudgeProviders } from "./judge/models.js";
+import { configuredJudge, configuredJudgeProviders, modelFromRef } from "./judge/models.js";
 import { combineTrials, type JudgedRun, judgeRun } from "./judge-case.js";
 import { liveToolResults } from "./live-tools.js";
 import { runPool } from "./pool.js";
@@ -96,6 +96,7 @@ export async function runLiveEvals(
       const judged = await judgeRun(evalsDir, evalCase, result, "live", {
         ...(defaultModel === undefined ? {} : { defaultModel }),
         provider: (model) => metered(judgeProvider(model)),
+        retries: (model) => modelFromRef(model, project.config.model) ?? {},
       });
       return refused ? undefined : judged;
     }),

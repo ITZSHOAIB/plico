@@ -1,6 +1,6 @@
 import type { EvalCodeScorerRef, EvalScorerRef } from "@plico-ai/core";
 import type { EvalCase, EvalScore, ModelProvider, RunResult } from "../../types/index.js";
-import { askJudge } from "./ask.js";
+import { askJudge, type JudgeRetries } from "./ask.js";
 import { criterionPrompt, factualityPrompt, type JudgePrompt, rubricPrompt } from "./prompts.js";
 import { describeInput, describeOutput, describeSubmission } from "./submission.js";
 
@@ -9,6 +9,8 @@ export interface RunJudge {
   /** The case's `judge:`, else `evals.judge`, else the configured model. */
   defaultModel?: string;
   provider(model: string): ModelProvider;
+  /** The judge model's `retries` and `retryDelayMs`. */
+  retries?(model: string): JudgeRetries;
 }
 
 export const RUBRIC_THRESHOLD = 0.7;
@@ -87,7 +89,9 @@ export async function runJudgedChecks(
       continue;
     }
     try {
-      const answer = await askJudge(judge.provider(check.model), check.model, check.prompt);
+      const provider = judge.provider(check.model);
+      const retries = judge.retries?.(check.model) ?? {};
+      const answer = await askJudge(provider, check.model, check.prompt, retries);
       const passed = answer.score >= check.score.threshold;
       scores.push({
         ...check.score,
