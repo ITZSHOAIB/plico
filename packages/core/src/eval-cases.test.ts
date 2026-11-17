@@ -140,6 +140,41 @@ scorers: [no-pii, { use: tone, threshold: 0.8 }]
     expect(error?.message).toContain("plain name");
   });
 
+  it("accepts rubric and factuality scorers with their own threshold and judge", async () => {
+    const root = await project({
+      "graded.md": `---
+scorers:
+  - rubric:
+      0: Ignores the outage
+      1: Names the outage
+      2: Names the outage and a workaround
+    threshold: 0.5
+    judge: openai:gpt-5-mini
+  - factuality: The VPN is down until 5pm.
+---
+`,
+      "graded.script.json": fixture,
+    });
+
+    const result = await validateProject(root);
+
+    expect(result.errors).toEqual([]);
+  });
+
+  it("rejects a rubric whose levels do not run from 0 without gaps", async () => {
+    const root = await project({
+      "gaps.md": "---\nscorers:\n  - rubric: { 0: Bad, 2: Good }\n  - factuality: ''\n---\n",
+      "gaps.script.json": fixture,
+    });
+
+    const messages = (await validateProject(root)).errors.map((e) => [e.line, e.message]);
+
+    expect(messages).toEqual([
+      [3, expect.stringContaining("levels 0, 1")],
+      [4, expect.stringContaining("factuality")],
+    ]);
+  });
+
   it("checks input against the agent's input schema at the line of input", async () => {
     const root = await project({
       "typed.md": "---\nexpect:\n  status: completed\ninput:\n  ticket: 7\n---\n",

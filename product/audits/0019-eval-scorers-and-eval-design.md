@@ -203,6 +203,8 @@ On Ollama, direct A succeeded 8 of 40 calls and A-port 33 of 40 on the same adap
 5. `--max-tokens` caps agent and judge tokens over the whole live suite. Once reached, no case or trial starts; the rest are listed as skipped and `plico eval` exits 1. `--concurrency` defaults to 4 for live runs; scripted runs stay sequential.
 6. A live case needs `input`, sent the way `plico run --input` sends it. Without it, and for a fixture on its own, the case is skipped. Live mode is CLI-only in this slice; approval policy applies as in a run.
 
+**Slice 3b rulings (2026-11-17).** Factuality passes at 0.6 by default, so a consistent superset passes and a subset fails; `threshold` overrides it. Without `evals.judge`, a case or check judge, the judge is the model in `plico.config.ts`, also under `--model`, so compared models share a judge. Criteria and rubrics see the case input, the final or structured output, each tool call with its arguments and result (long results shortened, with a note) and the files written; factuality sees the input, the expected answer and the final output. Live results stay unstored until reports v2 records the mode.
+
 Carried into 3b: the token cap counts only agent tokens until the judge exists, and must add judge tokens then (`LiveEvalOptions.maxTokens` says "agent tokens" today). Live results are not stored as the project's eval report until reports v2 records the mode.
 
 ## Decisions

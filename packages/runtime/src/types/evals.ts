@@ -1,4 +1,4 @@
-import type { EvalSummary, RunStatus } from "@plico-ai/contracts";
+import type { EvalCaseResult, EvalSummary, RunStatus } from "@plico-ai/contracts";
 import type { EvalCaseExpect, EvalScorerRef } from "@plico-ai/core";
 import type { ModelProvider } from "./provider.js";
 import type { DryRunScriptStep } from "./script.js";
@@ -21,6 +21,8 @@ export interface EvalCase {
   trials?: number;
   expect?: EvalExpectation;
   input?: unknown;
+  /** The `provider:model` that judges this case's criteria and judged scorers. */
+  judge?: string;
   /** Judge criteria from the case body, skipped in scripted mode. */
   criteria?: string[];
   scorers?: EvalScorerRef[];
@@ -31,8 +33,41 @@ export interface SkippedEvalCase {
   reason: string;
 }
 
+/** What the judge was asked and answered, enough to explain and repeat a judgement. */
+export interface EvalJudgeRecord {
+  /** The `provider:model` that was asked. */
+  model: string;
+  /** The model the provider says answered. */
+  servedModel?: string;
+  /** 0, or unset when the model refused it and answered at its default. */
+  temperature?: number;
+  prompt: string;
+  /** The judge's answer as it came back. */
+  raw: string;
+  usage?: { inputTokens: number; outputTokens: number };
+}
+
+/** One scored check of a case: a judged criterion, rubric or factuality, or a code scorer. */
+export interface EvalScore {
+  kind: "criterion" | "rubric" | "factuality" | "scorer";
+  /** The criterion text, the scorer's name, or `rubric` / `factuality`. */
+  name: string;
+  /** From 0 to 1. */
+  score: number;
+  threshold: number;
+  passed: boolean;
+  reason?: string;
+  judge?: EvalJudgeRecord;
+}
+
+/** A case result with its scores. The scores are not stored or served until reports v2. */
+export interface ScoredEvalCaseResult extends EvalCaseResult {
+  scores?: EvalScore[];
+}
+
 /** What `runEvals` returns: the stored summary plus the cases it could not run. */
 export interface EvalRunSummary extends EvalSummary {
+  results: ScoredEvalCaseResult[];
   skipped: SkippedEvalCase[];
   /** A live run hit `maxTokens`, so some cases or trials never started. */
   tokenCapReached: boolean;
@@ -44,8 +79,13 @@ export interface LiveEvalOptions {
   /** Take every tool result from the case's `.script.json` fixture; no handler runs. */
   mockTools?: boolean;
   /**
-   * Agent tokens over the whole suite. No model call starts that is expected, at the average call so
-   * far, to pass it; once one is refused, no case or trial starts.
+   * The judge for a `provider:model`. Defaults to building it from `plico.config.ts`; endpoint
+   * settings carry over from `model` when the provider matches.
+   */
+  judgeProvider?: (model: string) => ModelProvider;
+  /**
+   * Agent and judge tokens over the whole suite. No model call starts that is expected, at the
+   * average call so far, to pass it; once one is refused, no case or trial starts.
    */
   maxTokens?: number;
   /** Live runs at once. Defaults to 4. */

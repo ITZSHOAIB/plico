@@ -6,7 +6,7 @@ afterEach(() => {
   vi.unstubAllEnvs();
 });
 
-it("sends the output schema to a native provider through its response format", async () => {
+it("sends the output schema and temperature, and reports the model that answered", async () => {
   vi.stubEnv("OPENAI_API_KEY", "test");
   const requests: Record<string, unknown>[] = [];
   vi.stubGlobal("fetch", async (_url: unknown, init: RequestInit) => {
@@ -42,14 +42,21 @@ it("sends the output schema to a native provider through its response format", a
   const provider = createConfiguredModelProvider({ provider: "openai", name: "test" });
   const chunks = [];
   for await (const chunk of provider?.stream(
-    { messages: [{ role: "user", content: "Triage" }], maxSteps: 1, outputSchema: schema },
+    {
+      messages: [{ role: "user", content: "Triage" }],
+      maxSteps: 1,
+      outputSchema: schema,
+      temperature: 0,
+    },
     { signal: new AbortController().signal },
   ) ?? [])
     chunks.push(chunk);
 
   expect(requests[0]).toMatchObject({
+    temperature: 0,
     response_format: { type: "json_schema", json_schema: { schema } },
   });
   expect(provider?.supportsStructuredOutput).toBe(true);
   expect(chunks).toContainEqual({ type: "text", text: '{"ticket":"T-1"}' });
+  expect(chunks.at(-1)).toMatchObject({ type: "finish", modelId: "test" });
 });

@@ -34,6 +34,8 @@ export interface ProjectConfig {
   execution?: { leaseMs?: number };
   /** Thread naming. `keywords` is the default; `model` asks the configured model to write titles. */
   threads?: { title?: "keywords" | "model" };
+  /** Eval settings. `judge` is the `provider:model` that grades criteria, rubrics and factuality. */
+  evals?: { judge?: string };
   approvals?: {
     default?: "none" | "required";
     timeoutMs?: number;

@@ -165,6 +165,7 @@ async function* consume(
       : {
           output: Output.object({ schema: jsonSchema(request.outputSchema) }),
         }),
+    ...(request.temperature === undefined ? {} : { temperature: request.temperature }),
     allowSystemInMessages: true,
     maxRetries: 0,
     streamRetries: 0,
@@ -172,6 +173,7 @@ async function* consume(
     onError: () => {},
   });
   let metadata: JsonValue | undefined;
+  let modelId: string | undefined;
   let reasoning = "";
   for await (const part of response.fullStream) {
     if (part.type === "text-delta") yield { type: "text", text: part.text };
@@ -188,8 +190,10 @@ async function* consume(
             : {}),
         },
       };
-    else if (part.type === "finish-step") metadata = part.providerMetadata as JsonValue | undefined;
-    else if (part.type === "error") throw part.error;
+    else if (part.type === "finish-step") {
+      metadata = part.providerMetadata as JsonValue | undefined;
+      modelId = part.response.modelId || modelId;
+    } else if (part.type === "error") throw part.error;
     else if (part.type === "finish") {
       if (part.finishReason !== "stop" && part.finishReason !== "tool-calls")
         throw new ModelProviderError(
@@ -202,6 +206,7 @@ async function* consume(
           inputTokens: part.totalUsage.inputTokens ?? 0,
           outputTokens: part.totalUsage.outputTokens ?? 0,
         },
+        ...(modelId ? { modelId } : {}),
         ...(!reasoning && metadata === undefined
           ? {}
           : {

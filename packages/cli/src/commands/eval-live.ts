@@ -1,5 +1,10 @@
 import { type ProjectConfig, validateProject } from "@plico-ai/core";
-import { type LiveEvalOptions, loadProjectEnv, modelProviderRecoveryKey } from "@plico-ai/runtime";
+import {
+  type LiveEvalOptions,
+  loadProjectEnv,
+  modelFromRef,
+  modelProviderRecoveryKey,
+} from "@plico-ai/runtime";
 import { type ParsedArgs, readStringOption } from "../args.js";
 import { resolveModelProvider } from "./model-provider.js";
 
@@ -23,20 +28,10 @@ function positiveInteger(parsed: ParsedArgs, flag: string): number | undefined {
 
 /** `--model provider:model` replaces the agent's model; endpoint settings carry over only within a provider. */
 function overrideModel(model: ModelConfig | undefined, override: string): ModelConfig {
-  const colon = override.indexOf(":");
-  if (colon <= 0 || colon === override.length - 1)
+  const replaced = modelFromRef(override, model);
+  if (!replaced)
     throw new Error(`--model takes provider:model, such as openai:gpt-5-mini, not "${override}".`);
-  const provider = override.slice(0, colon);
-  const name = override.slice(colon + 1);
-  if (model?.provider === provider) return { ...model, name };
-  const { maxSteps, retries, retryDelayMs } = model ?? {};
-  return {
-    provider,
-    name,
-    ...(maxSteps === undefined ? {} : { maxSteps }),
-    ...(retries === undefined ? {} : { retries }),
-    ...(retryDelayMs === undefined ? {} : { retryDelayMs }),
-  };
+  return replaced;
 }
 
 /** The live options `plico eval` was given, or undefined for a scripted run. */

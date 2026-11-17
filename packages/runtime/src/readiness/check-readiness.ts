@@ -3,6 +3,7 @@ import type { ReadinessDiagnostic, ReadinessOptions, ReadinessReport } from "../
 import { checkArtifactAccess } from "./checks/artifact-access.js";
 import { checkArtifacts } from "./checks/artifacts.js";
 import { checkEnv } from "./checks/env.js";
+import { checkEvalJudge } from "./checks/eval-judge.js";
 import { checkEvals } from "./checks/evals.js";
 import { checkPersistence } from "./checks/persistence.js";
 import { checkProject } from "./checks/project.js";
@@ -35,6 +36,7 @@ export async function checkReadiness(
     checkArtifactAccess(projectCheck.project.config),
     ...(await checkTools(projectCheck.project)),
     ...(await checkEvals(projectRoot, database.eventStore)),
+    ...(await checkEvalJudge(projectCheck.project)),
     ...checkThreadStore(database.eventStore, options.threadStore),
     ...(await checkPersistence(databasePath, database)),
     ...(await checkArtifacts(projectRoot)),

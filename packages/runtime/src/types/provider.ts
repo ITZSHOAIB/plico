@@ -17,6 +17,8 @@ export interface ModelRequest {
   maxSteps: number;
   /** Final JSON value must match this schema; only sent to providers that support it. */
   outputSchema?: JsonSchema;
+  /** Sampling temperature. Left to the provider's default when unset. */
+  temperature?: number;
   tools?: Array<{
     name: string;
     description: string;
@@ -37,7 +39,13 @@ export interface ModelResponse {
 export type ModelChunk =
   | { type: "text"; text: string }
   | { type: "tool.call"; call: ModelToolCall }
-  | { type: "finish"; usage: ModelResponse["usage"]; providerMetadata?: JsonValue };
+  | {
+      type: "finish";
+      usage: ModelResponse["usage"];
+      providerMetadata?: JsonValue;
+      /** The model the provider says answered, which can differ from the one requested. */
+      modelId?: string;
+    };
 
 export interface ModelProvider {
   /** Opt in only when this provider supports schema-constrained JSON responses. */

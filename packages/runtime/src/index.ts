@@ -12,7 +12,7 @@ export {
 } from "./engine/index.js";
 export { loadedEnvFiles, loadProjectEnv } from "./env.js";
 export { type ModelErrorKind, ModelProviderError } from "./errors.js";
-export { evalCaseFromRun, runEvals } from "./evals/index.js";
+export { evalCaseFromRun, modelFromRef, runEvals } from "./evals/index.js";
 export { runFailureEvents } from "./events.js";
 export { composeInstructions } from "./instructions.js";
 export {
@@ -54,8 +54,10 @@ export type {
   EvalCase,
   EvalCaseResult,
   EvalExpectation,
+  EvalJudgeRecord,
   EvalReport,
   EvalRunSummary,
+  EvalScore,
   EvalSummary,
   EventStore,
   JsonSchema,
@@ -76,6 +78,7 @@ export type {
   RunResult,
   RunStatus,
   RunSummary,
+  ScoredEvalCaseResult,
   SkippedEvalCase,
   ToolApprovalPolicy,
   ToolArtifactContext,
