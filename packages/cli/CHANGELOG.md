@@ -1,5 +1,14 @@
 # @plico-ai/cli
 
+## 0.5.1
+
+### Patch Changes
+
+- 47ac54e: Browse saved eval reports in Studio, inspect trial transcripts with scores and judge reasons, and compare two reports side by side.
+- @plico-ai/core@0.5.1
+  - @plico-ai/runtime@0.5.1
+  - @plico-ai/server@0.5.1
+
 ## 0.5.0
 
 ### Minor Changes
