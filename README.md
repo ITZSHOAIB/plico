@@ -46,7 +46,7 @@ my-agent/
 ├── plico.config.ts     model, provider, settings
 ├── skills/             Markdown the agent loads when it needs it
 ├── tools/              TypeScript tools, with approvals
-├── evals/              scripted cases that run in CI with no model
+├── evals/              cases that run in CI with no model, or live against it
 ├── artifacts/          files the agent produces
 └── memory/
 ```

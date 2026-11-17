@@ -194,6 +194,17 @@ On Ollama, direct A succeeded 8 of 40 calls and A-port 33 of 40 on the same adap
 
 **Rubric re-run with the tightened level 0** (groq, 7 rubric cases, two trials each, `results/rubric-v2/groq.json`; `REPORT.md` covers the first run only). R7 and R4 now agree with their labels on every arm and trial except one trial each of C and D on R7. R2 and R5 are still judged one level too lenient (A on R2 both trials and R5 one trial, A-port on R5 both trials, C and E on R2, C on R5): the judges overlook the missing timing. That is a judge-prompt finding for slice 3, which should make each rubric level's required parts explicit, not a labelling problem.
 
+**Slice 3 rulings (2026-11-17).**
+
+1. Slice 3 ships as two PRs: 3a is live mode (`--live`, `mocks`, `--mock-tools`, `--model`, trials, `--max-tokens`, `--concurrency`), with criteria still reported as skipped; 3b is the judge (criteria, rubric, factuality, judge configuration and metadata, the port's `temperature` and served model id, judge readiness checks).
+2. Rubric and factuality are built-in entries in `scorers:` beside custom scorers, such as `{ rubric: { 0: ..., 1: ..., 2: ... }, threshold }` and `{ factuality: <expected answer>, judge }`. A rubric scores the chosen level over the top level, and its prompt says a level counts only when every part it names is present.
+3. Each criterion is its own judge call, with its own answer, reason and recorded prompt.
+4. Until reports v2, `runEvals` returns each case's scores with judge metadata and the CLI prints the reasons; `POST /v1/eval` strips them, so the wire is unchanged.
+5. `--max-tokens` caps agent and judge tokens over the whole live suite. Once reached, no case or trial starts; the rest are listed as skipped and `plico eval` exits 1. `--concurrency` defaults to 4 for live runs; scripted runs stay sequential.
+6. A live case needs `input`, sent the way `plico run --input` sends it. Without it, and for a fixture on its own, the case is skipped. Live mode is CLI-only in this slice; approval policy applies as in a run.
+
+Carried into 3b: the token cap counts only agent tokens until the judge exists, and must add judge tokens then (`LiveEvalOptions.maxTokens` says "agent tokens" today). Live results are not stored as the project's eval report until reports v2 records the mode.
+
 ## Decisions
 
 Accepted by the owner on 2026-11-17:

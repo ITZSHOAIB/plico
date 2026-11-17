@@ -19,7 +19,11 @@ export const evalRoutes: Route[] = [
     pattern: /^\/v1\/eval$/,
     handler: async ({ projectRoot, eventStore }) => {
       // Skipped cases join the wire with EvalReport version 2.
-      const { skipped: _skipped, ...summary } = await runEvals(projectRoot, { eventStore });
+      const {
+        skipped: _skipped,
+        tokenCapReached: _capped,
+        ...summary
+      } = await runEvals(projectRoot, { eventStore });
       return jsonResponse(200, summary);
     },
   },

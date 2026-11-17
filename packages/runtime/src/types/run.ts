@@ -11,6 +11,11 @@ export interface RunProjectOptions {
    * `result`; a step without one fails the run, and `live: true` opts a step back in to its handler.
    */
   mockTools?: boolean;
+  /**
+   * Live evals: returns a fixed result for a tool call instead of running its handler, or undefined
+   * to run it. A throw fails the call as a handler error would. Not journaled, so not recovered.
+   */
+  mockToolResult?: (toolName: string) => { result: unknown } | undefined;
   eventStore?: EventStore;
   /** Runs the loop durably. Defaults to an in-memory engine that does not survive the process. */
   engine?: Engine;

@@ -14,7 +14,12 @@ import { RunWaitingError, runtimeErrorPayload } from "../errors.js";
 import { InMemoryEventLog } from "../events.js";
 import type { Metadata } from "../storage/metadata.js";
 import { discoverTools } from "../tools/index.js";
-import type { DryRunScriptStep, RunProjectOptions, RunResult } from "../types/index.js";
+import type {
+  DeclaredTool,
+  DryRunScriptStep,
+  RunProjectOptions,
+  RunResult,
+} from "../types/index.js";
 import { finalizeRun } from "./finalize.js";
 import { ignoredWhenPinned, pinInstructions } from "./pinned-instructions.js";
 import { recordTools } from "./record-tools.js";
@@ -259,7 +264,7 @@ async function runLoop(
   try {
     const { instructions, skills, outputSchema } = await pinInstructions(project, events);
 
-    const tools = await discoverTools(project);
+    const tools = withMockedResults(await discoverTools(project), options.mockToolResult);
     await recordTools(project.root, tools, events);
 
     const output =
@@ -316,4 +321,18 @@ async function runLoop(
 
     return finalizeRun({ ...summary, status: "failed", events: events.all() });
   }
+}
+
+function withMockedResults(
+  tools: DeclaredTool[],
+  mock: RunProjectOptions["mockToolResult"],
+): DeclaredTool[] {
+  if (!mock) return tools;
+  return tools.map((tool) => ({
+    ...tool,
+    handler: async (input, context) => {
+      const mocked = mock(tool.name);
+      return mocked ? mocked.result : tool.handler(input, context);
+    },
+  }));
 }

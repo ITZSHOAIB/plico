@@ -80,7 +80,7 @@ export async function validateEvalFiles(
     if (parsed.issues.length === 0 && !names.includes(fixture))
       warnings.push({
         path,
-        message: `No ${fixture} fixture, so plico eval skips this case until it runs with --live.`,
+        message: `No ${fixture} fixture, so plico eval skips this case unless it runs with --live.`,
         severity: "warning",
       });
   }
