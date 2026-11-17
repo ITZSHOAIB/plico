@@ -17,8 +17,11 @@ export const evalRoutes: Route[] = [
     method: "POST",
     hostOnly: true,
     pattern: /^\/v1\/eval$/,
-    handler: async ({ projectRoot, eventStore }) =>
-      jsonResponse(200, await runEvals(projectRoot, { eventStore })),
+    handler: async ({ projectRoot, eventStore }) => {
+      // Skipped cases join the wire with EvalReport version 2.
+      const { skipped: _skipped, ...summary } = await runEvals(projectRoot, { eventStore });
+      return jsonResponse(200, summary);
+    },
   },
   {
     method: "GET",

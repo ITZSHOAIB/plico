@@ -6,6 +6,8 @@ export interface ValidationIssue {
   path: string;
   message: string;
   severity: ValidationSeverity;
+  /** 1-based line in `path`, when the issue points at one. */
+  line?: number;
 }
 
 export interface ProjectConfig {

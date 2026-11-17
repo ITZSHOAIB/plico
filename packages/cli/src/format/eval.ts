@@ -1,9 +1,9 @@
-import type { EvalSummary } from "@plico-ai/runtime";
+import type { EvalRunSummary } from "@plico-ai/runtime";
 
-export function formatEvalSummary(target: string, summary: EvalSummary): string[] {
+export function formatEvalSummary(target: string, summary: EvalRunSummary): string[] {
   const lines = [`Eval results for ${target}`];
 
-  if (summary.total === 0) {
+  if (summary.total === 0 && summary.skipped.length === 0) {
     lines.push("No eval cases found.");
     return lines;
   }
@@ -18,7 +18,9 @@ export function formatEvalSummary(target: string, summary: EvalSummary): string[
       }
     }
   }
+  for (const skipped of summary.skipped) lines.push(`  SKIP ${skipped.name}: ${skipped.reason}`);
 
-  lines.push(`\n${summary.passed}/${summary.total} passed, ${summary.failed} failed`);
+  const skipped = summary.skipped.length ? `, ${summary.skipped.length} skipped` : "";
+  lines.push(`\n${summary.passed}/${summary.total} passed, ${summary.failed} failed${skipped}`);
   return lines;
 }

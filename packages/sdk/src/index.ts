@@ -1,6 +1,7 @@
 import type {
   ProjectConfig,
   ProviderInput,
+  ScorerDefinition,
   ToolApprovalPolicy,
   ToolDefinition,
   ToolHandlerContext,
@@ -10,6 +11,9 @@ import type { InferToolInput, SchemaInput } from "./infer.js";
 export type {
   ProjectConfig,
   ProviderInput,
+  ScoreResult,
+  ScorerDefinition,
+  ScorerInput,
   ToolApprovalPolicy,
   ToolArtifactContext,
   ToolDefinition,
@@ -47,4 +51,12 @@ export function defineProvider(
   provider: (input: ProviderInput) => unknown,
 ): (input: ProviderInput) => unknown {
   return provider;
+}
+
+/**
+ * Declare `evals/scorers/<name>.ts`: a custom eval scorer that sees the whole run and returns a
+ * score from 0 to 1. Returns the scorer unchanged.
+ */
+export function defineScorer(scorer: ScorerDefinition): ScorerDefinition {
+  return scorer;
 }

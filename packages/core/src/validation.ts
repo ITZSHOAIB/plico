@@ -126,7 +126,9 @@ export async function validateProject(root: string): Promise<ValidationResult> {
   );
   errors.push(...(await validateToolNames(root)));
   errors.push(...(await validateSkills(root)));
-  warnings.push(...(await validateEvalFiles(root)));
+  const evalFiles = await validateEvalFiles(root);
+  errors.push(...evalFiles.errors);
+  warnings.push(...evalFiles.warnings);
   errors.push(
     ...(await validateModelProvider(root, project.config.model, relativePaths.configFile)),
   );

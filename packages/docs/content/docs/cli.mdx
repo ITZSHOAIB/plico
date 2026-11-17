@@ -8,7 +8,7 @@ Run `plico --version` to print the installed version. Every command takes an opt
 
 | Command | What it does |
 | --- | --- |
-| `plico validate [path]` | Validates a project and prints diagnostics. It warns about files in `evals/` that `plico eval` would skip, such as `case.json`. |
+| `plico validate [path]` | Validates a project and prints diagnostics, with `file:line` for eval cases. It warns about files in `evals/` that `plico eval` would skip, such as `case.json`. |
 | `plico run [--message <text>] [--input <json> \| --input-file <path>] [path]` | Runs the agent with its configured model. `--input` carries typed input for an agent with an `input` schema. |
 | `plico run --dry [--persist] [--script <file>] [path]` | Runs with a scripted model, so it needs no key. |
 | `plico runs [path]` | Lists saved runs. |
@@ -77,9 +77,10 @@ address; the default is `127.0.0.1:3000`. Other options:
 
 ## eval
 
-`plico eval [path]` runs every `evals/*.script.json` case with no model and exits 1 when a case fails
-or when there are no cases. `--allow-empty` accepts an empty `evals/` folder. See [Evals](/docs/evals)
-for the case format, approval cases and `--from-run`.
+`plico eval [path]` runs every eval case with no model: each `evals/<name>.md` with its
+`<name>.script.json` fixture, and each fixture on its own. A Markdown case without a fixture is
+listed as skipped. It exits 1 when a case fails or when no case ran. `--allow-empty` accepts an
+empty `evals/` folder. See [Evals](/docs/evals) for the case format, approval cases and `--from-run`.
 
 ## Help and unknown flags
 

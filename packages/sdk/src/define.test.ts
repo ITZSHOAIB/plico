@@ -1,5 +1,11 @@
 import { describe, expect, expectTypeOf, it } from "vitest";
-import { defineConfig, defineProvider, defineTool } from "./index.js";
+import {
+  defineConfig,
+  defineProvider,
+  defineScorer,
+  defineTool,
+  type ScorerInput,
+} from "./index.js";
 
 // A Zod-shaped schema, so the test needs no zod install.
 interface FakeZod<T> {
@@ -115,5 +121,22 @@ describe("defineProvider", () => {
     const provider = (input: { model: string }) => ({ id: input.model });
 
     expect(defineProvider(provider)).toBe(provider);
+  });
+});
+
+describe("defineScorer", () => {
+  it("returns the scorer unchanged and types its input", () => {
+    const score = ({ output }: ScorerInput) => ({ score: output.includes("SSN") ? 0 : 1 });
+    const scorer = defineScorer({ name: "no-pii", score });
+
+    expect(scorer.score).toBe(score);
+    defineScorer({
+      name: "typed",
+      score: (input) => {
+        expectTypeOf(input.output).toEqualTypeOf<string>();
+        expectTypeOf(input.events).toBeArray();
+        return { score: 1, reason: "ok" };
+      },
+    });
   });
 });

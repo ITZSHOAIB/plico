@@ -2,6 +2,7 @@ import { existsSync } from "node:fs";
 import { mkdir, mkdtemp, readdir, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { validateProject } from "@plico-ai/core";
 import { createSqliteEventStore, runProject } from "@plico-ai/runtime";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { main } from "./cli.js";
@@ -47,15 +48,42 @@ describe("plico eval --from-run", () => {
       0,
     );
 
-    const written = JSON.parse(await readFile(join(root, "evals", "vpn.script.json"), "utf8"));
-    expect(written).toEqual({
-      name: "vpn",
-      script: [
-        { type: "tool.call", toolName: "lookup", arguments: { q: "vpn" }, result: { found: true } },
-        { type: "assistant.output", content: "Found it" },
-      ],
-      expect: { status: "completed", outputContains: "Found it" },
+    const fixture = JSON.parse(await readFile(join(root, "evals", "vpn.script.json"), "utf8"));
+    expect(fixture).toEqual([
+      { type: "tool.call", toolName: "lookup", arguments: { q: "vpn" }, result: { found: true } },
+      { type: "assistant.output", content: "Found it" },
+    ]);
+    expect(await readFile(join(root, "evals", "vpn.md"), "utf8")).toBe(
+      "---\nexpect:\n  status: completed\n  contains: Found it\n---\n",
+    );
+    expect((await validateProject(root)).warnings).toEqual([]);
+    expect(await main(["node", "plico", "eval", root])).toBe(0);
+  });
+
+  it("writes structured output fields under expect.output", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-cli-promote-output-"));
+    for (const dir of ["skills", "tools", "evals", "artifacts", "memory"])
+      await mkdir(join(root, dir), { recursive: true });
+    await writeFile(
+      join(root, "plico.config.ts"),
+      `export default ${JSON.stringify({
+        schemaVersion: 1,
+        name: "Demo",
+        output: { type: "object", properties: { priority: { type: "string" } } },
+      })};`,
+    );
+    await writeFile(join(root, "agent.md"), "# Demo\n");
+    const { runId } = await runProject(root, {
+      eventStore: createSqliteEventStore({ databasePath: join(root, ".plico", "plico.sqlite") }),
+      script: [{ type: "assistant.output", content: '{"priority":"high"}' }],
     });
+    vi.spyOn(console, "log").mockImplementation(() => undefined);
+
+    expect(await main(["node", "plico", "eval", "--from-run", runId, "--name", "p", root])).toBe(0);
+
+    expect(await readFile(join(root, "evals", "p.md"), "utf8")).toBe(
+      "---\nexpect:\n  status: completed\n  output:\n    priority: high\n---\n",
+    );
     expect(await main(["node", "plico", "eval", root])).toBe(0);
   });
 

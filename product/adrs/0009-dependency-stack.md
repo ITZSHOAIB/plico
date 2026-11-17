@@ -24,7 +24,7 @@ Plico owns what makes it a product: the folder contract, the event contract, the
 | CLI parsing | Commander | proposed |
 | Studio data and routing | TanStack Query and Router | proposed |
 | Studio styling and components | Own semantic CSS-variable theme tokens (dark default, light via `data-theme`); Tailwind v4 mapped onto them; Radix for accessible primitives; `lucide-react` behind one `Icon` wrapper; fonts bundled with Fontsource | proposed, to be proven by the Studio redesign epic |
-| Eval scorers | `autoevals` behind a Plico scorer interface, optional | proposed |
+| Eval scorers | Own scorer interface and LLM judge on the AI SDK (`generateText` with `Output.object`) through the model port; judge prompts adapt `autoevals` (MIT) and Phoenix (Apache-2.0) wording with credit. Chosen over `autoevals`, Phoenix evals, openevals and `experimental_decide` by the PoC in audit 0019 | accepted |
 | Skills format | Agent Skills layout and progressive loading, added next to flat files | proposed, see the skills epic |
 | Node baseline | Node `>=22.18.0`, tested on 22.18.0 and 24 in CI. `node:sqlite` is loaded lazily so only commands that open a database load it, and the CLI hides its experimental warning | accepted |
 | Thread titles | Own keyword titler on `Intl.Segmenter`, no dependency; a model-written title is a proposed opt-in behind the same interface | accepted |

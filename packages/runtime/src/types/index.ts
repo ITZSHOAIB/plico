@@ -21,7 +21,13 @@ import type {
 } from "@plico-ai/contracts";
 
 export type { ArtifactFileInput } from "./artifacts.js";
-export type { EvalCase, EvalExpectation, RunEvalsOptions } from "./evals.js";
+export type {
+  EvalCase,
+  EvalExpectation,
+  EvalRunSummary,
+  RunEvalsOptions,
+  SkippedEvalCase,
+} from "./evals.js";
 export type {
   ModelChunk,
   ModelProvider,

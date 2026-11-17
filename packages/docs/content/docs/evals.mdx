@@ -1,13 +1,14 @@
 ---
 title: Evals
-description: Scripted test cases that run with no model and no API key.
+description: Test cases written in Markdown, replayed in CI with no model and no API key.
 icon: FlaskConical
 ---
 
-An eval is a script of steps that Plico replays against your project, plus what you expect to
-happen. It needs no model and no API key, so it is a good gate in CI. Evals check your wiring:
-the tools exist, the approval rules hold, the run ends how you expect. They do not judge what a
-model would say.
+An eval case is a Markdown file that says what a run should do, plus a script of steps that Plico
+replays against your project. Replaying needs no model and no API key, so it is a good gate in CI.
+Scripted evals check your wiring: the tools exist, the approval rules hold, the run ends how you
+expect, the output has the right fields. Judging what a model would say needs a live run, which
+comes with `plico eval --live`.
 
 ```bash
 plico eval .
@@ -19,45 +20,100 @@ Eval results for .
   PASS refund-denied (eval-refund-denied-12aad571)
        Approval for issue_refund was denied.
   PASS refund-held (eval-refund-held-5607f9f4)
+  SKIP vpn-outage: No .script.json fixture; runs with --live.
 
-3/3 passed, 0 failed
+3/3 passed, 0 failed, 1 skipped
 ```
 
-`plico eval` exits 0 when every case passes and 1 when a case fails. It also exits 1 when there are
-no cases, so a CI gate cannot pass with nothing tested. `--allow-empty` accepts an empty `evals/`
-folder. A new project ships one case, `evals/smoke.script.json`.
+`plico eval` exits 0 when every case passes and 1 when a case fails. It also exits 1 when no case
+ran, so a CI gate cannot pass with nothing tested. `--allow-empty` accepts an empty `evals/` folder.
 
 ## The case file
 
-Each `evals/<name>.script.json` file is one case:
+Each `evals/<name>.md` is one case. The frontmatter says what to check; each bullet in the body is a
+criterion for a judge model.
 
-```json
-{
-  "description": "A person approves the refund and the agent confirms it.",
-  "script": [
-    { "type": "tool.call", "toolName": "issue_refund", "arguments": { "orderId": "A-1001" },
-      "result": { "orderId": "A-1001", "status": "refunded" } },
-    { "type": "approval.decide", "approved": true },
-    { "type": "assistant.output", "content": "Refunded order A-1001." }
-  ],
-  "expect": { "status": "completed", "outputContains": "Refunded" }
-}
+```md
+---
+expect:
+  status: completed
+  contains: Refunded
+  tool: issue_refund
+  notTool: send_email
+  output:
+    orderId: A-1001
+tags: [regression]
+---
+- Confirms which order was refunded
+- Does not promise a delivery date
 ```
+
+`evals/<name>.script.json` next to it holds the steps scripted mode replays. A case without one is
+skipped by `plico eval` and listed as `SKIP`; it runs once `--live` ships.
 
 | Key | Meaning |
 | --- | --- |
-| `script` | The steps, required. A file that is only the array of steps also works. |
-| `description` | Optional text. |
-| `name` | Optional. Defaults to the file name without `.script.json`. |
-| `expect.status` | `completed`, `waiting` or `failed`. |
-| `expect.outputContains` | Text the run's final output must contain. |
+| `expect` | Code checks over the whole run. See below. |
+| `input` | The typed input for the run, checked against `agent.md`'s `input` schema. Used by live runs. |
+| `mocks` | Fixed results for named tools in live runs, such as `create_ticket: { id: T-1 }`. |
+| `trials` | How many live runs the case gets. Defaults to 1. |
+| `tags` | Labels such as `regression`. |
+| `judge` | The judge model for this case's criteria, as `provider:model`. |
+| `scorers` | Custom scorers by name, see [Custom scorers](#custom-scorers). |
+
+`plico validate` checks every case and points at the line, such as
+`evals/refund.md:4: Unknown key "expect.contian"`, so a typo fails before anything runs.
+
+## Expect
+
+| Check | Passes when |
+| --- | --- |
+| `status` | The run ended `completed`, `waiting`, `failed` or `cancelled`. Without it, the run must complete. |
+| `contains` | The final output contains this text. |
+| `tool` | Each named tool was called. A name or a list. |
+| `notTool` | None of the named tools was called. |
+| `artifact` | Each named artifact file was written. |
+| `output` | Each field matches the run's `structuredOutput`. Nested objects match the fields they list. |
+| `maxTokens` | The run used at most this many tokens. Live runs only. |
+| `maxLatencyMs` | The run took at most this many milliseconds. Live runs only. |
+
+In scripted mode, `maxTokens`, `maxLatencyMs` and the body's criteria are reported as skipped and do
+not fail the case: a script makes no model calls, and grading a script would only grade the fixture.
+
+## Custom scorers
+
+A scorer is a TypeScript file in `evals/scorers/` that sees the whole run and returns a score from 0
+to 1 with an optional reason:
+
+```ts title="evals/scorers/no-pii.ts"
+import { defineScorer } from "@plico-ai/sdk";
+
+export default defineScorer({
+  name: "no-pii",
+  score: ({ output }) => ({
+    score: /\b\d{3}-\d{2}-\d{4}\b/.test(output) ? 0 : 1,
+    reason: "Output contains a social security number",
+  }),
+});
+```
+
+A case names it under `scorers`. It passes at a score of 1 unless the entry sets a `threshold`:
+
+```yaml
+scorers: [no-pii, { use: tone, threshold: 0.8 }]
+```
+
+The scorer receives `output`, `structuredOutput`, `status`, `events` (every tool call, artifact and
+model response of the run), the case's `input`, and its `expect` block as `expected`.
+
+## The script
 
 The steps are the same ones `plico run --dry --script` takes, so you can try a case on its own:
 `plico run --dry --script evals/refund-approved.script.json .`.
 
 | Step | Fields |
 | --- | --- |
-| `assistant.output` | `content`, the text the agent says. |
+| `assistant.output` | `content`, the text the agent says. With an `output` schema, JSON text becomes `structuredOutput`. |
 | `tool.call` | `toolName`, `arguments` and `result`. |
 | `approval.decide` | `approved`. Right after a `tool.call` that needs approval. |
 | `artifact.write` | `files`, each with `path`, `content` and an optional `mimeType`. |
@@ -67,25 +123,42 @@ Evals never run tool handlers by surprise. A `tool.call` step supplies the tool'
 and names the tool. Add `"live": true` to run the real handler on purpose. Arguments are still
 checked against the tool's `inputSchema`.
 
+### A fixture on its own
+
+A `<name>.script.json` with no `<name>.md` beside it is a case of its own, the format earlier
+versions used. It is either the array of steps or an object:
+
+```json
+{
+  "description": "A person approves the refund and the agent confirms it.",
+  "script": [{ "type": "assistant.output", "content": "Refunded order A-1001." }],
+  "expect": { "status": "completed", "outputContains": "Refunded" }
+}
+```
+
+Its `expect` takes the same checks as the Markdown case, and `outputContains` is the same as
+`contains`. A new project ships one such case, `evals/smoke.script.json`.
+
 ## Test approvals
 
 Approval policy applies in evals as it does in a run. Three cases cover a tool that needs approval:
 
 - **Held.** No `approval.decide` step. The run stops as `waiting` and the tool never runs. Use
-  `"expect": { "status": "waiting" }`.
+  `expect: { status: waiting }`.
 - **Approved.** `{ "type": "approval.decide", "approved": true }` right after the tool call. The run
   records `approval.requested` and `approval.decided`, uses the step's `result` and carries on.
 - **Denied.** `"approved": false` ends the run as `failed` before the tool runs. Use
-  `"expect": { "status": "failed" }`.
+  `expect: { status: failed }`.
 
 An `approval.decide` step that does not follow a tool call needing approval fails the case. See
 [Approvals](/docs/approvals).
 
 ## Turn a run into a case
 
-`plico eval --from-run <run-id> [--name <name>] [path]` writes a stored run to
-`evals/<name>.script.json` (the name defaults to the run id). Each tool call keeps the output it
-produced as `result`, and `expect` records the run's status and final output. It refuses to
-overwrite an existing case and fails on an unknown run id. Files a tool wrote are not carried over.
+`plico eval --from-run <run-id> [--name <name>] [path]` writes a stored run as `evals/<name>.md` and
+its `evals/<name>.script.json` fixture (the name defaults to the run id). Each tool call keeps the
+output it produced as `result`. `expect` records the run's status and its structured output, or its
+final text as `contains`. Add criteria as bullets afterwards. It refuses to overwrite an existing
+case and fails on an unknown run id. Files a tool wrote are not carried over.
 
 For a complete project with three cases, see [Example: a refund agent](/docs/refund-agent).
