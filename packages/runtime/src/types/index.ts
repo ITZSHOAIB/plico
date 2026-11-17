@@ -24,9 +24,12 @@ export type { ArtifactFileInput } from "./artifacts.js";
 export type {
   EvalCase,
   EvalExpectation,
+  EvalJudgeRecord,
   EvalRunSummary,
+  EvalScore,
   LiveEvalOptions,
   RunEvalsOptions,
+  ScoredEvalCaseResult,
   SkippedEvalCase,
 } from "./evals.js";
 export type {

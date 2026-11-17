@@ -18,13 +18,17 @@ export const evalRoutes: Route[] = [
     hostOnly: true,
     pattern: /^\/v1\/eval$/,
     handler: async ({ projectRoot, eventStore }) => {
-      // Skipped cases join the wire with EvalReport version 2.
+      // Skipped cases and scores join the wire with EvalReport version 2.
       const {
         skipped: _skipped,
         tokenCapReached: _capped,
+        results,
         ...summary
       } = await runEvals(projectRoot, { eventStore });
-      return jsonResponse(200, summary);
+      return jsonResponse(200, {
+        ...summary,
+        results: results.map(({ scores: _scores, ...result }) => result),
+      });
     },
   },
   {

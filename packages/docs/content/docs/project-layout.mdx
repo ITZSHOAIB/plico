@@ -127,3 +127,7 @@ artifact tools the model sees. See [Artifacts](/docs/artifacts).
 Set `threads.title` to `model` to have the model write thread titles, or add an optional
 `threads/title.ts` that default-exports a function from messages to a title. See
 [Threads](/docs/threads#model-written-and-custom-titles).
+
+Set `evals.judge` to a `provider:model`, such as `openai:gpt-5-mini`, to choose the model that
+grades eval criteria, rubrics and factuality. Without it, the agent's own model judges. See
+[Evals](/docs/evals#the-judge).

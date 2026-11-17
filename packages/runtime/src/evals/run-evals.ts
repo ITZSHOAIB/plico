@@ -1,6 +1,6 @@
 import { getProjectPaths } from "@plico-ai/core";
 import { runProject } from "../run/index.js";
-import type { EvalCaseResult, EvalRunSummary, RunEvalsOptions } from "../types/index.js";
+import type { EvalRunSummary, RunEvalsOptions, ScoredEvalCaseResult } from "../types/index.js";
 import { digestEvalFixtures, discoverEvalCases } from "./discover.js";
 import { judgeRun } from "./judge-case.js";
 import { runLiveEvals } from "./live.js";
@@ -19,7 +19,7 @@ export async function runEvals(
     return runLiveEvals(projectRoot, evalsDir, cases, options.live, options.eventStore);
 
   const fixturesDigest = await digestEvalFixtures(evalsDir);
-  const results: EvalCaseResult[] = [];
+  const results: ScoredEvalCaseResult[] = [];
   const skipped: EvalRunSummary["skipped"] = [];
 
   for (const evalCase of cases) {
@@ -44,6 +44,8 @@ export async function runEvals(
   await options.eventStore?.persistEvalReport({
     schemaVersion: 1,
     ...summary,
+    // Stored reports gain scores in v2.
+    results: results.map(({ scores: _scores, ...result }) => result),
     evaluatedAt: new Date().toISOString(),
     fixturesDigest,
   });

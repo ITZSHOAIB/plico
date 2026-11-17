@@ -57,7 +57,9 @@ export async function validateEvalFiles(
       continue;
     }
     errors.push(...parsed.issues);
-    parsed.definition.scorers.forEach(({ use }, index) => {
+    parsed.definition.scorers.forEach((ref, index) => {
+      if (!("use" in ref)) return;
+      const { use } = ref;
       if (!scorers.includes(`${use}.ts`))
         errors.push({
           path,

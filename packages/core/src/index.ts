@@ -4,6 +4,8 @@ export { loadProject } from "./config.js";
 export {
   type EvalCaseDefinition,
   type EvalCaseExpect,
+  type EvalCodeScorerRef,
+  type EvalJudgedScorerRef,
   type EvalScorerRef,
   formatEvalCase,
   type ParsedEvalCase,
@@ -22,6 +24,7 @@ export {
   findProjectThreadTitleFile,
   NATIVE_MODEL_PROVIDERS,
 } from "./model-provider.js";
+export { parseModelRef } from "./model-ref.js";
 export { type PreparedRunMessage, prepareRunMessage } from "./run-input.js";
 export { readRunSchemas } from "./run-schemas.js";
 export { isJsonSchema, type NormalizedInputSchema, normalizeInputSchema } from "./schema.js";

@@ -136,7 +136,7 @@ Code scorers need no model. Criteria, rubrics and factuality are judged by a sec
 
 The judge is configurable at three levels, the most specific winning: `evals.judge` in `plico.config.ts`, `judge:` in a case's frontmatter, and per check in `scorers:`. Without any, the agent's model judges. Any provider Plico supports works, with the same `provider:model` strings and keys. Temperature defaults to 0; samples and thresholds are options.
 
-Readiness warns when the judge is the agent's own model, because a model grading itself is biased. Every judged score records the judge model, prompt and raw answer, and `compare` flags two reports judged by different models. Judge prompts are Plico's own, adapting tested wording from `autoevals` (MIT) and Phoenix (Apache-2.0) with credit in NOTICE.
+Readiness warns when the judge is the agent's own model, because a model grading itself is biased. Every judged score records the judge model, prompt and raw answer, and `compare` flags two reports judged by different models. Judge prompts are Plico's own, adapting tested wording from `autoevals` (MIT) with credit in NOTICE. Slice 3b took no Phoenix (Apache-2.0) text, so Phoenix needs no credit unless later wording comes from it.
 
 ## Smallest useful experiment
 
@@ -203,7 +203,9 @@ On Ollama, direct A succeeded 8 of 40 calls and A-port 33 of 40 on the same adap
 5. `--max-tokens` caps agent and judge tokens over the whole live suite. Once reached, no case or trial starts; the rest are listed as skipped and `plico eval` exits 1. `--concurrency` defaults to 4 for live runs; scripted runs stay sequential.
 6. A live case needs `input`, sent the way `plico run --input` sends it. Without it, and for a fixture on its own, the case is skipped. Live mode is CLI-only in this slice; approval policy applies as in a run.
 
-Carried into 3b: the token cap counts only agent tokens until the judge exists, and must add judge tokens then (`LiveEvalOptions.maxTokens` says "agent tokens" today). Live results are not stored as the project's eval report until reports v2 records the mode.
+**Slice 3b rulings (2026-11-17).** Factuality passes at 0.6 by default, so a consistent superset passes and a subset fails; `threshold` overrides it. Without `evals.judge`, a case or check judge, the judge is the model in `plico.config.ts`, which `--model` never changes, so compared models share a judge. Criteria and rubrics see the case input, the final or structured output, each tool call with its arguments and result (long results shortened, with a note) and the files written; factuality sees the input, the expected answer and the final output. Live results stay unstored until reports v2 records the mode.
+
+Carried into 3b: the token cap counts only agent tokens until the judge exists, and must add judge tokens then; 3b meters judge calls through the same cap. Live results are not stored as the project's eval report until reports v2 records the mode.
 
 ## Decisions
 

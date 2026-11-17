@@ -1,15 +1,17 @@
 import { join } from "node:path";
 import type { ScoreResult, ScorerDefinition, ScorerInput } from "@plico-ai/contracts";
-import type { EvalScorerRef } from "@plico-ai/core";
+import type { EvalCodeScorerRef } from "@plico-ai/core";
 import { isRecord } from "../guards.js";
 import { importProjectModule } from "../tools/load.js";
+import type { EvalScore } from "../types/index.js";
 
-/** Runs a case's custom scorers and returns a failure message for each one below its threshold. */
+/** Runs a case's custom scorers: a score for each one, and a failure for each below its threshold. */
 export async function runScorers(
   evalsDir: string,
-  refs: EvalScorerRef[],
+  refs: EvalCodeScorerRef[],
   input: ScorerInput,
-): Promise<string[]> {
+): Promise<{ scores: EvalScore[]; failures: string[] }> {
+  const scores: EvalScore[] = [];
   const failures: string[] = [];
   for (const { use, threshold = 1 } of refs) {
     let result: ScoreResult;
@@ -25,12 +27,21 @@ export async function runScorers(
       );
       continue;
     }
-    if (result.score < threshold)
+    const passed = result.score >= threshold;
+    scores.push({
+      kind: "scorer",
+      name: use,
+      score: result.score,
+      threshold,
+      passed,
+      ...(result.reason ? { reason: result.reason } : {}),
+    });
+    if (!passed)
       failures.push(
         `Scorer "${use}" scored ${result.score}, below ${threshold}${result.reason ? `: ${result.reason}` : ""}`,
       );
   }
-  return failures;
+  return { scores, failures };
 }
 
 async function loadScorer(path: string, use: string): Promise<ScorerDefinition> {

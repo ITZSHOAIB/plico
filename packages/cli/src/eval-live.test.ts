@@ -28,7 +28,10 @@ async function project(cases: Record<string, string>): Promise<string> {
   return root;
 }
 
-/** An OpenAI-compatible server that answers every request with "Hello" and records the model. */
+/**
+ * An OpenAI-compatible server that records the model of each request. It answers "Hello", or a
+ * passing verdict when the request is a judge prompt.
+ */
 async function modelServer(models: string[]): Promise<void> {
   const server = createServer((req, res) => {
     let body = "";
@@ -37,10 +40,13 @@ async function modelServer(models: string[]): Promise<void> {
     });
     req.on("end", () => {
       models.push(JSON.parse(body).model);
+      const text = body.includes("[BEGIN DATA]")
+        ? JSON.stringify({ reasons: "It greets.", choice: "Y" })
+        : "Hello";
       res.writeHead(200, { "content-type": "text/event-stream" });
       const chunk = (choice: object, extra: object = {}) =>
         `data: ${JSON.stringify({ id: "x", object: "chat.completion.chunk", created: 1, model: "m", choices: [{ index: 0, ...choice }], ...extra })}\n\n`;
-      res.write(chunk({ delta: { content: "Hello" }, finish_reason: null }));
+      res.write(chunk({ delta: { content: text }, finish_reason: null }));
       res.write(
         chunk(
           { delta: {}, finish_reason: "stop" },
@@ -77,6 +83,20 @@ describe("plico eval --live", { timeout: 30_000 }, () => {
     const override = ["--model", "openai-compatible:other-model"];
     expect(await main(["node", "plico", "eval", "--live", ...override, ...db, root])).toBe(0);
     expect(models).toEqual(["agent-model", "other-model"]);
+  });
+
+  it("judges criteria with the configured model, also under --model", async () => {
+    const models: string[] = [];
+    await modelServer(models);
+    const root = await project({ "hello.md": `${hello}- Greets the user\n` });
+    vi.spyOn(console, "log").mockImplementation(() => undefined);
+    const db = ["--db", join(root, "s.sqlite")];
+
+    expect(await main(["node", "plico", "eval", "--live", ...db, root])).toBe(0);
+    const override = ["--model", "openai-compatible:other-model"];
+    expect(await main(["node", "plico", "eval", "--live", ...override, ...db, root])).toBe(0);
+
+    expect(models).toEqual(["agent-model", "agent-model", "other-model", "agent-model"]);
   });
 
   it("exits 1 when the token cap leaves cases unrun", async () => {

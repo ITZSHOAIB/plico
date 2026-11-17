@@ -108,6 +108,21 @@ expect:
     ]);
   });
 
+  it("skips rubric and factuality scorers in scripted mode without failing", async () => {
+    const root = await project({
+      "vpn.md":
+        "---\nscorers:\n  - rubric: { 0: Wrong, 1: Right }\n  - factuality: VPN outage\n---\n",
+      "vpn.script.json": script,
+    });
+
+    const [result] = (await runEvals(root)).results;
+
+    expect(result?.status).toBe("pass");
+    expect(result?.diagnostics).toEqual([
+      "Skipped in scripted mode: 2 judged scorers run with --live.",
+    ]);
+  });
+
   it("skips a case without a fixture and does not run the fixture of a case on its own", async () => {
     const root = await project({
       "live-only.md": "---\nexpect:\n  status: completed\n---\n",

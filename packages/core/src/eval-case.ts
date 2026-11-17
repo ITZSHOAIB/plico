@@ -1,6 +1,7 @@
 import type { RunStatus, ValidationIssue } from "@plico-ai/contracts";
 import { stringify } from "yaml";
 import { parseLocatedFrontmatter, type YamlPath } from "./located-frontmatter.js";
+import { parseModelRef } from "./model-ref.js";
 
 /** Code checks over a whole run, written as `expect:` in an eval case. */
 export interface EvalCaseExpect {
@@ -15,11 +16,29 @@ export interface EvalCaseExpect {
   output?: Record<string, unknown>;
 }
 
-export interface EvalScorerRef {
+/** A code scorer from `evals/scorers/<use>.ts`. */
+export interface EvalCodeScorerRef {
   use: string;
   /** Lowest passing score. Defaults to 1. */
   threshold?: number;
 }
+
+/** A judged scorer: the judge picks a rubric level or a factuality grade. */
+export interface EvalJudgedScorerRef {
+  /** Rubric levels in order; the score is the level picked over the top level. */
+  rubric?: string[];
+  /** The expected answer the output is compared with. */
+  factuality?: string;
+  /** Lowest passing score. Defaults to 0.7 for a rubric and 0.6 for factuality. */
+  threshold?: number;
+  /** The `provider:model` that judges this scorer. */
+  judge?: string;
+}
+
+export type EvalScorerRef =
+  | EvalCodeScorerRef
+  | (EvalJudgedScorerRef & { rubric: string[] })
+  | (EvalJudgedScorerRef & { factuality: string });
 
 /** An eval case as written in `evals/<name>.md`. */
 export interface EvalCaseDefinition {
@@ -71,20 +90,53 @@ const EXPECT_CHECKS: Record<keyof EvalCaseExpect, Check> = {
 };
 
 const plainName = (v: unknown) => typeof v === "string" && /^[A-Za-z0-9_-]+$/.test(v);
+const modelRef: Check = (v) =>
+  parseModelRef(v) ? undefined : "must be <provider>:<model>, such as openai:gpt-5-mini";
+const SCORER_SHAPE =
+  "must be a scorer name, { use: <name>, threshold }, { rubric: {0: ..., 1: ...} } or { factuality: <expected answer> }";
+
+const rubric: Check = (v) => {
+  const levels = isRecord(v) ? Object.keys(v) : [];
+  const ordered = levels.length >= 2 && levels.every((key, index) => key === String(index));
+  if (!ordered || !isRecord(v)) return "rubric must map levels 0, 1, ... to what each level means";
+  return Object.values(v).every((level) => !text(level))
+    ? undefined
+    : "rubric levels must each be text";
+};
+
 const scorer: Check = (v) => {
   if (typeof v === "string")
     return plainName(v) ? undefined : "name must be a plain name: letters, digits, - and _";
-  if (!isRecord(v) || text(v.use)) return "must be a scorer name or { use: <name>, threshold }";
-  if (!plainName(v.use)) return "name must be a plain name: letters, digits, - and _";
+  if (!isRecord(v)) return SCORER_SHAPE;
+  const kinds = ["use", "rubric", "factuality"].filter((key) => Object.hasOwn(v, key));
+  if (kinds.length !== 1) return SCORER_SHAPE;
+  const allowed = kinds[0] === "use" ? ["use", "threshold"] : [kinds[0], "threshold", "judge"];
+  if (kinds[0] === "use" && !plainName(v.use))
+    return "name must be a plain name: letters, digits, - and _";
+  if (kinds[0] === "rubric") {
+    const problem = rubric(v.rubric);
+    if (problem) return problem;
+  }
+  if (kinds[0] === "factuality" && text(v.factuality))
+    return "factuality must be the expected answer as text";
   const threshold = v.threshold;
   if (
     threshold !== undefined &&
     !(typeof threshold === "number" && threshold >= 0 && threshold <= 1)
   )
     return "threshold must be a number from 0 to 1";
-  const unknown = Object.keys(v).find((key) => key !== "use" && key !== "threshold");
+  if (v.judge !== undefined && modelRef(v.judge)) return `judge ${modelRef(v.judge)}`;
+  const unknown = Object.keys(v).find((key) => !allowed.includes(key));
   return unknown ? `has unknown key "${unknown}"` : undefined;
 };
+
+/** The written scorer entry as a ref: a name becomes `{ use }`, rubric levels become a list. */
+function toScorerRef(entry: unknown): EvalScorerRef {
+  if (typeof entry === "string") return { use: entry };
+  const ref = entry as Record<string, unknown>;
+  if (isRecord(ref.rubric)) return { ...ref, rubric: Object.values(ref.rubric) } as EvalScorerRef;
+  return ref as unknown as EvalScorerRef;
+}
 
 const TOP_LEVEL_CHECKS: Record<string, Check> = {
   input: () => undefined,
@@ -93,8 +145,7 @@ const TOP_LEVEL_CHECKS: Record<string, Check> = {
   trials: positiveInteger,
   tags: (v) =>
     Array.isArray(v) && v.every((t) => !text(t)) ? undefined : "must be a list of tags",
-  judge: (v) =>
-    typeof v === "string" && /^[^:\s]+:\S+$/.test(v) ? undefined : "must be <provider>:<model>",
+  judge: modelRef,
   scorers: (v) => (Array.isArray(v) ? undefined : "must be a list of scorers"),
 };
 
@@ -144,9 +195,7 @@ export function parseEvalCase(path: string, source: string): ParsedEvalCase {
     mocks: (data.mocks as Record<string, unknown>) ?? {},
     trials: (data.trials as number) ?? 1,
     tags: (data.tags as string[]) ?? [],
-    scorers: ((data.scorers as unknown[]) ?? []).map((entry) =>
-      typeof entry === "string" ? { use: entry } : (entry as EvalScorerRef),
-    ),
+    scorers: ((data.scorers as unknown[]) ?? []).map(toScorerRef),
   };
   if (data.input !== undefined) definition.input = data.input;
   if (typeof data.judge === "string") definition.judge = data.judge;

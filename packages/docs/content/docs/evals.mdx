@@ -58,8 +58,8 @@ skipped by `plico eval` and listed as `SKIP`; it still runs with `--live`.
 | `mocks` | Fixed results for named tools in live runs, such as `create_ticket: { id: T-1 }`. |
 | `trials` | How many live runs the case gets. Defaults to 1. |
 | `tags` | Labels such as `regression`. |
-| `judge` | The judge model for this case's criteria, as `provider:model`. |
-| `scorers` | Custom scorers by name, see [Custom scorers](#custom-scorers). |
+| `judge` | The judge model for this case's criteria and judged scorers, as `provider:model`. |
+| `scorers` | A rubric, a factuality check, or custom scorers by name. See [The judge](#the-judge) and [Custom scorers](#custom-scorers). |
 
 `plico validate` checks every case and points at the line, such as
 `evals/refund.md:4: Unknown key "expect.contian"`, so a typo fails before anything runs.
@@ -77,9 +77,9 @@ skipped by `plico eval` and listed as `SKIP`; it still runs with `--live`.
 | `maxTokens` | The run used at most this many tokens. Live runs only. |
 | `maxLatencyMs` | The run took at most this many milliseconds. Live runs only. |
 
-In scripted mode, `maxTokens`, `maxLatencyMs` and the body's criteria are reported as skipped and do
-not fail the case: a script makes no model calls, and grading a script would only grade the fixture.
-In live mode the budgets apply. Criteria are still reported as skipped until the judge ships.
+In scripted mode, `maxTokens`, `maxLatencyMs`, the body's criteria and the judged scorers are
+reported as skipped and do not fail the case: a script makes no model calls, and grading a script
+would only grade the fixture. In live mode they all apply.
 
 ## Live runs
 
@@ -114,9 +114,76 @@ leaves the run `waiting`; expect that with `status: waiting`.
 | Option | Meaning |
 | --- | --- |
 | `trials: n` in the case | Runs the case n times. It passes only when every trial passes, and the result shows how many did, such as `2/3 trials passed.` |
-| `--model <provider:model>` | Runs the suite on another model, so comparing two models is two commands. |
-| `--max-tokens <n>` | Caps the tokens of the whole suite. A model call starts only if it and the calls already running, each counted at the average call so far, fit under the cap. Once a call is refused, no case or trial starts, the rest (and any run cut off) are listed as `SKIP`, and `plico eval` exits 1. A single call can still use more than the average. |
+| `--model <provider:model>` | Runs the suite on another model, so comparing two models is two commands. The judge stays the same. |
+| `--max-tokens <n>` | Caps the tokens of the whole suite, judge calls included. A model call starts only if it and the calls already running, each counted at the average call so far, fit under the cap. Once a call is refused, no case or trial starts, the rest (and any run cut off) are listed as `SKIP`, and `plico eval` exits 1. A single call can still use more than the average. |
 | `--concurrency <n>` | Live runs at once. Defaults to 4. |
+
+## The judge
+
+In a live run, a judge model grades what code checks cannot. Each bullet in the case body is a
+criterion it answers yes or no, and `scorers` can add a rubric and a factuality check:
+
+```md
+---
+input: The VPN has been down for everyone since 9am. What should I do?
+scorers:
+  - rubric:
+      0: Gives no useful next step
+      1: Gives one useful next step
+      2: Gives a useful next step and says how to get updates
+  - factuality: Report it to IT; the outage affects everyone.
+    threshold: 0.4
+---
+- Acknowledges that the outage affects everyone
+```
+
+| Check | Score | Passes at |
+| --- | --- | --- |
+| A criterion | 1 for yes, 0 for no. | 1 |
+| `rubric` | The level the judge picks, over the top level. Level 1 of 2 scores 0.5. A level counts only when the answer does every part it names. | 0.7 |
+| `factuality` | Compares the answer with the expected one: 1 when it says the same, 0.6 when it adds to it, 0.4 when it leaves part out, 0 when it disagrees. | 0.6 |
+
+`threshold` changes where a rubric or factuality check passes. A failed check prints the judge's
+reasons:
+
+```text
+  FAIL vpn (eval-vpn-9c2e41d7)
+       Rubric scored 0.5 (level 1 of 2), below 0.7: The submission gives a useful next step but
+       does not say how to get updates about the outage.
+```
+
+For criteria and the rubric, the judge sees the case `input`, the answer (its `structuredOutput`
+when it has one), each tool call with its arguments and result, and the files written. Long values
+are shortened, with a note. For factuality it sees the input, the expected answer and the answer.
+
+Each check is one model call at temperature 0, asking for the judge's reasons and then one choice.
+A model that refuses temperature 0 is asked again at its default, and reasoning models that ignore
+temperature answer at theirs. A call the provider turns away for now, such as on a rate limit, is
+retried like the agent's, with the judge model's `retries` and `retryDelayMs`. A judge that cannot be reached, or
+answers off its choices, fails that check. A run that failed is not judged.
+
+The judge model is the first of these that is set:
+
+1. `judge` on the rubric or factuality entry.
+2. `judge` in the case.
+3. `evals.judge` in `plico.config.ts`.
+4. The agent's own `model` in `plico.config.ts`.
+
+`--model` changes only the agent, never the judge, so two models compared with it are graded by the
+same judge.
+
+```ts title="plico.config.ts"
+export default defineConfig({
+  schemaVersion: 1,
+  name: "Helpdesk",
+  model: { provider: "openai", name: "gpt-5-mini" },
+  evals: { judge: "anthropic:claude-sonnet-5-5" },
+});
+```
+
+A judge on the agent's own provider reuses its endpoint and key settings; another provider uses its
+usual key variable. `plico readiness` warns when judged cases have no judge, when a judge's key is
+not set, and when the judge is the agent's own model, which then grades its own answers.
 
 ## Custom scorers
 
