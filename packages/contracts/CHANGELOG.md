@@ -1,5 +1,11 @@
 # @plico-ai/contracts
 
+## 0.5.0
+
+### Minor Changes
+
+- 252526c: Save eval reports with scores and trial transcripts; compare baselines with tolerance, rescore saved runs, export Markdown and JUnit, and read reports over HTTP.
+
 ## 0.4.0
 
 ### Minor Changes
