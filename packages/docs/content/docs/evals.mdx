@@ -167,7 +167,10 @@ The judge model is the first of these that is set:
 1. `judge` on the rubric or factuality entry.
 2. `judge` in the case.
 3. `evals.judge` in `plico.config.ts`.
-4. The agent's own `model` in `plico.config.ts`, also under `--model`.
+4. The agent's own `model` in `plico.config.ts`.
+
+`--model` changes only the agent, never the judge, so two models compared with it are graded by the
+same judge.
 
 ```ts title="plico.config.ts"
 export default defineConfig({

@@ -143,12 +143,15 @@ scorers:
     ]);
   });
 
-  it("fails a check whose judge answer is not one of its choices", async () => {
+  it.each([
+    ["is not JSON", "Looks fine to me"],
+    ["names an inherited key", JSON.stringify({ reasons: "x", choice: "toString" })],
+  ])("fails a check whose judge answer %s", async (_, answer) => {
     const root = await project({ "vpn.md": "---\ninput: hi\n---\n- Polite\n" });
 
     const [result] = (
       await runEvals(root, {
-        live: { provider: agent, judgeProvider: judge(() => "Looks fine to me", []) },
+        live: { provider: agent, judgeProvider: judge(() => answer, []) },
       })
     ).results;
 

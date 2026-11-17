@@ -106,7 +106,8 @@ export async function askJudge(
   };
 
   const answer = parseAnswer(raw);
-  const score = answer ? scores[answer.choice] : undefined;
+  // Only the listed choices count; an inherited key such as "toString" is not one.
+  const score = answer && Object.hasOwn(scores, answer.choice) ? scores[answer.choice] : undefined;
   if (!answer || score === undefined) {
     const said = raw.replace(/\s+/g, " ").trim().slice(0, 200);
     throw new Error(

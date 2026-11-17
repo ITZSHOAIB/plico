@@ -4,9 +4,9 @@ import { isAbsolute } from "node:path";
 import { pathToFileURL } from "node:url";
 import { build, type Plugin } from "esbuild";
 import { resolveAuthoringModule, SPECIFIER } from "./authoring.js";
+import { normalizeEvalsConfig, validateEvalsConfig } from "./config-evals.js";
 import { configLoadMessage, missingFileMessage, ProjectConfigError } from "./errors.js";
 import { getProjectPaths, getProjectRelativePaths } from "./layout.js";
-import { parseModelRef } from "./model-ref.js";
 import type { LoadedProject, ProjectConfig, ValidationIssue } from "./types.js";
 
 export async function loadProject(root: string): Promise<LoadedProject> {
@@ -161,10 +161,7 @@ function normalizeProjectConfig(value: unknown, configPath: string): ProjectConf
     if (config.threads.title !== undefined) normalized.threads.title = config.threads.title;
   }
 
-  if (config.evals !== undefined) {
-    normalized.evals = {};
-    if (config.evals.judge !== undefined) normalized.evals.judge = config.evals.judge;
-  }
+  if (config.evals !== undefined) normalized.evals = normalizeEvalsConfig(config.evals);
 
   if (config.approvals !== undefined) {
     normalized.approvals = {};
@@ -312,20 +309,8 @@ function validateProjectConfigShape(value: unknown): ValidationIssue[] {
       });
     }
   }
-  if (Object.hasOwn(value, "evals")) {
-    const evals = value.evals;
-    if (
-      !isRecord(evals) ||
-      Array.isArray(evals) ||
-      (Object.hasOwn(evals, "judge") && parseModelRef(evals.judge) === undefined)
-    ) {
-      issues.push({
-        path: relativePaths.configFile,
-        message: 'Expected evals.judge to be "<provider>:<model>", such as "openai:gpt-5-mini"',
-        severity: "error",
-      });
-    }
-  }
+  if (Object.hasOwn(value, "evals"))
+    issues.push(...validateEvalsConfig(value.evals, relativePaths.configFile));
   if (Object.hasOwn(value, "approvals")) {
     const approvals = value.approvals;
     if (!isRecord(approvals) || Array.isArray(approvals)) {
