@@ -60,11 +60,19 @@ Run the narrowest useful check first:
 - `pnpm test` or root build only when cross-package behavior changed.
 - Before raising a PR, all relevant tests must pass.
 
+## Epic completion docs review
+
+After each epic completes, do a quick docs review before the completion summary:
+
+- Compare the epic's merged behavior with `README.md` and affected pages in `packages/docs/content/docs`, including commands, examples, API contracts, Studio flows, and feature status. Fix any gaps found.
+- Check the corresponding live docs pages after deployment to confirm the latest changes are visible. If deployment is pending or the site cannot be checked, report that explicitly.
+- Include the reviewed docs links and any remaining gaps in the completion summary. Distinguish merged features from features available in the latest published release.
+
 ## Release marketing reminder
 
 After completing an epic or milestone, remind the maintainer in the completion summary to write a LinkedIn post about the shipped work for Plico marketing. Include the user-facing outcome and the relevant release, demo, or documentation link, distinguishing merged work from a published release. The maintainer writes and publishes the post.
 
-Offer the post image too: a new card in `product/brand/update-card/` (copy the latest in `cards/`, bump the number, render). Its README has the steps, the rules, and the post text structure.
+Offer the post image too: use the reusable kit in `product/brand/update-card/`, keeping post-specific cards, illustrations, copy, and renders under `artifacts/marketing/`. Its README has the workflow, rules, and post text structure.
 
 ## Agent skills
 
