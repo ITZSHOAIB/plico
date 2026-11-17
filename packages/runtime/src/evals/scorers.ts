@@ -16,7 +16,8 @@ export async function runScorers(
     try {
       const scorer = await loadScorer(join(evalsDir, "scorers", `${use}.ts`), use);
       result = await scorer.score(input);
-      if (typeof result?.score !== "number" || result.score < 0 || result.score > 1)
+      // `NaN` fails no comparison, so it must be refused here or it would pass any threshold.
+      if (!Number.isFinite(result?.score) || result.score < 0 || result.score > 1)
         throw new Error("it must return { score } from 0 to 1");
     } catch (error) {
       failures.push(

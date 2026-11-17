@@ -146,6 +146,21 @@ expect:
     expect(result?.diagnostics).toEqual(['Scorer "short" scored 0.4, below 1: too long']);
   });
 
+  it("fails a case whose scorer returns a score that is not a number from 0 to 1", async () => {
+    const root = await project({
+      "vpn.md": "---\nscorers: [broken]\n---\n",
+      "vpn.script.json": script,
+      "scorers/broken.ts": `export default { name: "broken", score: () => ({ score: Number.NaN }) };`,
+    });
+
+    const [result] = (await runEvals(root)).results;
+
+    expect(result?.status).toBe("fail");
+    expect(result?.diagnostics).toEqual([
+      'Scorer "broken" threw: it must return { score } from 0 to 1',
+    ]);
+  });
+
   it("treats stored results as stale once a Markdown case or scorer changes", {
     timeout: 30_000,
   }, async () => {
