@@ -38,6 +38,64 @@ export default defineTool({
 
 A tool must export its definition as the file default.
 
+## MCP configuration (in progress)
+
+The first slice of [MCP support](https://github.com/ITZSHOAIB/plico/issues/77) adds
+typed configuration and offline validation. **MCP discovery and execution are not
+implemented yet.** Configuring a server does not make its tools available to runs.
+
+Declare sources in `plico.config.ts` with an explicit transport and tool allowlist:
+
+```ts title="plico.config.ts"
+import { defineConfig } from "@plico-ai/sdk";
+
+export default defineConfig({
+  schemaVersion: 1,
+  name: "Support agent",
+  mcpServers: {
+    tickets: {
+      transport: "stdio",
+      command: "node",
+      args: ["./integrations/tickets.mjs"],
+      env: ["TICKETS_TOKEN"],
+      tools: ["get_ticket"],
+    },
+    docs: {
+      transport: "streamable-http",
+      url: "https://mcp.example.com/mcp",
+      headersEnv: { Authorization: "DOCS_AUTHORIZATION" },
+      tools: ["search"],
+    },
+  },
+});
+```
+
+Server ids use lowercase letters, digits and underscores, starting with a letter.
+`tools` is required: exact server tool names, unique and non-empty, with no wildcard
+patterns. An empty list exposes no tools. Newly advertised tools will require an
+allowlist change.
+
+For stdio, `command` names an executable; `args` is an optional string array.
+`env` lists host environment variable names to pass to the server, not their values.
+For Streamable HTTP, `url` must be an absolute HTTP(S) endpoint without embedded
+credentials or a fragment. `headersEnv` maps HTTP header names to host environment
+variable names; for example, `DOCS_AUTHORIZATION` will hold the complete
+`Bearer …` value. Environment values will be resolved when connecting, not during
+project loading. Keep credentials out of URLs, arguments and config literals.
+OAuth flows are deferred.
+
+`plico validate` checks these shapes without launching a server, making network
+requests or requiring environment variables to be set. It rejects unknown fields
+and fields from the wrong transport. Connectivity checks will ship with discovery.
+The project API returns the configured environment variable names, never values
+resolved from those variables.
+
+The execution slice will require approval for MCP tools by default, with explicit
+overrides in Plico's approval config. Server annotations cannot waive approval.
+MCP results are untrusted tool output, including any instructions they contain;
+they cannot change approval policy. The runtime enforcement and adversarial eval
+will ship in subsequent slices.
+
 ## Input schemas
 
 Declare `inputSchema` with Zod 4 or JSON Schema. A project on `zod` 3.25 can import from `"zod/v4"`; Zod 3 schemas are rejected. Plico validates tool calls

@@ -1,3 +1,4 @@
+import type { McpServerConfig } from "./mcp.js";
 import type { JsonSchema, ToolInputSchema } from "./tools.js";
 
 export type ValidationSeverity = "error" | "warning";
@@ -15,6 +16,8 @@ export interface ProjectConfig {
   name: string;
   description?: string;
   template?: string;
+  /** MCP sources with explicit tool allowlists. Config loading never connects to them. */
+  mcpServers?: Record<string, McpServerConfig>;
   artifacts?: { access: "read-write" | "read-only" | "off" };
   model?: {
     provider: string;

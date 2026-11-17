@@ -9,6 +9,9 @@ import type {
 import type { InferToolInput, SchemaInput } from "./infer.js";
 
 export type {
+  McpHttpServerConfig,
+  McpServerConfig,
+  McpStdioServerConfig,
   ProjectConfig,
   ProviderInput,
   ScoreResult,
