@@ -1,3 +1,4 @@
+export type { EvalReportV2 } from "@plico-ai/contracts";
 export { buildArtifactWorkspace, readArtifactSnapshot, readArtifactVersion } from "./artifacts.js";
 export {
   createEngine,
@@ -12,7 +13,10 @@ export {
 } from "./engine/index.js";
 export { loadedEnvFiles, loadProjectEnv } from "./env.js";
 export { type ModelErrorKind, ModelProviderError } from "./errors.js";
+export { compareEvalReports } from "./evals/compare.js";
 export { evalCaseFromRun, modelFromRef, runEvals } from "./evals/index.js";
+export { listEvalReports, readEvalReport } from "./evals/reports.js";
+export { rescoreEvalReport } from "./evals/rescore.js";
 export { runFailureEvents } from "./events.js";
 export { composeInstructions } from "./instructions.js";
 export {

@@ -133,3 +133,8 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) to set up the repository and run the chec
 ## License
 
 Apache-2.0. See [LICENSE](LICENSE) and [NOTICE](NOTICE).
+
+Eval runs save version 2 reports, including scores and trial transcripts, under
+`.plico/evals/<id>.json`. Use `plico eval --save-baseline` to write `evals/baseline.json`
+and commit it, then `plico eval --baseline evals/baseline.json --tolerance 0.05`
+to fail on regressions. See the [eval guide](packages/docs/content/docs/evals.mdx).

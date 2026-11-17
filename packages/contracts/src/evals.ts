@@ -23,3 +23,48 @@ export interface EvalReport extends EvalSummary {
   /** Identifies the fixtures this report ran, so readers can detect stale results. */
   fixturesDigest: string;
 }
+
+/** What the judge was asked and answered, enough to explain and repeat a judgement. */
+export interface EvalJudgeRecord {
+  /** The `provider:model` that was asked. */
+  model: string;
+  /** The model the provider says answered. */
+  servedModel?: string;
+  /** 0, or unset when the model refused it and answered at its default. */
+  temperature?: number;
+  prompt: string;
+  /** The judge's answer as it came back. */
+  raw: string;
+  usage?: { inputTokens: number; outputTokens: number };
+}
+
+/** One scored check of a case: a judged criterion, rubric or factuality, or a code scorer. */
+export interface EvalScore {
+  kind: "criterion" | "rubric" | "factuality" | "scorer";
+  /** The criterion text, the scorer's name, or `rubric` / `factuality`. */
+  name: string;
+  /** From 0 to 1. */
+  score: number;
+  threshold: number;
+  passed: boolean;
+  reason?: string;
+  judge?: EvalJudgeRecord;
+}
+
+export interface EvalTrial extends EvalCaseResult {
+  scores: EvalScore[];
+  events: import("./events.js").PlicoEvent[];
+  structuredOutput?: import("./events.js").JsonValue;
+}
+
+/** Saved report files; the original /v1/eval routes retain their v1 shape. */
+export interface EvalReportV2 extends EvalSummary {
+  schemaVersion: 2;
+  id: string;
+  mode: "scripted" | "live";
+  evaluatedAt: string;
+  fixturesDigest: string;
+  skipped: { name: string; reason: string }[];
+  tokenCapReached: boolean;
+  results: (EvalCaseResult & { scores?: EvalScore[]; trials?: EvalTrial[]; passAtK?: number })[];
+}

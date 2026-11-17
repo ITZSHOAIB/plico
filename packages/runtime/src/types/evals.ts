@@ -33,36 +33,12 @@ export interface SkippedEvalCase {
   reason: string;
 }
 
-/** What the judge was asked and answered, enough to explain and repeat a judgement. */
-export interface EvalJudgeRecord {
-  /** The `provider:model` that was asked. */
-  model: string;
-  /** The model the provider says answered. */
-  servedModel?: string;
-  /** 0, or unset when the model refused it and answered at its default. */
-  temperature?: number;
-  prompt: string;
-  /** The judge's answer as it came back. */
-  raw: string;
-  usage?: { inputTokens: number; outputTokens: number };
-}
-
-/** One scored check of a case: a judged criterion, rubric or factuality, or a code scorer. */
-export interface EvalScore {
-  kind: "criterion" | "rubric" | "factuality" | "scorer";
-  /** The criterion text, the scorer's name, or `rubric` / `factuality`. */
-  name: string;
-  /** From 0 to 1. */
-  score: number;
-  threshold: number;
-  passed: boolean;
-  reason?: string;
-  judge?: EvalJudgeRecord;
-}
-
-/** A case result with its scores. The scores are not stored or served until reports v2. */
+export type { EvalJudgeRecord, EvalScore } from "@plico-ai/contracts";
+/** A case result with its scores. Scores and trials are saved in report files. */
 export interface ScoredEvalCaseResult extends EvalCaseResult {
-  scores?: EvalScore[];
+  scores?: import("@plico-ai/contracts").EvalScore[];
+  trials?: import("@plico-ai/contracts").EvalTrial[];
+  passAtK?: number;
 }
 
 /** What `runEvals` returns: the stored summary plus the cases it could not run. */
@@ -71,6 +47,7 @@ export interface EvalRunSummary extends EvalSummary {
   skipped: SkippedEvalCase[];
   /** A live run hit `maxTokens`, so some cases or trials never started. */
   tokenCapReached: boolean;
+  reportId?: string;
 }
 
 export interface LiveEvalOptions {
