@@ -216,7 +216,7 @@ export function createEngine({
       for (const { runId, deadline } of await journal.listWaiting()) {
         if (active.has(runId) || registered.has(runId)) continue;
         const run = await journal.getRun(runId);
-        if (!run || run.state !== "waiting") continue;
+        if (run?.state !== "waiting") continue;
         const input = JSON.parse(run.inputJson) as I;
         const workflow = resolve(runId, input);
         if (!workflow) continue;

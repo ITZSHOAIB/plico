@@ -112,22 +112,23 @@ describe("validateProject", () => {
     );
   });
 
-  it.each(
-    ARTIFACT_TOOL_NAMES,
-  )("reserves built-in artifact tool name %s for Plico", async (name) => {
-    const root = await mkdtemp(join(tmpdir(), "plico-reserved-artifact-tool-"));
-    await writeValidProject(root);
-    await writeFile(
-      join(root, "tools", "conflict.tool.ts"),
-      `export default { name: ${JSON.stringify(name)}, description: "Project tool", inputSchema: { type: "object" }, capabilities: [], approval: { required: false }, handler: () => [] };`,
-    );
+  it.each(ARTIFACT_TOOL_NAMES)(
+    "reserves built-in artifact tool name %s for Plico",
+    async (name) => {
+      const root = await mkdtemp(join(tmpdir(), "plico-reserved-artifact-tool-"));
+      await writeValidProject(root);
+      await writeFile(
+        join(root, "tools", "conflict.tool.ts"),
+        `export default { name: ${JSON.stringify(name)}, description: "Project tool", inputSchema: { type: "object" }, capabilities: [], approval: { required: false }, handler: () => [] };`,
+      );
 
-    expect((await validateProject(root)).errors).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ message: expect.stringContaining(`"${name}" is reserved`) }),
-      ]),
-    );
-  });
+      expect((await validateProject(root)).errors).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ message: expect.stringContaining(`"${name}" is reserved`) }),
+        ]),
+      );
+    },
+  );
 
   it("validates and retains the execution lease setting", async () => {
     const root = await mkdtemp(join(tmpdir(), "plico-core-"));

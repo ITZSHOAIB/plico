@@ -4,23 +4,22 @@ import { expect, it } from "vitest";
 import { type ModelRequest, runProject } from "../index.js";
 import { outputProject, outputUsage as usage } from "../testing/structured-output.js";
 
-it.each([
-  undefined,
-  "not JSON",
-  '{"ticket":7}',
-])("refuses invalid scripted output: %s", async (content) => {
-  const root = await outputProject();
-  const result = await runProject(root, {
-    script: content === undefined ? [] : [{ type: "assistant.output", content }],
-  });
+it.each([undefined, "not JSON", '{"ticket":7}'])(
+  "refuses invalid scripted output: %s",
+  async (content) => {
+    const root = await outputProject();
+    const result = await runProject(root, {
+      script: content === undefined ? [] : [{ type: "assistant.output", content }],
+    });
 
-  expect(result.status).toBe("failed");
-  expect(result).not.toHaveProperty("structuredOutput");
-  expect(result.events.at(-1)?.type).toBe("run.failed");
-  expect(result.events.find((event) => event.type === "run.error")?.payload.phase).toBe(
-    "output.validation",
-  );
-});
+    expect(result.status).toBe("failed");
+    expect(result).not.toHaveProperty("structuredOutput");
+    expect(result.events.at(-1)?.type).toBe("run.failed");
+    expect(result.events.find((event) => event.type === "run.error")?.payload.phase).toBe(
+      "output.validation",
+    );
+  },
+);
 
 it("does not exceed maxSteps to repair an invalid result", async () => {
   const root = await outputProject();

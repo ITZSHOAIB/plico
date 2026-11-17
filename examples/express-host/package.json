@@ -9,10 +9,10 @@
   },
   "dependencies": {
     "@plico-ai/server": "workspace:*",
-    "express": "5.1.0"
+    "express": "5.3.0"
   },
   "devDependencies": {
-    "@types/express": "5.0.3",
-    "tsx": "4.20.6"
+    "@types/express": "5.0.6",
+    "tsx": "4.23.15"
   }
 }

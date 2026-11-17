@@ -19,6 +19,12 @@ updates:
       # host registers makes the global API reject it, so Plico spans fall back to a no-op tracer.
       - dependency-name: "@opentelemetry/api"
         update-types: ["version-update:semver-minor"]
+      # Stay on the OTel SDK 2.x line: 3.x requires @opentelemetry/api 1.10, which hosts on the
+      # 2.x SDK cannot register. Move together with the API when that changes.
+      - dependency-name: "@opentelemetry/context-async-hooks"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@opentelemetry/sdk-trace-base"
+        update-types: ["version-update:semver-major"]
     groups:
       security:
         applies-to: security-updates

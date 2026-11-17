@@ -21,16 +21,14 @@ async function project(model: string, files: Record<string, string> = {}): Promi
 }
 
 describe("model provider validation", () => {
-  it.each([
-    "anthropic",
-    "google",
-    "openai",
-    "openai-compatible",
-  ])("accepts %s", async (provider) => {
-    const root = await project(`{ provider: "${provider}", name: "m" }`);
+  it.each(["anthropic", "google", "openai", "openai-compatible"])(
+    "accepts %s",
+    async (provider) => {
+      const root = await project(`{ provider: "${provider}", name: "m" }`);
 
-    expect((await validateProject(root)).ok).toBe(true);
-  });
+      expect((await validateProject(root)).ok).toBe(true);
+    },
+  );
 
   it("rejects an unknown provider and lists the ones it knows", async () => {
     const result = await validateProject(await project('{ provider: "acme", name: "m" }'));
