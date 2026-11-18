@@ -39,6 +39,110 @@ describe("MCP configuration", () => {
     expect((await validateProject(root)).errors).toEqual([]);
   });
 
+  it("rejects tool names with surrounding whitespace", async () => {
+    const result = await validateProject(
+      await project(
+        JSON.stringify({
+          docs: {
+            transport: "stdio",
+            command: "node",
+            tools: [" search "],
+          },
+        }),
+      ),
+    );
+    expect(result.ok).toBe(false);
+    expect(result.errors.map((issue) => issue.message)).toContain(
+      "Expected mcpServers.docs.tools to be an explicit array of unique, non-empty tool names without wildcards",
+    );
+  });
+
+  it.each([
+    "Mcp-Session-Id",
+    "Mcp-Protocol-Version",
+    "Content-Type",
+    "Accept",
+    "Host",
+    "Content-Length",
+  ])("rejects transport-managed header %s regardless of casing", async (name) => {
+    for (const header of [name, name.toLowerCase(), name.toUpperCase()]) {
+      const result = await validateProject(
+        await project(
+          JSON.stringify({
+            docs: {
+              transport: "streamable-http",
+              url: "https://example.com/mcp",
+              tools: [],
+              headersEnv: { [header]: "TOKEN" },
+            },
+          }),
+        ),
+      );
+      expect(result.ok, header).toBe(false);
+      expect(result.errors.map((issue) => issue.message)).toContain(
+        "Expected mcpServers.docs.headersEnv to map unique HTTP header names to environment variable names",
+      );
+    }
+  });
+
+  it("isolates normalized MCP configuration from later validation loads", async () => {
+    const root = await project(
+      JSON.stringify({
+        local: {
+          transport: "stdio",
+          command: "node",
+          args: ["server.mjs"],
+          env: ["TOKEN"],
+          tools: ["lookup"],
+        },
+        docs: {
+          transport: "streamable-http",
+          url: "https://example.com/mcp",
+          headersEnv: { Authorization: "TOKEN" },
+          tools: ["search"],
+        },
+      }),
+    );
+    const first = await validateProject(root);
+    expect(first.ok).toBe(true);
+    const servers = first.project?.config.mcpServers;
+    if (!servers) throw new Error("Missing MCP configuration");
+    const local = servers.local;
+    const docs = servers.docs;
+    if (
+      local?.transport !== "stdio" ||
+      docs?.transport !== "streamable-http" ||
+      !local.args ||
+      !local.env ||
+      !docs.headersEnv
+    )
+      throw new Error("Unexpected transport");
+    local.command = "changed";
+    local.args.push("changed");
+    local.env.push("CHANGED");
+    local.tools.push("changed");
+    docs.headersEnv.Authorization = "CHANGED";
+    docs.tools.push("changed");
+    delete servers.docs;
+    const second = await validateProject(root);
+    expect(second.ok).toBe(true);
+    expect(second.project?.config.mcpServers).toEqual({
+      local: {
+        transport: "stdio",
+        command: "node",
+        args: ["server.mjs"],
+        env: ["TOKEN"],
+        tools: ["lookup"],
+      },
+      docs: {
+        transport: "streamable-http",
+        url: "https://example.com/mcp",
+        headersEnv: { Authorization: "TOKEN" },
+        tools: ["search"],
+      },
+    });
+  });
+
   it.each([undefined, "search", ["*"], [""], ["search", "search"], [12]])(
     "rejects a missing or invalid explicit allowlist: %j",
     async (tools) => {
@@ -59,9 +163,9 @@ describe("MCP configuration", () => {
   );
 
   it.each([
-    [null, "mcpServers"],
-    [[], "mcpServers"],
-    [{ docs: null }, "mcpServers.docs"],
+    [null, "Expected mcpServers to be an object"],
+    [[], "Expected mcpServers to be an object"],
+    [{ docs: null }, "Expected mcpServers.docs to be an object"],
     [{ "Bad Name": { transport: "stdio", command: "node", tools: [] } }, "mcpServers.Bad Name"],
     [{ docs: { transport: "sse", tools: [] } }, "mcpServers.docs.transport"],
     [{ docs: { command: "node", tools: [] } }, "mcpServers.docs.transport"],
@@ -167,7 +271,7 @@ describe("MCP configuration", () => {
     expect(result.errors).toContainEqual({
       path: "plico.config.ts",
       severity: "error",
-      message: expect.stringContaining(field),
+      message: field.startsWith("Expected ") ? field : expect.stringContaining(field),
     });
     expect(JSON.stringify(result.errors)).not.toContain("secret");
   });

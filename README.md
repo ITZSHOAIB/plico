@@ -120,7 +120,7 @@ Plico is a **developer preview (`0.1`)**. The HTTP API under `/v1` takes additiv
 MCP support is in progress: `mcpServers` accepts typed stdio and Streamable HTTP
 configuration with explicit tool allowlists and environment variable references.
 `plico validate` checks it offline. Discovery and execution are not implemented yet;
-see [MCP configuration](packages/docs/content/docs/tools.mdx#mcp-configuration-in-progress).
+see [MCP configuration](https://plico.sohab.dev/docs/tools#mcp-configuration-in-progress).
 
 ## Learn more
 

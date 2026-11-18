@@ -76,10 +76,13 @@ patterns. An empty list exposes no tools. Newly advertised tools will require an
 allowlist change.
 
 For stdio, `command` names an executable; `args` is an optional string array.
+The stdio working directory will be defined in the discovery slice.
 `env` lists host environment variable names to pass to the server, not their values.
 For Streamable HTTP, `url` must be an absolute HTTP(S) endpoint without embedded
 credentials or a fragment. `headersEnv` maps HTTP header names to host environment
-variable names; for example, `DOCS_AUTHORIZATION` will hold the complete
+variable names. It rejects transport-managed headers case-insensitively: `Mcp-Session-Id`,
+`Mcp-Protocol-Version`, `Content-Type`, `Accept`, `Host`, and `Content-Length`.
+For example, `DOCS_AUTHORIZATION` will hold the complete
 `Bearer …` value. Environment values will be resolved when connecting, not during
 project loading. Keep credentials out of URLs, arguments and config literals.
 OAuth flows are deferred.

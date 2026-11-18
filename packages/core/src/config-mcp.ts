@@ -1,4 +1,4 @@
-import type { ValidationIssue } from "./types.js";
+import type { ProjectConfig, ValidationIssue } from "./types.js";
 
 /** Offline checks only: no server launch, network access, or environment lookup. */
 export function validateMcpConfig(value: unknown, configFile: string): ValidationIssue[] {
@@ -73,6 +73,16 @@ function headers(value: unknown): boolean {
   const names = Object.keys(value).map((name) => name.toLowerCase());
   return (
     new Set(names).size === names.length &&
+    !names.some((name) =>
+      [
+        "mcp-session-id",
+        "mcp-protocol-version",
+        "content-type",
+        "accept",
+        "host",
+        "content-length",
+      ].includes(name),
+    ) &&
     Object.entries(value).every(
       ([name, variable]) =>
         /^[!#$%&'*+.^_`|~0-9A-Za-z-]+$/.test(name) &&
@@ -101,11 +111,41 @@ function endpoint(value: unknown): boolean {
 function validTools(value: unknown): boolean {
   return (
     Array.isArray(value) &&
-    value.every((name) => typeof name === "string" && name.trim() !== "" && !name.includes("*")) &&
+    value.every(
+      (name) =>
+        typeof name === "string" &&
+        name.trim() !== "" &&
+        name.trim() === name &&
+        !name.includes("*"),
+    ) &&
     new Set(value).size === value.length
   );
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+export function normalizeMcpConfig(
+  servers: NonNullable<ProjectConfig["mcpServers"]>,
+): NonNullable<ProjectConfig["mcpServers"]> {
+  return Object.fromEntries(
+    Object.entries(servers).map(([name, server]) => [
+      name,
+      server.transport === "stdio"
+        ? {
+            transport: server.transport,
+            command: server.command,
+            tools: [...server.tools],
+            ...(server.args !== undefined ? { args: [...server.args] } : {}),
+            ...(server.env !== undefined ? { env: [...server.env] } : {}),
+          }
+        : {
+            transport: server.transport,
+            url: server.url,
+            tools: [...server.tools],
+            ...(server.headersEnv !== undefined ? { headersEnv: { ...server.headersEnv } } : {}),
+          },
+    ]),
+  );
 }
