@@ -77,3 +77,42 @@ it("compares newly added passing and failing cases through the CLI", async () =>
     );
   }
 });
+
+it("prints baseline comparison lines by default and JSON only with --json", async () => {
+  const root = await mkdtemp(join(tmpdir(), "plico-baseline-output-"));
+  for (const dir of ["skills", "tools", "evals", "artifacts", "memory"])
+    await mkdir(join(root, dir));
+  await writeFile(
+    join(root, "plico.config.ts"),
+    'export default { schemaVersion: 1, name: "Demo" };',
+  );
+  await writeFile(join(root, "agent.md"), "# Demo");
+  await writeFile(
+    join(root, "evals", "case.script.json"),
+    JSON.stringify([{ type: "assistant.output", content: "ok" }]),
+  );
+  const before = {
+    schemaVersion: 2,
+    id: "before",
+    mode: "scripted",
+    evaluatedAt: "now",
+    fixturesDigest: "x",
+    total: 1,
+    passed: 0,
+    failed: 1,
+    results: [{ name: "case", status: "fail", runId: "r", runStatus: "failed" }],
+    skipped: [],
+    tokenCapReached: false,
+  };
+  const baseline = join(root, "before.json");
+  await writeFile(baseline, JSON.stringify(before));
+  const out = vi.spyOn(console, "log").mockImplementation(() => {});
+  const err = vi.spyOn(console, "error").mockImplementation(() => {});
+  await main(["node", "plico", "eval", root, "--baseline", baseline]);
+  expect(err.mock.calls.flat().join("\n")).toContain("OK case:");
+  expect(err.mock.calls.flat().join("\n")).not.toContain('"cases"');
+  err.mockClear();
+  out.mockClear();
+  await main(["node", "plico", "eval", root, "--baseline", baseline, "--json"]);
+  expect(err.mock.calls.flat().join("\n")).toContain('"cases"');
+});

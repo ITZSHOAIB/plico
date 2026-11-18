@@ -193,6 +193,8 @@ describe("scaffold agent instructions", () => {
     const agents = await readFile(join(root, "AGENTS.md"), "utf8");
 
     expect(agents).toContain("https://plico.sohab.dev/llms.txt");
+    expect(agents).toContain("`evals/<name>.md` holds one eval case");
+    expect(agents).toContain("`plico eval --live` runs cases that have an `input`");
     expect(await readFile(join(root, "CLAUDE.md"), "utf8")).toBe("@AGENTS.md\n");
   });
 

@@ -103,7 +103,7 @@ This is a [Plico](https://plico.sohab.dev) project: the agent is the files in th
 - \`plico.config.ts\` is the project config (\`defineConfig\` from \`@plico-ai/sdk\`): name, optional \`model\`, optional \`approvals\`.
 - \`skills/<name>/SKILL.md\` holds a skill. It needs a \`description\` in its frontmatter.
 - \`tools/<name>.tool.ts\` holds one tool as a default export (below).
-- \`evals/<name>.script.json\` holds one eval case (below).
+- \`evals/<name>.md\` holds one eval case (below); an optional \`evals/<name>.script.json\` fixture replays it for scripted runs. \`plico eval --live\` runs cases that have an \`input\`.
 - \`artifacts/\` and \`memory/\` are required folders. Leave them in place.
 
 ## Add a tool
