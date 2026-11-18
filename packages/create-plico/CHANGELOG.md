@@ -1,5 +1,12 @@
 # create-plico
 
+## 0.5.2
+
+### Patch Changes
+
+- 0b746c3: Clarify eval case guidance in generated projects and improve eval baseline output and help.
+- @plico-ai/core@0.5.2
+
 ## 0.5.1
 
 ### Patch Changes

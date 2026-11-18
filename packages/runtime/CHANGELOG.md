@@ -1,5 +1,12 @@
 # @plico-ai/runtime
 
+## 0.5.2
+
+### Patch Changes
+
+- @plico-ai/contracts@0.5.2
+  - @plico-ai/core@0.5.2
+
 ## 0.5.1
 
 ### Patch Changes
