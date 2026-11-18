@@ -53,7 +53,7 @@ describe("MCP configuration", () => {
     );
     expect(result.ok).toBe(false);
     expect(result.errors.map((issue) => issue.message)).toContain(
-      "Expected mcpServers.docs.tools to be an explicit array of unique, non-empty tool names without wildcards",
+      "Expected mcpServers.docs.tools to be an explicit array of unique, non-empty, trimmed tool names without wildcards",
     );
   });
 
@@ -80,7 +80,7 @@ describe("MCP configuration", () => {
       );
       expect(result.ok, header).toBe(false);
       expect(result.errors.map((issue) => issue.message)).toContain(
-        "Expected mcpServers.docs.headersEnv to map unique HTTP header names to environment variable names",
+        "Expected mcpServers.docs.headersEnv to map unique HTTP header names to environment variable names; transport-managed headers (Mcp-Session-Id, Mcp-Protocol-Version, Content-Type, Accept, Host, Content-Length) are reserved",
       );
     }
   });

@@ -21,7 +21,7 @@ export function validateMcpConfig(value: unknown, configFile: string): Validatio
     if (!validTools(server.tools))
       issue(
         `${field}.tools`,
-        "to be an explicit array of unique, non-empty tool names without wildcards",
+        "to be an explicit array of unique, non-empty, trimmed tool names without wildcards",
       );
     let keys: string[];
     if (server.transport === "stdio") {
@@ -43,7 +43,7 @@ export function validateMcpConfig(value: unknown, configFile: string): Validatio
       if (Object.hasOwn(server, "headersEnv") && !headers(server.headersEnv))
         issue(
           `${field}.headersEnv`,
-          "to map unique HTTP header names to environment variable names",
+          "to map unique HTTP header names to environment variable names; transport-managed headers (Mcp-Session-Id, Mcp-Protocol-Version, Content-Type, Accept, Host, Content-Length) are reserved",
         );
     } else {
       issue(`${field}.transport`, 'to be "stdio" or "streamable-http"');
