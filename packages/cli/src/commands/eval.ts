@@ -44,6 +44,7 @@ export async function evalCommand(args: string[]): Promise<number> {
           readStringOption(parsed, "--baseline"),
           parsed.flags.has("--save-baseline"),
           readStringOption(parsed, "--tolerance"),
+          parsed.flags.has("--json"),
         )
       : false;
     const format = readStringOption(parsed, "--format");

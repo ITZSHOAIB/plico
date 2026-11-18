@@ -144,6 +144,10 @@ Eval runs save version 2 reports, including scores and trial transcripts, under
 and commit it, then `plico eval --baseline evals/baseline.json --tolerance 0.05`
 to fail on regressions. See the [eval guide](packages/docs/content/docs/evals.mdx).
 
+Use `plico eval compare <a> <b>` to compare saved reports and `plico eval rescore <report> [project]`
+to score a saved report again. `--format md` and `--format junit` export reports; `--json` emits
+machine-readable output.
+
 Report comparisons include newly added cases. Incomplete live cases retain completed trial transcripts, and report listings ignore unsupported schema versions.
 
 Studio?s Evals view lets you browse saved reports, inspect trial transcripts with scores and judge reasons, and compare two reports side by side.

@@ -4,6 +4,16 @@ import { compareEvalReports, readEvalReport, rescoreEvalReport } from "@plico-ai
 import { parseArgs, readStringOption } from "../args.js";
 import { formatEvalReport } from "../format/eval-report.js";
 
+function formatComparison(comparison: ReturnType<typeof compareEvalReports>): string {
+  return [
+    ...comparison.warnings,
+    ...comparison.cases.map(
+      (r) =>
+        `${r.regressed ? "REGRESSION" : "OK"} ${r.name}: ${r.before} -> ${r.after} ${r.deltas.map((d) => `${d.name} ${d.delta ?? "missing"}`).join(", ")}`,
+    ),
+  ].join("\n");
+}
+
 export async function reportCommand(args: string[]): Promise<number> {
   const [command, ...rest] = args;
   const parsed = parseArgs(rest, {
@@ -27,15 +37,7 @@ export async function reportCommand(args: string[]): Promise<number> {
       Number(readStringOption(parsed, "--tolerance") ?? 0),
     );
     console.log(
-      parsed.flags.has("--json")
-        ? JSON.stringify(comparison)
-        : [
-            ...comparison.warnings,
-            ...comparison.cases.map(
-              (r) =>
-                `${r.regressed ? "REGRESSION" : "OK"} ${r.name}: ${r.before} -> ${r.after} ${r.deltas.map((d) => `${d.name} ${d.delta ?? "missing"}`).join(", ")}`,
-            ),
-          ].join("\n"),
+      parsed.flags.has("--json") ? JSON.stringify(comparison) : formatComparison(comparison),
     );
     return comparison.regressed ? 1 : 0;
   }
@@ -51,6 +53,7 @@ export async function reportBaseline(
   baseline: string | undefined,
   save: boolean,
   tolerance: string | undefined,
+  json = false,
 ): Promise<boolean> {
   const report = await readEvalReport(join(target, ".plico", "evals", `${reportId}.json`));
   let regressed = false;
@@ -60,8 +63,7 @@ export async function reportBaseline(
       report,
       Number(tolerance ?? 0),
     );
-    for (const warning of comparison.warnings) console.error(warning);
-    console.error(JSON.stringify(comparison));
+    console.error(json ? JSON.stringify(comparison) : formatComparison(comparison));
     regressed = comparison.regressed;
   }
   if (save)

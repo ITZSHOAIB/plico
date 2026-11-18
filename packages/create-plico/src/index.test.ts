@@ -193,6 +193,20 @@ describe("scaffold agent instructions", () => {
     const agents = await readFile(join(root, "AGENTS.md"), "utf8");
 
     expect(agents).toContain("https://plico.sohab.dev/llms.txt");
+    expect(agents).toContain(
+      "`evals/<name>.md` holds one eval case, with frontmatter for `expect` and `scorers` plus criteria as bullets.",
+    );
+    expect(agents).toContain(
+      "An optional `evals/<name>.script.json` fixture is replayed in scripted runs.",
+    );
+    expect(agents).toContain(
+      "A `.script.json` on its own is also a case, like the shipped `smoke.script.json`.",
+    );
+    expect(agents).toContain("Start with the Markdown case and its fixture.");
+    expect(agents).toContain(
+      "A standalone JSON case is the minimal form and uses no model or API key:",
+    );
+    expect(agents).toContain("`plico eval --live` runs cases that have an `input`");
     expect(await readFile(join(root, "CLAUDE.md"), "utf8")).toBe("@AGENTS.md\n");
   });
 
