@@ -1,5 +1,11 @@
 # @plico-ai/sdk
 
+## 0.5.2
+
+### Patch Changes
+
+- @plico-ai/contracts@0.5.2
+
 ## 0.5.1
 
 ### Patch Changes
