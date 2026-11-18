@@ -14,7 +14,9 @@ Run `plico --version` to print the installed version. Every command takes an opt
 | `plico runs [path]` | Lists saved runs. |
 | `plico events <run-id> [--after <sequence>] [path]` | Prints a run's event log. |
 | `plico cancel <run-id> [path]` | Cancels an active persisted run. |
-| `plico eval [path]` | Runs the project's evals: scripted by default, against the model with `--live`. |
+| `plico eval [path]` | Runs the project's evals: scripted by default, against the model with `--live`. Supports `--baseline <file>`, `--save-baseline`, `--tolerance <n>`, and `--format` with `md` or `junit`. |
+| `plico eval compare [--tolerance &lt;n&gt;] [--json] &lt;a&gt; &lt;b&gt;` | Compares two saved eval reports. |
+| `plico eval rescore [--format &lt;md|junit&gt;] [--json] &lt;report&gt; [project]` | Rescores a saved report using the project's current scorers. |
 | `plico readiness [path]` | Reports readiness diagnostics. |
 | `plico serve [path]` | Starts the HTTP API. |
 

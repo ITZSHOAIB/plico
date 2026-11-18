@@ -5,7 +5,9 @@ const USAGE_LINES: readonly string[] = [
   "Usage: plico cancel <runId> [--db <path>] [--json] [path]",
   "Usage: plico runs [--db <path>] [--json] [path]",
   "Usage: plico events <runId> [--after <sequence>] [--db <path>] [--json] [path]",
-  "Usage: plico eval [--json] [--allow-empty] [--live [--mock-tools] [--model <provider:model>] [--max-tokens <n>] [--concurrency <n>]] [--from-run <run-id> [--name <name>]] [--db <path>] [path]",
+  "Usage: plico eval [--json] [--allow-empty] [--live [--mock-tools] [--model <provider:model>] [--max-tokens <n>] [--concurrency <n>]] [--from-run <run-id> [--name <name>]] [--baseline <file>] [--save-baseline] [--tolerance <n>] [--format <md|junit>] [--db <path>] [path]",
+  "Usage: plico eval compare [--tolerance <n>] [--json] <a> <b>",
+  "Usage: plico eval rescore [--format <md|junit>] [--json] <report> [project]",
   "Usage: plico readiness [--json] [--db <path>] [path]",
   "Usage: plico serve [--host <host>] [--port <port>] [--db <path>] [--studio] [--allow-remote] [--allow-script] [--inspect] [path]",
 ];

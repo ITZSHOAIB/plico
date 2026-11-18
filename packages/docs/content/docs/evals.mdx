@@ -48,8 +48,9 @@ tags: [regression]
 - Does not promise a delivery date
 ```
 
-`evals/<name>.script.json` next to it holds the steps scripted mode replays. A case without one is
-skipped by `plico eval` and listed as `SKIP`; it still runs with `--live`.
+`evals/<name>.script.json` next to it is an optional fixture whose steps scripted mode replays.
+Without a fixture, the case is skipped by scripted `plico eval` and listed as `SKIP`. `plico eval
+--live` runs cases that have an `input`.
 
 | Key | Meaning |
 | --- | --- |

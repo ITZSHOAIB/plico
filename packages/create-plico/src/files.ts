@@ -103,7 +103,7 @@ This is a [Plico](https://plico.sohab.dev) project: the agent is the files in th
 - \`plico.config.ts\` is the project config (\`defineConfig\` from \`@plico-ai/sdk\`): name, optional \`model\`, optional \`approvals\`.
 - \`skills/<name>/SKILL.md\` holds a skill. It needs a \`description\` in its frontmatter.
 - \`tools/<name>.tool.ts\` holds one tool as a default export (below).
-- \`evals/<name>.script.json\` holds one eval case (below).
+- \`evals/<name>.md\` holds one eval case, with frontmatter for \`expect\` and \`scorers\` plus criteria as bullets. An optional \`evals/<name>.script.json\` fixture is replayed in scripted runs. A \`.script.json\` on its own is also a case, like the shipped \`smoke.script.json\`. \`plico eval --live\` runs cases that have an \`input\`.
 - \`artifacts/\` and \`memory/\` are required folders. Leave them in place.
 
 ## Add a tool
@@ -130,7 +130,35 @@ export default defineTool({
 
 ## Add an eval
 
-A case is a script plus an optional \`expect\`. It uses no model and no API key:
+Start with the Markdown case and its fixture. The frontmatter has \`expect\` and \`scorers\`; criteria are bullets for a judge model. Scripted runs replay the optional fixture without a model or API key. See https://plico.sohab.dev/docs/evals.
+
+\`evals/refund.md\`:
+
+\`\`\`md
+---
+expect:
+  status: completed
+  contains: Refunded
+scorers:
+  rubric: Check that the refund is described accurately.
+---
+- Confirms which order was refunded
+- Does not promise a delivery date
+\`\`\`
+
+Optional \`evals/refund.script.json\` fixture:
+
+\`\`\`json
+{
+  "script": [
+    { "type": "tool.call", "toolName": "issue_refund", "arguments": { "orderId": "A-1" }, "result": { "status": "refunded" } },
+    { "type": "approval.decide", "approved": true },
+    { "type": "assistant.output", "content": "Refunded." }
+  ]
+}
+\`\`\`
+
+A standalone JSON case is the minimal form and uses no model or API key:
 
 \`\`\`json
 {
