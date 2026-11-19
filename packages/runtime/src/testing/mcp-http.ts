@@ -1,0 +1,90 @@
+import { createServer, type IncomingHttpHeaders } from "node:http";
+
+interface Request {
+  method: string;
+  params?: { cursor?: string };
+  id?: number;
+}
+
+interface McpHttpFixture {
+  url: string;
+  requests: Array<{ method: string; headers: IncomingHttpHeaders }>;
+  close(): Promise<void>;
+}
+
+/** Local protocol fixture, independent of Plico's client implementation. */
+export async function mcpHttp(
+  pages: unknown[][],
+  delayListMs = 0,
+  fault?: { deleteError?: string; hangDelete?: boolean; redirect?: boolean; modern?: boolean },
+): Promise<McpHttpFixture> {
+  const requests: Array<{ method: string; headers: IncomingHttpHeaders }> = [];
+  const server = createServer(async (req, res) => {
+    if (req.method === "DELETE") {
+      requests.push({ method: "DELETE", headers: req.headers });
+      if (fault?.hangDelete) return;
+      if (fault?.deleteError) {
+        res.writeHead(500).end(fault.deleteError);
+        return;
+      }
+      res.writeHead(200).end();
+      return;
+    }
+    if (req.method !== "POST") {
+      res.writeHead(405).end();
+      return;
+    }
+    if (fault?.redirect && req.url === "/mcp") {
+      res.writeHead(307, { Location: "/forward" }).end();
+      return;
+    }
+    const chunks = [];
+    for await (const chunk of req) chunks.push(chunk);
+    const request = JSON.parse(Buffer.concat(chunks).toString()) as Request;
+    requests.push({ method: request.method, headers: req.headers });
+    if (request.id === undefined) {
+      res.writeHead(202).end();
+      return;
+    }
+    let result: unknown;
+    if (request.method === "server/discover" && fault?.modern) {
+      result = { supportedVersions: ["2026-07-28"], capabilities: { tools: {} } };
+    } else if (request.method === "initialize") {
+      res.setHeader("Mcp-Session-Id", "fixture-session");
+      result = {
+        protocolVersion: "2025-11-25",
+        capabilities: { tools: {} },
+        serverInfo: { name: "local-http", version: "1" },
+      };
+    } else if (request.method === "tools/list") {
+      if (delayListMs) await new Promise((resolve) => setTimeout(resolve, delayListMs));
+      const page = Number(request.params?.cursor ?? 0);
+      result = {
+        tools: pages[page] ?? [],
+        ...(fault?.modern ? { resultType: "complete", ttlMs: 0, cacheScope: "private" } : {}),
+        ...(page + 1 < pages.length ? { nextCursor: String(page + 1) } : {}),
+      };
+    }
+    res.setHeader("content-type", "application/json");
+    res.end(
+      JSON.stringify({
+        jsonrpc: "2.0",
+        id: request.id,
+        ...(result ? { result } : { error: { code: -32601, message: "Unknown method" } }),
+      }),
+    );
+  });
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const address = server.address();
+  if (!address || typeof address === "string") throw new Error("No fixture address");
+  return {
+    url: `http://127.0.0.1:${address.port}/mcp`,
+    requests,
+    async close() {
+      server.closeAllConnections();
+      await new Promise<void>((resolve, reject) =>
+        server.close((err) => (err ? reject(err) : resolve())),
+      );
+    },
+  };
+}

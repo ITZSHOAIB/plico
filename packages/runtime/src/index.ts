@@ -1,4 +1,4 @@
-export type { EvalReportV2 } from "@plico-ai/contracts";
+export type { EvalReportV2, McpTool } from "@plico-ai/contracts";
 export { buildArtifactWorkspace, readArtifactSnapshot, readArtifactVersion } from "./artifacts.js";
 export {
   createEngine,
@@ -19,6 +19,7 @@ export { listEvalReports, readEvalReport } from "./evals/reports.js";
 export { rescoreEvalReport } from "./evals/rescore.js";
 export { runFailureEvents } from "./events.js";
 export { composeInstructions } from "./instructions.js";
+export { discoverMcpTools, type McpDiscoveryOptions } from "./mcp/discover.js";
 export {
   createConfiguredModelProvider,
   modelProviderAccountKey,
