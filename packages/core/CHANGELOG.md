@@ -1,5 +1,14 @@
 # @plico-ai/core
 
+## 0.5.3
+
+### Patch Changes
+
+- 313f061: Add typed stdio and Streamable HTTP MCP source configuration with explicit tool allowlists and offline validation. Credentials are referenced by environment variable name. MCP discovery and execution will follow in subsequent slices.
+- Updated dependencies [313f061]
+  - @plico-ai/contracts@0.5.3
+  - @plico-ai/sdk@0.5.3
+
 ## 0.5.2
 
 ### Patch Changes
