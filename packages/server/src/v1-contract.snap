@@ -1,4 +1,42 @@
 {
+  "GET /v1/project (MCP configuration)": {
+    "project": {
+      "config": {
+        "artifacts": {
+          "access": "string"
+        },
+        "mcpServers": {
+          "local": {
+            "args": [
+              "string"
+            ],
+            "command": "string",
+            "env": [
+              "string"
+            ],
+            "tools": [
+              "string"
+            ],
+            "transport": "string"
+          },
+          "remote": {
+            "headersEnv": {
+              "Authorization": "string"
+            },
+            "tools": [
+              "string"
+            ],
+            "transport": "string",
+            "url": "string"
+          }
+        },
+        "name": "string",
+        "schemaVersion": "number"
+      },
+      "configPath": "string",
+      "root": "string"
+    }
+  },
   "Legacy artifact.file.written payload": {
     "content": "string",
     "mimeType": "string",

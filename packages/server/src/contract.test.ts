@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, unlink, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, unlink, writeFile } from "node:fs/promises";
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
@@ -383,7 +383,41 @@ it("keeps the /v1 response shapes stable", async () => {
     })
   ).json()) as unknown;
 
+  // MCP configuration is additive to GET /v1/project. Exercise it without changing the
+  // runtime fixtures: discovery and transport execution belong to the next epic slices.
+  const configPath = join(root, "plico.config.ts");
+  const originalConfig = await readFile(configPath, "utf8");
+  let mcpProject: Shape;
+  try {
+    await writeFile(
+      configPath,
+      `export default ${JSON.stringify({
+        schemaVersion: 1,
+        name: "MCP",
+        mcpServers: {
+          local: {
+            transport: "stdio",
+            command: "node",
+            args: ["server.mjs"],
+            env: ["MCP_TOKEN"],
+            tools: ["lookup"],
+          },
+          remote: {
+            transport: "streamable-http",
+            url: "https://example.com/mcp",
+            headersEnv: { Authorization: "MCP_AUTH" },
+            tools: ["search"],
+          },
+        },
+      })};`,
+    );
+    mcpProject = await shape("/v1/project");
+  } finally {
+    await writeFile(configPath, originalConfig);
+  }
+
   const shapes = {
+    "GET /v1/project (MCP configuration)": mcpProject,
     // Legacy rows predate receipts and omit contentHash/version; the runtime replays them with derived values.
     "Legacy artifact.file.written payload": shapeOf({
       path: "legacy.md",
