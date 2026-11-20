@@ -1,5 +1,12 @@
 # create-plico
 
+## 0.5.3
+
+### Patch Changes
+
+- Updated dependencies [313f061]
+  - @plico-ai/core@0.5.3
+
 ## 0.5.2
 
 ### Patch Changes
