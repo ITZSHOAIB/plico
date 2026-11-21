@@ -96,8 +96,10 @@ resolved from those variables.
 
 The execution slice will require approval for MCP tools by default, with explicit
 overrides in Plico's approval config. Server annotations cannot waive approval.
-MCP results are untrusted tool output, including any instructions they contain;
-they cannot change approval policy. The runtime enforcement and adversarial eval
+MCP results, server tool descriptions and input schemas are untrusted content,
+including any instructions they contain; they cannot change approval policy.
+Discovery preserves descriptions and schemas as metadata, not as permissions.
+The runtime enforcement and adversarial eval
 will ship in subsequent slices.
 
 ### Discover configured tools
@@ -113,15 +115,16 @@ const tools = await discoverMcpTools(await loadProject("."), { timeoutMs: 10_000
 Discovery uses the official MCP client with automatic protocol negotiation for
 both transports. For stdio, that can start a short-lived probe process before
 the discovery process; server startup must tolerate this. It returns metadata,
-then closes its clients, stdio processes
-and HTTP sessions before resolving. It never calls a tool. All pages of the
+then closes its clients, stdio processes and HTTP sessions before resolving.
+It never calls a tool. All pages of the
 server's tool list are checked against the exact allowlist; an unavailable
 allowlisted tool is an error. An empty allowlist returns no tools from that server.
 
 Each result includes `serverId`, the original `toolName`, `source`, `name`,
 `description`, `inputSchema`, `capabilities` and `approval`. The Plico name is
 `mcp_<server>__<tool>`: the tool portion is lowercased and characters outside
-`[a-z0-9_]` become underscores. Name collisions are errors. Remote schemas are
+`[a-z0-9_]` become underscores. Normalized names longer than 64 characters are
+rejected; use a shorter server ID. Name collisions are errors. Remote schemas are
 preserved, capabilities are empty and approval metadata is required regardless
 of server annotations. Results have no handler or live client handle.
 
@@ -130,14 +133,17 @@ variables; other host secrets are not inherited. `headersEnv` values are sent on
 as headers to the configured HTTP endpoint; redirects are rejected. Missing
 variables fail before connecting to that source. Resolved credential values and
 raw server error bodies are not included in discovery errors or metadata.
+Failures retain safe spawn codes, HTTP statuses or MCP error codes when available.
 
-`timeoutMs` sets a positive deadline per source (30 seconds by default). Pass an
+`timeoutMs` sets a positive deadline per source (30 seconds by default). Sources
+are tried one after another, so this is not a deadline for the whole call. Pass an
 `AbortSignal` as `signal` to cancel discovery. Cleanup also runs on failures and
 cancellation. A source failure rejects the call instead of returning a partial
 list. Projects without configured sources return `[]`. Existing project loading,
 validation, TypeScript tool discovery and runs do not connect to MCP sources.
 HTTP session termination has its own deadline of at most one second; stdio cleanup
-uses the official client's process shutdown and kill escalation.
+uses the official client's process shutdown and kill escalation and can take a
+few extra seconds beyond the source deadline.
 
 ## Input schemas
 
