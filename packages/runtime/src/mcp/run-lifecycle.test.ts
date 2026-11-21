@@ -35,6 +35,7 @@ it("cancels a run during MCP discovery and closes its session", async () => {
     await until(() => server.requests.some((request) => request.method === "tools/list"));
     await engine.cancel("cancel-discovery");
     expect(await running).toMatchObject({ status: "cancelled" });
+    expect(await engine.status("cancel-discovery")).toMatchObject({ state: "cancelled" });
     expect(server.requests.some((request) => request.method === "DELETE")).toBe(true);
     expect(server.requests.some((request) => request.method === "tools/call")).toBe(false);
   } finally {

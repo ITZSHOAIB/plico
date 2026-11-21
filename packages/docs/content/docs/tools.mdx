@@ -176,7 +176,8 @@ extra seconds. Cancellation cannot undo work already performed by the server.
 Results enter the normal `tool.result` event and model conversation as
 `{ content, structuredContent?, isError? }`. A server's `isError` result is retained
 as untrusted tool data. Protocol failures contain safe codes instead of server
-error text or response bodies. Plico does not automatically retry a failed call;
+error text or response bodies. Known failures are journaled so resuming a later
+approval wait does not repeat a failed call. Plico does not automatically retry;
 a model may request another call, which is checked against approval policy again.
 
 Completed calls replay from the journal without reconnecting. A crash after a

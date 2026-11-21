@@ -77,7 +77,8 @@ and closes the session; it cannot undo a remote side effect already performed.
 MCP results enter the normal `tool.result` event and provider conversation as
 `{ content, structuredContent?, isError? }`. These values remain untrusted.
 Protocol failures retain only safe codes, never response bodies or credential
-values. A failed call is not automatically retried. The provider may choose to
+values. Known failures are journaled too, so resuming a later approval wait does
+not repeat a failed call. The provider may choose to
 request a new call, which goes through approval again.
 
 Recovery reuses journaled results without reconnecting. If a process crashes

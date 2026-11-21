@@ -78,7 +78,7 @@ export function createEngine({
         } catch (error) {
           if (!(error instanceof RunSuspended || error instanceof RunCancelled)) throw error;
         }
-        if (ctx.cancelled()) {
+        if (ctx.cancelled() || controller.signal.aborted) {
           await journal.setState(runId, "cancelled");
           registered.delete(runId);
           return returned ? { state: "cancelled", output: output as O } : { state: "cancelled" };

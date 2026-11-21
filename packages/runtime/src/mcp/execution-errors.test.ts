@@ -23,6 +23,31 @@ it("does not expose an HTTP cleanup body in run errors", async () => {
   }
 });
 
+it("identifies both remote sources when their normalized names collide", async () => {
+  const server = await mcpHttp([
+    [
+      { ...ticket, name: "b__x" },
+      { ...ticket, name: "x" },
+    ],
+  ]);
+  try {
+    const { root } = await project({
+      a: { transport: "streamable-http", url: server.url, tools: ["b__x"] },
+      a__b: { transport: "streamable-http", url: server.url, tools: ["x"] },
+    });
+    const result = await runProject(root, {
+      script: [{ type: "tool.call", toolName: "mcp_a__b__x", arguments: { id: "42" } }],
+    });
+    expect(result.status).toBe("failed");
+    const errors = result.events.filter((event) => event.type === "run.error");
+    expect(JSON.stringify(errors)).toContain("mcp:a/b__x");
+    expect(JSON.stringify(errors)).toContain("mcp:a__b/x");
+    expect(server.requests.some((request) => request.method === "tools/call")).toBe(false);
+  } finally {
+    await server.close();
+  }
+});
+
 it("reports a protocol code without exposing server text and never automatically retries", async () => {
   const server = await mcpHttp([[ticket]], 0, {
     modern: true,

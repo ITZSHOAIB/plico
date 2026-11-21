@@ -39,9 +39,10 @@ export async function discoverMcpTools(
       const tool = matches[0];
       if (!tool) throw new Error(`MCP server ${serverId}: ${name} is not advertised.`);
       const normalized = toMcpTool(serverId, tool);
-      if (tools.some((tool) => tool.name === normalized.name))
+      const first = tools.find((tool) => tool.name === normalized.name);
+      if (first)
         throw new Error(
-          `Duplicate MCP tool name ${normalized.name}. Rename the source or narrow its allowlist.`,
+          `Duplicate MCP tool name ${normalized.name} declared in ${first.source} and ${normalized.source}. Rename the source or narrow its allowlist.`,
         );
       tools.push(normalized);
     }
