@@ -1,5 +1,15 @@
 # @plico-ai/server
 
+## 0.5.4
+
+### Patch Changes
+
+- Updated dependencies [c5512d7]
+- Updated dependencies [5e7c30c]
+  - @plico-ai/contracts@0.5.4
+  - @plico-ai/runtime@0.5.4
+  - @plico-ai/core@0.5.4
+
 ## 0.5.3
 
 ### Patch Changes

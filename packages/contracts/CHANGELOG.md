@@ -1,5 +1,11 @@
 # @plico-ai/contracts
 
+## 0.5.4
+
+### Patch Changes
+
+- c5512d7: Add explicit MCP tool discovery for stdio and Streamable HTTP sources. Return allowlisted Plico metadata with bounded connections, credential references and cleanup, without enabling MCP execution in runs.
+
 ## 0.5.3
 
 ### Patch Changes
