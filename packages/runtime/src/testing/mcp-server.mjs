@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync } from "node:fs";
+import { appendFileSync, readFileSync, writeFileSync } from "node:fs";
 import { createInterface } from "node:readline";
 
 const fixture = JSON.parse(readFileSync("mcp-fixture.json", "utf8"));
@@ -25,6 +25,9 @@ input.on("line", (line) => {
     };
   } else if (request.method === "tools/list") {
     result = { tools: fixture.tools };
+  } else if (request.method === "tools/call") {
+    appendFileSync("mcp-calls.jsonl", `${JSON.stringify(request.params)}\n`);
+    result = { content: [{ type: "text", text: "Ticket 42" }] };
   }
   const reply = () =>
     process.stdout.write(

@@ -34,6 +34,13 @@ it("returns no MCP tools for an unconfigured project", async () => {
   expect(await discoverMcpTools(loaded)).toEqual([]);
 });
 
+it("keeps an ordinary dry run offline even with configured MCP sources", async () => {
+  const { root } = await project({
+    unavailable: { transport: "stdio", command: "plico-missing-command", tools: ["read"] },
+  });
+  expect(await runProject(root)).toMatchObject({ status: "completed" });
+});
+
 it("keeps existing TypeScript discovery and scripted runs independent of MCP connectivity", async () => {
   const { root, loaded } = await project({
     unreachable: {
