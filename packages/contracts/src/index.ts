@@ -28,7 +28,7 @@ export type {
   PlicoEventType,
 } from "./events.js";
 export type { ComposedInstructions } from "./instructions.js";
-export type { McpHttpServerConfig, McpServerConfig, McpStdioServerConfig } from "./mcp.js";
+export type { McpHttpServerConfig, McpServerConfig, McpStdioServerConfig, McpTool } from "./mcp.js";
 export type {
   AgentSchemas,
   LoadedProject,

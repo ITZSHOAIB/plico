@@ -40,9 +40,10 @@ A tool must export its definition as the file default.
 
 ## MCP configuration (in progress)
 
-The first slice of [MCP support](https://github.com/ITZSHOAIB/plico/issues/77) adds
-typed configuration and offline validation. **MCP discovery and execution are not
-implemented yet.** Configuring a server does not make its tools available to runs.
+[MCP support](https://github.com/ITZSHOAIB/plico/issues/77) includes typed
+configuration, offline validation and explicit runtime discovery. **MCP execution
+is not implemented yet.** Configuring a server does not make its tools available
+to runs. Readiness connectivity checks and Studio inspection follow in later slices.
 
 Declare sources in `plico.config.ts` with an explicit transport and tool allowlist:
 
@@ -76,7 +77,7 @@ patterns. An empty list exposes no tools. Newly advertised tools will require an
 allowlist change.
 
 For stdio, `command` names an executable; `args` is an optional string array.
-The stdio working directory will be defined in the discovery slice.
+The stdio working directory is the project root.
 `env` lists host environment variable names to pass to the server, not their values.
 For Streamable HTTP, `url` must be an absolute HTTP(S) endpoint without embedded
 credentials or a fragment. `headersEnv` maps HTTP header names to host environment
@@ -89,7 +90,7 @@ OAuth flows are deferred.
 
 `plico validate` checks these shapes without launching a server, making network
 requests or requiring environment variables to be set. It rejects unknown fields
-and fields from the wrong transport. Connectivity checks will ship with discovery.
+and fields from the wrong transport. Explicit runtime discovery checks connectivity.
 The project API returns the configured environment variable names, never values
 resolved from those variables.
 
@@ -98,6 +99,45 @@ overrides in Plico's approval config. Server annotations cannot waive approval.
 MCP results are untrusted tool output, including any instructions they contain;
 they cannot change approval policy. The runtime enforcement and adversarial eval
 will ship in subsequent slices.
+
+### Discover configured tools
+
+```ts
+import { loadProject } from "@plico-ai/core";
+import { discoverMcpTools, loadProjectEnv } from "@plico-ai/runtime";
+
+loadProjectEnv("."); // Optional: read this project's .env into the host environment.
+const tools = await discoverMcpTools(await loadProject("."), { timeoutMs: 10_000 });
+```
+
+Discovery uses the official MCP client with automatic protocol negotiation for
+both transports. For stdio, that can start a short-lived probe process before
+the discovery process; server startup must tolerate this. It returns metadata,
+then closes its clients, stdio processes
+and HTTP sessions before resolving. It never calls a tool. All pages of the
+server's tool list are checked against the exact allowlist; an unavailable
+allowlisted tool is an error. An empty allowlist returns no tools from that server.
+
+Each result includes `serverId`, the original `toolName`, `source`, `name`,
+`description`, `inputSchema`, `capabilities` and `approval`. The Plico name is
+`mcp_<server>__<tool>`: the tool portion is lowercased and characters outside
+`[a-z0-9_]` become underscores. Name collisions are errors. Remote schemas are
+preserved, capabilities are empty and approval metadata is required regardless
+of server annotations. Results have no handler or live client handle.
+
+The client passes its standard process environment plus stdio's configured `env`
+variables; other host secrets are not inherited. `headersEnv` values are sent only
+as headers to the configured HTTP endpoint; redirects are rejected. Missing
+variables fail before connecting to that source. Resolved credential values and
+raw server error bodies are not included in discovery errors or metadata.
+
+`timeoutMs` sets a positive deadline per source (30 seconds by default). Pass an
+`AbortSignal` as `signal` to cancel discovery. Cleanup also runs on failures and
+cancellation. A source failure rejects the call instead of returning a partial
+list. Projects without configured sources return `[]`. Existing project loading,
+validation, TypeScript tool discovery and runs do not connect to MCP sources.
+HTTP session termination has its own deadline of at most one second; stdio cleanup
+uses the official client's process shutdown and kill escalation.
 
 ## Input schemas
 

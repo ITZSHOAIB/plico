@@ -9,7 +9,9 @@ Core project-loading and validation helpers for Plico.
 
 MCP source configuration (`mcpServers`) supports stdio and Streamable HTTP shapes,
 explicit tool allowlists and environment variable references. Validation is offline;
-MCP discovery and execution are not implemented yet.
+Runtime MCP discovery is available through `discoverMcpTools` in
+`@plico-ai/runtime`; it is explicitly separate from loading and validation.
+MCP execution is not implemented yet.
 
 This package stays local-first and file-first. It does not know about runtime execution or provider-specific agent abstractions.
 
