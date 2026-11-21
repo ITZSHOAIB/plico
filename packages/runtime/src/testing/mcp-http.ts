@@ -2,13 +2,13 @@ import { createServer, type IncomingHttpHeaders } from "node:http";
 
 interface Request {
   method: string;
-  params?: { cursor?: string };
+  params?: { cursor?: string; clientInfo?: { version: string } };
   id?: number;
 }
 
 interface McpHttpFixture {
   url: string;
-  requests: Array<{ method: string; headers: IncomingHttpHeaders }>;
+  requests: Array<{ method: string; headers: IncomingHttpHeaders; params?: Request["params"] }>;
   close(): Promise<void>;
 }
 
@@ -16,9 +16,17 @@ interface McpHttpFixture {
 export async function mcpHttp(
   pages: unknown[][],
   delayListMs = 0,
-  fault?: { deleteError?: string; hangDelete?: boolean; redirect?: boolean; modern?: boolean },
+  fault?: {
+    deleteError?: string;
+    hangDelete?: boolean;
+    redirect?: boolean;
+    modern?: boolean;
+    httpStatus?: number;
+    errorBody?: string;
+    mcpError?: { code: number; message: string };
+  },
 ): Promise<McpHttpFixture> {
-  const requests: Array<{ method: string; headers: IncomingHttpHeaders }> = [];
+  const requests: McpHttpFixture["requests"] = [];
   const server = createServer(async (req, res) => {
     if (req.method === "DELETE") {
       requests.push({ method: "DELETE", headers: req.headers });
@@ -34,6 +42,10 @@ export async function mcpHttp(
       res.writeHead(405).end();
       return;
     }
+    if (fault?.httpStatus) {
+      res.writeHead(fault.httpStatus).end(fault.errorBody);
+      return;
+    }
     if (fault?.redirect && req.url === "/mcp") {
       res.writeHead(307, { Location: "/forward" }).end();
       return;
@@ -41,7 +53,7 @@ export async function mcpHttp(
     const chunks = [];
     for await (const chunk of req) chunks.push(chunk);
     const request = JSON.parse(Buffer.concat(chunks).toString()) as Request;
-    requests.push({ method: request.method, headers: req.headers });
+    requests.push({ method: request.method, headers: req.headers, params: request.params });
     if (request.id === undefined) {
       res.writeHead(202).end();
       return;
@@ -70,7 +82,11 @@ export async function mcpHttp(
       JSON.stringify({
         jsonrpc: "2.0",
         id: request.id,
-        ...(result ? { result } : { error: { code: -32601, message: "Unknown method" } }),
+        ...(request.method === "tools/list" && fault?.mcpError
+          ? { error: fault.mcpError }
+          : result
+            ? { result }
+            : { error: { code: -32601, message: "Unknown method" } }),
       }),
     );
   });

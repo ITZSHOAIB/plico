@@ -161,3 +161,62 @@ it("automatically negotiates modern servers without forcing the legacy handshake
     await server.close();
   }
 });
+
+it("rejects normalized names longer than 64 characters with source and shortening guidance", async () => {
+  const name = "a".repeat(55);
+  const server = await mcpHttp([[{ ...ticket, name }]]);
+  try {
+    const { loaded } = await project({
+      docs: {
+        transport: "streamable-http",
+        url: server.url,
+        tools: [name],
+      },
+    });
+    await expect(discoverMcpTools(loaded)).rejects.toThrow(
+      `MCP server docs: tool ${name} normalizes to a name longer than 64 characters. Use a shorter server ID.`,
+    );
+    expect(server.requests.at(-1)?.method).toBe("DELETE");
+  } finally {
+    await server.close();
+  }
+});
+
+it("identifies the MCP client with the runtime package version", async () => {
+  const { version } = JSON.parse(
+    await readFile(new URL("../../package.json", import.meta.url), "utf8"),
+  );
+  const server = await mcpHttp([[ticket]]);
+  try {
+    const { loaded } = await project({
+      docs: {
+        transport: "streamable-http",
+        url: server.url,
+        tools: ["get_ticket"],
+      },
+    });
+    await discoverMcpTools(loaded);
+    expect(
+      server.requests.find((r) => r.method === "initialize")?.params?.clientInfo?.version,
+    ).toBe(version);
+  } finally {
+    await server.close();
+  }
+});
+
+it("accepts normalized names at the 64-character boundary", async () => {
+  const name = "a".repeat(54);
+  const server = await mcpHttp([[{ ...ticket, name }]]);
+  try {
+    const { loaded } = await project({
+      docs: {
+        transport: "streamable-http",
+        url: server.url,
+        tools: [name],
+      },
+    });
+    expect(await discoverMcpTools(loaded)).toMatchObject([{ name: `mcp_docs__${name}` }]);
+  } finally {
+    await server.close();
+  }
+});

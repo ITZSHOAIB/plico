@@ -57,6 +57,6 @@ it("reports unavailable executables with a source-specific error", async () => {
     },
   });
   await expect(discoverMcpTools(loaded)).rejects.toThrow(
-    /MCP server unavailable.*connection or tool listing failed/,
+    /MCP server unavailable.*connection or tool listing failed.*ENOENT/,
   );
 });
