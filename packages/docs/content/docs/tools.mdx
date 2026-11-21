@@ -41,9 +41,9 @@ A tool must export its definition as the file default.
 ## MCP configuration (in progress)
 
 [MCP support](https://github.com/ITZSHOAIB/plico/issues/77) includes typed
-configuration, offline validation and explicit runtime discovery. **MCP execution
-is not implemented yet.** Configuring a server does not make its tools available
-to runs. Readiness connectivity checks and Studio inspection follow in later slices.
+configuration, offline validation, explicit runtime discovery and tool execution
+through the run loop. Readiness connectivity checks and dedicated Studio
+inspection follow in the next slice.
 
 Declare sources in `plico.config.ts` with an explicit transport and tool allowlist:
 
@@ -94,13 +94,13 @@ and fields from the wrong transport. Explicit runtime discovery checks connectiv
 The project API returns the configured environment variable names, never values
 resolved from those variables.
 
-The execution slice will require approval for MCP tools by default, with explicit
-overrides in Plico's approval config. Server annotations cannot waive approval.
+MCP calls require approval by default. Only an explicit per-tool override in
+Plico's approval config can waive that default. A global default of `"none"` and
+server annotations cannot waive MCP approval.
 MCP results, server tool descriptions and input schemas are untrusted content,
 including any instructions they contain; they cannot change approval policy.
 Discovery preserves descriptions and schemas as metadata, not as permissions.
-The runtime enforcement and adversarial eval
-will ship in subsequent slices.
+The adversarial eval follows in the final slice of this epic.
 
 ### Discover configured tools
 
@@ -140,10 +140,56 @@ are tried one after another, so this is not a deadline for the whole call. Pass 
 `AbortSignal` as `signal` to cancel discovery. Cleanup also runs on failures and
 cancellation. A source failure rejects the call instead of returning a partial
 list. Projects without configured sources return `[]`. Existing project loading,
-validation, TypeScript tool discovery and runs do not connect to MCP sources.
+validation and TypeScript tool discovery remain offline. Ordinary dry runs and
+mocked scripts also remain offline.
 HTTP session termination has its own deadline of at most one second; stdio cleanup
 uses the official client's process shutdown and kill escalation and can take a
 few extra seconds beyond the source deadline.
+
+### Execute configured tools
+
+Provider-backed runs discover allowlisted MCP tools and combine them with the
+project's TypeScript tools. Live scripted calls discover the sources they use.
+`mcp_` is allowed in TypeScript tool names; an actual normalized-name collision
+fails with both sources identified.
+
+Arguments are validated against the remote input schema before approval or
+execution. To waive approval for a specific read tool, use its normalized name:
+
+```ts
+approvals: {
+  tools: { mcp_tickets__get_ticket: "none" },
+},
+```
+
+Unlike a TypeScript tool's explicit requirement, MCP's default approval gate may
+be waived by that per-tool override. Use narrow server allowlists and grant only
+the credentials each server needs.
+
+Discovery connections close before a run waits for approval. An approved call
+opens a new connection, checks the tool description and input schema against the
+recorded metadata, then calls the original server tool name. The connect/list/call
+sequence shares a 30-second deadline. Sessions and stdio processes close after
+each call, including failures and cancellation; stdio shutdown can take a few
+extra seconds. Cancellation cannot undo work already performed by the server.
+
+Results enter the normal `tool.result` event and model conversation as
+`{ content, structuredContent?, isError? }`. A server's `isError` result is retained
+as untrusted tool data. Protocol failures contain safe codes instead of server
+error text or response bodies. Plico does not automatically retry a failed call;
+a model may request another call, which is checked against approval policy again.
+
+Completed calls replay from the journal without reconnecting. A crash after a
+remote side effect but before its result is journaled repeats that call during
+recovery: delivery is **at least once**, so use idempotent operations or server-side
+deduplication. Changes to MCP source config or approval policy fail recovery
+before making another call. Changed remote descriptions or input schemas also
+fail the pending call before execution.
+
+For offline scripted evals, `mockTools: true` uses each step's supplied `result`
+without connecting or resolving credentials; `live: true` opts that step into
+execution. Offline mocks check the allowlist and approval policy, but do not
+validate against a remote input schema.
 
 ## Input schemas
 
