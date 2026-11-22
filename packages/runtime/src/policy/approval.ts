@@ -20,7 +20,7 @@ export function decideApproval(
     decision = "none";
   }
   // MCP's default gate may be waived explicitly; TypeScript declarations remain mandatory.
-  if (tool.approval.required && decision === "none" && !tool.source.startsWith("mcp:")) {
+  if (tool.approval.required && decision === "none" && !tool.mcp) {
     decision = "required";
   }
   return tool.approval.reason

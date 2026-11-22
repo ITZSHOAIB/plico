@@ -68,17 +68,26 @@ it("replays a journaled MCP result without reconnecting to the server", {
   ).toHaveLength(2);
 });
 
-it("repeats a remote side effect after a crash before its result is journaled", {
-  timeout: 30_000,
-}, async () => {
-  const fault = { hangCall: true };
-  const server = await mcpHttp([[ticket]], 0, fault);
-  const { root } = await project({
-    desk: { transport: "streamable-http", url: server.url, tools: ["get_ticket"] },
-  });
-  const databasePath = join(root, "state.sqlite");
-  const moduleUrl = pathToFileURL(join(process.cwd(), "packages/runtime/src/index.ts")).href;
-  const program = `
+it.each([
+  { replay: false, state: "failed", calls: 1 },
+  { replay: true, state: "completed", calls: 2 },
+])(
+  "recovers an interrupted call with replayOnCrash=$replay",
+  { timeout: 30_000 },
+  async ({ replay, state, calls }) => {
+    const fault = { hangCall: true };
+    const server = await mcpHttp([[ticket]], 0, fault);
+    const { root } = await project({
+      desk: {
+        transport: "streamable-http",
+        url: server.url,
+        tools: ["get_ticket"],
+        ...(replay ? { replayOnCrash: ["get_ticket"] } : {}),
+      },
+    });
+    const databasePath = join(root, "state.sqlite");
+    const moduleUrl = pathToFileURL(join(process.cwd(), "packages/runtime/src/index.ts")).href;
+    const program = `
     import { createSqliteEngine, createSqliteEventStore, runProject } from ${JSON.stringify(moduleUrl)};
     const [root, databasePath] = process.argv.slice(1);
     await runProject(root, { runId: "pending", engine: createSqliteEngine({ databasePath }),
@@ -86,36 +95,38 @@ it("repeats a remote side effect after a crash before its result is journaled", 
         { type: "tool.call", toolName: "mcp_desk__get_ticket", arguments: { id: "42" } },
         { type: "approval.decide", approved: true },
       ] });`;
-  const child = execFile(process.execPath, [
-    "--import",
-    "tsx",
-    "--input-type=module",
-    "-e",
-    program,
-    root,
-    databasePath,
-  ]);
-  const exited = new Promise<void>((resolve) => child.once("exit", () => resolve()));
-  try {
-    for (let attempt = 0; attempt < 1000; attempt++) {
-      if (server.requests.some((request) => request.method === "tools/call")) break;
-      await new Promise((resolve) => setTimeout(resolve, 10));
+    const child = execFile(process.execPath, [
+      "--import",
+      "tsx",
+      "--input-type=module",
+      "-e",
+      program,
+      root,
+      databasePath,
+    ]);
+    const exited = new Promise<void>((resolve) => child.once("exit", () => resolve()));
+    try {
+      for (let attempt = 0; attempt < 1000; attempt++) {
+        if (server.requests.some((request) => request.method === "tools/call")) break;
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      }
+      expect(server.requests.filter((request) => request.method === "tools/call")).toHaveLength(1);
+      child.kill("SIGKILL");
+      await exited;
+      fault.hangCall = false;
+      const store = createSqliteEventStore({ databasePath });
+      expect(
+        await recoverRuns({ engine: createSqliteEngine({ databasePath }), eventStore: store }),
+      ).toEqual([{ runId: "pending", state }]);
+      expect(server.requests.filter((request) => request.method === "tools/call")).toHaveLength(
+        calls,
+      );
+      if (!replay)
+        expect(JSON.stringify(await store.getEvents("pending"))).toContain("outcome is unknown");
+    } finally {
+      child.kill("SIGKILL");
+      await exited;
+      await server.close();
     }
-    expect(server.requests.filter((request) => request.method === "tools/call")).toHaveLength(1);
-    child.kill("SIGKILL");
-    await exited;
-    fault.hangCall = false;
-    const store = createSqliteEventStore({ databasePath });
-    expect(
-      await recoverRuns({ engine: createSqliteEngine({ databasePath }), eventStore: store }),
-    ).toEqual([{ runId: "pending", state: "completed" }]);
-    expect(server.requests.filter((request) => request.method === "tools/call")).toHaveLength(2);
-    expect(
-      (await store.getEvents("pending")).filter((event) => event.type === "tool.result"),
-    ).toHaveLength(1);
-  } finally {
-    child.kill("SIGKILL");
-    await exited;
-    await server.close();
-  }
-});
+  },
+);

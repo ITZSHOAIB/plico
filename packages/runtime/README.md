@@ -55,6 +55,11 @@ without MCP sources return an empty list. `loadProject`, `validateProject`,
 and `discoverTools` remain offline. Ordinary dry runs and mocked scripts also
 remain offline.
 
+Provider runs discover sources in parallel. An unavailable source is omitted and
+recorded in a `run.warning` event with a safe reason; other sources remain usable.
+Explicit `discoverMcpTools` remains strict and sequential. Live scripts fail if a
+source they explicitly call cannot be discovered.
+
 ## Execute MCP tools
 
 Provider-backed `runProject` calls discover the configured allowlists and combine
@@ -70,8 +75,10 @@ approvals: { tools: { mcp_tickets__get_ticket: "none" } }
 
 Connections close before a run waits for approval. An approved call reconnects,
 checks that its description and input schema still match, and calls the original
-server tool name. Each call's connect/list/call sequence shares a 30-second
-deadline, followed by bounded cleanup. Cancelling a run aborts pending requests
+server tool name. Every call opens a new connection and, for stdio, a new process.
+Servers that require client session state across calls are unsupported in this slice.
+Each call's connect/list/call sequence shares the server's `callTimeoutMs` deadline
+(30 seconds by default), followed by bounded cleanup. Cancelling a run aborts pending requests
 and closes the session; it cannot undo a remote side effect already performed.
 
 MCP results enter the normal `tool.result` event and provider conversation as
@@ -82,10 +89,14 @@ not repeat a failed call. The provider may choose to
 request a new call, which goes through approval again.
 
 Recovery reuses journaled results without reconnecting. If a process crashes
-after the server performs a side effect but before Plico journals the result,
-the pending call runs again: MCP execution is **at least once**. Use server-side
-deduplication or idempotent operations for side effects. A changed MCP source
-configuration or approval policy fails recovery before another remote call.
+after recording its intent to call but before journaling the result, the pending
+call fails by default with an unknown-outcome diagnostic and makes no second
+remote call. Inspect the server before deciding whether to start another call.
+To permit crash replay for a specific tool, configure the server's
+`replayOnCrash: ["get_ticket"]` before starting the run. Names must come from its
+exact tool allowlist. This opt-in provides **at-least-once** delivery, so use
+server-side deduplication or idempotent operations. Changed MCP source config or
+approval policy fails recovery before another call; key order alone is ignored.
 
 Scripts with `mockTools: true` use their supplied results without connecting or
 resolving credentials, unless a step has `live: true`. Offline MCP mocks check

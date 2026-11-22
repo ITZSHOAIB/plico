@@ -1,4 +1,5 @@
 import type { ArtifactContent } from "./artifacts.js";
+import type { McpTool } from "./mcp.js";
 import type { ValidationIssue } from "./project.js";
 import type { JsonSchema } from "./tools.js";
 
@@ -42,8 +43,9 @@ export interface PlicoEventPayloads {
       inputSchema: unknown;
       capabilities: string[];
       approval: { required: boolean; reason?: string };
+      mcp?: Pick<McpTool, "serverId" | "toolName">;
     }>;
-    /** Hash of the TypeScript files in `tools/`, so a resumed run can tell the tool code changed. */
+    /** Hash of tool files, MCP source configuration and approval policy for safe recovery. */
     fingerprint?: string;
   };
   "input.received": { content: string };
@@ -98,6 +100,7 @@ export interface PlicoEventPayloads {
   "run.waiting": { requestId: string; toolName: string; output?: string };
   "run.failed": { phase: string };
   "run.cancelled": Record<string, never>;
+  "run.warning": { phase: string; message: string; serverId?: string };
   "run.error": { phase: string; message?: string; issues?: ValidationIssue[]; toolName?: string };
 }
 

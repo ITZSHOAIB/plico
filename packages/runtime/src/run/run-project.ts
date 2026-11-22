@@ -134,7 +134,7 @@ export async function runLoop(
         project,
         ctx.signal,
         input.script ?? (options.provider ? undefined : []),
-        events.all(),
+        events,
         input.mockTools,
       ),
       options.mockToolResult,

@@ -60,6 +60,7 @@ export default defineConfig({
       args: ["./integrations/tickets.mjs"],
       env: ["TICKETS_TOKEN"],
       tools: ["get_ticket"],
+      callTimeoutMs: 10_000,
     },
     docs: {
       transport: "streamable-http",
@@ -87,6 +88,11 @@ For example, `DOCS_AUTHORIZATION` will hold the complete
 `Bearer …` value. Environment values will be resolved when connecting, not during
 project loading. Keep credentials out of URLs, arguments and config literals.
 OAuth flows are deferred.
+
+`callTimeoutMs` is an optional positive 32-bit integer (default `30_000`) for the
+entire execution connect/list/call sequence. It does not change explicit discovery's
+separate `timeoutMs` option. `replayOnCrash` optionally lists exact allowlisted tool
+names whose interrupted calls may be repeated during recovery; it defaults to `[]`.
 
 `plico validate` checks these shapes without launching a server, making network
 requests or requiring environment variables to be set. It rejects unknown fields
@@ -150,6 +156,10 @@ few extra seconds beyond the source deadline.
 
 Provider-backed runs discover allowlisted MCP tools and combine them with the
 project's TypeScript tools. Live scripted calls discover the sources they use.
+Provider discovery runs sources in parallel and skips unavailable servers,
+recording a `run.warning` event with the server ID and safe failure reason.
+Healthy sources remain available to the conversation. Explicit discovery remains
+strict and sequential; scripts fail if a source they explicitly call is unavailable.
 `mcp_` is allowed in TypeScript tool names; an actual normalized-name collision
 fails with both sources identified.
 
@@ -167,9 +177,11 @@ be waived by that per-tool override. Use narrow server allowlists and grant only
 the credentials each server needs.
 
 Discovery connections close before a run waits for approval. An approved call
-opens a new connection, checks the tool description and input schema against the
-recorded metadata, then calls the original server tool name. The connect/list/call
-sequence shares a 30-second deadline. Sessions and stdio processes close after
+opens a new connection (a new process for stdio), checks the tool description and
+input schema against the recorded metadata, then calls the original server tool
+name. Servers that require client session state across calls are unsupported in
+this slice. The connect/list/call sequence shares the server's `callTimeoutMs`
+deadline, defaulting to 30 seconds. Sessions and stdio processes close after
 each call, including failures and cancellation; stdio shutdown can take a few
 extra seconds. Cancellation cannot undo work already performed by the server.
 
@@ -181,10 +193,14 @@ approval wait does not repeat a failed call. Plico does not automatically retry;
 a model may request another call, which is checked against approval policy again.
 
 Completed calls replay from the journal without reconnecting. A crash after a
-remote side effect but before its result is journaled repeats that call during
-recovery: delivery is **at least once**, so use idempotent operations or server-side
-deduplication. Changes to MCP source config or approval policy fail recovery
-before making another call. Changed remote descriptions or input schemas also
+call's intent is recorded but before its outcome is journaled fails the pending
+call by default with an unknown-outcome diagnostic. It makes no second remote
+call; inspect the server before starting another call. Configure a server's
+`replayOnCrash: ["get_ticket"]` before starting a run to opt that specific tool into
+crash replay. This opt-in provides **at-least-once** delivery and requires idempotent
+operations or server-side deduplication. Changes to MCP source config or approval
+policy fail recovery before another call; reordering keys alone does not.
+Changed remote descriptions or input schemas also
 fail the pending call before execution.
 
 For offline scripted evals, `mockTools: true` uses each step's supplied `result`

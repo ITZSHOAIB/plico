@@ -19,18 +19,15 @@ export async function recordTools(
   const legacy =
     recorded?.type === "tools.discovered" && recorded.payload.fingerprint === undefined;
   const localFingerprint = await fingerprintTools(root);
-  const fingerprint =
-    Object.keys(config?.mcpServers ?? {}).length > 0
-      ? createHash("sha256")
-          .update(localFingerprint)
-          .update(
-            JSON.stringify({
-              sources: config?.mcpServers,
-              approvals: config?.approvals,
-            }),
-          )
-          .digest("hex")
-      : localFingerprint;
+  const fingerprint = createHash("sha256")
+    .update(localFingerprint)
+    .update(
+      stableJson({
+        sources: config?.mcpServers,
+        approvals: config?.approvals,
+      }),
+    )
+    .digest("hex");
   await events.append("tools.discovered", {
     tools: tools.map((tool) => ({
       source: tool.source,
@@ -39,7 +36,16 @@ export async function recordTools(
       inputSchema: tool.inputSchema,
       capabilities: tool.capabilities,
       approval: tool.approval,
+      ...(tool.mcp ? { mcp: { serverId: tool.mcp.serverId, toolName: tool.mcp.toolName } } : {}),
     })),
     ...(legacy ? {} : { fingerprint }),
   });
+}
+
+function stableJson(value: unknown): string {
+  return JSON.stringify(value, (_key, value: unknown) =>
+    value !== null && typeof value === "object" && !Array.isArray(value)
+      ? Object.fromEntries(Object.entries(value).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)))
+      : value,
+  );
 }

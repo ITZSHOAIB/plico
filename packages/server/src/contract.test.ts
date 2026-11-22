@@ -3,6 +3,7 @@ import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import type { PlicoEventPayloads } from "@plico-ai/contracts";
 import {
   createSqliteEngine,
   createSqliteEventStore,
@@ -384,7 +385,7 @@ it("keeps the /v1 response shapes stable", async () => {
   ).json()) as unknown;
 
   // MCP configuration is additive to GET /v1/project. Exercise it without changing the
-  // runtime fixtures: discovery and transport execution belong to the next epic slices.
+  // runtime fixtures: connectivity and execution are covered through the runtime APIs.
   const configPath = join(root, "plico.config.ts");
   const originalConfig = await readFile(configPath, "utf8");
   let mcpProject: Shape;
@@ -401,6 +402,8 @@ it("keeps the /v1 response shapes stable", async () => {
             args: ["server.mjs"],
             env: ["MCP_TOKEN"],
             tools: ["lookup"],
+            callTimeoutMs: 4500,
+            replayOnCrash: ["lookup"],
           },
           remote: {
             transport: "streamable-http",
@@ -417,6 +420,15 @@ it("keeps the /v1 response shapes stable", async () => {
   }
 
   const shapes = {
+    "MCP tools.discovered identity": shapeOf({
+      serverId: "local",
+      toolName: "lookup",
+    } satisfies NonNullable<PlicoEventPayloads["tools.discovered"]["tools"][number]["mcp"]>),
+    "run.warning payload": shapeOf({
+      phase: "mcp.discovery",
+      serverId: "local",
+      message: "Safe failure reason",
+    } satisfies PlicoEventPayloads["run.warning"]),
     "GET /v1/project (MCP configuration)": mcpProject,
     // Legacy rows predate receipts and omit contentHash/version; the runtime replays them with derived values.
     "Legacy artifact.file.written payload": shapeOf({

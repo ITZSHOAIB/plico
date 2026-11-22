@@ -18,7 +18,7 @@ export async function callMcpTool(
       source,
       operation: `tool ${tool.toolName}`,
       signal,
-      timeoutMs: 30_000,
+      timeoutMs: source.callTimeoutMs ?? 30_000,
     },
     async (client, request) => {
       const listed = await client.listTools(undefined, request);
@@ -27,7 +27,7 @@ export async function callMcpTool(
       if (
         matches.length !== 1 ||
         !definition ||
-        !isDeepStrictEqual(toMcpTool(tool.serverId, definition), tool)
+        !isDeepStrictEqual(comparable(toMcpTool(tool.serverId, definition)), comparable(tool))
       )
         throw new McpSessionError(
           `MCP server ${tool.serverId}: tool ${tool.toolName} changed since discovery.`,
@@ -49,4 +49,8 @@ export async function callMcpTool(
       };
     },
   );
+}
+
+function comparable(tool: McpTool): Pick<McpTool, "name" | "description" | "inputSchema"> {
+  return { name: tool.name, description: tool.description, inputSchema: tool.inputSchema };
 }

@@ -17,6 +17,12 @@ export function declareMcpTool(project: LoadedProject, tool: McpTool): DeclaredT
       : { success: false, error: "Arguments do not match the MCP input schema." };
   return {
     ...tool,
+    mcp: {
+      serverId: tool.serverId,
+      toolName: tool.toolName,
+      replayOnCrash:
+        project.config.mcpServers?.[tool.serverId]?.replayOnCrash?.includes(tool.toolName) === true,
+    },
     parseInput,
     async validateInput(input) {
       const result = await parseInput(input);

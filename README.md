@@ -122,6 +122,7 @@ configuration with explicit tool allowlists and environment variable references.
 `plico validate` checks it offline. The runtime's `discoverMcpTools(project)` connects
 and returns allowlisted tool metadata, then closes its connections. Runs execute
 allowlisted MCP tools through approval policy, cancellation and durable recovery.
+Unknown outcomes after a crash fail by default; exact tools can opt into replay.
 MCP readiness connectivity and dedicated Studio inspection follow in the next slice;
 see [MCP configuration](https://plico.sohab.dev/docs/tools#mcp-configuration-in-progress).
 

@@ -53,9 +53,20 @@ export async function runToolStep(
     },
   };
 
+  let startedHere = false;
+  if (tool.mcp) {
+    await ctx.step(`mcp-start:${stepName}`, async () => {
+      startedHere = true;
+      return null;
+    });
+  }
   const recorded = await ctx.step(stepName, async ({ signal }): Promise<RecordedToolStep> => {
     let result: unknown;
     try {
+      if (tool.mcp && !startedHere && !tool.mcp.replayOnCrash)
+        throw new Error(
+          `MCP tool ${tool.name}: outcome is unknown after interruption; crash replay is disabled. Inspect the server before starting a new call.`,
+        );
       result = await tool.handler(input, {
         signal,
         idempotencyKey,
@@ -63,7 +74,7 @@ export async function runToolStep(
         ...(context === undefined ? {} : { context }),
       });
     } catch (error) {
-      if (!tool.source.startsWith("mcp:") || signal.aborted) throw error;
+      if (!tool.mcp || signal.aborted) throw error;
       // A later approval wait must replay this known failure, not repeat the remote call.
       return {
         failure: { message: error instanceof Error ? error.message : "MCP tool call failed." },

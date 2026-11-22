@@ -43,6 +43,35 @@ it("cancels a run during MCP discovery and closes its session", async () => {
   }
 });
 
+it("records explicit MCP identity and uses it when an approved call resumes", async () => {
+  const server = await mcpHttp([[ticket]]);
+  try {
+    const { root } = await project({
+      desk: { transport: "streamable-http", url: server.url, tools: ["get_ticket"] },
+    });
+    const databasePath = join(root, "state.sqlite");
+    const eventStore = createSqliteEventStore({ databasePath });
+    const waiting = await runProject(root, {
+      runId: "identity",
+      eventStore,
+      engine: createSqliteEngine({ databasePath }),
+      script: [{ type: "tool.call", toolName: "mcp_desk__get_ticket", arguments: { id: "42" } }],
+    });
+    const discovered = waiting.events.find((event) => event.type === "tools.discovered");
+    expect(discovered?.payload).toMatchObject({
+      tools: [{ mcp: { serverId: "desk", toolName: "get_ticket" } }],
+    });
+    const engine = createSqliteEngine({ databasePath });
+    await engine.signal("identity", "approval:identity:0", { approved: true });
+    expect(await recoverRuns({ engine, eventStore })).toEqual([
+      { runId: "identity", state: "completed" },
+    ]);
+    expect(server.requests.filter((request) => request.method === "tools/call")).toHaveLength(1);
+  } finally {
+    await server.close();
+  }
+});
+
 it("aborts an in-flight MCP call and closes the session on cancellation", async () => {
   const server = await mcpHttp([[ticket]], 0, { hangCall: true });
   try {

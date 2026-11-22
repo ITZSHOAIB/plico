@@ -1,4 +1,4 @@
-import type { JsonSchema, ToolDefinition } from "@plico-ai/contracts";
+import type { JsonSchema, McpTool, ToolDefinition } from "@plico-ai/contracts";
 
 export type {
   JsonSchema,
@@ -19,6 +19,7 @@ export type ToolInputParseResult =
 
 export interface DeclaredTool extends Omit<ToolDefinition, "inputSchema"> {
   source: string;
+  mcp?: Pick<McpTool, "serverId" | "toolName"> & { replayOnCrash?: boolean };
   inputSchema: JsonSchema;
   validateInput(input: unknown): Promise<string | undefined>;
   parseInput(input: unknown): Promise<ToolInputParseResult>;

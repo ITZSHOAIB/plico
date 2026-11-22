@@ -33,6 +33,7 @@ export async function mcpHttp(
     callResult?: unknown;
     hangCall?: boolean;
     callError?: { code: number; message: string };
+    beforeList?: () => Promise<void>;
   },
 ): Promise<McpHttpFixture> {
   const requests: McpHttpFixture["requests"] = [];
@@ -86,6 +87,7 @@ export async function mcpHttp(
       if (fault?.hangCall) return;
       result = fault?.callResult ?? { content: [{ type: "text", text: "Ticket 42" }] };
     } else if (request.method === "tools/list") {
+      await fault?.beforeList?.();
       if (delayListMs) await new Promise((resolve) => setTimeout(resolve, delayListMs));
       const page = Number(request.params?.cursor ?? 0);
       result = {
