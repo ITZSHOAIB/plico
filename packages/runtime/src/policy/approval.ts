@@ -19,8 +19,8 @@ export function decideApproval(
   } else {
     decision = "none";
   }
-  // Config can escalate but never silently drop a tool-declared requirement.
-  if (tool.approval.required && decision === "none") {
+  // MCP's default gate may be waived explicitly; TypeScript declarations remain mandatory.
+  if (tool.approval.required && decision === "none" && !tool.mcp) {
     decision = "required";
   }
   return tool.approval.reason

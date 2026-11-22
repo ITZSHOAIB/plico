@@ -1,4 +1,13 @@
 {
+  "MCP tools.discovered identity": {
+    "serverId": "string",
+    "toolName": "string"
+  },
+  "run.warning payload": {
+    "message": "string",
+    "phase": "string",
+    "serverId": "string"
+  },
   "GET /v1/project (MCP configuration)": {
     "project": {
       "config": {
@@ -10,8 +19,12 @@
             "args": [
               "string"
             ],
+            "callTimeoutMs": "number",
             "command": "string",
             "env": [
+              "string"
+            ],
+            "replayOnCrash": [
               "string"
             ],
             "tools": [
