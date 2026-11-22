@@ -204,7 +204,7 @@ Changed remote descriptions or input schemas also
 fail the pending call before execution.
 
 The stricter recovery fingerprint also pins approvals for TypeScript-only projects.
-Waiting runs saved with older tool-only fingerprints fail recovery after upgrading,
+Waiting runs saved with tool-only fingerprints or no fingerprint fail recovery after upgrading,
 even if the project is unchanged. Finish those waits before upgrading or restart
 them afterward.
 

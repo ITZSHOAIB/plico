@@ -98,7 +98,7 @@ exact tool allowlist. This opt-in provides **at-least-once** delivery, so use
 server-side deduplication or idempotent operations. Changed MCP source config or
 approval policy fails recovery before another call; key order alone is ignored.
 
-Upgrade note: older waiting runs with saved tool-only fingerprints fail recovery
+Upgrade note: older waiting runs with tool-only fingerprints or no fingerprint fail recovery
 under the stricter policy fingerprint, even for unchanged TypeScript-only projects.
 Finish those waits before upgrading or restart them afterward.
 

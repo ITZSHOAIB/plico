@@ -6,8 +6,8 @@ import { fingerprintTools } from "./tool-fingerprint.js";
 
 /**
  * Records the tools a run discovered with a hash of the tool code. A resumed run compares both, so
- * a changed handler fails the run before the tool runs. Runs recorded without a hash are compared
- * on their declarations only.
+ * a changed handler or policy fails the run before a tool runs. Older records without the
+ * composite fingerprint fail conservatively because their original policy cannot be verified.
  */
 export async function recordTools(
   root: string,
@@ -15,9 +15,6 @@ export async function recordTools(
   events: InMemoryEventLog,
   config?: ProjectConfig,
 ): Promise<void> {
-  const recorded = events.all().find((event) => event.type === "tools.discovered");
-  const legacy =
-    recorded?.type === "tools.discovered" && recorded.payload.fingerprint === undefined;
   const localFingerprint = await fingerprintTools(root);
   const fingerprint = createHash("sha256")
     .update(localFingerprint)
@@ -38,7 +35,7 @@ export async function recordTools(
       approval: tool.approval,
       ...(tool.mcp ? { mcp: { serverId: tool.mcp.serverId, toolName: tool.mcp.toolName } } : {}),
     })),
-    ...(legacy ? {} : { fingerprint }),
+    fingerprint,
   });
 }
 
