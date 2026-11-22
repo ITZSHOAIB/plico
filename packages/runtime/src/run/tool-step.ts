@@ -10,6 +10,7 @@ import {
 
 interface RecordedToolStep {
   result?: unknown;
+  failure?: { message: string };
   writes: StagedArtifactWrite[];
   createWorkspace: boolean;
   workspaceId: string;
@@ -52,13 +53,36 @@ export async function runToolStep(
     },
   };
 
-  const recorded = await ctx.step(stepName, async ({ signal }): Promise<RecordedToolStep> => {
-    const result = await tool.handler(input, {
-      signal,
-      idempotencyKey,
-      artifacts,
-      ...(context === undefined ? {} : { context }),
+  let startedHere = false;
+  if (tool.mcp) {
+    await ctx.step(`mcp-start:${stepName}`, async () => {
+      startedHere = true;
+      return null;
     });
+  }
+  const recorded = await ctx.step(stepName, async ({ signal }): Promise<RecordedToolStep> => {
+    let result: unknown;
+    try {
+      if (tool.mcp && !startedHere && !tool.mcp.replayOnCrash)
+        throw new Error(
+          `MCP tool ${tool.name}: outcome is unknown after interruption; crash replay is disabled. Inspect the server before starting a new call.`,
+        );
+      result = await tool.handler(input, {
+        signal,
+        idempotencyKey,
+        artifacts,
+        ...(context === undefined ? {} : { context }),
+      });
+    } catch (error) {
+      if (!tool.mcp || signal.aborted) throw error;
+      // A later approval wait must replay this known failure, not repeat the remote call.
+      return {
+        failure: { message: error instanceof Error ? error.message : "MCP tool call failed." },
+        writes: [],
+        createWorkspace: false,
+        workspaceId,
+      };
+    }
     return {
       result: normalizeToolResult(result),
       writes: staged?.writes() ?? [],
@@ -67,6 +91,7 @@ export async function runToolStep(
     };
   });
 
+  if (recorded.failure) throw new Error(recorded.failure.message);
   await events.append("tool.result", { toolName: tool.name, result: recorded.result });
   if (recorded.createWorkspace) {
     await events.append("artifact.workspace.created", { workspaceId: recorded.workspaceId });

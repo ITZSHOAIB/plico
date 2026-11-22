@@ -50,8 +50,27 @@ export function validateMcpConfig(value: unknown, configFile: string): Validatio
       continue;
     }
     for (const key of Object.keys(server))
-      if (!keys.includes(key))
+      if (!keys.includes(key) && key !== "replayOnCrash" && key !== "callTimeoutMs")
         issue(`${field}.${key}`, `to be a supported ${server.transport} field`);
+    const allowlist = server.tools;
+    if (
+      Object.hasOwn(server, "replayOnCrash") &&
+      (!validTools(server.replayOnCrash) ||
+        !validTools(allowlist) ||
+        !server.replayOnCrash.every((name) => allowlist.includes(name)))
+    )
+      issue(
+        `${field}.replayOnCrash`,
+        "to contain unique exact tool names from this server's tools allowlist",
+      );
+    if (
+      Object.hasOwn(server, "callTimeoutMs") &&
+      (typeof server.callTimeoutMs !== "number" ||
+        !Number.isSafeInteger(server.callTimeoutMs) ||
+        server.callTimeoutMs <= 0 ||
+        server.callTimeoutMs > 2_147_483_647)
+    )
+      issue(`${field}.callTimeoutMs`, "to be a positive 32-bit integer");
   }
   return issues;
 }
@@ -108,7 +127,7 @@ function endpoint(value: unknown): boolean {
   }
 }
 
-function validTools(value: unknown): boolean {
+function validTools(value: unknown): value is string[] {
   return (
     Array.isArray(value) &&
     value.every(
@@ -137,6 +156,10 @@ export function normalizeMcpConfig(
             transport: server.transport,
             command: server.command,
             tools: [...server.tools],
+            ...(server.callTimeoutMs !== undefined ? { callTimeoutMs: server.callTimeoutMs } : {}),
+            ...(server.replayOnCrash !== undefined
+              ? { replayOnCrash: [...server.replayOnCrash] }
+              : {}),
             ...(server.args !== undefined ? { args: [...server.args] } : {}),
             ...(server.env !== undefined ? { env: [...server.env] } : {}),
           }
@@ -144,6 +167,10 @@ export function normalizeMcpConfig(
             transport: server.transport,
             url: server.url,
             tools: [...server.tools],
+            ...(server.callTimeoutMs !== undefined ? { callTimeoutMs: server.callTimeoutMs } : {}),
+            ...(server.replayOnCrash !== undefined
+              ? { replayOnCrash: [...server.replayOnCrash] }
+              : {}),
             ...(server.headersEnv !== undefined ? { headersEnv: { ...server.headersEnv } } : {}),
           },
     ]),

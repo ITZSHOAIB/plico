@@ -3,7 +3,14 @@ import type { JsonSchema, ToolDefinition } from "./tools.js";
 /** A tool source. `tools` contains exact server tool names, never wildcard patterns. */
 export type McpServerConfig = McpStdioServerConfig | McpHttpServerConfig;
 
-export interface McpStdioServerConfig {
+interface McpExecutionConfig {
+  /** Deadline for a call's complete connect/list/call sequence; defaults to 30 seconds. */
+  callTimeoutMs?: number;
+  /** Exact allowlisted tool names whose interrupted calls may be repeated after a crash. */
+  replayOnCrash?: string[];
+}
+
+export interface McpStdioServerConfig extends McpExecutionConfig {
   transport: "stdio";
   command: string;
   args?: string[];
@@ -12,7 +19,7 @@ export interface McpStdioServerConfig {
   tools: string[];
 }
 
-export interface McpHttpServerConfig {
+export interface McpHttpServerConfig extends McpExecutionConfig {
   transport: "streamable-http";
   url: string;
   /** Header name -> host environment variable containing the complete header value. */

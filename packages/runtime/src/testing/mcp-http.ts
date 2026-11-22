@@ -2,7 +2,12 @@ import { createServer, type IncomingHttpHeaders } from "node:http";
 
 interface Request {
   method: string;
-  params?: { cursor?: string; clientInfo?: { version: string } };
+  params?: {
+    cursor?: string;
+    clientInfo?: { version: string };
+    name?: string;
+    arguments?: unknown;
+  };
   id?: number;
 }
 
@@ -18,12 +23,17 @@ export async function mcpHttp(
   delayListMs = 0,
   fault?: {
     deleteError?: string;
+    deleteAfterCallError?: string;
     hangDelete?: boolean;
     redirect?: boolean;
     modern?: boolean;
     httpStatus?: number;
     errorBody?: string;
     mcpError?: { code: number; message: string };
+    callResult?: unknown;
+    hangCall?: boolean;
+    callError?: { code: number; message: string };
+    beforeList?: () => Promise<void>;
   },
 ): Promise<McpHttpFixture> {
   const requests: McpHttpFixture["requests"] = [];
@@ -31,8 +41,13 @@ export async function mcpHttp(
     if (req.method === "DELETE") {
       requests.push({ method: "DELETE", headers: req.headers });
       if (fault?.hangDelete) return;
-      if (fault?.deleteError) {
-        res.writeHead(500).end(fault.deleteError);
+      const deleteError =
+        fault?.deleteError ??
+        (requests.some((request) => request.method === "tools/call")
+          ? fault?.deleteAfterCallError
+          : undefined);
+      if (deleteError) {
+        res.writeHead(500).end(deleteError);
         return;
       }
       res.writeHead(200).end();
@@ -68,7 +83,11 @@ export async function mcpHttp(
         capabilities: { tools: {} },
         serverInfo: { name: "local-http", version: "1" },
       };
+    } else if (request.method === "tools/call") {
+      if (fault?.hangCall) return;
+      result = fault?.callResult ?? { content: [{ type: "text", text: "Ticket 42" }] };
     } else if (request.method === "tools/list") {
+      await fault?.beforeList?.();
       if (delayListMs) await new Promise((resolve) => setTimeout(resolve, delayListMs));
       const page = Number(request.params?.cursor ?? 0);
       result = {
@@ -82,11 +101,13 @@ export async function mcpHttp(
       JSON.stringify({
         jsonrpc: "2.0",
         id: request.id,
-        ...(request.method === "tools/list" && fault?.mcpError
-          ? { error: fault.mcpError }
-          : result
-            ? { result }
-            : { error: { code: -32601, message: "Unknown method" } }),
+        ...(request.method === "tools/call" && fault?.callError
+          ? { error: fault.callError }
+          : request.method === "tools/list" && fault?.mcpError
+            ? { error: fault.mcpError }
+            : result
+              ? { result }
+              : { error: { code: -32601, message: "Unknown method" } }),
       }),
     );
   });
