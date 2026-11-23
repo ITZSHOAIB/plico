@@ -1,5 +1,12 @@
 # @plico-ai/sdk
 
+## 0.6.0
+
+### Patch Changes
+
+- Updated dependencies [d7e9084]
+  - @plico-ai/contracts@0.6.0
+
 ## 0.5.4
 
 ### Patch Changes

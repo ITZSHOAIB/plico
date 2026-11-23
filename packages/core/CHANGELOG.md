@@ -1,5 +1,16 @@
 # @plico-ai/core
 
+## 0.6.0
+
+### Patch Changes
+
+- d7e9084: Execute allowlisted stdio and HTTP MCP tools through approval policy, cancellation and durable recovery. Skip unavailable sources with warnings in provider runs, preserve offline scripts, and reject actual name collisions. Interrupted calls fail by default; exact tools may opt into crash replay with replayOnCrash. Add per-server callTimeoutMs and stable policy fingerprints.
+  
+  Stricter recovery fingerprints also pin approvals for TypeScript-only projects. Waiting runs saved with older tool-only fingerprints or no fingerprint fail recovery after upgrading, even if the project is unchanged. Finish those waits before upgrading or restart them afterward.
+- Updated dependencies [d7e9084]
+  - @plico-ai/contracts@0.6.0
+  - @plico-ai/sdk@0.6.0
+
 ## 0.5.4
 
 ### Patch Changes
