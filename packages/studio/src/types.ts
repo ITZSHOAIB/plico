@@ -19,4 +19,6 @@ export type {
   Thread,
   ThreadArtifactWorkspace,
   ThreadMessage,
+  ToolInspection,
+  ToolsReport,
 } from "@plico-ai/contracts";

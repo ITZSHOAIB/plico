@@ -9,8 +9,8 @@ over production data, because it can approve tool calls and cancel runs.
 
 Start the bundled Studio with `plico serve --studio <project>`. Beside a backend that embeds Plico, add `--inspect` so Studio only reads; see [Use Plico from your backend](/docs/backend).
 
-Studio has seven views in its left rail: Chat, Overview, Runs (the timeline, raw events and
-replay), Instructions, Artifacts, Evals and Readiness.
+Studio has eight views in its left rail: Chat, Overview, Runs (the timeline, raw events and
+replay), Instructions, Tools, Artifacts, Evals and Readiness.
 
 ## Approvals
 
@@ -31,13 +31,21 @@ into one row. The thread header shows the tokens used by all its runs, and the r
 the tokens for one run. Configure a model provider for the project before sending messages.
 See [Threads](/docs/threads).
 
+## Tools
+
+The **Tools** view lists declared TypeScript tools and allowlisted MCP tools with
+their source and effective approval policy. MCP rows show the configured server and
+the original tool name. The list is built from project files and configuration; it
+does not connect to MCP servers. See [MCP configuration](/docs/tools#mcp-configuration-in-progress).
+
 ## Readiness
 
 The Readiness view reports approval policy overrides that reference missing tools or
 conflict with a tool's declared approval requirement. It also reports whether
 model-facing artifact tools are configured as `read-write`, `read-only`, or `off`.
 An agent with an output schema also has a `run.output` diagnostic confirming that final results
-are validated before completion.
+are validated before completion. Configured MCP servers get an `mcp.<serverId>` diagnostic from a
+short connectivity probe.
 
 ## Artifacts
 

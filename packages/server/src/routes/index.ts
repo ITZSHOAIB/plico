@@ -9,12 +9,14 @@ import { readinessRoutes } from "./readiness.js";
 import { runRoutes } from "./runs.js";
 import { schemaRoutes } from "./schemas.js";
 import { threadRoutes } from "./threads.js";
+import { toolRoutes } from "./tools.js";
 import type { Route } from "./types.js";
 
 const routes: readonly Route[] = [
   ...healthRoutes,
   ...projectRoutes,
   ...schemaRoutes,
+  ...toolRoutes,
   ...runRoutes,
   ...threadRoutes,
   ...artifactRoutes,

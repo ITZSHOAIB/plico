@@ -10,6 +10,7 @@ import type {
   PlicoEvent,
   ReadinessReport,
   RunSummary,
+  ToolsReport,
 } from "../types";
 
 const project = { root: "/demo", config: { name: "Internal Ops" } } as unknown as LoadedProject;
@@ -171,6 +172,26 @@ const readiness: ReadinessReport = {
   ],
 };
 
+export const tools: ToolsReport = {
+  tools: [
+    {
+      name: "create_ticket",
+      description: "Create a support ticket.",
+      source: "tools/create-ticket.tool.ts",
+      capabilities: ["side-effect"],
+      approval: { required: true, reason: "Writes to the ticketing system" },
+    },
+    {
+      name: "mcp_tickets__get_ticket",
+      description: "Read a ticket.",
+      source: "mcp:tickets/get_ticket",
+      capabilities: [],
+      approval: { required: false },
+      mcp: { serverId: "tickets", toolName: "get_ticket" },
+    },
+  ],
+};
+
 export const schemas: AgentSchemas = {
   input: { type: "object", required: ["ticket"], properties: { ticket: { type: "string" } } },
   output: { type: "object", properties: { priority: { type: "number" } } },
@@ -207,6 +228,7 @@ export function stubApi(
     if (path === "/v1/runs") return json(options.includeOtherRun ? [run, otherRun] : [run]);
     if (path === "/v1/instructions") return json(instructions);
     if (path === "/v1/schemas") return json(schemas);
+    if (path === "/v1/tools") return json(tools);
     if (path === "/v1/readiness") return json(readiness);
     if (path === `/v1/runs/${run.runId}`) return json(run);
     if (path === `/v1/runs/${run.runId}/events`) return json(runEvents);

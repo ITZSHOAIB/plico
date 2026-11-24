@@ -11,7 +11,7 @@ MCP source configuration (`mcpServers`) supports stdio and Streamable HTTP shape
 explicit tool allowlists and environment variable references. Validation is offline;
 Runtime MCP discovery is available through `discoverMcpTools` in
 `@plico-ai/runtime`; it is explicitly separate from loading and validation.
-MCP execution is not implemented yet.
+MCP execution runs allowlisted tools through the runtime's approval policy and durable event log.
 
 This package stays local-first and file-first. It does not know about runtime execution or provider-specific agent abstractions.
 

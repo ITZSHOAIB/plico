@@ -41,7 +41,7 @@ export {
   type ThreadStore,
 } from "./storage/sqlite/threads.js";
 export { createThreadTitler, type ThreadTitler } from "./threads/titler.js";
-export { discoverTools } from "./tools/index.js";
+export { discoverTools, inspectTools } from "./tools/index.js";
 export type {
   ArtifactContent,
   ArtifactFile,
@@ -92,6 +92,8 @@ export type {
   ToolHandlerContext,
   ToolInputParseResult,
   ToolInputSchema,
+  ToolInspection,
+  ToolsReport,
   ZodInputParseResult,
   ZodInputSchema,
 } from "./types/index.js";

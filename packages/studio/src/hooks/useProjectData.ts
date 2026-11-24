@@ -1,11 +1,19 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { fetchInstructions, fetchProject, fetchReadiness, fetchRuns, fetchSchemas } from "../api";
+import {
+  fetchInstructions,
+  fetchProject,
+  fetchReadiness,
+  fetchRuns,
+  fetchSchemas,
+  fetchTools,
+} from "../api";
 import type {
   AgentSchemas,
   ComposedInstructions,
   LoadedProject,
   ReadinessReport,
   RunSummary,
+  ToolsReport,
 } from "../types";
 
 export function useProjectData() {
@@ -15,6 +23,8 @@ export function useProjectData() {
   const [runs, setRuns] = useState<RunSummary[]>([]);
   const [instructions, setInstructions] = useState<ComposedInstructions | null>(null);
   const [schemas, setSchemas] = useState<AgentSchemas>({});
+  const [tools, setTools] = useState<ToolsReport | null>(null);
+  const [toolsError, setToolsError] = useState<string | null>(null);
   const [readiness, setReadiness] = useState<ReadinessReport | null>(null);
   const [readinessError, setReadinessError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -58,6 +68,12 @@ export function useProjectData() {
     fetchSchemas()
       .then(setSchemas)
       .catch(() => setSchemas({}));
+    fetchTools()
+      .then((report) => {
+        setTools(report);
+        setToolsError(null);
+      })
+      .catch(() => setToolsError("Could not load tools"));
     void loadRuns();
     void loadReadiness();
     const refresh = setInterval(() => {
@@ -77,6 +93,8 @@ export function useProjectData() {
     instructions,
     instructionsError,
     schemas,
+    tools,
+    toolsError,
     readiness,
     readinessError,
     error,

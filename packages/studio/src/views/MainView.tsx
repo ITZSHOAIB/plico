@@ -10,6 +10,7 @@ import { InstructionsView } from "./InstructionsView";
 import { OverviewView } from "./OverviewView";
 import { ReadinessView } from "./ReadinessView";
 import { RunView } from "./RunView";
+import { ToolsView } from "./ToolsView";
 
 interface MainViewProps {
   view: View;
@@ -38,6 +39,10 @@ export function MainView({ view, data, inspector, evals, onOpenRun, onBackToRuns
     ) : (
       <EmptyState>Loading instructions…</EmptyState>
     );
+  }
+
+  if (view === "tools") {
+    return <ToolsView report={data.tools} error={data.toolsError} />;
   }
 
   if (view === "evals") {
