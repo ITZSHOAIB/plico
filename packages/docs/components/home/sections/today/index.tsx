@@ -22,7 +22,7 @@ const groups = [
     state: "dim",
     word: "NEXT",
     title: "Up next",
-    items: ["MCP and external tools", "Context compaction", "Eval scorers"],
+    items: ["Context compaction", "Eval scorers"],
   },
   {
     state: "off",
