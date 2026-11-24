@@ -126,7 +126,7 @@ Unknown outcomes after a crash fail by default; exact tools can opt into replay.
 `plico readiness` probes each configured server and reports its allowlist, and Studio's
 Tools view shows each tool's source and effective approval policy. Interactive
 remote auth (OAuth) remains out of scope. See
-[MCP configuration](https://plico.sohab.dev/docs/tools#mcp-configuration-in-progress).
+[MCP configuration](https://plico.sohab.dev/docs/tools#mcp-configuration).
 
 ## Learn more
 
