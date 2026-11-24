@@ -117,14 +117,15 @@ structured result. The final `run.completed` event and run result include `struc
 
 Plico is a **developer preview (`0.1`)**. The HTTP API under `/v1` takes additive changes only; the TypeScript exports can change in any `0.x` minor release. It needs Node 22.18 or later. Follow the [milestones](https://github.com/ITZSHOAIB/plico/milestones) for what is planned.
 
-MCP support is in progress: `mcpServers` accepts typed stdio and Streamable HTTP
+MCP support ships for stdio and Streamable HTTP: `mcpServers` accepts typed
 configuration with explicit tool allowlists and environment variable references.
 `plico validate` checks it offline. The runtime's `discoverMcpTools(project)` connects
 and returns allowlisted tool metadata, then closes its connections. Runs execute
 allowlisted MCP tools through approval policy, cancellation and durable recovery.
 Unknown outcomes after a crash fail by default; exact tools can opt into replay.
 `plico readiness` probes each configured server and reports its allowlist, and Studio's
-Tools view shows each tool's source and effective approval policy. See
+Tools view shows each tool's source and effective approval policy. Interactive
+remote auth (OAuth) remains out of scope. See
 [MCP configuration](https://plico.sohab.dev/docs/tools#mcp-configuration-in-progress).
 
 ## Learn more
