@@ -1,5 +1,15 @@
 # @plico-ai/cli
 
+## 0.6.1
+
+### Patch Changes
+
+- 9f5ed25: Report MCP server reachability and allowlist gaps in readiness checks, and expose declared and configured MCP tools with effective approval policy through `GET /v1/tools` and Studio's Tools view.
+- Updated dependencies [9f5ed25]
+  - @plico-ai/runtime@0.6.1
+  - @plico-ai/server@0.6.1
+  - @plico-ai/core@0.6.1
+
 ## 0.6.0
 
 ### Patch Changes

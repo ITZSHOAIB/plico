@@ -1,5 +1,13 @@
 # @plico-ai/core
 
+## 0.6.1
+
+### Patch Changes
+
+- Updated dependencies [9f5ed25]
+  - @plico-ai/contracts@0.6.1
+  - @plico-ai/sdk@0.6.1
+
 ## 0.6.0
 
 ### Patch Changes
