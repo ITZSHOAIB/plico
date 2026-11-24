@@ -4,7 +4,7 @@ import type { DeclaredTool } from "../types/tools.js";
 export type ApprovalDecision = "none" | "required";
 
 export function decideApproval(
-  tool: DeclaredTool,
+  tool: Pick<DeclaredTool, "name" | "approval" | "mcp">,
   config: ProjectConfig,
 ): { required: boolean; reason?: string } {
   const policy = config.approvals;

@@ -1,4 +1,17 @@
 {
+  "Tool inspection": {
+    "approval": {
+      "required": "boolean"
+    },
+    "capabilities": [],
+    "description": "string",
+    "mcp": {
+      "serverId": "string",
+      "toolName": "string"
+    },
+    "name": "string",
+    "source": "string"
+  },
   "MCP tools.discovered identity": {
     "serverId": "string",
     "toolName": "string"
@@ -440,6 +453,9 @@
       "configPath": "string",
       "root": "string"
     }
+  },
+  "GET /v1/tools": {
+    "tools": []
   },
   "GET /v1/instructions": {
     "content": "string",

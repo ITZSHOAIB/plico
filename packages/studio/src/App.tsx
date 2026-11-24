@@ -70,6 +70,12 @@ export function App() {
       onSelect: () => showTopLevelView("instructions"),
     },
     {
+      view: "tools",
+      label: "Tools",
+      icon: "tools",
+      onSelect: () => showTopLevelView("tools"),
+    },
+    {
       view: "artifacts",
       label: "Artifacts",
       icon: "artifacts",

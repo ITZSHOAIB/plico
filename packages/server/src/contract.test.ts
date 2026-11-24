@@ -3,7 +3,7 @@ import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { PlicoEventPayloads } from "@plico-ai/contracts";
+import type { PlicoEventPayloads, ToolInspection } from "@plico-ai/contracts";
 import {
   createSqliteEngine,
   createSqliteEventStore,
@@ -420,6 +420,14 @@ it("keeps the /v1 response shapes stable", async () => {
   }
 
   const shapes = {
+    "Tool inspection": shapeOf({
+      name: "mcp_local__lookup",
+      description: "Lookup",
+      source: "mcp:local/lookup",
+      capabilities: [],
+      approval: { required: true },
+      mcp: { serverId: "local", toolName: "lookup" },
+    } satisfies ToolInspection),
     "MCP tools.discovered identity": shapeOf({
       serverId: "local",
       toolName: "lookup",
@@ -457,6 +465,7 @@ it("keeps the /v1 response shapes stable", async () => {
     "POST /v1/runs/:id/signal (approval)": shapeOf(decisionResult),
     "POST /v1/runs/dry": await shape("/v1/runs/dry", dryRun),
     "GET /v1/project": await shape("/v1/project"),
+    "GET /v1/tools": await shape("/v1/tools"),
     "GET /v1/instructions": await shape("/v1/instructions"),
     "GET /v1/schemas": await shape("/v1/schemas"),
     "GET /v1/runs": await shape("/v1/runs"),

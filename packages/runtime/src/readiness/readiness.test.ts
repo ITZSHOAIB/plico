@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { checkReadiness, createSqliteEventStore } from "../index.js";
+import { project, serverFile, ticket } from "../testing/mcp-project.js";
 
 async function scaffold(options: { tools?: boolean; config?: string } = {}): Promise<string> {
   const root = await mkdtemp(join(tmpdir(), "plico-readiness-unit-"));
@@ -19,6 +20,60 @@ async function scaffold(options: { tools?: boolean; config?: string } = {}): Pro
 }
 
 describe("checkReadiness", () => {
+  it("reports MCP connectivity and exposes configured tools with approval policy", async () => {
+    const { root } = await project({
+      tickets: {
+        transport: "stdio",
+        command: process.execPath,
+        args: [join(process.cwd(), "packages/runtime/src/testing/mcp-server.mjs")],
+        tools: ["get_ticket"],
+      },
+    });
+    await writeFile(join(root, "mcp-fixture.json"), JSON.stringify({ tools: [ticket] }));
+    const report = await checkReadiness(root);
+    expect(report.diagnostics).toContainEqual(
+      expect.objectContaining({ subsystem: "mcp.tickets", severity: "ok" }),
+    );
+  });
+  it("reports an unreachable MCP server without failing the readiness check", async () => {
+    const { root } = await project({
+      tickets: {
+        transport: "stdio",
+        command: process.execPath,
+        args: ["-e", "process.exit(1)"],
+        tools: ["get_ticket"],
+      },
+    });
+
+    const report = await checkReadiness(root);
+
+    expect(report.diagnostics).toContainEqual(
+      expect.objectContaining({ subsystem: "mcp.tickets", severity: "error" }),
+    );
+  });
+
+  it("reports an allowlisted MCP tool that the server does not advertise", async () => {
+    const { root } = await project({
+      tickets: {
+        transport: "stdio",
+        command: process.execPath,
+        args: [serverFile],
+        tools: ["get_ticket"],
+      },
+    });
+    await writeFile(join(root, "mcp-fixture.json"), JSON.stringify({ tools: [] }));
+
+    const report = await checkReadiness(root);
+
+    expect(report.diagnostics).toContainEqual(
+      expect.objectContaining({
+        subsystem: "mcp.tickets",
+        severity: "error",
+        message: expect.stringContaining("get_ticket"),
+      }),
+    );
+  });
+
   it("reports a diagnostic instead of throwing when tools/ is missing", async () => {
     const root = await scaffold({ tools: false });
 

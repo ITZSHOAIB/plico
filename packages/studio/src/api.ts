@@ -12,6 +12,7 @@ import type {
   RunSummary,
   Thread,
   ThreadMessage,
+  ToolsReport,
 } from "./types";
 
 async function parseJson<T>(url: string, response: Response): Promise<T> {
@@ -38,6 +39,10 @@ export async function fetchProject(): Promise<LoadedProject> {
 
 export function fetchRuns(): Promise<RunSummary[]> {
   return getJson("/v1/runs");
+}
+
+export function fetchTools(): Promise<ToolsReport> {
+  return getJson("/v1/tools");
 }
 
 export function fetchThreads(): Promise<Thread[]> {

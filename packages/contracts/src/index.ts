@@ -55,6 +55,8 @@ export type {
   ToolDefinition,
   ToolHandlerContext,
   ToolInputSchema,
+  ToolInspection,
+  ToolsReport,
   ZodInputParseResult,
   ZodInputSchema,
 } from "./tools.js";

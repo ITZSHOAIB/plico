@@ -35,7 +35,7 @@ otherwise build yourself:
 
 Plico's scope is deliberately small for `0.1`. These are not in the packages today:
 
-- **MCP execution.** Configuration and explicit runtime discovery are available; agent runs cannot execute MCP tools yet. Executable tools are TypeScript files in `tools/`.
+- **MCP OAuth.** stdio and Streamable HTTP servers work with explicit allowlists, approval policy, readiness checks and Studio inspection; interactive remote auth flows are not available yet.
 - **Agent memory.** The `memory/` folder is required in the layout, but the agent does not read or
   write it yet.
 - **Multi-agent and workflows.** One agent per project. `agents/`, `workflows/` and the `entry`
@@ -49,8 +49,8 @@ The remaining plan lives in the [GitHub milestones](https://github.com/ITZSHOAIB
 
 ## When to choose something else
 
-- You need MCP servers, graph workflows or multi-agent handoffs now: look at Mastra, LangGraph or
-  the OpenAI Agents SDK.
+- You need graph workflows or multi-agent handoffs now: look at Mastra, LangGraph or the
+  OpenAI Agents SDK.
 - You want chat channels such as Slack out of the box: look at eve.
 - You only need model calls and streaming inside an app you already have: the AI SDK on its own is
   enough.

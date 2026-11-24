@@ -67,3 +67,18 @@ export interface ToolDefinition {
   approval: ToolApprovalPolicy;
   handler: (input: unknown, context: ToolHandlerContext) => unknown | Promise<unknown>;
 }
+
+/** Non-live metadata used by readiness and Studio inspection. */
+export interface ToolInspection {
+  name: string;
+  description: string;
+  source: string;
+  capabilities: string[];
+  /** Effective policy after project overrides, not the declaration alone. */
+  approval: ToolApprovalPolicy;
+  mcp?: { serverId: string; toolName: string };
+}
+
+export interface ToolsReport {
+  tools: ToolInspection[];
+}

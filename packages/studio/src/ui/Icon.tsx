@@ -20,6 +20,7 @@ import {
   ShieldCheck,
   Sun,
   TriangleAlert,
+  Wrench,
 } from "lucide-react";
 
 // The single place icons are chosen. Swapping the icon set means editing this map only.
@@ -28,6 +29,7 @@ const icons = {
   chat: MessageSquare,
   runs: Activity,
   instructions: FileText,
+  tools: Wrench,
   artifacts: Package,
   evals: FlaskConical,
   readiness: ShieldCheck,

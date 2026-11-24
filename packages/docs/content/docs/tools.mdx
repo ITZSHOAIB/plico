@@ -41,9 +41,8 @@ A tool must export its definition as the file default.
 ## MCP configuration (in progress)
 
 [MCP support](https://github.com/ITZSHOAIB/plico/issues/77) includes typed
-configuration, offline validation, explicit runtime discovery and tool execution
-through the run loop. Readiness connectivity checks and dedicated Studio
-inspection follow in the next slice.
+configuration, offline validation, explicit runtime discovery, tool execution
+through the run loop, readiness connectivity diagnostics and Studio inspection.
 
 Declare sources in `plico.config.ts` with an explicit transport and tool allowlist:
 
@@ -212,6 +211,18 @@ For offline scripted evals, `mockTools: true` uses each step's supplied `result`
 without connecting or resolving credentials; `live: true` opts that step into
 execution. Offline mocks check the allowlist and approval policy, but do not
 validate against a remote input schema.
+
+### Check readiness and inspect tools
+
+`plico readiness` connects to each configured server, lists its tools and reports an
+`mcp.<serverId>` diagnostic. The check reports a missing allowlisted tool or an
+unreachable server without throwing; projects without MCP sources make no new
+connections. Readiness runs use a five-second probe deadline per server.
+
+Studio's **Tools** view lists declared and MCP tools with their source and effective
+approval policy. For MCP tools it shows the server and original tool name. The same
+metadata is available to hosts at `GET /v1/tools`; this endpoint does not connect to
+MCP servers or resolve credentials.
 
 ## Input schemas
 

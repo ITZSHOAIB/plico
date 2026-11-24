@@ -5,6 +5,7 @@ import { checkArtifacts } from "./checks/artifacts.js";
 import { checkEnv } from "./checks/env.js";
 import { checkEvalJudge } from "./checks/eval-judge.js";
 import { checkEvals } from "./checks/evals.js";
+import { checkMcpServers } from "./checks/mcp.js";
 import { checkPersistence } from "./checks/persistence.js";
 import { checkProject } from "./checks/project.js";
 import { checkProvider } from "./checks/provider.js";
@@ -35,6 +36,7 @@ export async function checkReadiness(
     ...(await checkRunOutput(projectCheck.project)),
     checkArtifactAccess(projectCheck.project.config),
     ...(await checkTools(projectCheck.project)),
+    ...(await checkMcpServers(projectCheck.project)),
     ...(await checkEvals(projectRoot, database.eventStore)),
     ...(await checkEvalJudge(projectCheck.project)),
     ...checkThreadStore(database.eventStore, options.threadStore),

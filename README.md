@@ -123,8 +123,9 @@ configuration with explicit tool allowlists and environment variable references.
 and returns allowlisted tool metadata, then closes its connections. Runs execute
 allowlisted MCP tools through approval policy, cancellation and durable recovery.
 Unknown outcomes after a crash fail by default; exact tools can opt into replay.
-MCP readiness connectivity and dedicated Studio inspection follow in the next slice;
-see [MCP configuration](https://plico.sohab.dev/docs/tools#mcp-configuration-in-progress).
+`plico readiness` probes each configured server and reports its allowlist, and Studio's
+Tools view shows each tool's source and effective approval policy. See
+[MCP configuration](https://plico.sohab.dev/docs/tools#mcp-configuration-in-progress).
 
 ## Learn more
 

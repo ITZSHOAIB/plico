@@ -105,7 +105,14 @@ Finish those waits before upgrading or restart them afterward.
 Scripts with `mockTools: true` use their supplied results without connecting or
 resolving credentials, unless a step has `live: true`. Offline MCP mocks check
 the allowlist and approval policy, but cannot validate arguments against a remote
-schema. Readiness connectivity checks and dedicated Studio inspection follow in
-the next slice of [#77](https://github.com/ITZSHOAIB/plico/issues/77).
+schema.
+
+## Inspect tools and readiness
+
+`inspectTools(project)` returns declared TypeScript tools and configured MCP tool
+allowlists with their source and effective approval policy. It does not connect to MCP
+servers. `checkReadiness(root)` probes each configured server and adds an
+`mcp.<serverId>` diagnostic for reachability and allowlisted tools; projects without
+MCP sources make no new connections.
 
 Docs: [plico.sohab.dev](https://plico.sohab.dev). For AI coding agents: [llms.txt](https://plico.sohab.dev/llms.txt).
