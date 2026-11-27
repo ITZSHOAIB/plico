@@ -56,6 +56,11 @@ export function RunList({ runs, selectedRun, onSelectRun, visibleOnMobile }: Run
                   <span className="min-w-0">
                     <span className="flex min-w-0 items-center gap-1.5 font-mono text-small text-fg">
                       <span className="truncate">{formatRunId(run.runId)}</span>
+                      {(run.workflowId ?? (run.agentId !== "main" ? run.agentId : undefined)) && (
+                        <span className="shrink-0 truncate rounded border border-line px-1 font-sans text-caption text-muted">
+                          {run.workflowId ?? run.agentId}
+                        </span>
+                      )}
                       {run.runId.startsWith("eval-") && (
                         <span className="shrink-0 rounded border border-line px-1 font-sans text-caption text-muted">
                           eval

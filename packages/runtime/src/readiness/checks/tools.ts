@@ -3,6 +3,7 @@ import { getProjectPaths, getProjectRelativePaths, type LoadedProject } from "@p
 import { discoverToolFiles, loadToolFile } from "../../tools/index.js";
 import type { DeclaredTool, ReadinessDiagnostic } from "../../types/index.js";
 import { makeDiagnostic } from "../diagnostic.js";
+import { checkAgentTools } from "./agent-tools.js";
 import { checkApprovalPolicy } from "./approval-policy.js";
 
 export async function checkTools(project: LoadedProject): Promise<ReadinessDiagnostic[]> {
@@ -64,6 +65,7 @@ export async function checkTools(project: LoadedProject): Promise<ReadinessDiagn
   );
   diagnostics.push(
     ...checkApprovalPolicy(project, tools, { toolsComplete: validCount === toolFiles.length }),
+    ...(await checkAgentTools(project, tools)),
   );
   return diagnostics;
 }

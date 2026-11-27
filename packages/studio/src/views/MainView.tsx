@@ -72,6 +72,7 @@ export function MainView({ view, data, inspector, evals, onOpenRun, onBackToRuns
       eventsError={inspector.eventsError}
       eventsLoaded={inspector.eventsLoaded}
       onBack={onBackToRuns}
+      onOpenRun={onOpenRun}
     />
   );
 }

@@ -154,6 +154,37 @@ describe("checkReadiness", () => {
     });
   });
 
+  it("warns when a delegated specialist inherits a tool that needs approval", async () => {
+    const root = await scaffold();
+    await mkdir(join(root, "agents"));
+    await writeFile(join(root, "agent.md"), "---\nagents: [researcher, writer]\n---\n# Demo\n");
+    await writeFile(
+      join(root, "agents", "researcher.md"),
+      "---\ndescription: Finds facts.\n---\nResearch.\n",
+    );
+    await writeFile(
+      join(root, "agents", "writer.md"),
+      "---\ndescription: Writes.\ntools: []\n---\nWrite.\n",
+    );
+    await writeFile(
+      join(root, "tools", "delete-ticket.tool.ts"),
+      'export default { name: "delete_ticket", description: "Delete a ticket", inputSchema: { type: "object" }, capabilities: ["ticket:delete"], approval: { required: true }, handler: async () => ({}) };\n',
+    );
+
+    const report = await checkReadiness(root);
+
+    const warnings = report.diagnostics.filter((d) => d.subsystem === "agents.tools");
+    expect(warnings).toEqual([
+      expect.objectContaining({
+        severity: "warning",
+        path: "agents/researcher.md",
+        message: expect.stringContaining(
+          'Agent "researcher" is delegated to and inherits every project tool, including "delete_ticket"',
+        ),
+      }),
+    ]);
+  });
+
   it("does not report a policy target as undeclared when a tool fails to load", async () => {
     const root = await scaffold({
       config:

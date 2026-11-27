@@ -5,11 +5,14 @@ export interface TokenUsage {
   outputTokens: number;
 }
 
-/** Input and output tokens the model reported across a run's events. */
+/**
+ * Input and output tokens the model reported across a run's events, including what its child runs
+ * used: each `agent.returned` carries its child's total.
+ */
 export function sumUsage(events: readonly PlicoEvent[]): TokenUsage {
   const total: TokenUsage = { inputTokens: 0, outputTokens: 0 };
   for (const event of events) {
-    if (event.type !== "model.response") continue;
+    if (event.type !== "model.response" && event.type !== "agent.returned") continue;
     // Events stored by older versions may carry no usage.
     const usage = event.payload.usage as TokenUsage | undefined;
     total.inputTokens += usage?.inputTokens ?? 0;

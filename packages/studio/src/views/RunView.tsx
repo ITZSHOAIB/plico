@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ApprovalDecision } from "../components/ApprovalDecision";
 import { EventList } from "../components/EventList";
+import { RunAgents } from "../components/RunAgents";
 import { RunCancellation } from "../components/RunCancellation";
 import { StructuredResult } from "../components/StructuredResult";
 import { formatMetadata } from "../format-metadata";
@@ -22,6 +23,8 @@ interface RunViewProps {
   eventsError?: string | null;
   eventsLoaded?: boolean;
   onBack?: () => void;
+  /** Opens a parent or child run. */
+  onOpenRun?: (runId: string) => void;
 }
 
 export function RunView(props: RunViewProps) {
@@ -43,6 +46,7 @@ function SelectedRunView({
   eventsError,
   eventsLoaded = true,
   onBack,
+  onOpenRun,
 }: RunViewProps & { selectedRun: RunSummary }) {
   const [mode, setMode] = useState<RunTabMode>("timeline");
   const replay = useReplayPosition(selectedRun, events);
@@ -122,9 +126,12 @@ function SelectedRunView({
         </div>
       )}
       {approvalRequest && <ApprovalDecision runId={selectedRun.runId} request={approvalRequest} />}
-      {replay.isLatest && ["running", "waiting"].includes(selectedRun.status) && (
-        <RunCancellation key={selectedRun.runId} runId={selectedRun.runId} />
-      )}
+      <RunAgents run={shownRun} events={visibleEvents} onOpenRun={onOpenRun} />
+      {replay.isLatest &&
+        !selectedRun.parentRunId &&
+        ["running", "waiting"].includes(selectedRun.status) && (
+          <RunCancellation key={selectedRun.runId} runId={selectedRun.runId} />
+        )}
       <StructuredResult events={visibleEvents} />
       <RunTabs mode={mode} onChange={setMode} />
       <div
