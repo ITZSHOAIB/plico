@@ -41,8 +41,7 @@ export default defineWorkflow<{ request: string }>({
   description: "Draft a reply, then review it.",
   async run({ input, agent }) {
     const draft = await agent("writer", { task: `Draft a reply to: ${input.request}` });
-    return agent("reviewer", { task: `Tighten this reply:
-${draft}` });
+    return agent("reviewer", { task: `Tighten this reply: ${draft}` });
   },
 });
 ```
