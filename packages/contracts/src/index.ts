@@ -60,3 +60,4 @@ export type {
   ZodInputParseResult,
   ZodInputSchema,
 } from "./tools.js";
+export type { WorkflowAgentCall, WorkflowContext, WorkflowDefinition } from "./workflows.js";

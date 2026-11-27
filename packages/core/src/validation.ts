@@ -1,5 +1,6 @@
 import { readFile, stat } from "node:fs/promises";
 import { parseAgentFile, unknownAgentKeyWarnings } from "./agent-file.js";
+import { validateAgentsAndWorkflows } from "./agents-validation.js";
 import { loadProject } from "./config.js";
 import { missingFileMessage, missingFileMessageFor, ProjectConfigError } from "./errors.js";
 import { validateEvalFiles } from "./eval-files.js";
@@ -126,6 +127,7 @@ export async function validateProject(root: string): Promise<ValidationResult> {
   );
   errors.push(...(await validateToolNames(root)));
   errors.push(...(await validateSkills(root)));
+  errors.push(...(await validateAgentsAndWorkflows(project)));
   const evalFiles = await validateEvalFiles(root);
   errors.push(...evalFiles.errors);
   warnings.push(...evalFiles.warnings);

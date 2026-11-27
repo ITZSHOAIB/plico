@@ -16,6 +16,8 @@ export interface ProjectConfig {
   name: string;
   description?: string;
   template?: string;
+  /** The agent or workflow a run starts with when the caller selects none. Defaults to `main`. */
+  entry?: string;
   /** MCP sources with explicit tool allowlists. Config loading never connects to them. */
   mcpServers?: Record<string, McpServerConfig>;
   artifacts?: { access: "read-write" | "read-only" | "off" };

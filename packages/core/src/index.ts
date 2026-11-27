@@ -1,4 +1,17 @@
 export { AGENT_FRONTMATTER_KEYS, parseAgentFile } from "./agent-file.js";
+export { DELEGATE_TOOL_PREFIX, delegateToolName, projectToolNames } from "./agent-graph.js";
+export {
+  AGENT_ID_PATTERN,
+  type AgentDefinition,
+  type AgentModel,
+  type AgentsResult,
+  type ArtifactAccess,
+  DEFAULT_MAX_DELEGATIONS,
+  MAIN_AGENT_ID,
+  readAgents,
+  resolveAgentArtifacts,
+  resolveAgentModel,
+} from "./agents.js";
 export { installAuthoringFallback } from "./authoring.js";
 export { loadProject } from "./config.js";
 export {
@@ -29,7 +42,11 @@ export { type PreparedRunMessage, prepareRunMessage } from "./run-input.js";
 export { readRunSchemas } from "./run-schemas.js";
 export { isJsonSchema, type NormalizedInputSchema, normalizeInputSchema } from "./schema.js";
 export { readSkills, type Skill, type SkillsResult } from "./skills.js";
-export { ARTIFACT_TOOL_NAMES, SKILL_TOOL_NAME } from "./tool-name-validation.js";
+export {
+  ARTIFACT_TOOL_NAMES,
+  readToolFileNames,
+  SKILL_TOOL_NAME,
+} from "./tool-name-validation.js";
 export type {
   LoadedProject,
   ProjectConfig,
@@ -43,3 +60,11 @@ export type {
   ValidationSeverity,
 } from "./types.js";
 export { validateProject } from "./validation.js";
+export {
+  DEFAULT_MAX_AGENT_CALLS,
+  type LoadedWorkflow,
+  listWorkflowFiles,
+  loadWorkflow,
+  staticAgentCalls,
+  type WorkflowFile,
+} from "./workflows.js";

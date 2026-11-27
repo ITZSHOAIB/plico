@@ -51,3 +51,31 @@ _Avoid_: Tags, labels
 **Context**:
 JSON the host passes with a call. Tools read it as `ctx.context`, and it is recorded with the run. It must not carry secrets.
 _Avoid_: Auth context, session
+
+**Agent ID**:
+The stable name of one agent in a project. Root `agent.md` is always `main`; `agents/<id>.md` is the agent `<id>`.
+_Avoid_: Agent name, persona
+
+**Entry agent**:
+The agent or workflow a run starts with when the caller selects none. It is `main` unless `entry` in `plico.config.ts` names another.
+_Avoid_: Default bot, root agent
+
+**Supervisor**:
+An ordinary agent that lists other agents under `agents:` in its frontmatter, so it may delegate to them.
+_Avoid_: Orchestrator, manager agent
+
+**Specialist**:
+An agent another agent delegates to. It needs a `description`, which the supervisor reads to decide when to use it.
+_Avoid_: Subagent, worker
+
+**Delegation**:
+A supervisor calling a specialist through its synthetic `delegate_<id>` tool. The specialist runs its own loop on the task and returns the result as the tool result.
+_Avoid_: Handoff (a specialist taking over the conversation, which Plico does not do)
+
+**Workflow**:
+A `workflows/<id>.ts` file whose `run` function fixes the order of agent calls with plain TypeScript. Only `agent()` and `step()` are durable.
+_Avoid_: Graph, pipeline, flow
+
+**Child run**:
+The run a delegation or a workflow `agent()` call starts. It has its own run ID and event stream, records its parent and root run, and executes inside the root run's engine run.
+_Avoid_: Sub-run, nested run

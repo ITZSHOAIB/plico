@@ -53,6 +53,11 @@ async function readProjectConfig(configPath: string): Promise<ProjectConfig> {
   return normalizeProjectConfig(exportedConfig, configPath);
 }
 
+/** Bundles a project TypeScript module and imports it, so edits show on the next load. */
+export async function importProjectModule(path: string): Promise<unknown> {
+  return importTranspiledProjectConfig(path);
+}
+
 async function importTranspiledProjectConfig(configPath: string): Promise<unknown> {
   const result = await build({
     entryPoints: [configPath],
@@ -137,6 +142,8 @@ function normalizeProjectConfig(value: unknown, configPath: string): ProjectConf
   if (typeof config.template === "string") {
     normalized.template = config.template;
   }
+
+  if (typeof config.entry === "string") normalized.entry = config.entry;
 
   if (config.model !== undefined) {
     normalized.model = { provider: config.model.provider, name: config.model.name };
@@ -232,6 +239,14 @@ function validateProjectConfigShape(value: unknown): ValidationIssue[] {
     issues.push({
       path: relativePaths.configFile,
       message: "Expected template to be a string",
+      severity: "error",
+    });
+  }
+
+  if (Object.hasOwn(value, "entry") && (typeof value.entry !== "string" || !value.entry.trim())) {
+    issues.push({
+      path: relativePaths.configFile,
+      message: "Expected entry to be an agent or workflow ID",
       severity: "error",
     });
   }
