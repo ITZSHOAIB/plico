@@ -10,6 +10,6 @@ Scaffold generator for the internal-ops starter project. Part of [Plico](https:/
 
 `create-plico my-plico --provider anthropic|openai|google|openai-compatible` configures a model and writes the matching `.env.example` and adapter dependency. The interactive flow asks for the provider; without `--provider`, a non-interactive run configures none. The scaffold also writes a `package.json` with `dev`, `validate` and `eval` scripts, `@plico-ai/cli` as a dev dependency, and a `.gitignore` for `.plico/` and `.env`.
 
-The generated scaffold includes the required Plico project files and directories so it is immediately valid and can complete `plico run --dry` and pass `plico eval` (it ships `evals/smoke.script.json`) after `npm install`.
+The generated scaffold includes the required Plico project files and directories so it is immediately valid and can complete `plico run --dry` and pass `plico eval` (it ships `evals/smoke.script.json`) after `npm install`. It also includes a researcher specialist the main agent can delegate to, and a draft, review and revise `reply` workflow with writer and reviewer agents, each with a scripted eval.
 
 Docs: [plico.sohab.dev](https://plico.sohab.dev). For AI coding agents: [llms.txt](https://plico.sohab.dev/llms.txt).
