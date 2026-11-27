@@ -15,7 +15,8 @@ async function readRunEvents(context: RouteContext, runId: string) {
   await requireRun(context.app, runId);
 
   const threadId = await threadStore?.getThreadForRun(runId);
-  if (!threadId) return eventStore.getEvents(runId);
+  // Child runs write to their root's workspace, so a root run's workspace reads the whole tree.
+  if (!threadId) return eventStore.getRunTreeEvents?.(runId) ?? eventStore.getEvents(runId);
   if (eventStore.getThreadRunEventsThrough)
     return eventStore.getThreadRunEventsThrough(threadId, runId);
   if (!eventStore.getThreadRunEvents)

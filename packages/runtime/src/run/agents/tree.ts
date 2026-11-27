@@ -79,8 +79,9 @@ export function agentModel(
   agent: AgentDefinition,
 ): { model: LoadedProject["config"]["model"]; provider: ModelProvider | undefined } {
   const model = resolveAgentModel(tree.project.config.model, agent.model);
+  // A run without a provider stays dry for every agent, even one with its own model.
   const provider =
-    agent.model && model && tree.options.providerForModel
+    tree.options.provider && agent.model && model && tree.options.providerForModel
       ? (tree.options.providerForModel(model) ?? tree.options.provider)
       : tree.options.provider;
   return { model, provider };

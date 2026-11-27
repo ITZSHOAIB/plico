@@ -17,6 +17,11 @@ export function formatRunSummaries(
       run.runId,
       run.status,
       run.projectName || "unknown project",
+      ...(run.workflowId
+        ? [`workflow ${run.workflowId}`]
+        : run.agentId && run.agentId !== "main"
+          ? [`agent ${run.agentId}`]
+          : []),
       run.endedAt ?? "not ended",
     ].join(" | ");
     lines.push(summary);

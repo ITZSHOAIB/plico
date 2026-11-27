@@ -9,7 +9,10 @@ export async function runsCommand(args: string[]): Promise<number> {
   try {
     const parsed = parseArgs(args, {
       flags: ["--json"],
-      values: { "--db": { missing: "Missing database path after --db" } },
+      values: {
+        "--db": { missing: "Missing database path after --db" },
+        "--parent": { missing: "Missing run ID after --parent" },
+      },
       rejectUnknown: true,
     });
     const json = parsed.flags.has("--json");
@@ -28,7 +31,8 @@ export async function runsCommand(args: string[]): Promise<number> {
       return 0;
     }
     const eventStore = createSqliteEventStore({ databasePath });
-    const runs = await eventStore.listRuns();
+    const parentRunId = readStringOption(parsed, "--parent");
+    const runs = await eventStore.listRuns(parentRunId === undefined ? {} : { parentRunId });
 
     if (json) {
       console.log(JSON.stringify(runs));

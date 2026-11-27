@@ -11,6 +11,7 @@ export class PlicoError extends Error {
 const statusByCode: Record<string, number> = {
   "thread.not_found": 404,
   "run.not_found": 404,
+  "run.child": 409,
   "workspace.not_found": 404,
   "thread.busy": 409,
   "thread.invalid_title": 400,

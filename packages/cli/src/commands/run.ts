@@ -11,6 +11,7 @@ import {
   loadProjectEnv,
   type ModelProvider,
   modelProviderRecoveryKey,
+  type RunProjectOptions,
   recoverRuns,
   runProject,
 } from "@plico-ai/runtime";
@@ -34,6 +35,8 @@ export async function runCommand(args: string[]): Promise<number> {
         "--input": { missing: "Missing JSON after --input" },
         "--input-file": { missing: "Missing file after --input-file" },
         "--db": { missing: "Missing database path after --db" },
+        "--agent": { missing: "Missing agent ID after --agent" },
+        "--workflow": { missing: "Missing workflow ID after --workflow" },
       },
       rejectUnknown: true,
     });
@@ -45,6 +48,13 @@ export async function runCommand(args: string[]): Promise<number> {
     const scriptPath = readStringOption(parsed, "--script");
     const dbPath = readStringOption(parsed, "--db");
     let message = readStringOption(parsed, "--message");
+    const agent = readStringOption(parsed, "--agent");
+    const workflow = readStringOption(parsed, "--workflow");
+    const selection = {
+      ...(agent === undefined ? {} : { agent }),
+      ...(workflow === undefined ? {} : { workflow }),
+    };
+    const input = (await readRunInput(parsed)) as RunProjectOptions["input"];
 
     if (!dry && scriptPath) throw new Error("--script requires --dry.");
     const script = scriptPath ? await loadDryRunScript(scriptPath) : undefined;
@@ -54,10 +64,7 @@ export async function runCommand(args: string[]): Promise<number> {
       throw new Error("Project is invalid. Run plico validate for details.");
     }
     if (!dry) {
-      const prepared = await prepareRunMessage(target, {
-        content: message,
-        input: await readRunInput(parsed),
-      });
+      const prepared = await prepareRunMessage(target, { content: message, input }, selection);
       if (!prepared.ok) throw new Error(prepared.errors.join("\n"));
       message = prepared.message ?? (await resolveMessage(undefined));
     }
@@ -66,6 +73,9 @@ export async function runCommand(args: string[]): Promise<number> {
         ? undefined
         : createFakeProvider()
       : resolveModelProvider(validation?.project?.config.model, target);
+    const providerForModel = dry
+      ? undefined
+      : (model: Parameters<typeof resolveModelProvider>[0]) => resolveModelProvider(model, target);
     const recoveryKey = dry
       ? "plico:dry-fake:v1"
       : validation?.project?.config.model
@@ -88,6 +98,7 @@ export async function runCommand(args: string[]): Promise<number> {
               ...(recoveryKey ? { providerRecoveryKey: recoveryKey } : {}),
             },
             ...(dry ? { provider: createFakeProvider() } : provider ? { provider } : {}),
+            ...(providerForModel ? { providerForModel } : {}),
             ...(interruption
               ? {
                   onRecoveryStarted: interruption.onRecoveryStarted,
@@ -112,8 +123,11 @@ export async function runCommand(args: string[]): Promise<number> {
       ...(script ? { script } : {}),
       ...(outputStore ? { eventStore: outputStore } : {}),
       ...(engine ? { engine } : {}),
+      ...selection,
+      ...(input === undefined ? {} : { input }),
       ...(message === undefined ? {} : { message }),
       ...(provider === undefined ? {} : { provider }),
+      ...(providerForModel ? { providerForModel } : {}),
       ...(recoveryKey === undefined || provider === undefined
         ? {}
         : { providerRecoveryKey: recoveryKey }),

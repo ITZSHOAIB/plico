@@ -1,3 +1,4 @@
+import type { JsonValue } from "@plico-ai/contracts";
 import {
   cancelRun,
   listRunEvents,
@@ -8,11 +9,30 @@ import {
   startRun,
 } from "../app/runs.js";
 import { readJsonBody } from "../body.js";
+import { HttpError } from "../errors.js";
 import { jsonResponse } from "../responses.js";
 import { readScript } from "../script.js";
 import { eventStreamResponse, parseAfterCursor } from "../stream.js";
 import { readMetadataFilter } from "./metadata-query.js";
 import type { Route } from "./types.js";
+
+/** The agent or workflow a new run executes, and what it is asked. */
+function readSelection(body: Record<string, unknown>): {
+  agent?: string;
+  workflow?: string;
+  message?: string;
+  input?: JsonValue;
+} {
+  for (const key of ["agent", "workflow", "message"] as const)
+    if (body[key] !== undefined && (typeof body[key] !== "string" || !body[key]))
+      throw new HttpError(400, "request.invalid", `${key} must be a nonempty string.`);
+  return {
+    ...(body.agent === undefined ? {} : { agent: body.agent as string }),
+    ...(body.workflow === undefined ? {} : { workflow: body.workflow as string }),
+    ...(body.message === undefined ? {} : { message: body.message as string }),
+    ...(body.input === undefined ? {} : { input: body.input as JsonValue }),
+  };
+}
 
 function readAfterCursor(url: URL): number | undefined {
   const after = url.searchParams.get("after");
@@ -31,6 +51,7 @@ export const runRoutes: Route[] = [
         await startRun(app, {
           // A script sent over HTTP comes from the caller, so its tool steps never run handlers.
           ...(script === undefined ? {} : { script, mockTools: true }),
+          ...readSelection(body),
           metadata: body.metadata,
         }),
       );
@@ -51,8 +72,16 @@ export const runRoutes: Route[] = [
   {
     method: "GET",
     pattern: /^\/v1\/runs$/,
-    handler: async ({ app, url }) =>
-      jsonResponse(200, await listRuns(app, readMetadataFilter(url))),
+    handler: async ({ app, url }) => {
+      const parentRunId = url.searchParams.get("parentRunId");
+      return jsonResponse(
+        200,
+        await listRuns(app, {
+          ...readMetadataFilter(url),
+          ...(parentRunId ? { parentRunId } : {}),
+        }),
+      );
+    },
   },
   {
     method: "GET",
