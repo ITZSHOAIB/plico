@@ -1,6 +1,7 @@
 import { mkdir, readdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { getProjectPaths, REQUIRED_PROJECT_DIRECTORIES } from "@plico-ai/core";
+import { multiAgentFiles } from "./agent-files.js";
 import {
   agentFile,
   artifactsReadmeFile,
@@ -56,6 +57,10 @@ export async function createInternalOpsScaffold(options: ScaffoldOptions): Promi
     artifactsReadmeFile(),
     "utf8",
   );
+  for (const [path, content] of Object.entries(multiAgentFiles())) {
+    await mkdir(join(root, path, ".."), { recursive: true });
+    await writeFile(join(root, path), content, "utf8");
+  }
   await writeFile(join(root, "README.md"), projectReadmeFile(projectName), "utf8");
   await writeFile(join(root, "AGENTS.md"), projectAgentsFile(projectName), "utf8");
   await writeFile(join(root, "CLAUDE.md"), projectClaudeFile(), "utf8");

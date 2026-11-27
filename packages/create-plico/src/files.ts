@@ -73,6 +73,10 @@ export function gitignoreFile(): string {
 
 export function agentFile(projectName: string): string {
   return [
+    "---",
+    "agents: [researcher]",
+    "---",
+    "",
     `# ${projectName}`,
     "",
     "This project is organized file-first.",
@@ -88,6 +92,7 @@ export function agentFile(projectName: string): string {
     "- Read `plico.config.ts` and `agent.md`.",
     "- Inspect `skills/`, `tools/`, `evals/`, `artifacts/`, and `memory/`.",
     "- Add project-specific instructions before expanding the scaffold.",
+    "- Ask `researcher` for context you do not have. Give it one clear question.",
     "",
   ].join("\n");
 }
@@ -104,6 +109,8 @@ This is a [Plico](https://plico.sohab.dev) project: the agent is the files in th
 - \`skills/<name>/SKILL.md\` holds a skill. It needs a \`description\` in its frontmatter.
 - \`tools/<name>.tool.ts\` holds one tool as a default export (below).
 - \`evals/<name>.md\` holds one eval case, with frontmatter for \`expect\` and \`scorers\` plus criteria as bullets. An optional \`evals/<name>.script.json\` fixture is replayed in scripted runs. A \`.script.json\` on its own is also a case, like the shipped \`smoke.script.json\`. \`plico eval --live\` runs cases that have an \`input\`.
+- \`agents/<id>.md\` holds a specialist agent: instructions plus optional frontmatter (\`description\`, \`model\`, \`tools\`, \`skills\`, \`agents\`, \`input\`, \`output\`). An agent lists the specialists it may delegate to under \`agents\`; each becomes a \`delegate_<id>\` tool. Give a specialist an explicit \`tools\` list.
+- \`workflows/<id>.ts\` holds a workflow (\`defineWorkflow\` from \`@plico-ai/sdk\`): a \`run({ input, agent, step })\` function that calls agents in code. Run one with \`plico run --workflow <id>\`.
 - \`artifacts/\` and \`memory/\` are required folders. Leave them in place.
 
 ## Add a tool

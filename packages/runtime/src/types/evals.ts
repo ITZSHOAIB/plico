@@ -21,6 +21,10 @@ export interface EvalCase {
   trials?: number;
   expect?: EvalExpectation;
   input?: unknown;
+  /** The named agent a scripted case runs. Defaults to the entry agent. */
+  agent?: string;
+  /** The workflow a scripted case runs with `input`. */
+  workflow?: string;
   /** The `provider:model` that judges this case's criteria and judged scorers. */
   judge?: string;
   /** Judge criteria from the case body, skipped in scripted mode. */

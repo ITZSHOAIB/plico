@@ -171,8 +171,9 @@ describe("scaffold eval and dependencies", () => {
 
     const report = await runEvals(root);
 
-    expect(report.total).toBe(1);
-    expect(report.passed).toBe(1);
+    // smoke, plus the delegation and reply workflow cases.
+    expect(report.total).toBe(3);
+    expect(report.passed).toBe(3);
   });
 
   it("pins the provider adapter to a range instead of latest", async () => {
@@ -232,6 +233,6 @@ describe("scaffold agent instructions", () => {
 
     expect(validation.ok).toBe(true);
     expect(report.failed).toBe(0);
-    expect(report.passed).toBe(2);
+    expect(report.passed).toBe(4);
   });
 });

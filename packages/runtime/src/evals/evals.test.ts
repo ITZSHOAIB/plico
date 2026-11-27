@@ -29,6 +29,32 @@ function resultsDiagnostic(report: Awaited<ReturnType<typeof checkReadiness>>) {
 }
 
 describe("eval fixture shapes", () => {
+  it("runs a fixture against a named workflow with its input", async () => {
+    const root = await scaffold({
+      workflow: "review",
+      input: { ticket: "T-1" },
+      script: [
+        {
+          type: "agent.call",
+          agentId: "writer",
+          script: [{ type: "assistant.output", content: "Draft for T-1" }],
+        },
+      ],
+      expect: { outputContains: "Reviewed: Draft for T-1" },
+    });
+    await mkdir(join(root, "agents"));
+    await mkdir(join(root, "workflows"));
+    await writeFile(join(root, "agents", "writer.md"), "You write.\n");
+    await writeFile(
+      join(root, "workflows", "review.ts"),
+      "export default { async run({ input, agent }) { return `Reviewed: ${await agent('writer', { task: input.ticket })}`; } };\n",
+    );
+
+    const summary = await runEvals(root);
+
+    expect(summary).toMatchObject({ total: 1, passed: 1, failed: 0 });
+  });
+
   it("runs a bare step array, the same shape plico run --script accepts, named after its file", async () => {
     const root = await scaffold(passing.script);
 

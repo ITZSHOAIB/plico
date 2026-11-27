@@ -1,9 +1,11 @@
+import type { JsonValue } from "@plico-ai/contracts";
 import {
   getProjectRelativePaths,
   type LoadedProject,
   loadProject,
   prepareRunMessage,
-  readRunSchemas,
+  readTargetSchemas,
+  resolveRunTarget,
 } from "@plico-ai/core";
 import { runProject } from "../run/index.js";
 import type {
@@ -27,13 +29,19 @@ interface PlannedCase {
   trials: number;
 }
 
+function caseSelection(evalCase: EvalCase): { agent?: string; workflow?: string } {
+  return {
+    ...(evalCase.agent === undefined ? {} : { agent: evalCase.agent }),
+    ...(evalCase.workflow === undefined ? {} : { workflow: evalCase.workflow }),
+  };
+}
+
 /** The message each case sends, or why it cannot run live. */
 async function planCases(
   project: LoadedProject,
   cases: EvalCase[],
 ): Promise<{ planned: PlannedCase[]; skipped: SkippedEvalCase[] }> {
   const projectRoot = project.root;
-  const hasInputSchema = (await readRunSchemas(project)).input !== undefined;
   const planned: PlannedCase[] = [];
   const skipped: SkippedEvalCase[] = [];
   for (const evalCase of cases) {
@@ -42,12 +50,21 @@ async function planCases(
       skipped.push({ name: evalCase.name, reason: "Has no input, so it cannot run with --live." });
       continue;
     }
+    const path = `${getProjectRelativePaths().directories.evals}/${evalCase.name}.md`;
+    const selection = caseSelection(evalCase);
+    let hasInputSchema: boolean;
+    try {
+      const target = await resolveRunTarget(project, selection);
+      hasInputSchema = (await readTargetSchemas(project, target)).input !== undefined;
+    } catch (error) {
+      throw new Error(`Invalid eval case ${path}: ${(error as Error).message}`);
+    }
     const prepared = await prepareRunMessage(
       projectRoot,
       typeof input === "string" && !hasInputSchema ? { content: input } : { input },
+      selection,
     );
     if (!prepared.ok || prepared.message === undefined) {
-      const path = `${getProjectRelativePaths().directories.evals}/${evalCase.name}.md`;
       const reason = prepared.ok ? "input is empty" : prepared.errors.join("; ");
       throw new Error(`Invalid eval case ${path}: ${reason}`);
     }
@@ -82,6 +99,8 @@ export async function runLiveEvals(
           : provider;
       const result = await runProject(projectRoot, {
         message,
+        ...caseSelection(evalCase),
+        ...(evalCase.workflow === undefined ? {} : { input: evalCase.input as JsonValue }),
         provider: metered(live.provider),
         runId: `eval-${evalCase.name.replace(/[^a-z0-9_-]/gi, "_")}-${crypto.randomUUID().slice(0, 8)}`,
         ...(live.providerRecoveryKey === undefined

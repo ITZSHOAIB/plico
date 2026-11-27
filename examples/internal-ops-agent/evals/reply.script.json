@@ -1,0 +1,38 @@
+{
+  "description": "The reply workflow drafts, gets a rejection, revises, and is approved. Scripted, so it needs no model.",
+  "workflow": "reply",
+  "input": { "request": "My laptop will not connect to the VPN." },
+  "script": [
+    {
+      "type": "agent.call",
+      "agentId": "writer",
+      "script": [{ "type": "assistant.output", "content": "We got it." }]
+    },
+    {
+      "type": "agent.call",
+      "agentId": "reviewer",
+      "script": [
+        {
+          "type": "assistant.output",
+          "content": "{\"approved\":false,\"notes\":\"Say what happens next.\"}"
+        }
+      ]
+    },
+    {
+      "type": "agent.call",
+      "agentId": "writer",
+      "script": [
+        {
+          "type": "assistant.output",
+          "content": "We got it. The network team will reach out within an hour."
+        }
+      ]
+    },
+    {
+      "type": "agent.call",
+      "agentId": "reviewer",
+      "script": [{ "type": "assistant.output", "content": "{\"approved\":true}" }]
+    }
+  ],
+  "expect": { "status": "completed", "outputContains": "within an hour" }
+}
