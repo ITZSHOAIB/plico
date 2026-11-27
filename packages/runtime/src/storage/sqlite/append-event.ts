@@ -46,7 +46,7 @@ export function appendEventRecord(database: DatabaseSync, event: PlicoEvent): vo
         throw new Error("The first event must be run.started.");
       database
         .prepare(
-          "INSERT INTO runs (run_id, project_root, project_name, status, started_at, ended_at, metadata_json) VALUES (?, ?, ?, 'running', ?, NULL, ?)",
+          "INSERT INTO runs (run_id, project_root, project_name, status, started_at, ended_at, metadata_json, agent_id, workflow_id, parent_run_id, root_run_id) VALUES (?, ?, ?, 'running', ?, NULL, ?, ?, ?, ?, ?)",
         )
         .run(
           event.runId,
@@ -54,6 +54,10 @@ export function appendEventRecord(database: DatabaseSync, event: PlicoEvent): vo
           String(event.payload.projectName ?? ""),
           event.timestamp,
           event.payload.metadata === undefined ? null : JSON.stringify(event.payload.metadata),
+          event.payload.agentId ?? null,
+          event.payload.workflowId ?? null,
+          event.payload.parentRunId ?? null,
+          event.payload.rootRunId ?? null,
         );
       const owner = acquireOwner();
       database

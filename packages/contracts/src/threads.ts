@@ -7,6 +7,8 @@ export interface Thread {
   title?: string;
   /** Host data set at creation and never changed. */
   metadata?: Record<string, JsonValue>;
+  /** The entry agent the thread is bound to. Absent on threads created before named agents. */
+  agentId?: string;
 }
 
 export interface ThreadMessage {

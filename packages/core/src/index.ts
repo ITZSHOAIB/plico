@@ -40,6 +40,14 @@ export {
 export { parseModelRef } from "./model-ref.js";
 export { type PreparedRunMessage, prepareRunMessage } from "./run-input.js";
 export { readRunSchemas } from "./run-schemas.js";
+export {
+  type RunSelection,
+  type RunTarget,
+  readAgent,
+  readTargetSchemas,
+  readWorkflow,
+  resolveRunTarget,
+} from "./run-target.js";
 export { isJsonSchema, type NormalizedInputSchema, normalizeInputSchema } from "./schema.js";
 export { readSkills, type Skill, type SkillsResult } from "./skills.js";
 export {

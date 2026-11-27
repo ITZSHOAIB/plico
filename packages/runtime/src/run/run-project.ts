@@ -1,7 +1,15 @@
 import { randomUUID } from "node:crypto";
 import { resolve } from "node:path";
 import { type Span, SpanStatusCode } from "@opentelemetry/api";
-import { validateProject } from "@plico-ai/core";
+import {
+  type AgentDefinition,
+  type LoadedProject,
+  MAIN_AGENT_ID,
+  type RunTarget,
+  readAgents,
+  resolveRunTarget,
+  validateProject,
+} from "@plico-ai/core";
 import {
   createEngine,
   createMemoryJournal,
@@ -10,15 +18,14 @@ import {
 } from "../engine/index.js";
 import { RunWaitingError, runtimeErrorPayload } from "../errors.js";
 import { InMemoryEventLog } from "../events.js";
-import { discoverRunTools } from "../mcp/run-tools.js";
-import type { DeclaredTool, RunProjectOptions, RunResult } from "../types/index.js";
+import type { RunProjectOptions, RunResult } from "../types/index.js";
+import { executeAgent } from "./agents/run-agent.js";
+import type { RunTree } from "./agents/tree.js";
 import { finalizeRun } from "./finalize.js";
-import { ignoredWhenPinned, pinInstructions } from "./pinned-instructions.js";
-import { recordTools } from "./record-tools.js";
+import { ignoredWhenPinned } from "./pinned-instructions.js";
 import type { RunInput } from "./run-input.js";
-import { runDryStrategy } from "./strategies/dry.js";
-import { runProviderBackedRun } from "./strategies/provider.js";
-import { startRunSpan, storeSpanContext, tracedContext } from "./tracing.js";
+import { startRunSpan, storeSpanContext } from "./tracing.js";
+import { runWorkflow } from "./workflows/run-workflow.js";
 
 export async function runProject(
   root: string,
@@ -32,6 +39,10 @@ export async function runProject(
     displayRoot: root,
     startedAt: new Date().toISOString(),
     traceContext: storeSpanContext(span),
+    recordsTarget: true,
+    ...(options.agent === undefined ? {} : { agent: options.agent }),
+    ...(options.workflow === undefined ? {} : { workflow: options.workflow }),
+    ...(options.input === undefined ? {} : { input: options.input }),
     ...(options.message === undefined ? {} : { message: options.message }),
     ...(options.threadId === undefined ? {} : { threadId: options.threadId }),
     ...(options.metadata === undefined ? {} : { metadata: options.metadata }),
@@ -87,9 +98,20 @@ export async function runLoop(
   const displayRoot = input.displayRoot ?? root;
   const validation = await validateProject(root);
   const events = await InMemoryEventLog.open(runId, options.eventStore);
-  const errors = events.all().some((event) => event.type === "instructions.composed")
-    ? validation.errors.filter((issue) => !ignoredWhenPinned(issue))
-    : validation.errors;
+  const observed: RunTree["observed"] = [];
+  events.onEvent((event) => {
+    observed.push(event);
+  });
+  const pinned = events.all().some((event) => event.type === "instructions.composed");
+  const target = await recordTarget(ctx, input, validation.project);
+  const errors = [
+    ...(pinned
+      ? validation.errors.filter((issue) => !ignoredWhenPinned(issue))
+      : validation.errors),
+    ...("error" in target
+      ? [{ path: "plico.config.ts", message: target.error, severity: "error" as const }]
+      : []),
+  ];
   const newlyStarted = events.all().length === 0;
   await events.append("run.started", {
     projectRoot: displayRoot,
@@ -97,10 +119,13 @@ export async function runLoop(
     ...(input.threadId === undefined ? {} : { threadId: input.threadId }),
     ...(input.metadata === undefined ? {} : { metadata: input.metadata }),
     ...(input.context === undefined ? {} : { context: input.context }),
+    ...("kind" in target
+      ? { [target.kind === "agent" ? "agentId" : "workflowId"]: target.id }
+      : {}),
   });
   if (newlyStarted) options.onStarted?.(runId);
 
-  if (errors.length > 0 || !validation.project) {
+  if (errors.length > 0 || !validation.project || "error" in target) {
     await events.append("run.error", { phase: "validation", issues: errors });
     await events.append("run.failed", { phase: "validation" });
 
@@ -117,7 +142,6 @@ export async function runLoop(
   }
 
   const { project } = validation;
-  ctx = tracedContext(ctx, span, project.config.model);
   const summary = {
     runId,
     projectRoot: displayRoot,
@@ -127,46 +151,23 @@ export async function runLoop(
   };
 
   try {
-    const { instructions, skills, outputSchema } = await pinInstructions(project, events);
-
-    const tools = withMockedResults(
-      await discoverRunTools(
-        project,
-        ctx.signal,
-        input.script ?? (options.provider ? undefined : []),
-        events,
-        input.mockTools,
-      ),
-      options.mockToolResult,
-    );
-    await recordTools(project.root, tools, events, project.config);
-
+    const tree: RunTree = {
+      rootRunId: runId,
+      input,
+      options,
+      project,
+      agents: new Map((await readAgents(project.root)).agents.map((agent) => [agent.id, agent])),
+      observed,
+    };
+    const selected = "kind" in target ? target : { kind: "agent" as const, id: MAIN_AGENT_ID };
     const output =
-      options.provider !== undefined
-        ? await runProviderBackedRun(
-            ctx,
-            options.provider,
-            input.message,
-            instructions.content,
-            tools,
-            events,
-            options.eventStore,
-            project.config.model,
-            project.config,
-            input.history,
-            skills,
-            outputSchema,
-          )
-        : await runDryStrategy(
-            ctx,
-            project,
-            tools,
-            events,
-            options.eventStore,
-            input.script,
-            input.mockTools === true,
-            outputSchema,
-          );
+      selected.kind === "workflow"
+        ? await runWorkflow(ctx, tree, selected.id, events)
+        : await executeAgent(ctx, span, tree, rootAgent(tree, selected.id), events, {
+            message: input.message,
+            history: input.history,
+            script: input.script,
+          });
     await events.append("run.completed", output);
 
     return await finalizeRun({
@@ -197,16 +198,28 @@ export async function runLoop(
   }
 }
 
-function withMockedResults(
-  tools: DeclaredTool[],
-  mock: RunProjectOptions["mockToolResult"],
-): DeclaredTool[] {
-  if (!mock) return tools;
-  return tools.map((tool) => ({
-    ...tool,
-    handler: async (input, context) => {
-      const mocked = mock(tool.name);
-      return mocked ? mocked.result : tool.handler(input, context);
-    },
-  }));
+/**
+ * The agent or workflow this run executes, journaled so a changed `entry` cannot reroute a run that
+ * resumes. Runs journaled before named agents have no target step and run `main`.
+ */
+async function recordTarget(
+  ctx: RunContext,
+  input: RunInput,
+  project: LoadedProject | undefined,
+): Promise<RunTarget | { error: string } | { legacy: true }> {
+  if (input.recordsTarget !== true) return { legacy: true };
+  return ctx.step("target", async () => {
+    if (!project) return { kind: "agent" as const, id: MAIN_AGENT_ID };
+    try {
+      return await resolveRunTarget(project, { agent: input.agent, workflow: input.workflow });
+    } catch (error) {
+      return { error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+}
+
+function rootAgent(tree: RunTree, id: string): AgentDefinition {
+  const agent = tree.agents.get(id);
+  if (!agent) throw new Error(`Unknown agent "${id}".`);
+  return agent;
 }

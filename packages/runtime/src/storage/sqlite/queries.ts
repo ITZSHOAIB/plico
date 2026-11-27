@@ -3,16 +3,18 @@ import type { EvalReport, JsonValue, PlicoEvent, RunStatus, RunSummary } from "@
 import { runStreamType } from "../../events.js";
 import { parseMetadata } from "../metadata.js";
 
-export function readRunSummaries(database: DatabaseSync): RunSummary[] {
+/** Root runs, or the child runs of `parentRunId`, newest first. */
+export function readRunSummaries(database: DatabaseSync, parentRunId?: string): RunSummary[] {
   const rows = database
     .prepare(
       `
-        SELECT run_id, project_root, project_name, status, started_at, ended_at, output, structured_output_json, metadata_json
+        SELECT run_id, project_root, project_name, status, started_at, ended_at, output, structured_output_json, metadata_json, agent_id, workflow_id, parent_run_id, root_run_id
         FROM runs
+        WHERE ${parentRunId === undefined ? "parent_run_id IS NULL" : "parent_run_id = ?"}
         ORDER BY started_at DESC, run_id DESC
       `,
     )
-    .all() as Array<Record<string, unknown>>;
+    .all(...(parentRunId === undefined ? [] : [parentRunId])) as Array<Record<string, unknown>>;
 
   return rows.map((row) => rowToRunSummary(row));
 }
@@ -21,7 +23,7 @@ export function readRunSummary(database: DatabaseSync, runId: string): RunSummar
   const row = database
     .prepare(
       `
-        SELECT run_id, project_root, project_name, status, started_at, ended_at, output, structured_output_json, metadata_json
+        SELECT run_id, project_root, project_name, status, started_at, ended_at, output, structured_output_json, metadata_json, agent_id, workflow_id, parent_run_id, root_run_id
         FROM runs
         WHERE run_id = ?
       `,
@@ -59,7 +61,8 @@ export function readThreadRunEvents(database: DatabaseSync, threadId: string): P
         SELECT events.stream_id, events.sequence, events.event_id, events.schema_version,
           events.type, events.timestamp, events.payload_json, artifact_content.content AS artifact_content
         FROM events
-        JOIN thread_runs ON thread_runs.run_id = events.stream_id
+        JOIN runs ON runs.run_id = events.stream_id
+        JOIN thread_runs ON thread_runs.run_id = COALESCE(runs.root_run_id, runs.run_id)
         LEFT JOIN artifact_content ON artifact_content.content_hash = json_extract(events.payload_json, '$.contentHash')
         WHERE events.stream_type = 'run' AND thread_runs.thread_id = ?
         ORDER BY events.position ASC
@@ -81,15 +84,18 @@ export function readThreadRunEventsThrough(
         WITH selected_run_position AS (
           SELECT MAX(target_events.position) AS position
           FROM events AS target_events
-          JOIN thread_runs AS target_runs ON target_runs.run_id = target_events.stream_id
+          JOIN runs AS target_run ON target_run.run_id = target_events.stream_id
+          JOIN thread_runs AS target_runs
+            ON target_runs.run_id = COALESCE(target_run.root_run_id, target_run.run_id)
           WHERE target_events.stream_type = 'run'
             AND target_runs.thread_id = ?
-            AND target_events.stream_id = ?
+            AND COALESCE(target_run.root_run_id, target_run.run_id) = ?
         )
         SELECT events.stream_id, events.sequence, events.event_id, events.schema_version,
           events.type, events.timestamp, events.payload_json, artifact_content.content AS artifact_content
         FROM events
-        JOIN thread_runs ON thread_runs.run_id = events.stream_id
+        JOIN runs ON runs.run_id = events.stream_id
+        JOIN thread_runs ON thread_runs.run_id = COALESCE(runs.root_run_id, runs.run_id)
         LEFT JOIN artifact_content ON artifact_content.content_hash = json_extract(events.payload_json, '$.contentHash')
         WHERE events.stream_type = 'run' AND thread_runs.thread_id = ?
           AND events.position <= (SELECT position FROM selected_run_position)
@@ -97,6 +103,24 @@ export function readThreadRunEventsThrough(
       `,
     )
     .all(threadId, runId, threadId) as Array<Record<string, unknown>>;
+
+  return rows.map((row) => rowToEvent(row));
+}
+
+export function readRunTreeEvents(database: DatabaseSync, rootRunId: string): PlicoEvent[] {
+  const rows = database
+    .prepare(
+      `
+        SELECT events.stream_id, events.sequence, events.event_id, events.schema_version,
+          events.type, events.timestamp, events.payload_json, artifact_content.content AS artifact_content
+        FROM events
+        JOIN runs ON runs.run_id = events.stream_id
+        LEFT JOIN artifact_content ON artifact_content.content_hash = json_extract(events.payload_json, '$.contentHash')
+        WHERE events.stream_type = 'run' AND (runs.run_id = ? OR runs.root_run_id = ?)
+        ORDER BY events.position ASC
+      `,
+    )
+    .all(rootRunId, rootRunId) as Array<Record<string, unknown>>;
 
   return rows.map((row) => rowToEvent(row));
 }
@@ -138,7 +162,15 @@ function rowToRunSummary(row: Record<string, unknown>): RunSummary {
       ? { structuredOutput: JSON.parse(row.structured_output_json) as JsonValue }
       : {}),
     ...(metadata === undefined ? {} : { metadata }),
+    ...optionalText("agentId", row.agent_id),
+    ...optionalText("workflowId", row.workflow_id),
+    ...optionalText("parentRunId", row.parent_run_id),
+    ...optionalText("rootRunId", row.root_run_id),
   };
+}
+
+function optionalText<K extends string>(key: K, value: unknown): Partial<Record<K, string>> {
+  return typeof value === "string" ? ({ [key]: value } as Record<K, string>) : {};
 }
 
 function rowToEvent(row: Record<string, unknown>): PlicoEvent {

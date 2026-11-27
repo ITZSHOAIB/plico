@@ -3,6 +3,7 @@ import type { LoadedProject } from "@plico-ai/core";
 import type { RunContext } from "../../engine/index.js";
 import type { InMemoryEventLog } from "../../events.js";
 import type { DeclaredTool, DryRunScriptStep, EventStore } from "../../types/index.js";
+import type { AgentToolset } from "../agents/types.js";
 import { validateStructuredText } from "../structured-output.js";
 import { runDefaultDryRun } from "./default-dry.js";
 import { runScriptedDryRun } from "./scripted.js";
@@ -17,11 +18,21 @@ export async function runDryStrategy(
   script: DryRunScriptStep[] | undefined,
   mockTools: boolean,
   outputSchema: JsonSchema | undefined,
+  toolset?: AgentToolset,
 ): Promise<Pick<RunResult, "output" | "structuredOutput">> {
   const output =
     script === undefined
       ? await runDefaultDryRun(project, events)
-      : await runScriptedDryRun(ctx, script, tools, events, eventStore, project.config, mockTools);
+      : await runScriptedDryRun(
+          ctx,
+          script,
+          tools,
+          events,
+          eventStore,
+          project.config,
+          mockTools,
+          toolset,
+        );
   const structuredOutput =
     outputSchema === undefined ? undefined : await validateStructuredText(outputSchema, output);
   return {

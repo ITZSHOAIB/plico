@@ -18,7 +18,7 @@ export function recoverInterruptedRuns(database: DatabaseSync): void {
       SELECT runs.run_id, run_owners.owner_token, run_owners.owner_path FROM runs
       LEFT JOIN run_owners ON run_owners.run_id = runs.run_id
       WHERE runs.status = 'running'
-        AND runs.run_id NOT IN (SELECT run_id FROM engine_runs)
+        AND COALESCE(runs.root_run_id, runs.run_id) NOT IN (SELECT run_id FROM engine_runs)
     `)
       .all() as Array<{ run_id: string; owner_token: string | null; owner_path: string | null }>;
     // The write transaction serializes recovery with concurrent event appends and other openers.
