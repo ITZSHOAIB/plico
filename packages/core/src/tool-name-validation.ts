@@ -18,6 +18,9 @@ export const ARTIFACT_TOOL_NAMES = ["list_files", "read_file", "write_file", "ed
 /** The built-in tool the agent calls to read a skill's full text. */
 export const SKILL_TOOL_NAME = "load_skill";
 
+/** Reserved for the built-in task tool of dynamic task subagents, so adding it later is not breaking. */
+export const TASK_TOOL_NAME = "task";
+
 /** Names of the project's tool files whose name can be read statically, sorted. */
 export async function readToolFileNames(root: string): Promise<string[]> {
   const paths = getProjectPaths(root);
@@ -79,6 +82,15 @@ export async function validateToolNames(root: string): Promise<ValidationIssue[]
       issues.push({
         path: source,
         message: `Tool name "${name}" is reserved by Plico's skill loader`,
+        severity: "error",
+      });
+      continue;
+    }
+
+    if (name === TASK_TOOL_NAME) {
+      issues.push({
+        path: source,
+        message: `Tool name "${name}" is reserved by Plico's task subagent tool`,
         severity: "error",
       });
       continue;

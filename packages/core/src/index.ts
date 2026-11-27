@@ -54,6 +54,7 @@ export {
   ARTIFACT_TOOL_NAMES,
   readToolFileNames,
   SKILL_TOOL_NAME,
+  TASK_TOOL_NAME,
 } from "./tool-name-validation.js";
 export type {
   LoadedProject,
