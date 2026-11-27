@@ -9,6 +9,7 @@
     "evals",
     "providers",
     "artifacts",
+    "multi-agent",
     "refund-agent",
     "agents",
     "---Run---",

@@ -38,8 +38,6 @@ Plico's scope is deliberately small for `0.1`. These are not in the packages tod
 - **MCP OAuth.** stdio and Streamable HTTP servers work with explicit allowlists, approval policy, readiness checks and Studio inspection; interactive remote auth flows are not available yet.
 - **Agent memory.** The `memory/` folder is required in the layout, but the agent does not read or
   write it yet.
-- **Multi-agent and workflows.** One agent per project. `agents/`, `workflows/` and the `entry`
-  config key are reserved for later; see [Project layout](/docs/project-layout#reserved-names).
 - **Context compaction.** A long thread is sent to the model as it stands.
 - **Chat channels** such as Slack, and a React component kit. Studio is the UI, and it is a local
   development tool, not something to deploy over production data.

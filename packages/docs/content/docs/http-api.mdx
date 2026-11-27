@@ -34,7 +34,24 @@ cannot say who decided. See [Threads](/docs/threads#host-data-metadata-and-conte
 
 Cancel an active persisted run with `POST /v1/runs/<run-id>/cancel` or
 `plico cancel <run-id> <project>`. Pressing Ctrl+C during `plico run` also cancels
-that run.
+that run. Cancelling a run cancels its child runs. Cancelling a child run on its own answers 409
+`run.child`; cancel its root instead.
+
+## Select an agent or workflow
+
+`POST /v1/runs` takes `agent` or `workflow` to run something other than the entry agent:
+
+```json
+{ "workflow": "reply", "input": { "request": "My VPN is down" } }
+```
+
+With a `message` or `input` and no `script`, the run calls the configured model; without a model
+it answers 503 `provider.unavailable`. Input that does not match the selected agent's or workflow's
+`input` schema answers 400 `input.invalid`. Without `message`, `input` or `script`, the run calls no
+model, as before.
+
+`POST /v1/threads` takes `{ "agent": "<id>" }` to bind a thread to that agent. Every message in it
+then runs that agent. See [Specialists and workflows](/docs/multi-agent).
 
 ## Scripted runs
 
@@ -44,7 +61,8 @@ answers 403 `run.script_disabled` unless the server starts with
 
 Scripted runs over HTTP never run tool handlers. Each `tool.call` step needs a `result`, which
 is recorded as the tool's output, the same way evals mock tools. A step without `result`
-or with `"live": true` is refused with 400 `request.invalid_body` before the run starts. Approval policies still apply, so a step for a tool that needs
+or with `"live": true` is refused with 400 `request.invalid_body` before the run starts. The same holds
+for the steps nested under a `delegate_<id>` call or an `agent.call`. Approval policies still apply, so a step for a tool that needs
 approval waits for a decision first, unless an `approval.decide` step follows it (see [Evals](/docs/evals#test-approvals)). `plico run --dry --script` on the command line, and
 `plico.runs.start({ script })` in your backend, still run the real handlers.
 
@@ -67,12 +85,12 @@ Every route is under `/v1`. Errors are JSON with an `error.code` and `error.mess
 | `GET /v1/readiness` | Readiness diagnostics. |
 | `POST /v1/runs` | Start a run. Returns 202 and the `runId`. |
 | `POST /v1/runs/dry` | Run the project without a model and return the result. |
-| `GET /v1/runs` | List runs. |
+| `GET /v1/runs` | List root runs. `?parentRunId=<id>` lists that run's child runs. |
 | `GET /v1/runs/<run-id>` | One run, with `structuredOutput` when the agent declares an output schema. |
 | `GET /v1/runs/<run-id>/events` | The run's events. `?after=<sequence>` returns only newer ones. See [Events](/docs/events). |
 | `GET /v1/runs/<run-id>/events/stream` | The same events as Server-Sent Events. |
 | `POST /v1/runs/<run-id>/cancel` | Cancel a run. |
-| `POST /v1/runs/<run-id>/signal` | Send a signal, such as an [approval](/docs/approvals) decision. |
+| `POST /v1/runs/<run-id>/signal` | Send a signal, such as an [approval](/docs/approvals) decision. A child run's approval can be sent to the child or its root. |
 | `GET /v1/runs/<run-id>/workspace` | The run's artifact files and versions. Sub-routes `/files/<path>`, `/diffs`, `/exports` and `/snapshots/<id>` are in [Artifacts](/docs/artifacts). |
 | `POST /v1/threads`, `GET /v1/threads` | Create and list threads. |
 | `GET /v1/threads/<id>`, `PATCH /v1/threads/<id>` | Read or rename a thread. |

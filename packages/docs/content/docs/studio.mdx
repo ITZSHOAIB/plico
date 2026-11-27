@@ -20,6 +20,12 @@ the run before the tool executes. Each decision is recorded in the run's event l
 [Approvals](/docs/approvals) for the policy and the other ways to decide.
 The run inspector also lets you cancel active runs.
 
+In a project with [specialists or workflows](/docs/multi-agent), the run list tags each run with
+the agent or workflow it ran. The run inspector lists a run's child runs with their agent, task,
+status and tokens, and links each one; a child links back to its parent. A child's approval also
+shows on its root run, so it can be decided there, and a child run offers no cancel of its own.
+A run's token count includes its child runs.
+
 For an agent with an output schema, the run inspector shows the validated structured result once
 the run completes. The Instructions view shows the agent's declared input and output schemas.
 

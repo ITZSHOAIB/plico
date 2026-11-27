@@ -90,6 +90,13 @@ Declare an `output` schema in `agent.md` frontmatter or `plico.config.ts` to req
 structured result. The final `run.completed` event and run result include `structuredOutput`;
 `output` stays text. `GET /v1/schemas` lets clients discover the declared shapes. See [run schemas](https://plico.sohab.dev/docs/project-layout#agentmd-frontmatter).
 
+**Specialists and workflows** are optional. One `agent.md` is a complete agent. When it outgrows
+one set of instructions, add `agents/researcher.md` and list it under `agents:` in `agent.md`
+frontmatter: the agent gets a `delegate_researcher` tool that runs the researcher as a child run.
+A `workflows/reply.ts` file calls agents in a fixed order, such as draft, review and revise, with
+plain `await` and `for`. Child runs share the root's approvals, cancellation and token totals.
+See [Specialists and workflows](https://plico.sohab.dev/docs/multi-agent).
+
 ## Why Plico
 
 - **File-first.** The project is a directory tree. No hidden state, no code generation, no build step.
@@ -107,7 +114,7 @@ structured result. The final `run.completed` event and run result include `struc
 | --- | --- |
 | [`create-plico`](packages/create-plico) | `npm create plico`: scaffold a project |
 | [`@plico-ai/cli`](packages/cli) | The `plico` command: validate, run, serve, eval, readiness |
-| [`@plico-ai/sdk`](packages/sdk) | `defineTool` and `defineConfig` for your project |
+| [`@plico-ai/sdk`](packages/sdk) | `defineTool`, `defineConfig` and `defineWorkflow` for your project |
 | [`@plico-ai/server`](packages/server) | The HTTP API and `createPlico` for embedding |
 | [`@plico-ai/runtime`](packages/runtime) | The run loop and event store |
 | [`@plico-ai/core`](packages/core) | Project loading and validation |

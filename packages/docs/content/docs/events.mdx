@@ -31,7 +31,7 @@ version of the saved event, not of the HTTP API. The types are in `@plico-ai/con
 
 | Event | When it is written |
 | --- | --- |
-| `run.started` | A run begins. Carries the project name and any host `metadata` and `context`. |
+| `run.started` | A run begins. Carries the project name, any host `metadata` and `context`, and the `agentId` or `workflowId` it runs. A child run adds `parentRunId` and `rootRunId`. |
 | `instructions.composed` | `agent.md` and the skills are combined. Records the exact text and optional `outputSchema` the run uses. |
 | `tools.discovered` | The project's tools are loaded, with their schemas and approval policy. |
 | `input.received` | The user message a model-backed run starts from. |
@@ -42,12 +42,15 @@ version of the saved event, not of the HTTP API. The types are in `@plico-ai/con
 | `assistant.output` | Text the agent says to the user. |
 | `tool.call` | The agent calls a tool, with its arguments. |
 | `tool.result` | The tool's result. |
-| `approval.requested` | A tool needs a decision. See [Approvals](/docs/approvals). |
+| `approval.requested` | A tool needs a decision. See [Approvals](/docs/approvals). A copy in a parent run carries the child's `runId`. |
 | `approval.decided` | A person approved or denied. May record who decided. |
+| `agent.called` | A delegation or workflow `agent()` call starts a child run, with its `runId`, `agentId` and `task`. |
+| `agent.returned` | The child run ended, with its `status`, `output` or `error`, and its token `usage` including its own children. |
+| `workflow.step` | A workflow `step()` ran, with its `name`. |
 | `artifact.workspace.created` | The run gets an artifact workspace. |
 | `artifact.file.written` | A file version is written, with its path, hash and version. |
 | `artifact.snapshot.created` | A workspace snapshot is recorded, with its file count. |
-| `run.waiting` | The run is parked on a decision. |
+| `run.waiting` | The run is parked on a decision. A parent waiting on a child's decision carries the child's `runId`. |
 | `run.completed` | The run finished, with its final text `output` and optional validated JSON `structuredOutput`. |
 | `run.cancelled` | The run was cancelled. |
 | `run.error` | Something went wrong, with its phase and a message. |

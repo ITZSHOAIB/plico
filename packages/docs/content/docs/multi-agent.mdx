@@ -1,0 +1,197 @@
+---
+title: Specialists and workflows
+description: Add specialist agents a supervisor can delegate to, and workflows that call agents in a fixed order.
+icon: Network
+---
+
+Most projects need one agent: `agent.md` with its tools and skills. Start there. Add specialists when
+one set of instructions starts doing several jobs, and a workflow when the order of those jobs
+must not be left to a model.
+
+## One agent
+
+Root `agent.md` is the agent `main`. It is the only agent file a project needs, and everything else
+on this page is optional.
+
+```text
+my-agent/
+├── agent.md
+├── plico.config.ts
+├── skills/
+└── tools/
+```
+
+## Add a specialist
+
+A specialist is another Markdown file in `agents/`. Its file name is its ID: lowercase letters,
+digits, `-` and `_`, starting with a letter.
+
+```md title="agents/researcher.md"
+---
+description: Looks up context for a request, such as past tickets or who owns a system.
+tools: []
+---
+
+# Researcher
+
+Answer the one research question you were given, in two or three sentences.
+```
+
+Make `main` a supervisor by listing the specialists it may call:
+
+```md title="agent.md"
+---
+agents: [researcher]
+---
+
+# Ops agent
+
+Ask `researcher` for context you do not have. Give it one clear question.
+```
+
+Each listed specialist becomes a tool named `delegate_<id>`, with the specialist's `description` and
+the input `{ task: string }`. The specialist runs its own loop with its own instructions, tools and
+model, and its answer comes back as the tool result. When it fails, the supervisor gets the error as
+a tool error and can recover.
+
+A specialist sees its instructions, its skills and the task. It never sees the supervisor's
+conversation, so put everything it needs into the task.
+
+## Agent frontmatter
+
+Every agent file, `agent.md` included, takes the same optional fields.
+
+| Field | Default when left out |
+| --- | --- |
+| `description` | None. Required when another agent delegates to this one. |
+| `model` | The project model. A partial override such as `name: small` keeps the rest, provider included. |
+| `tools` | Every project tool. List the tools a specialist needs; `tools: []` gives it none. |
+| `skills` | Every skill. |
+| `agents` | None, so the agent does not delegate. |
+| `artifacts` | The project's `artifacts.access`. An agent can only narrow it. |
+| `maxDelegations` | 8 delegations per run of this agent. Further calls return an error to the model. |
+| `input`, `output` | None. JSON Schema, or a Zod schema file, as for [`agent.md`](/docs/project-layout). |
+
+Validation rejects an unknown agent in `agents`, a cycle such as `a → b → a`, a specialist without a
+`description`, and a `delegate_<id>` name that collides with a project tool.
+
+`plico readiness` warns when a delegated specialist has no `tools` list and so inherits a tool that
+needs approval. Give it an explicit list.
+
+## Add a workflow
+
+A workflow is a TypeScript file in `workflows/` that calls agents with plain `await`, `if` and
+`for`. Use one when the steps and their order are fixed, such as draft, review and revise:
+
+```ts title="workflows/reply.ts"
+import { defineWorkflow } from "@plico-ai/sdk";
+
+const verdict = {
+  type: "object",
+  required: ["approved"],
+  properties: { approved: { type: "boolean" }, notes: { type: "string" } },
+} as const;
+
+export default defineWorkflow<{ request: string }>({
+  description: "Draft a reply, review it, and revise it until it is approved.",
+  input: {
+    type: "object",
+    required: ["request"],
+    properties: { request: { type: "string" } },
+  },
+  maxAgentCalls: 5,
+  async run({ input, agent }) {
+    let reply: string = await agent("writer", { task: `Draft a reply to: ${input.request}` });
+    for (let round = 0; round < 2; round++) {
+      const review = await agent("reviewer", { task: `Review this reply:\n${reply}`, output: verdict });
+      if (review.approved) break;
+      reply = await agent("writer", { task: `Revise this reply:\n${reply}\n\nNotes: ${review.notes}` });
+    }
+    return reply;
+  },
+});
+```
+
+- `agent(id, { task, output? })` runs an agent and returns its text. With `output`, a JSON Schema or
+  Zod schema, it returns the validated value instead.
+- `step(name, fn)` runs a side effect once. When a run resumes, the recorded result is returned and
+  `fn` does not run again.
+- `input` and `output` validate the workflow's own input and result.
+- `maxAgentCalls` caps `agent()` calls per run. The default is 20.
+
+Keep the code between `agent()` and `step()` calls deterministic. Anything that reads the clock,
+randomness or the network belongs inside `step()`, because a resumed run replays the workflow and
+fails loudly if the sequence of calls changed.
+
+Agents and workflows share one ID space. Set `entry` in `plico.config.ts` to start runs with another
+agent or a workflow; without it, runs start with `main`.
+
+## Run one
+
+```bash
+plico run --agent researcher --message "Who owns the VPN?" .
+plico run --workflow reply --input '{"request":"My VPN is down"}' .
+```
+
+Over HTTP, `POST /v1/runs` takes `agent` or `workflow` with a `message` or `input`. A thread is bound
+to one agent when it is created, with `POST /v1/threads` and `{ "agent": "researcher" }`. Without
+one, it uses the entry agent. See the [HTTP API](/docs/http-api).
+
+## Child runs
+
+Every delegation and every `agent()` call is a child run with its own run ID and events. Its
+`run.started` records `agentId`, `parentRunId` and `rootRunId`.
+
+- **IDs.** A child's ID extends its parent's: `run-1.d0-0` for the first delegation in the first
+  model turn, `run-1.a2-writer` for a workflow's third agent call.
+- **Lists.** `GET /v1/runs` and `plico runs` list root runs. Add `?parentRunId=<id>` or
+  `--parent <id>` to list one run's children. Every run can be read by ID.
+- **Approvals.** A child's approval request is copied into its root run's events, and the root waits
+  too. Decide it through the root or the child; either reaches the same wait.
+- **Cancel.** Cancelling the root cancels every child. Cancelling a child on its own is refused with
+  a message that names the root.
+- **Usage.** The parent records `agent.called` and `agent.returned`. `agent.returned` carries the
+  child's token usage, its own children included, so a root run's events add up to the whole tree.
+- **Artifacts.** Children share the thread's workspace, or the root run's when there is no thread.
+
+[Studio](/docs/studio) shows the agent or workflow a run executed, links each child run, and counts
+their tokens in the parent.
+
+## Evals
+
+A scripted eval replays a delegation by nesting the specialist's steps under the `delegate_<id>`
+call, and a workflow with one `agent.call` step per `agent()` call:
+
+```json title="evals/reply.script.json"
+{
+  "workflow": "reply",
+  "input": { "request": "My laptop will not connect to the VPN." },
+  "script": [
+    { "type": "agent.call", "agentId": "writer", "script": [{ "type": "assistant.output", "content": "We got it." }] },
+    { "type": "agent.call", "agentId": "reviewer", "script": [{ "type": "assistant.output", "content": "{\"approved\":true}" }] }
+  ],
+  "expect": { "status": "completed", "outputContains": "We got it" }
+}
+```
+
+```json title="evals/delegate.script.json"
+{
+  "script": [
+    {
+      "type": "tool.call",
+      "toolName": "delegate_researcher",
+      "arguments": { "task": "Who owns the VPN?" },
+      "script": [{ "type": "assistant.output", "content": "The network team owns the VPN." }]
+    },
+    { "type": "assistant.output", "content": "The network team owns it." }
+  ]
+}
+```
+
+A fixture's `agent` field runs a named agent instead of the entry agent. `npm create plico` ships
+both cases, with the researcher, writer and reviewer agents.
+
+## Not yet
+
+Handing a conversation over to another agent, running agents in parallel, giving a specialist the
+parent's conversation, and starting a workflow from a thread message are not supported.

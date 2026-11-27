@@ -180,6 +180,21 @@ describe("multi-agent projects", () => {
       }),
     );
 
+    const nested = await post("/v1/runs", {
+      script: [
+        {
+          type: "tool.call",
+          toolName: "delegate_researcher",
+          arguments: { task: "Find 42" },
+          script: [{ type: "tool.call", toolName: "lookup", arguments: {}, live: true }],
+        },
+      ],
+    });
+    expect(nested.status).toBe(400);
+    expect(await nested.json()).toMatchObject({
+      error: { message: expect.stringContaining("Script step 0.0 is live") },
+    });
+
     const invalid = await post("/v1/runs", { workflow: "review", input: { nope: 1 } });
     expect(invalid.status).toBe(400);
     expect(await invalid.json()).toMatchObject({ error: { code: "input.invalid" } });

@@ -11,9 +11,9 @@ Run `plico --version` to print the installed version. Every command takes an opt
 | `plico validate [path]` | Validates a project and prints diagnostics, with `file:line` for eval cases. It warns about files in `evals/` that `plico eval` would skip, such as `case.json`. |
 | `plico run [--message <text>] [--input <json> \| --input-file <path>] [path]` | Runs the agent with its configured model. `--input` carries typed input for an agent with an `input` schema. |
 | `plico run --dry [--persist] [--script <file>] [path]` | Runs with a scripted model, so it needs no key. |
-| `plico runs [path]` | Lists saved runs. |
+| `plico runs [--parent <run-id>] [path]` | Lists saved root runs, with the agent or workflow each ran. `--parent` lists one run's child runs. |
 | `plico events <run-id> [--after <sequence>] [path]` | Prints a run's event log. |
-| `plico cancel <run-id> [path]` | Cancels an active persisted run. |
+| `plico cancel <run-id> [path]` | Cancels an active persisted run and its child runs. A child run is refused; cancel its root. |
 | `plico eval [path]` | Runs the project's evals: scripted by default, against the model with `--live`. Supports `--baseline <file>`, `--save-baseline`, `--tolerance <n>`, and `--format` with `md` or `junit`. |
 | `plico eval compare [--tolerance &lt;n&gt;] [--json] &lt;a&gt; &lt;b&gt;` | Compares two saved eval reports. |
 | `plico eval rescore [--format &lt;md|junit&gt;] [--json] &lt;report&gt; [project]` | Rescores a saved report using the project's current scorers. |
@@ -29,6 +29,10 @@ than `.plico/plico.sqlite`. `plico run` without `--dry` needs a configured model
 
 Typed input is validated before the model provider is resolved, so input schema diagnostics
 take precedence over model configuration errors.
+
+`plico run` and `plico run --dry` take `--agent <id>` or `--workflow <id>` to run a named agent or
+workflow instead of the entry agent. A workflow takes its input with `--input`. See
+[Specialists and workflows](/docs/multi-agent#run-one).
 
 For an agent with an `output` schema, `plico run --json` includes the validated value in
 `structuredOutput`. A scripted run's final output must be JSON matching that schema.
@@ -55,6 +59,9 @@ array of steps:
 | `tool.call` | `toolName`, `arguments`, and an optional `result`. `plico run --dry` runs the real handler. [Evals](/docs/evals) and scripted runs over HTTP use `result` instead and never run it. `"live": true` runs the handler there too. |
 | `approval.decide` | `approved`, `true` or `false`. Place it right after a `tool.call` that needs approval. |
 | `artifact.write` | `files`, each with `path`, `content` and an optional `mimeType`. |
+| `agent.call` | `agentId` and `script`, the steps that agent replays. A workflow takes one per `agent()` call, in order. |
+
+A `tool.call` to `delegate_<id>` takes a nested `script` too: the steps the specialist replays.
 
 A script that calls a tool needing approval and has no `approval.decide` after it stops with
 `run.waiting`, prints `Dry run waiting for approval.` and exits with code 2. Add `--persist` to save

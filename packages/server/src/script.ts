@@ -34,21 +34,37 @@ export function readScript(
     );
   }
   const script = normalizeScript(body.script);
-  const live = script.findIndex((step) => step.type === "tool.call" && step.live === true);
-  if (live !== -1) {
-    throw new HttpError(
-      400,
-      "request.invalid_body",
-      `Script step ${live} is live. Scripted runs over HTTP never run tool handlers; give the step a "result" instead.`,
-    );
-  }
-  const unmocked = script.findIndex((step) => step.type === "tool.call" && !("result" in step));
-  if (unmocked !== -1) {
-    throw new HttpError(
-      400,
-      "request.invalid_body",
-      `Script step ${unmocked} has no "result". Scripted runs over HTTP never run tool handlers; add the "result" the tool should return.`,
-    );
-  }
+  refuseHandlers(script, "");
   return script;
+}
+
+/**
+ * Checks every step, including those a delegation or workflow agent call replays. A `delegate_<id>`
+ * call with a nested `script` runs that specialist instead of a handler, so it needs no `result`.
+ */
+function refuseHandlers(script: DryRunScriptStep[], path: string): void {
+  for (const [index, step] of script.entries()) {
+    const at = `${path}${index}`;
+    if (step.type === "agent.call") {
+      refuseHandlers(step.script, `${at}.`);
+      continue;
+    }
+    if (step.type !== "tool.call") continue;
+    if (step.live === true)
+      throw new HttpError(
+        400,
+        "request.invalid_body",
+        `Script step ${at} is live. Scripted runs over HTTP never run tool handlers; give the step a "result" instead.`,
+      );
+    if (step.script !== undefined && step.toolName.startsWith("delegate_")) {
+      refuseHandlers(step.script, `${at}.`);
+      continue;
+    }
+    if (!("result" in step))
+      throw new HttpError(
+        400,
+        "request.invalid_body",
+        `Script step ${at} has no "result". Scripted runs over HTTP never run tool handlers; add the "result" the tool should return.`,
+      );
+  }
 }

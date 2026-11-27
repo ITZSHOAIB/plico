@@ -16,6 +16,7 @@ const groups = [
       "Artifact workspace with versions, diffs and exports",
       "Threads, and embedding in your own backend",
       "OpenTelemetry tracing",
+      "Specialist agents and workflows",
     ],
   },
   {
@@ -28,12 +29,7 @@ const groups = [
     state: "off",
     word: "PLANNED",
     title: "Planned",
-    items: [
-      "Agent memory",
-      "Multi-agent workflows",
-      "AG-UI and a React kit",
-      "Postgres and multi-worker production",
-    ],
+    items: ["Agent memory", "AG-UI and a React kit", "Postgres and multi-worker production"],
   },
 ] as const;
 

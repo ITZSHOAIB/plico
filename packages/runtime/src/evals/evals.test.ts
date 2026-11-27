@@ -81,8 +81,12 @@ describe("eval fixture shapes", () => {
   it("runs the internal-ops example", async () => {
     const summary = await runEvals(fileURLToPath(example));
 
-    expect(summary).toMatchObject({ total: 1, passed: 1, failed: 0 });
-    expect(summary.results[0]?.name).toBe("smoke");
+    expect(summary).toMatchObject({ total: 3, passed: 3, failed: 0 });
+    expect(summary.results.map((result) => result.name).sort()).toEqual([
+      "delegate",
+      "reply",
+      "smoke",
+    ]);
   });
 });
 
