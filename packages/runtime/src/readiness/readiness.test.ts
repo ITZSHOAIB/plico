@@ -157,7 +157,10 @@ describe("checkReadiness", () => {
   it("warns when a delegated specialist inherits a tool that needs approval", async () => {
     const root = await scaffold();
     await mkdir(join(root, "agents"));
-    await writeFile(join(root, "agent.md"), "---\nagents: [researcher, writer]\n---\n# Demo\n");
+    await writeFile(
+      join(root, "agent.md"),
+      "---\nagents: [researcher, writer]\ntools: []\n---\n# Demo\n",
+    );
     await writeFile(
       join(root, "agents", "researcher.md"),
       "---\ndescription: Finds facts.\n---\nResearch.\n",
@@ -183,6 +186,58 @@ describe("checkReadiness", () => {
         ),
       }),
     ]);
+  });
+
+  it("warns when a supervisor inherits every project tool", async () => {
+    const root = await scaffold();
+    await mkdir(join(root, "agents"));
+    await writeFile(join(root, "agent.md"), "---\nagents: [researcher]\n---\n# Demo\n");
+    await writeFile(
+      join(root, "agents", "researcher.md"),
+      "---\ndescription: Finds facts.\ntools: []\n---\nResearch.\n",
+    );
+    await writeFile(
+      join(root, "tools", "lookup.tool.ts"),
+      'export default { name: "lookup", description: "Look up", inputSchema: { type: "object" }, capabilities: [], approval: { required: false }, handler: async () => ({}) };\n',
+    );
+
+    const report = await checkReadiness(root);
+
+    expect(report.diagnostics.filter((d) => d.subsystem === "agents.tools")).toEqual([
+      expect.objectContaining({
+        severity: "warning",
+        path: "agent.md",
+        message: expect.stringContaining('Agent "main" delegates and inherits every project tool'),
+      }),
+    ]);
+  });
+
+  it("checks credentials for each provider an agent uses", async () => {
+    const root = await scaffold({
+      config:
+        'export default { schemaVersion: 1, name: "Demo", model: { provider: "openai", name: "a" } } as const;\n',
+    });
+    await mkdir(join(root, "agents"));
+    await writeFile(
+      join(root, "agents", "writer.md"),
+      "---\nmodel:\n  provider: anthropic\n  name: small\n---\nWrite.\n",
+    );
+    const saved = { ...process.env };
+    process.env.OPENAI_API_KEY = "x";
+    delete process.env.ANTHROPIC_API_KEY;
+    try {
+      const report = await checkReadiness(root);
+      expect(report.diagnostics).toContainEqual(
+        expect.objectContaining({
+          severity: "warning",
+          subsystem: "provider.credentials",
+          path: "agents/writer.md",
+          message: 'Set ANTHROPIC_API_KEY to run the model of agent "writer".',
+        }),
+      );
+    } finally {
+      process.env = saved;
+    }
   });
 
   it("does not report a policy target as undeclared when a tool fails to load", async () => {
