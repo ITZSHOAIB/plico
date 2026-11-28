@@ -118,7 +118,9 @@ export async function runCommand(args: string[]): Promise<number> {
           )
         : Promise.resolve();
 
-    const outputStore = eventStore && !dry && !json ? streamModelOutput(eventStore) : eventStore;
+    const live =
+      eventStore && runId && !dry && !json ? streamModelOutput(eventStore, runId) : undefined;
+    const outputStore = live?.store ?? eventStore;
     const resultPromise = runProject(target, {
       ...(script ? { script } : {}),
       ...(outputStore ? { eventStore: outputStore } : {}),
@@ -146,6 +148,7 @@ export async function runCommand(args: string[]): Promise<number> {
         console.error(`${error.path}: ${error.message}`);
       }
     } else if (!dry) {
+      if (live && !live.streamed() && result.output) process.stdout.write(result.output);
       process.stdout.write("\n");
       if (result.status !== "completed") {
         for (const line of formatRunResult(target, result, false)) console.error(line);
