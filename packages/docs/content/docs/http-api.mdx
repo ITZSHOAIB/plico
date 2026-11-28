@@ -47,7 +47,8 @@ that run. Cancelling a run cancels its child runs. Cancelling a child run on its
 
 With a `message` or `input` and no `script`, the run calls the configured model; without a model
 it answers 503 `provider.unavailable`. Input that does not match the selected agent's or workflow's
-`input` schema answers 400 `input.invalid`. Without `message`, `input` or `script`, the run calls no
+`input` schema answers 400 `input.invalid`. An unknown agent or workflow, or both at once, answers
+400 `request.invalid`, as it does on `POST /v1/threads`. Without `message`, `input` or `script`, the run calls no
 model, as before.
 
 `POST /v1/threads` takes `{ "agent": "<id>" }` to bind a thread to that agent. Every message in it
@@ -85,7 +86,7 @@ Every route is under `/v1`. Errors are JSON with an `error.code` and `error.mess
 | `GET /v1/readiness` | Readiness diagnostics. |
 | `POST /v1/runs` | Start a run. Returns 202 and the `runId`. |
 | `POST /v1/runs/dry` | Run the project without a model and return the result. |
-| `GET /v1/runs` | List root runs. `?parentRunId=<id>` lists that run's child runs. |
+| `GET /v1/runs` | List root runs, newest first. `?parentRunId=<id>` lists that run's child runs, oldest first. |
 | `GET /v1/runs/<run-id>` | One run, with `structuredOutput` when the agent declares an output schema. |
 | `GET /v1/runs/<run-id>/events` | The run's events. `?after=<sequence>` returns only newer ones. See [Events](/docs/events). |
 | `GET /v1/runs/<run-id>/events/stream` | The same events as Server-Sent Events. |

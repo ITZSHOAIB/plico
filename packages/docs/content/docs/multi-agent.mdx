@@ -64,7 +64,7 @@ Every agent file, `agent.md` included, takes the same optional fields.
 | Field | Default when left out |
 | --- | --- |
 | `description` | None. Required when another agent delegates to this one. |
-| `model` | The project model. A partial override such as `name: small` keeps the rest, provider included. |
+| `model` | The project model. A partial override such as `name: small` keeps the rest, provider included. It takes the same keys as the project `model`, `maxSteps` among them, so each agent keeps its own step limit. |
 | `tools` | Every project tool. List the tools a specialist needs; `tools: []` gives it none. |
 | `skills` | Every skill. |
 | `agents` | None, so the agent does not delegate. |
@@ -73,10 +73,16 @@ Every agent file, `agent.md` included, takes the same optional fields.
 | `input`, `output` | None. JSON Schema, or a Zod schema file, as for [`agent.md`](/docs/project-layout). |
 
 Validation rejects an unknown agent in `agents`, a cycle such as `a → b → a`, a specialist without a
-`description`, and a `delegate_<id>` name that collides with a project tool.
+`description`, a `delegate_<id>` name that collides with a project tool, and a `model.provider` that
+is neither a built-in provider nor a file in `providers/`. A tool file that fails to load, such as
+one without a `name`, is reported against that file.
 
-`plico readiness` warns when a delegated specialist has no `tools` list and so inherits a tool that
-needs approval. Give it an explicit list.
+`plico readiness` checks the credentials of every provider an agent uses, and warns in two cases:
+
+- A delegated specialist has no `tools` list and so inherits a tool that needs approval.
+- A supervisor has no `tools` list and so can call every project tool itself instead of delegating.
+  `npm create plico` sets `tools: []` on `agent.md` for this reason; list the tools the supervisor
+  needs, or leave the list empty.
 
 ## Add a workflow
 
@@ -133,6 +139,13 @@ plico run --agent researcher --message "Who owns the VPN?" .
 plico run --workflow reply --input '{"request":"My VPN is down"}' .
 ```
 
+`plico run` prints the root run's own text as it streams. Child runs stay out of the terminal; read
+them with `plico events <child-run-id>` or in Studio. A workflow prints its result last.
+
+With `--dry` and no `--script`, an agent or workflow call that declares an `output` schema answers
+with a minimal value that matches the schema (required fields only, `true`, `0` and `"stub"`), so
+the workflow runs end to end. Use `--script` when the values matter. A dry run that stops on a tool
+that needs approval exits with code 2 and prints how to continue.
 Over HTTP, `POST /v1/runs` takes `agent` or `workflow` with a `message` or `input`. A thread is bound
 to one agent when it is created, with `POST /v1/threads` and `{ "agent": "researcher" }`. Without
 one, it uses the entry agent. See the [HTTP API](/docs/http-api).
@@ -144,10 +157,12 @@ Every delegation and every `agent()` call is a child run with its own run ID and
 
 - **IDs.** A child's ID extends its parent's: `run-1.d0-0` for the first delegation in the first
   model turn, `run-1.a2-writer` for a workflow's third agent call.
-- **Lists.** `GET /v1/runs` and `plico runs` list root runs. Add `?parentRunId=<id>` or
-  `--parent <id>` to list one run's children. Every run can be read by ID.
+- **Lists.** `GET /v1/runs` and `plico runs` list root runs, newest first. Add `?parentRunId=<id>` or
+  `--parent <id>` to list one run's children, oldest first, in the order they ran. Every run can be
+  read by ID.
 - **Approvals.** A child's approval request is copied into its root run's events, and the root waits
-  too. Decide it through the root or the child; either reaches the same wait.
+  too. Decide it through the root or the child; either reaches the same wait. See
+  [Approval inside a specialist](#approval-inside-a-specialist).
 - **Cancel.** Cancelling the root cancels every child. Cancelling a child on its own is refused with
   a message that names the root.
 - **Usage.** The parent records `agent.called` and `agent.returned`. `agent.returned` carries the
@@ -156,6 +171,32 @@ Every delegation and every `agent()` call is a child run with its own run ID and
 
 [Studio](/docs/studio) shows the agent or workflow a run executed, links each child run, and counts
 their tokens in the parent.
+
+## Approval inside a specialist
+
+A specialist can own a tool that needs approval. Give it the tool in `tools`, and keep the tool out
+of the supervisor's list:
+
+```md title="agents/ticketer.md"
+---
+description: Files tickets with the ticket system.
+tools: [file_ticket]
+---
+
+File the ticket you were asked for and return its ID.
+```
+
+When the specialist calls `file_ticket`, the child run records `approval.requested` and the root run
+copies it, with the child's run ID in its `runId` field, and both runs wait. Decide it with the
+same signal as any approval, `approval:<requestId>`, where `requestId` comes from that event (it
+starts with the child's run ID). Send it to the root or the child run:
+
+```bash
+curl -X POST http://127.0.0.1:3000/v1/runs/<root-or-child-run-id>/signal   -H "content-type: application/json"   -d '{ "name": "approval:<requestId>", "value": { "approved": true } }'
+```
+
+The child resumes, the tool runs, and the parent continues with the delegation's result. A denial
+fails the child, and the supervisor gets that as a tool error. See [Approvals](/docs/approvals).
 
 ## Evals
 

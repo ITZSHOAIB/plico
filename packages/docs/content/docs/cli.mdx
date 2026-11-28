@@ -11,7 +11,7 @@ Run `plico --version` to print the installed version. Every command takes an opt
 | `plico validate [path]` | Validates a project and prints diagnostics, with `file:line` for eval cases. It warns about files in `evals/` that `plico eval` would skip, such as `case.json`. |
 | `plico run [--message <text>] [--input <json> \| --input-file <path>] [path]` | Runs the agent with its configured model. `--input` carries typed input for an agent with an `input` schema. |
 | `plico run --dry [--persist] [--script <file>] [path]` | Runs with a scripted model, so it needs no key. |
-| `plico runs [--parent <run-id>] [path]` | Lists saved root runs, with the agent or workflow each ran. `--parent` lists one run's child runs. |
+| `plico runs [--parent <run-id>] [path]` | Lists saved root runs, with the agent or workflow each ran. `--parent` lists one run's child runs, oldest first. |
 | `plico events <run-id> [--after <sequence>] [path]` | Prints a run's event log. |
 | `plico cancel <run-id> [path]` | Cancels an active persisted run and its child runs. A child run is refused; cancel its root. |
 | `plico eval [path]` | Runs the project's evals: scripted by default, against the model with `--live`. Supports `--baseline <file>`, `--save-baseline`, `--tolerance <n>`, and `--format` with `md` or `junit`. |
