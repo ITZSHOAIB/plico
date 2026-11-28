@@ -22,7 +22,7 @@ export async function runDryStrategy(
 ): Promise<Pick<RunResult, "output" | "structuredOutput">> {
   const output =
     script === undefined
-      ? await runDefaultDryRun(project, events)
+      ? await runDefaultDryRun(project, events, outputSchema)
       : await runScriptedDryRun(
           ctx,
           script,

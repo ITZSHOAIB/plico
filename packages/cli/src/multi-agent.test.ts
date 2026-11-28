@@ -90,3 +90,23 @@ it("runs a selected agent", async () => {
   };
   expect(result.events[0]?.payload).toMatchObject({ agentId: "writer" });
 });
+
+it("dry-runs a workflow whose agent declares an output schema", async () => {
+  const root = await project();
+  await writeFile(
+    join(root, "agents", "reviewer.md"),
+    "---\noutput:\n  type: object\n  required: [approved, notes]\n  properties:\n    approved: { type: boolean }\n    notes: { type: string }\n---\nYou review.\n",
+  );
+  await writeFile(
+    join(root, "workflows", "check.ts"),
+    'export default { async run({ agent }) { const v = await agent("reviewer", { task: "Check", output: { type: "object", required: ["approved", "notes"], properties: { approved: { type: "boolean" }, notes: { type: "string" } } } }); return JSON.stringify(v); } };\n',
+  );
+  const log = vi.spyOn(console, "log").mockImplementation(() => {});
+  vi.spyOn(console, "error").mockImplementation(() => {});
+
+  const code = await main(["node", "plico", "run", "--dry", "--json", "--workflow", "check", root]);
+
+  expect(code).toBe(0);
+  const result = JSON.parse(String(log.mock.calls.at(-1)?.[0])) as { output: string };
+  expect(JSON.parse(result.output)).toEqual({ approved: true, notes: "stub" });
+}, 30_000);
