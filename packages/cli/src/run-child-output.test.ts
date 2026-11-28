@@ -56,7 +56,6 @@ it("prints a workflow's final output last and keeps child model output out of st
     const code = await main(["node", "plico", "run", "--workflow", "reply", "--input", "{}", root]);
     const out = written.join("");
     expect(code).toBe(0);
-    expect(out).not.toContain("child draft\n");
     expect(out.trim()).toBe("Final: child draft");
   } finally {
     vi.restoreAllMocks();
