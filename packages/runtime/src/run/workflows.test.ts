@@ -123,6 +123,35 @@ describe("workflows", () => {
     });
   });
 
+  it("fails with the sequential rule when agent() calls run at once", async () => {
+    const root = await scaffold();
+    await writeFile(
+      join(root, "workflows", "parallel.ts"),
+      `export default {
+  description: "Two agents at once.",
+  async run({ agent }) {
+    await Promise.all([agent("writer", { task: "t1" }), agent("reviewer", { task: "t2" })]);
+  },
+};
+`,
+    );
+    const result = await runProject(root, {
+      workflow: "parallel",
+      script: [
+        { type: "agent.call", agentId: "writer", script: say("A") },
+        { type: "agent.call", agentId: "reviewer", script: say("B") },
+      ],
+    });
+
+    expect(result.status).toBe("failed");
+    const error = result.events.find((event) => event.type === "run.error")?.payload;
+    expect(error).toMatchObject({
+      phase: "workflow",
+      message: expect.stringContaining("one at a time"),
+    });
+    expect(error?.message).not.toContain("Conflicting event");
+  });
+
   it("selects an agent other than main", async () => {
     const root = await scaffold();
     const result = await runProject(root, { agent: "writer", script: say("Hello") });

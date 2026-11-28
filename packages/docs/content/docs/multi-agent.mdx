@@ -127,7 +127,9 @@ export default defineWorkflow<{ request: string }>({
 
 Keep the code between `agent()` and `step()` calls deterministic. Anything that reads the clock,
 randomness or the network belongs inside `step()`, because a resumed run replays the workflow and
-fails loudly if the sequence of calls changed.
+fails loudly if the sequence of calls changed. For the same reason `agent()` and `step()` calls run
+one at a time: await each before starting the next, because a call started while another is running
+fails the run.
 
 Agents and workflows share one ID space. Set `entry` in `plico.config.ts` to start runs with another
 agent or a workflow; without it, runs start with `main`.

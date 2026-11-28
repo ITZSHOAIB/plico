@@ -40,58 +40,75 @@ export async function runWorkflow(
   };
   let calls = 0;
   let steps = 0;
+  // Replay matches journal entries by call order, so a second call in flight breaks it.
+  let busy: string | undefined;
+  const oneAtATime = async <R>(label: string, fn: () => Promise<R>): Promise<R> => {
+    if (busy !== undefined)
+      throw new RuntimeDiagnosticError({
+        phase: "workflow",
+        message: `${label} started while ${busy} was still running. agent() and step() calls run one at a time; await each before the next.`,
+      });
+    busy = label;
+    try {
+      return await fn();
+    } finally {
+      busy = undefined;
+    }
+  };
 
-  const agent = async (agentId: string, call: WorkflowAgentCall): Promise<unknown> => {
-    guard();
-    const index = calls++;
-    if (index >= workflow.maxAgentCalls)
-      throw new RuntimeDiagnosticError({
-        phase: "workflow",
-        message: `Agent call budget reached: ${id} may call agents ${workflow.maxAgentCalls} times per run.`,
+  const agent = (agentId: string, call: WorkflowAgentCall): Promise<unknown> =>
+    oneAtATime(`agent("${agentId}")`, async () => {
+      guard();
+      const index = calls++;
+      if (index >= workflow.maxAgentCalls)
+        throw new RuntimeDiagnosticError({
+          phase: "workflow",
+          message: `Agent call budget reached: ${id} may call agents ${workflow.maxAgentCalls} times per run.`,
+        });
+      const scripted = script?.[index];
+      if (script && scripted?.agentId !== agentId)
+        throw new RuntimeDiagnosticError({
+          phase: "workflow",
+          message: `Workflow script step ${index + 1} must be an agent.call for "${agentId}".`,
+        });
+      const output =
+        call.output === undefined
+          ? undefined
+          : await normalizeInputSchema(
+              call.output,
+              `${id} agent("${agentId}") output`,
+              workflow.file,
+            );
+      const outcome = await runChild(ctx, tree, events, {
+        segment: `a${index}-${agentId}`,
+        agentId,
+        task: call.task,
+        ...(scripted ? { script: scripted.script } : {}),
+        ...(output ? { outputSchema: output.jsonSchema as JsonSchema } : {}),
       });
-    const scripted = script?.[index];
-    if (script && scripted?.agentId !== agentId)
-      throw new RuntimeDiagnosticError({
-        phase: "workflow",
-        message: `Workflow script step ${index + 1} must be an agent.call for "${agentId}".`,
-      });
-    const output =
-      call.output === undefined
-        ? undefined
-        : await normalizeInputSchema(
-            call.output,
-            `${id} agent("${agentId}") output`,
-            workflow.file,
-          );
-    const outcome = await runChild(ctx, tree, events, {
-      segment: `a${index}-${agentId}`,
-      agentId,
-      task: call.task,
-      ...(scripted ? { script: scripted.script } : {}),
-      ...(output ? { outputSchema: output.jsonSchema as JsonSchema } : {}),
+      guard();
+      if (outcome.status === "failed")
+        throw new RuntimeDiagnosticError({
+          phase: "workflow",
+          message: `Agent ${agentId} failed: ${outcome.error}`,
+        });
+      if (!output) return outcome.output ?? "";
+      const parsed = await output.parse(outcome.structuredOutput);
+      if (!parsed.success)
+        throw new RuntimeDiagnosticError({
+          phase: "output.validation",
+          message: `Agent ${agentId} returned an invalid result: ${parsed.error}`,
+        });
+      return outcome.structuredOutput;
     });
-    guard();
-    if (outcome.status === "failed")
-      throw new RuntimeDiagnosticError({
-        phase: "workflow",
-        message: `Agent ${agentId} failed: ${outcome.error}`,
-      });
-    if (!output) return outcome.output ?? "";
-    const parsed = await output.parse(outcome.structuredOutput);
-    if (!parsed.success)
-      throw new RuntimeDiagnosticError({
-        phase: "output.validation",
-        message: `Agent ${agentId} returned an invalid result: ${parsed.error}`,
-      });
-    return outcome.structuredOutput;
-  };
 
-  const step = async <T>(name: string, fn: () => T | Promise<T>): Promise<T> => {
-    guard();
-    const index = steps++;
-    await events.append("workflow.step", { name });
-    return ctx.step(`step:${index}:${name}`, () => fn());
-  };
+  const step = <T>(name: string, fn: () => T | Promise<T>): Promise<T> =>
+    oneAtATime(`step("${name}")`, async () => {
+      guard();
+      const index = steps++;
+      await events.append("workflow.step", { name });
+      return ctx.step(`step:${index}:${name}`, () => fn());
+    });
 
   const result = await workflow.definition.run({ input, agent, step });
   guard();
