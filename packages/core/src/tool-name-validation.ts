@@ -36,8 +36,8 @@ export async function readToolFileNames(root: string): Promise<string[]> {
   const names: string[] = [];
   for (const entry of entries) {
     const text = await readFile(join(paths.directories.tools, entry), "utf8");
-    const name = await readToolName(text, entry);
-    if (name !== undefined) names.push(name);
+    const resolution = await readToolNameResolution(text, entry);
+    if (resolution?.kind === "known") names.push(resolution.name);
   }
   return names.sort();
 }
@@ -66,8 +66,13 @@ export async function validateToolNames(root: string): Promise<ValidationIssue[]
   for (const entry of entries) {
     const source = `${relativePaths.directories.tools}/${entry}`;
     const text = await readFile(join(paths.directories.tools, entry), "utf8");
-    const name = await readToolName(text, source);
-    if (name === undefined) continue;
+    const resolution = await readToolNameResolution(text, source);
+    if (resolution?.kind === "absent") {
+      issues.push({ path: source, message: "Tool name must be a string", severity: "error" });
+      continue;
+    }
+    if (resolution?.kind !== "known") continue;
+    const { name } = resolution;
 
     if (ARTIFACT_TOOL_NAMES.includes(name as (typeof ARTIFACT_TOOL_NAMES)[number])) {
       issues.push({
@@ -137,7 +142,10 @@ async function parseToolFile(text: string, fileName: string): Promise<Program | 
   }
 }
 
-async function readToolName(text: string, fileName: string): Promise<string | undefined> {
+async function readToolNameResolution(
+  text: string,
+  fileName: string,
+): Promise<ToolNameResolution | undefined> {
   const program = await parseToolFile(text, fileName);
   if (!program) return undefined;
   const scope: Scope = { declarations: new Map(), defineTools: new Set(), namespaces: new Set() };
@@ -167,8 +175,7 @@ async function readToolName(text: string, fileName: string): Promise<string | un
 
   const object = resolveObject(defaultExpression, scope);
   if (!object) return undefined;
-  const result = resolveObjectName(object, scope);
-  return result.kind === "known" ? result.name : undefined;
+  return resolveObjectName(object, scope);
 }
 
 function moduleName(node: { type: string; name?: string; value?: unknown }): string | undefined {

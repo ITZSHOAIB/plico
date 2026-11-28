@@ -166,6 +166,28 @@ describe("named agents", () => {
     ]);
   });
 
+  it("rejects an agent model provider that is neither native nor in providers/", async () => {
+    const root = await project({
+      "agents/a.md": "---\nmodel:\n  provider: bogus\n  name: small\n---\nA.\n",
+      "agents/b.md": "---\nmodel:\n  provider: custom\n  name: small\n---\nB.\n",
+      "providers/custom.ts": "export default {};\n",
+    });
+
+    expect(await messages(root)).toEqual([
+      expect.stringContaining('agents/a.md: Unknown model provider "bogus"'),
+    ]);
+  });
+
+  it("reports a tool file without a name against the tool file", async () => {
+    const root = await project({
+      "agent.md": "---\ntools: [lookup]\n---\nYou answer.\n",
+      "tools/lookup.tool.ts": 'export default { description: "x", handler: async () => "ok" };',
+    });
+
+    const [first] = await messages(root);
+    expect(first).toBe("tools/lookup.tool.ts: Tool name must be a string");
+  });
+
   it("checks that entry names an agent or workflow", async () => {
     expect(await messages(await project({}, 'entry: "ghost"'))).toEqual([
       expect.stringContaining('plico.config.ts: entry "ghost" is not an agent or workflow'),
