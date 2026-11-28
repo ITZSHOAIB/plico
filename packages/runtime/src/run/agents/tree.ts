@@ -28,7 +28,7 @@ export function inTree(rootRunId: string, runId: string): boolean {
 }
 
 /** Feeds the tree's history from a run's log. Register before the run's first append. */
-export function observe(tree: RunTree, events: InMemoryEventLog): void {
+export function observe(tree: Pick<RunTree, "observed">, events: InMemoryEventLog): void {
   events.onEvent((event) => {
     tree.observed.push(event);
   });
@@ -41,16 +41,21 @@ export function observe(tree: RunTree, events: InMemoryEventLog): void {
  */
 export function relayApprovals(child: InMemoryEventLog, parent: InMemoryEventLog): void {
   child.onEvent(async (event) => {
-    if (
-      event.type !== "approval.requested" &&
-      event.type !== "approval.decided" &&
-      event.type !== "run.waiting"
-    )
-      return;
-    await parent.append(event.type, {
-      ...event.payload,
-      runId: event.payload.runId ?? event.runId,
-    } as never);
+    if (event.type === "approval.requested")
+      await parent.append(event.type, {
+        ...event.payload,
+        runId: event.payload.runId ?? event.runId,
+      });
+    else if (event.type === "approval.decided")
+      await parent.append(event.type, {
+        ...event.payload,
+        runId: event.payload.runId ?? event.runId,
+      });
+    else if (event.type === "run.waiting")
+      await parent.append(event.type, {
+        ...event.payload,
+        runId: event.payload.runId ?? event.runId,
+      });
   });
 }
 

@@ -1,3 +1,4 @@
+import { DELEGATE_TOOL_PREFIX } from "@plico-ai/core";
 import {
   type DryRunScriptStep,
   normalizeScript as normalize,
@@ -56,7 +57,7 @@ function refuseHandlers(script: DryRunScriptStep[], path: string): void {
         "request.invalid_body",
         `Script step ${at} is live. Scripted runs over HTTP never run tool handlers; give the step a "result" instead.`,
       );
-    if (step.script !== undefined && step.toolName.startsWith("delegate_")) {
+    if (step.script !== undefined && step.toolName.startsWith(DELEGATE_TOOL_PREFIX)) {
       refuseHandlers(step.script, `${at}.`);
       continue;
     }

@@ -43,7 +43,7 @@ version of the saved event, not of the HTTP API. The types are in `@plico-ai/con
 | `tool.call` | The agent calls a tool, with its arguments. |
 | `tool.result` | The tool's result. |
 | `approval.requested` | A tool needs a decision. See [Approvals](/docs/approvals). A copy in a parent run carries the child's `runId`. |
-| `approval.decided` | A person approved or denied. May record who decided. |
+| `approval.decided` | A person approved or denied. May record who decided. A copy in a parent run carries the child's `runId`. |
 | `agent.called` | A delegation or workflow `agent()` call starts a child run, with its `runId`, `agentId` and `task`. |
 | `agent.returned` | The child run ended, with its `status`, `output` or `error`, and its token `usage` including its own children. |
 | `workflow.step` | A workflow `step()` ran, with its `name`. |

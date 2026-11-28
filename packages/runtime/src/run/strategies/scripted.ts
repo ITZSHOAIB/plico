@@ -108,7 +108,7 @@ export async function runScriptedDryRun(
           : await toolset.delegate(
               tool.name,
               (parsedInput.value as { task: string }).task,
-              `d${index}`,
+              `d${index}-0`,
               step.script,
             );
       await events.append("tool.result", { toolName: tool.name, result });

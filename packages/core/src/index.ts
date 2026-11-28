@@ -50,9 +50,9 @@ export {
 } from "./run-target.js";
 export { isJsonSchema, type NormalizedInputSchema, normalizeInputSchema } from "./schema.js";
 export { readSkills, type Skill, type SkillsResult } from "./skills.js";
+export { readToolFileNames } from "./tool-file-names.js";
 export {
   ARTIFACT_TOOL_NAMES,
-  readToolFileNames,
   SKILL_TOOL_NAME,
   TASK_TOOL_NAME,
 } from "./tool-name-validation.js";

@@ -49,7 +49,7 @@ Add `--persist` to a dry run, then `plico runs` and `plico events <run-id>` repl
 | Path | What it is |
 | --- | --- |
 | `packages/contracts` | Wire types only |
-| `packages/sdk` | `defineConfig` and `defineTool` |
+| `packages/sdk` | `defineConfig`, `defineTool` and `defineWorkflow` |
 | `packages/core` | `loadProject` and `validateProject` |
 | `packages/runtime` | The run loop, event store and persistence |
 | `packages/server` | The HTTP API and `createPlico` |

@@ -120,9 +120,7 @@ export async function validateWorkflows(
     }
     try {
       const loaded = await loadWorkflow(workflow);
-      issues.push(
-        ...(await validateRunSchemas(workflow.source, workflow.file, loaded.definition as never)),
-      );
+      issues.push(...(await validateRunSchemas(workflow.source, workflow.file, loaded.definition)));
     } catch (cause) {
       error(cause instanceof Error ? cause.message : String(cause));
       continue;

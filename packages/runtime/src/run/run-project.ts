@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import { type Span, SpanStatusCode } from "@opentelemetry/api";
 import {
   type AgentDefinition,
+  getProjectRelativePaths,
   type LoadedProject,
   MAIN_AGENT_ID,
   type RunTarget,
@@ -20,7 +21,7 @@ import { RunWaitingError, runtimeErrorPayload } from "../errors.js";
 import { InMemoryEventLog } from "../events.js";
 import type { RunProjectOptions, RunResult } from "../types/index.js";
 import { executeAgent } from "./agents/run-agent.js";
-import type { RunTree } from "./agents/tree.js";
+import { observe, type RunTree } from "./agents/tree.js";
 import { finalizeRun } from "./finalize.js";
 import { ignoredWhenPinned } from "./pinned-instructions.js";
 import type { RunInput } from "./run-input.js";
@@ -99,17 +100,21 @@ export async function runLoop(
   const validation = await validateProject(root);
   const events = await InMemoryEventLog.open(runId, options.eventStore);
   const observed: RunTree["observed"] = [];
-  events.onEvent((event) => {
-    observed.push(event);
-  });
+  observe({ observed }, events);
   const pinned = events.all().some((event) => event.type === "instructions.composed");
   const target = await recordTarget(ctx, input, validation.project);
   const errors = [
     ...(pinned
       ? validation.errors.filter((issue) => !ignoredWhenPinned(issue))
       : validation.errors),
-    ...("error" in target
-      ? [{ path: "plico.config.ts", message: target.error, severity: "error" as const }]
+    ...(target.kind === "invalid"
+      ? [
+          {
+            path: getProjectRelativePaths().configFile,
+            message: target.message,
+            severity: "error" as const,
+          },
+        ]
       : []),
   ];
   const newlyStarted = events.all().length === 0;
@@ -119,13 +124,13 @@ export async function runLoop(
     ...(input.threadId === undefined ? {} : { threadId: input.threadId }),
     ...(input.metadata === undefined ? {} : { metadata: input.metadata }),
     ...(input.context === undefined ? {} : { context: input.context }),
-    ...("kind" in target
-      ? { [target.kind === "agent" ? "agentId" : "workflowId"]: target.id }
+    ...(target.kind === "resolved"
+      ? { [target.run.kind === "agent" ? "agentId" : "workflowId"]: target.run.id }
       : {}),
   });
   if (newlyStarted) options.onStarted?.(runId);
 
-  if (errors.length > 0 || !validation.project || "error" in target) {
+  if (errors.length > 0 || !validation.project || target.kind === "invalid") {
     await events.append("run.error", { phase: "validation", issues: errors });
     await events.append("run.failed", { phase: "validation" });
 
@@ -159,7 +164,8 @@ export async function runLoop(
       agents: new Map((await readAgents(project.root)).agents.map((agent) => [agent.id, agent])),
       observed,
     };
-    const selected = "kind" in target ? target : { kind: "agent" as const, id: MAIN_AGENT_ID };
+    const selected =
+      target.kind === "resolved" ? target.run : { kind: "agent" as const, id: MAIN_AGENT_ID };
     const output =
       selected.kind === "workflow"
         ? await runWorkflow(ctx, tree, selected.id, events)
@@ -198,6 +204,12 @@ export async function runLoop(
   }
 }
 
+/** `legacy` runs were journaled before targets were recorded and run `main`. */
+type TargetOutcome =
+  | { kind: "resolved"; run: RunTarget }
+  | { kind: "invalid"; message: string }
+  | { kind: "legacy" };
+
 /**
  * The agent or workflow this run executes, journaled so a changed `entry` cannot reroute a run that
  * resumes. Runs journaled before named agents have no target step and run `main`.
@@ -206,9 +218,10 @@ async function recordTarget(
   ctx: RunContext,
   input: RunInput,
   project: LoadedProject | undefined,
-): Promise<RunTarget | { error: string } | { legacy: true }> {
-  if (input.recordsTarget !== true) return { legacy: true };
-  return ctx.step("target", async () => {
+): Promise<TargetOutcome> {
+  if (input.recordsTarget !== true) return { kind: "legacy" };
+  // The journaled shape is `RunTarget | { error }`; it stays as is so journaled runs still resume.
+  const journaled = await ctx.step<RunTarget | { error: string }>("target", async () => {
     if (!project) return { kind: "agent" as const, id: MAIN_AGENT_ID };
     try {
       return await resolveRunTarget(project, { agent: input.agent, workflow: input.workflow });
@@ -216,6 +229,9 @@ async function recordTarget(
       return { error: error instanceof Error ? error.message : String(error) };
     }
   });
+  return "error" in journaled
+    ? { kind: "invalid", message: journaled.error }
+    : { kind: "resolved", run: journaled };
 }
 
 function rootAgent(tree: RunTree, id: string): AgentDefinition {

@@ -36,7 +36,7 @@ One Plico project holds several named agents. Root `agent.md` is still the only 
 - The child runs through a context that prefixes step and wait names on the root's engine run. The engine needs no spawn operation, so ADR 0008 is unchanged.
 - A child's approval is mirrored into every ancestor stream as `approval.requested` and `run.waiting` with the child's `runId`, at the same point on every execution. A decision addressed to the root or to the child reaches the root engine run under the child's prefixed wait name.
 - Cancelling the root cancels every child. Cancelling a child directly is rejected with a message naming its root.
-- The parent stream records `agent.called` before a child starts and `agent.returned` when it ends, with the child's usage summed over its own descendants. A workflow `step()` records `workflow.step`.
+- The parent stream records `agent.called` before a child starts and `agent.returned` when it ends, with the child's token usage summed over its own descendants. Plico has no cost field, so "usage" here means tokens only, and `RunSummary` carries no usage total: a host adds up `model.response` and `agent.returned` events itself. A summed total on `RunSummary` is a later, additive change. A workflow `step()` records `workflow.step`.
 
 **Context and artifacts.** A child sees its own instructions, its skills and the task, never the parent's messages. It shares the artifact workspace of its thread, otherwise of its root run, and the root's workspace view includes every descendant's writes.
 
@@ -46,7 +46,7 @@ One Plico project holds several named agents. Root `agent.md` is still the only 
 
 - `run.started` and `RunSummary` gain optional `agentId`, `workflowId`, `parentRunId` and `rootRunId`. Root runs set `agentId` or `workflowId`; runs recorded before this change have neither.
 - `Thread` gains optional `agentId`.
-- New events: `agent.called`, `agent.returned` and `workflow.step`. `approval.requested` and `run.waiting` gain optional `runId`.
+- New events: `agent.called`, `agent.returned` and `workflow.step`. `approval.requested`, `approval.decided` and `run.waiting` gain optional `runId`, set on the copies relayed to ancestor streams.
 - `POST /v1/runs` and thread creation accept `agent` or `workflow`. `GET /v1/runs` lists root runs; `?parentRunId=<id>` lists one run's children.
 
 ## Considered Options

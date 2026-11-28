@@ -21,27 +21,6 @@ export const SKILL_TOOL_NAME = "load_skill";
 /** Reserved for the built-in task tool of dynamic task subagents, so adding it later is not breaking. */
 export const TASK_TOOL_NAME = "task";
 
-/** Names of the project's tool files whose name can be read statically, sorted. */
-export async function readToolFileNames(root: string): Promise<string[]> {
-  const paths = getProjectPaths(root);
-  let entries: string[];
-  try {
-    entries = (await readdir(paths.directories.tools, { withFileTypes: true }))
-      .filter((entry) => !entry.isDirectory() && entry.name.endsWith(".tool.ts"))
-      .map((entry) => entry.name);
-  } catch (error) {
-    if (isMissingDirectory(error)) return [];
-    throw error;
-  }
-  const names: string[] = [];
-  for (const entry of entries) {
-    const text = await readFile(join(paths.directories.tools, entry), "utf8");
-    const resolution = await readToolNameResolution(text, entry);
-    if (resolution?.kind === "known") names.push(resolution.name);
-  }
-  return names.sort();
-}
-
 type ToolNameResolution =
   | { kind: "known"; name: string }
   | { kind: "absent" }
@@ -142,7 +121,7 @@ async function parseToolFile(text: string, fileName: string): Promise<Program | 
   }
 }
 
-async function readToolNameResolution(
+export async function readToolNameResolution(
   text: string,
   fileName: string,
 ): Promise<ToolNameResolution | undefined> {
@@ -273,7 +252,7 @@ function isDefineToolCall(expression: Expression, scope: Scope): expression is C
   );
 }
 
-function isMissingDirectory(error: unknown): boolean {
+export function isMissingDirectory(error: unknown): boolean {
   return (
     typeof error === "object" &&
     error !== null &&

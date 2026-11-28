@@ -17,11 +17,11 @@ export type RunSchemas = Partial<Record<(typeof RUN_SCHEMA_KEYS)[number], ToolIn
 export async function validateRunSchemas(
   path: string,
   file: string,
-  source: { input?: unknown; output?: unknown } | Record<string, unknown>,
+  source: { input?: unknown; output?: unknown },
 ): Promise<ValidationIssue[]> {
   const issues: ValidationIssue[] = [];
   for (const key of RUN_SCHEMA_KEYS) {
-    const value = (source as Record<string, unknown>)[key];
+    const value = source[key];
     if (value === undefined) continue;
     try {
       await normalizeInputSchema(value, `${path} ${key}`, file);

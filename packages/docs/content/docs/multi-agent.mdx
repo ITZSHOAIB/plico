@@ -166,7 +166,7 @@ Every delegation and every `agent()` call is a child run with its own run ID and
 - **Cancel.** Cancelling the root cancels every child. Cancelling a child on its own is refused with
   a message that names the root.
 - **Usage.** The parent records `agent.called` and `agent.returned`. `agent.returned` carries the
-  child's token usage, its own children included, so a root run's events add up to the whole tree.
+  child's token usage, its own children included, so a root run's events add up to the whole tree. Usage means tokens: Plico has no cost field, and a run summary carries no usage total yet, so a host sums `agent.returned` events itself.
 - **Artifacts.** Children share the thread's workspace, or the root run's when there is no thread.
 
 [Studio](/docs/studio) shows the agent or workflow a run executed, links each child run, and counts

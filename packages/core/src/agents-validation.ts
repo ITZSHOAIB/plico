@@ -3,7 +3,7 @@ import { readAgents } from "./agents.js";
 import { validateModelProvider } from "./model-provider.js";
 import { validateRunSchemas } from "./run-schemas.js";
 import { readSkills } from "./skills.js";
-import { readToolFileNames } from "./tool-name-validation.js";
+import { readToolFileNames } from "./tool-file-names.js";
 import type { LoadedProject, ValidationIssue } from "./types.js";
 import { listWorkflowFiles, validateWorkflows } from "./workflows.js";
 
@@ -20,12 +20,12 @@ export async function validateAgentsAndWorkflows(
   const tools = projectToolNames(project, await readToolFileNames(project.root).catch(() => []));
   for (const agent of agents) {
     if (agent.id !== "main")
-      issues.push(...(await validateRunSchemas(agent.source, agent.file, agent as never)));
+      issues.push(...(await validateRunSchemas(agent.source, agent.file, agent)));
     if (typeof agent.model?.provider === "string")
       issues.push(
         ...(await validateModelProvider(
           project.root,
-          { ...project.config.model, ...agent.model } as never,
+          { ...project.config.model, ...agent.model },
           agent.source,
         )),
       );
