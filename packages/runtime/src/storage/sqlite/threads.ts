@@ -16,7 +16,8 @@ export interface ThreadStore {
   readonly storageIdentity?: string;
   /** Release resources owned by this store. */
   close(): void;
-  createThread(metadata?: Metadata): Promise<Thread>;
+  /** `agentId` binds the thread to the agent every one of its runs executes. */
+  createThread(metadata?: Metadata, agentId?: string): Promise<Thread>;
   /** `metadata` keeps threads whose top-level keys equal every given value. */
   listThreads(filter?: { metadata?: Metadata }): Promise<Thread[]>;
   getThread(id: string): Promise<Thread | undefined>;
@@ -52,16 +53,18 @@ export interface ThreadStore {
 }
 
 const selectThread =
-  "SELECT thread_id AS id, created_at AS createdAt, title, metadata_json AS metadataJson FROM threads";
+  "SELECT thread_id AS id, created_at AS createdAt, title, metadata_json AS metadataJson, agent_id AS agentId FROM threads";
 
 function toThread(row: unknown): Thread {
-  const { title, metadataJson, ...thread } = row as Thread & {
+  const { title, metadataJson, agentId, ...thread } = row as Thread & {
     title: string | null;
     metadataJson: string | null;
+    agentId: string | null;
   };
   const metadata = parseMetadata(metadataJson);
   return {
     ...thread,
+    ...(agentId === null ? {} : { agentId }),
     ...(title === null ? {} : { title }),
     ...(metadata === undefined ? {} : { metadata }),
   };
@@ -94,20 +97,22 @@ export function createSqliteThreadStore({
     close() {
       db.close();
     },
-    async createThread(metadata) {
+    async createThread(metadata, agentId) {
       const thread: Thread = {
         id: randomUUID(),
         createdAt: new Date().toISOString(),
         ...(metadata === undefined ? {} : { metadata }),
+        ...(agentId === undefined ? {} : { agentId }),
       };
       transaction(db, () => {
         appendThreadEvent(db, thread.id, "thread.created", { thread }, thread.createdAt);
         db.prepare(
-          "INSERT INTO threads (thread_id, created_at, metadata_json) VALUES (?, ?, ?)",
+          "INSERT INTO threads (thread_id, created_at, metadata_json, agent_id) VALUES (?, ?, ?, ?)",
         ).run(
           thread.id,
           thread.createdAt,
           metadata === undefined ? null : JSON.stringify(metadata),
+          agentId ?? null,
         );
       });
       return thread;

@@ -15,6 +15,14 @@ export interface RunSummary {
   structuredOutput?: JsonValue;
   /** Host data set when the run started and never changed. */
   metadata?: Record<string, JsonValue>;
+  /** The agent the run executes. */
+  agentId?: string;
+  /** The workflow a root run executes. */
+  workflowId?: string;
+  /** Set on a child run. */
+  parentRunId?: string;
+  /** Set on a child run. */
+  rootRunId?: string;
 }
 
 export interface RunResult {

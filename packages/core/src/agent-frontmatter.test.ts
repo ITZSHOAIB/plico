@@ -28,19 +28,19 @@ describe("agent.md frontmatter", () => {
 
   it("warns on each unknown key and still validates", async () => {
     const result = await validateProject(
-      await project(`---\nmodel: fast\ntemperature: 0\n---\n${instructions}`),
+      await project(`---\npersona: fast\ntemperature: 0\n---\n${instructions}`),
     );
 
     expect(result.ok).toBe(true);
     expect(result.warnings.map((issue) => issue.message)).toEqual([
-      expect.stringContaining('"model"'),
+      expect.stringContaining('"persona"'),
       expect.stringContaining('"temperature"'),
     ]);
     expect(result.warnings[0]?.path).toBe("agent.md");
   });
 
   it("treats frontmatter with no instructions as empty", async () => {
-    const result = await validateProject(await project("---\nmodel: fast\n---\n"));
+    const result = await validateProject(await project("---\npersona: fast\n---\n"));
 
     expect(result.ok).toBe(false);
     expect(result.errors[0]?.message).toContain("must not be empty");

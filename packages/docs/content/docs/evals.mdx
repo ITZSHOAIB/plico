@@ -223,6 +223,10 @@ The steps are the same ones `plico run --dry --script` takes, so you can try a c
 | `tool.call` | `toolName`, `arguments` and `result`. |
 | `approval.decide` | `approved`. Right after a `tool.call` that needs approval. |
 | `artifact.write` | `files`, each with `path`, `content` and an optional `mimeType`. |
+| `agent.call` | `agentId` and `script`. A workflow case takes one per `agent()` call, in order. |
+
+A `tool.call` to `delegate_<id>` takes a nested `script` instead of a `result`: the steps the
+specialist replays as its own child run. See [Specialists and workflows](/docs/multi-agent#evals).
 
 Evals never run tool handlers by surprise. A `tool.call` step supplies the tool's output as
 `result`, and the run uses it instead of calling the handler. A step without `result` fails the case
@@ -243,7 +247,9 @@ versions used. It is either the array of steps or an object:
 ```
 
 Its `expect` takes the same checks as the Markdown case, and `outputContains` is the same as
-`contains`. A new project ships one such case, `evals/smoke.script.json`.
+`contains`. `agent` runs a named agent instead of the entry agent, and `workflow` with `input` runs
+a workflow. A new project ships three such cases: `evals/smoke.script.json`, a delegation in
+`evals/delegate.script.json`, and the reply workflow in `evals/reply.script.json`.
 
 ## Test approvals
 

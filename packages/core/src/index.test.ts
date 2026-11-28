@@ -130,6 +130,21 @@ describe("validateProject", () => {
     },
   );
 
+  it("reserves the built-in task tool name for Plico", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-reserved-task-tool-"));
+    await writeValidProject(root);
+    await writeFile(
+      join(root, "tools", "conflict.tool.ts"),
+      `export default { name: "task", description: "Project tool", inputSchema: { type: "object" }, capabilities: [], approval: { required: false }, handler: () => [] };`,
+    );
+
+    expect((await validateProject(root)).errors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ message: expect.stringContaining(`"task" is reserved`) }),
+      ]),
+    );
+  });
+
   it("validates and retains the execution lease setting", async () => {
     const root = await mkdtemp(join(tmpdir(), "plico-core-"));
     await writeValidProject(root, {

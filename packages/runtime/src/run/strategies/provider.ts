@@ -7,6 +7,7 @@ import { approvalTimeoutMs, decideApproval } from "../../policy/approval.js";
 import { createArtifactModelTools } from "../../tools/artifact-model-tools.js";
 import { createSkillModelTool } from "../../tools/skill-model-tool.js";
 import type { DeclaredTool, EventStore, ModelProvider, ModelRequest } from "../../types/index.js";
+import type { AgentToolset } from "../agents/types.js";
 import { requestModel } from "../model-step.js";
 import { createStructuredOutput, type ProviderRunOutput } from "../structured-output.js";
 import { runToolStep } from "../tool-step.js";
@@ -27,6 +28,7 @@ export async function runProviderBackedRun(
   history: Array<Pick<import("../../types/index.js").ProviderMessage, "role" | "content">> = [],
   skills: Skill[] = [],
   outputSchema?: JsonSchema,
+  toolset?: AgentToolset,
 ): Promise<ProviderRunOutput> {
   const maxSteps = model?.maxSteps ?? 10;
   if (outputSchema !== undefined && tools.some((tool) => tool.name === "submit_result")) {
@@ -47,12 +49,12 @@ export async function runProviderBackedRun(
 
   const artifactTools = await createArtifactModelTools();
   const skillTools = skills.length > 0 ? [await createSkillModelTool(skills)] : [];
-  const toolsByName = new Map(
-    [...tools, ...artifactTools, ...skillTools].map((tool) => [tool.name, tool]),
-  );
-  const artifactAccess = config.artifacts?.access ?? "read-write";
+  const delegates = toolset?.delegates ?? [];
+  const allTools = [...tools, ...artifactTools, ...skillTools, ...delegates];
+  const toolsByName = new Map(allTools.map((tool) => [tool.name, tool]));
+  const artifactAccess = toolset?.artifactAccess ?? config.artifacts?.access ?? "read-write";
 
-  const providerTools = [...tools, ...artifactTools, ...skillTools]
+  const providerTools = allTools
     .filter((tool) => isArtifactToolAllowed(tool.name, artifactAccess))
     .map((tool) => ({
       name: tool.name,
@@ -150,6 +152,19 @@ export async function runProviderBackedRun(
         continue;
       }
 
+      if (toolset && delegates.includes(tool)) {
+        const { task } = parsedInput.value as { task: string };
+        const result = await toolset.delegate(tool.name, task, `d${turn}-${callIndex}`);
+        await events.append("tool.result", { toolName: tool.name, result });
+        messages.push({
+          role: "tool",
+          content: JSON.stringify(result),
+          toolName: tool.name,
+          ...(toolCall.id === undefined ? {} : { toolCallId: toolCall.id }),
+        });
+        continue;
+      }
+
       const approval = decideApproval(tool, config);
       if (approval.required) {
         const requestId = `${ctx.runId}:${turn}:${callIndex}`;
@@ -179,6 +194,7 @@ export async function runProviderBackedRun(
           parsedInput.value,
           `tool:${turn}:${callIndex}`,
           idempotencyKey,
+          toolset?.scope,
         );
       } catch (error) {
         if (error instanceof RunCancelled) throw error;

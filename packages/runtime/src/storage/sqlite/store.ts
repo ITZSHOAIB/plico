@@ -10,6 +10,7 @@ import {
   readLatestEvalReport,
   readRunSummaries,
   readRunSummary,
+  readRunTreeEvents,
   readThreadRunEvents,
   readThreadRunEventsThrough,
 } from "./queries.js";
@@ -42,7 +43,7 @@ export function createSqliteEventStore({
       appendEventRecord(database, event);
     },
     async listRuns(filter): Promise<RunSummary[]> {
-      return readRunSummaries(database).filter((run) =>
+      return readRunSummaries(database, filter?.parentRunId).filter((run) =>
         matchesMetadata(run.metadata, filter?.metadata),
       );
     },
@@ -60,6 +61,9 @@ export function createSqliteEventStore({
     },
     async getThreadRunEventsThrough(threadId: string, runId: string): Promise<PlicoEvent[]> {
       return readThreadRunEventsThrough(database, threadId, runId);
+    },
+    async getRunTreeEvents(rootRunId: string): Promise<PlicoEvent[]> {
+      return readRunTreeEvents(database, rootRunId);
     },
     async persistEvalReport(report: EvalReport): Promise<void> {
       persistEvalReportRecord(database, report);

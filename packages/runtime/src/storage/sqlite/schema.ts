@@ -122,6 +122,20 @@ const migrations: ReadonlyArray<{ from: number; to: number; sql: string }> = [
       );
     `,
   },
+  {
+    from: 15,
+    to: 16,
+    // Named agents. Runs and threads from before have none of these and stay root runs.
+    sql: `
+      ALTER TABLE runs ADD COLUMN agent_id TEXT;
+      ALTER TABLE runs ADD COLUMN workflow_id TEXT;
+      ALTER TABLE runs ADD COLUMN parent_run_id TEXT;
+      ALTER TABLE runs ADD COLUMN root_run_id TEXT;
+      CREATE INDEX runs_parent_run_id ON runs(parent_run_id);
+      CREATE INDEX runs_root_run_id ON runs(root_run_id);
+      ALTER TABLE threads ADD COLUMN agent_id TEXT;
+    `,
+  },
 ];
 
 function readSchemaVersion(

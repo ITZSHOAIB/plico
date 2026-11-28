@@ -49,6 +49,7 @@ export class InMemoryEventLog {
   readonly #events: PlicoEvent[] = [];
   #replayed = 0;
   #cursor = 0;
+  #listeners: Array<(event: PlicoEvent) => void | Promise<void>> = [];
 
   /**
    * Opens the log of a run that may have started before. The loop emits the same events again when
@@ -78,6 +79,7 @@ export class InMemoryEventLog {
         throw new ProjectChangedError("event", this.#cursor, recorded.type, type);
       }
       this.#cursor += 1;
+      await this.#notify(recorded);
       return recorded;
     }
     const sequence = this.#events.length + 1;
@@ -96,7 +98,20 @@ export class InMemoryEventLog {
 
     await this.store?.appendEvent(event);
     this.#events.push(event);
+    await this.#notify(event);
     return event;
+  }
+
+  /**
+   * Calls `listener` after each event the run reaches, whether it was just written or matched on
+   * replay, in the order the run reached them. Model deltas skipped on replay are not reported.
+   */
+  onEvent(listener: (event: PlicoEvent) => void | Promise<void>): void {
+    this.#listeners.push(listener);
+  }
+
+  async #notify(event: PlicoEvent): Promise<void> {
+    for (const listener of this.#listeners) await listener(event);
   }
 
   /** Skip previously persisted live chunks when replaying a model step. */

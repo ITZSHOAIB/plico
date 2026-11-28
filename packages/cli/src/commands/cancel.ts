@@ -17,8 +17,15 @@ export async function cancelCommand(args: string[]): Promise<number> {
     await ensureDatabaseExists(databasePath);
 
     const eventStore = createSqliteEventStore({ databasePath });
-    if (!(await eventStore.getRun(runId))) {
+    const run = await eventStore.getRun(runId);
+    if (!run) {
       console.error(`Unknown run ID: ${runId}`);
+      return 1;
+    }
+    if (run.rootRunId !== undefined && run.rootRunId !== run.runId) {
+      console.error(
+        `Run ${runId} is a child run of ${run.rootRunId}. Cancel ${run.rootRunId}, which cancels every child run.`,
+      );
       return 1;
     }
 

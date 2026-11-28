@@ -4,8 +4,10 @@ description: Choose a model provider, keep keys in .env, and reach any other pro
 icon: Cpu
 ---
 
-Set `model` in `plico.config.ts`. `plico validate` fails when `model.provider` is not one of the
-providers below and the project has no matching file in `providers/`.
+Set `model` in `plico.config.ts`. `plico validate` fails when `model.provider`, in the project config
+or in any agent's `model` override, is not one of the providers below and the project has no
+matching file in `providers/`. `plico readiness` checks the key variable of each provider the
+project and its agents use.
 
 | `provider` | Key variable | Package to install |
 | --- | --- | --- |

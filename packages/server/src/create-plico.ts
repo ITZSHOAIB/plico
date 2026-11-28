@@ -55,6 +55,10 @@ export async function openPlico(options: CreatePlicoOptions, inspect: boolean): 
       });
   const model = validation.project?.config.model;
   const provider = model ? createConfiguredModelProvider(model, options.projectRoot) : undefined;
+  const providerForModel = provider
+    ? (agentModel: NonNullable<typeof model>) =>
+        createConfiguredModelProvider(agentModel, options.projectRoot)
+    : undefined;
   const providerRecoveryKey = model ? modelProviderRecoveryKey(model) : undefined;
   const providerAccountKey = model ? modelProviderAccountKey(model) : undefined;
   const threadStore = createSqliteThreadStore({ databasePath, readOnly: inspect });
@@ -65,6 +69,7 @@ export async function openPlico(options: CreatePlicoOptions, inspect: boolean): 
     threadStore,
     engine,
     ...(provider ? { provider } : {}),
+    ...(providerForModel ? { providerForModel } : {}),
     ...(providerRecoveryKey ? { providerRecoveryKey } : {}),
     isClosed: () => closing,
   };
@@ -92,6 +97,7 @@ export async function openPlico(options: CreatePlicoOptions, inspect: boolean): 
       threadStore,
       engine,
       ...(provider ? { provider } : {}),
+      ...(providerForModel ? { providerForModel } : {}),
       ...(providerRecoveryKey ? { providerRecoveryKey } : {}),
       ...(providerAccountKey ? { providerAccountKey } : {}),
       ...(inspect ? { inspect: true as const } : {}),

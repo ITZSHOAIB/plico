@@ -38,7 +38,14 @@ function normalizeStep(step: unknown, index: number): DryRunScriptStep {
       arguments: step.arguments,
       ...("result" in step ? { result: step.result } : {}),
       ...(step.live === true ? { live: true as const } : {}),
+      ...(step.script === undefined ? {} : { script: nestedScript(step.script, prefix) }),
     };
+  }
+  if (step.type === "agent.call") {
+    if (typeof step.agentId !== "string") {
+      throw new ScriptValidationError(`${prefix} must include an agentId.`);
+    }
+    return { type: "agent.call", agentId: step.agentId, script: nestedScript(step.script, prefix) };
   }
   if (step.type === "artifact.write") {
     if (!Array.isArray(step.files)) {
@@ -59,8 +66,17 @@ function normalizeStep(step: unknown, index: number): DryRunScriptStep {
     return { type: "artifact.write", files };
   }
   throw new ScriptValidationError(
-    `${prefix} has an unsupported type. Use assistant.output, tool.call, approval.decide or artifact.write.`,
+    `${prefix} has an unsupported type. Use assistant.output, tool.call, approval.decide, artifact.write or agent.call.`,
   );
+}
+
+function nestedScript(value: unknown, prefix: string): DryRunScriptStep[] {
+  if (!Array.isArray(value)) throw new ScriptValidationError(`${prefix} script must be an array.`);
+  try {
+    return value.map(normalizeStep);
+  } catch (error) {
+    throw new ScriptValidationError(`${prefix}: ${(error as Error).message}`);
+  }
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

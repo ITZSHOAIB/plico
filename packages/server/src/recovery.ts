@@ -3,6 +3,7 @@ import {
   type Engine,
   type EventStore,
   type ModelProvider,
+  type RunProjectOptions,
   recoverRuns,
   runProject,
   type ThreadStore,
@@ -15,6 +16,7 @@ interface RecoveryOptions {
   threadStore?: ThreadStore;
   engine: Engine;
   provider?: ModelProvider;
+  providerForModel?: RunProjectOptions["providerForModel"];
   providerRecoveryKey?: string;
   /** Stops recovery from touching stores a shutting-down server is closing. */
   isClosed?: () => boolean;
@@ -37,6 +39,7 @@ export async function recoverPlicoState(options: RecoveryOptions): Promise<void>
           engine: options.engine,
           eventStore: options.eventStore,
           provider: options.provider,
+          ...(options.providerForModel ? { providerForModel: options.providerForModel } : {}),
           recoveryFilter: {
             projectRoot: options.projectRoot,
             providerRecoveryKey: options.providerRecoveryKey,
@@ -82,7 +85,8 @@ export async function resumeQueuedRuns(options: ResumeQueuedOptions): Promise<vo
       run.providerKey !== options.providerAccountKey
     )
       continue;
-    const metadata = (await options.threadStore.getThread(run.threadId))?.metadata;
+    const thread = await options.threadStore.getThread(run.threadId);
+    const metadata = thread?.metadata;
     const status = await options.engine.status(run.runId);
     if (status) {
       if (status.state === "failed" || status.state === "cancelled" || status.state === "completed")
@@ -104,7 +108,9 @@ export async function resumeQueuedRuns(options: ResumeQueuedOptions): Promise<vo
       ...(run.context === undefined ? {} : { context: run.context }),
       history: run.history,
       message: run.content,
+      ...(thread?.agentId === undefined ? {} : { agent: thread.agentId }),
       provider: options.provider,
+      ...(options.providerForModel ? { providerForModel: options.providerForModel } : {}),
       providerRecoveryKey: options.providerRecoveryKey ?? options.providerAccountKey,
       engine: options.engine,
       eventStore: options.eventStore,

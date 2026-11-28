@@ -17,6 +17,9 @@ function toEvalCase(file: string, parsed: unknown): EvalCase {
     script: fixture.script as DryRunScriptStep[],
   };
   if (typeof fixture.description === "string") entry.description = fixture.description;
+  if (typeof fixture.agent === "string") entry.agent = fixture.agent;
+  if (typeof fixture.workflow === "string") entry.workflow = fixture.workflow;
+  if (fixture.input !== undefined) entry.input = fixture.input;
   if (fixture.expect !== undefined)
     entry.expect = fixture.expect as NonNullable<EvalCase["expect"]>;
   return entry;
@@ -41,6 +44,9 @@ function markdownCase(
     scorers: definition.scorers,
   };
   if (fixture?.script) entry.script = fixture.script;
+  if (fixture?.agent !== undefined) entry.agent = fixture.agent;
+  if (fixture?.workflow !== undefined) entry.workflow = fixture.workflow;
+  if (fixture?.input !== undefined) entry.input = fixture.input;
   if (definition.input !== undefined) entry.input = definition.input;
   if (Object.keys(definition.mocks).length > 0) entry.mocks = definition.mocks;
   if (definition.trials !== 1) entry.trials = definition.trials;

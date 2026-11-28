@@ -1,17 +1,24 @@
 import { loadProject } from "./config.js";
-import { readRunSchemas } from "./run-schemas.js";
+import { type RunSelection, readTargetSchemas, resolveRunTarget } from "./run-target.js";
 
 export type PreparedRunMessage = { ok: true; message?: string } | { ok: false; errors: string[] };
 
 /**
- * Checks the typed `input` of a run against the agent's `input` schema and returns the user message
+ * Checks the typed `input` of a run against the selected agent's or workflow's `input` schema and returns the user message
  * the model sees. Without a schema, `content` passes through and any `input` is refused.
  */
 export async function prepareRunMessage(
   root: string,
   request: { content?: string | undefined; input?: unknown },
+  selection: RunSelection = {},
 ): Promise<PreparedRunMessage> {
-  const schema = (await readRunSchemas(await loadProject(root))).input;
+  const project = await loadProject(root);
+  let schema: Awaited<ReturnType<typeof readTargetSchemas>>["input"];
+  try {
+    schema = (await readTargetSchemas(project, await resolveRunTarget(project, selection))).input;
+  } catch (error) {
+    return { ok: false, errors: [error instanceof Error ? error.message : String(error)] };
+  }
 
   if (schema === undefined) {
     if (request.input !== undefined)

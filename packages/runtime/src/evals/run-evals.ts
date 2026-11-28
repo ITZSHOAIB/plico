@@ -1,3 +1,4 @@
+import type { JsonValue } from "@plico-ai/contracts";
 import { getProjectPaths } from "@plico-ai/core";
 import { runProject } from "../run/index.js";
 import type { EvalRunSummary, RunEvalsOptions, ScoredEvalCaseResult } from "../types/index.js";
@@ -42,6 +43,10 @@ export async function runEvals(
       script: evalCase.script,
       mockTools: true,
       runId,
+      ...(evalCase.agent === undefined ? {} : { agent: evalCase.agent }),
+      ...(evalCase.workflow === undefined
+        ? {}
+        : { workflow: evalCase.workflow, input: evalCase.input as JsonValue }),
       ...(options.eventStore === undefined ? {} : { eventStore: options.eventStore }),
     });
     results.push((await judgeRun(evalsDir, evalCase, result, "scripted")).entry);

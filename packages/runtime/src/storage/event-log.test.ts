@@ -159,6 +159,13 @@ describe("event log streams", () => {
       ALTER TABLE threads DROP COLUMN metadata_json;
       ALTER TABLE runs DROP COLUMN metadata_json;
       ALTER TABLE runs DROP COLUMN structured_output_json;
+      DROP INDEX runs_parent_run_id;
+      DROP INDEX runs_root_run_id;
+      ALTER TABLE runs DROP COLUMN agent_id;
+      ALTER TABLE runs DROP COLUMN workflow_id;
+      ALTER TABLE runs DROP COLUMN parent_run_id;
+      ALTER TABLE runs DROP COLUMN root_run_id;
+      ALTER TABLE threads DROP COLUMN agent_id;
       ALTER TABLE thread_runs DROP COLUMN context_json;
       UPDATE plico_meta SET value = '10' WHERE key = 'schema_version';
     `);
@@ -257,6 +264,13 @@ describe("schema migrations", () => {
     const database = new DatabaseSync(databasePath);
     database.exec(`
       ALTER TABLE runs DROP COLUMN structured_output_json;
+      DROP INDEX runs_parent_run_id;
+      DROP INDEX runs_root_run_id;
+      ALTER TABLE runs DROP COLUMN agent_id;
+      ALTER TABLE runs DROP COLUMN workflow_id;
+      ALTER TABLE runs DROP COLUMN parent_run_id;
+      ALTER TABLE runs DROP COLUMN root_run_id;
+      ALTER TABLE threads DROP COLUMN agent_id;
       UPDATE plico_meta SET value = '14' WHERE key = 'schema_version';
     `);
     database.close();

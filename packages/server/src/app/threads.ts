@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { resolve } from "node:path";
 import type { Thread, ThreadArtifactWorkspace, ThreadMessage } from "@plico-ai/contracts";
-import { prepareRunMessage } from "@plico-ai/core";
+import { loadProject, prepareRunMessage, resolveRunTarget } from "@plico-ai/core";
 import { buildArtifactWorkspace, runProject, ThreadBusyError } from "@plico-ai/runtime";
 import { finishFailedThreadRun } from "../thread-failure.js";
 import { PlicoError } from "./errors.js";
@@ -25,11 +25,21 @@ export async function requireThread(deps: AppDeps, threadId: string): Promise<Th
   return thread;
 }
 
+/** `agent` binds the thread to a named agent; without it, its runs execute the entry agent. */
 export async function createThread(
   deps: AppDeps,
-  options: { metadata?: unknown } = {},
+  options: { metadata?: unknown; agent?: unknown } = {},
 ): Promise<Thread> {
-  return storeFor(deps).createThread(scopedMetadata(deps, readMetadata(options.metadata)));
+  const metadata = scopedMetadata(deps, readMetadata(options.metadata));
+  if (options.agent === undefined) return storeFor(deps).createThread(metadata);
+  if (typeof options.agent !== "string" || !options.agent)
+    throw new PlicoError("request.invalid", "agent must be a nonempty string.");
+  try {
+    await resolveRunTarget(await loadProject(deps.projectRoot), { agent: options.agent });
+  } catch (error) {
+    throw new PlicoError("request.invalid", error instanceof Error ? error.message : String(error));
+  }
+  return storeFor(deps).createThread(metadata, options.agent);
 }
 
 export async function getThread(deps: AppDeps, threadId: string): Promise<Thread | undefined> {
@@ -115,10 +125,11 @@ export async function sendMessage(
     );
   let text = content;
   if (startRun) {
-    const prepared = await prepareRunMessage(deps.projectRoot, {
-      content: content as string | undefined,
-      input: options.input,
-    });
+    const prepared = await prepareRunMessage(
+      deps.projectRoot,
+      { content: content as string | undefined, input: options.input },
+      thread.agentId === undefined ? {} : { agent: thread.agentId },
+    );
     if (!prepared.ok) throw new PlicoError("input.invalid", prepared.errors.join("; "));
     text = prepared.message;
   }
@@ -150,6 +161,7 @@ export async function sendMessage(
     await startThreadRun(deps, {
       runId,
       threadId: thread.id,
+      ...(thread.agentId === undefined ? {} : { agentId: thread.agentId }),
       ...(thread.metadata === undefined ? {} : { metadata: thread.metadata }),
       ...(context === undefined ? {} : { context }),
       content: text,
@@ -164,6 +176,7 @@ async function startThreadRun(
   run: {
     runId: string;
     threadId: string;
+    agentId?: string;
     metadata?: Metadata;
     context?: Metadata;
     content: string;
@@ -179,11 +192,13 @@ async function startThreadRun(
   void runProject(deps.projectRoot, {
     runId: run.runId,
     threadId: run.threadId,
+    ...(run.agentId === undefined ? {} : { agent: run.agentId }),
     ...(run.metadata === undefined ? {} : { metadata: run.metadata }),
     ...(run.context === undefined ? {} : { context: run.context }),
     message: run.content,
     history: run.history,
     ...(deps.provider ? { provider: deps.provider } : {}),
+    ...(deps.providerForModel ? { providerForModel: deps.providerForModel } : {}),
     eventStore: deps.eventStore,
     engine: deps.engine,
     ...(deps.providerRecoveryKey ? { providerRecoveryKey: deps.providerRecoveryKey } : {}),

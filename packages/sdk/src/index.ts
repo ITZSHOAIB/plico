@@ -5,6 +5,7 @@ import type {
   ToolApprovalPolicy,
   ToolDefinition,
   ToolHandlerContext,
+  WorkflowDefinition,
 } from "@plico-ai/contracts";
 import type { InferToolInput, SchemaInput } from "./infer.js";
 
@@ -21,6 +22,9 @@ export type {
   ToolArtifactContext,
   ToolDefinition,
   ToolHandlerContext,
+  WorkflowAgentCall,
+  WorkflowContext,
+  WorkflowDefinition,
 } from "@plico-ai/contracts";
 export type { InferToolInput } from "./infer.js";
 
@@ -62,4 +66,14 @@ export function defineProvider(
  */
 export function defineScorer(scorer: ScorerDefinition): ScorerDefinition {
   return scorer;
+}
+
+/**
+ * Declare `workflows/<id>.ts`: a `run` function that calls agents in a fixed order with plain
+ * `await`, `if` and `for`. Returns the workflow unchanged.
+ */
+export function defineWorkflow<Input = unknown>(
+  workflow: WorkflowDefinition<Input>,
+): WorkflowDefinition<Input> {
+  return workflow;
 }

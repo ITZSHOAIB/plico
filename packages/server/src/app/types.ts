@@ -1,10 +1,11 @@
 import type { RequestListener } from "node:http";
-import type { PlicoEvent, RunSummary, Thread, ThreadMessage } from "@plico-ai/contracts";
+import type { JsonValue, PlicoEvent, RunSummary, Thread, ThreadMessage } from "@plico-ai/contracts";
 import type {
   DryRunScriptStep,
   Engine,
   EventStore,
   ModelProvider,
+  RunProjectOptions,
   ThreadStore,
 } from "@plico-ai/runtime";
 import type { MountOptions } from "../mount.js";
@@ -16,6 +17,8 @@ export interface AppDeps {
   eventStore: EventStore;
   threadStore?: ThreadStore;
   provider?: ModelProvider;
+  /** Builds the provider for an agent whose `model` differs from the project's. */
+  providerForModel?: RunProjectOptions["providerForModel"];
   providerRecoveryKey?: string;
   /** Account-only identity used to resume queued runs after a model change. */
   providerAccountKey?: string;
@@ -57,8 +60,11 @@ export interface SendMessageOptions {
 
 export interface Plico {
   threads: {
-    /** `metadata` is host data kept with the thread, set now and never changed. */
-    create(options?: { metadata?: Metadata }): Promise<Thread>;
+    /**
+     * `metadata` is host data kept with the thread, set now and never changed. `agent` binds the
+     * thread to a named agent; without it, its runs execute the entry agent.
+     */
+    create(options?: { metadata?: Metadata; agent?: string }): Promise<Thread>;
     get(threadId: string): Promise<Thread | undefined>;
     /** `metadata` keeps threads whose top-level keys equal every given value. */
     list(filter?: { metadata?: Metadata }): Promise<Thread[]>;
@@ -77,18 +83,29 @@ export interface Plico {
   };
   runs: {
     /**
-     * Starts a run that has no thread and no model, running the optional script against the
-     * project's tools. Provider-backed runs start through `threads.send`.
+     * Starts a run that has no thread. `agent` or `workflow` selects what runs; without either,
+     * the entry agent runs. A `message` or `input` without a script runs on the configured model
+     * and rejects with `provider.unavailable` when there is none. Otherwise no model is called and
+     * the optional script plays against the project's tools.
      */
     start(options?: {
+      agent?: string;
+      workflow?: string;
+      message?: string;
+      /** Typed input checked against the selected agent's or workflow's `input` schema. */
+      input?: JsonValue;
       script?: DryRunScriptStep[];
       metadata?: Metadata;
       /** Passed to tools as `ctx.context` and recorded on `run.started`. No secrets. */
       context?: Metadata;
     }): Promise<{ runId: string }>;
     get(runId: string): Promise<RunSummary | undefined>;
-    /** `metadata` keeps runs whose top-level keys equal every given value. */
-    list(filter?: { metadata?: Metadata }): Promise<RunSummary[]>;
+    /**
+     * Root runs, newest first. `parentRunId` lists that run's child runs instead. `metadata` keeps
+     * runs whose top-level keys equal every given value.
+     */
+    list(filter?: { metadata?: Metadata; parentRunId?: string }): Promise<RunSummary[]>;
+    /** Rejects with `run.child` for a child run: cancel its root, which cancels every child. */
     cancel(runId: string): Promise<string>;
     /** Follows a run's events from a cursor until it reaches a terminal state or is stopped. */
     events(runId: string, options?: EventFollowOptions): AsyncGenerator<PlicoEvent, void, void>;

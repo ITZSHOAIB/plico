@@ -1,0 +1,16 @@
+{
+  "description": "The ops agent asks the researcher for context, then answers with it. Scripted, so it needs no model.",
+  "script": [
+    {
+      "type": "tool.call",
+      "toolName": "delegate_researcher",
+      "arguments": { "task": "Who owns the VPN?" },
+      "script": [{ "type": "assistant.output", "content": "The network team owns the VPN." }]
+    },
+    {
+      "type": "assistant.output",
+      "content": "The network team owns the VPN, so I will route it there."
+    }
+  ],
+  "expect": { "status": "completed", "outputContains": "network team" }
+}

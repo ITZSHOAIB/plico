@@ -43,10 +43,10 @@ export async function findProjectThreadTitleFile(root: string): Promise<string |
 /** `plico validate` fails on a provider that is neither native nor supplied by the project. */
 export async function validateModelProvider(
   root: string,
-  model: ProjectConfig["model"],
+  model: Partial<NonNullable<ProjectConfig["model"]>> | undefined,
   configPath: string,
 ): Promise<ValidationIssue[]> {
-  if (!model || NATIVE_MODEL_PROVIDERS.includes(model.provider)) return [];
+  if (!model?.provider || NATIVE_MODEL_PROVIDERS.includes(model.provider)) return [];
   if (await findProjectProviderFile(root, model.provider)) return [];
   return [
     {

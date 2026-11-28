@@ -126,3 +126,50 @@ it("shows no structured result for a run without an output schema", () => {
   render(<RunView selectedRun={{ ...run, status: "completed" }} events={events} />);
   expect(screen.queryByRole("region", { name: "Structured result" })).toBeNull();
 });
+
+it("lists child runs with their usage and opens one", () => {
+  const opened: string[] = [];
+  const events = [
+    runEvent(1, "agent.called", { runId: "run-1.d0-0", agentId: "researcher", task: "Find 42" }),
+    runEvent(2, "agent.returned", {
+      runId: "run-1.d0-0",
+      agentId: "researcher",
+      status: "completed",
+      output: "Found it",
+      usage: { inputTokens: 20, outputTokens: 4 },
+    }),
+  ];
+  render(
+    <RunView
+      selectedRun={{ ...run, status: "completed", agentId: "main" }}
+      events={events}
+      onOpenRun={(runId) => opened.push(runId)}
+    />,
+  );
+  const children = screen.getByRole("list", { name: "Child runs" });
+  expect(children.textContent).toContain("researcher");
+  expect(children.textContent).toContain("Find 42");
+  expect(screen.getAllByText("20 in · 4 out").length).toBeGreaterThan(0);
+  fireEvent.click(screen.getByRole("button", { name: "d0-0" }));
+  expect(opened).toEqual(["run-1.d0-0"]);
+});
+
+it("links a child run to its parent and offers no cancel of its own", () => {
+  render(
+    <RunView
+      selectedRun={{
+        ...run,
+        runId: "run-1.d0-0",
+        status: "running",
+        agentId: "researcher",
+        parentRunId: "run-1",
+        rootRunId: "run-1",
+      }}
+      events={[]}
+      onOpenRun={() => {}}
+    />,
+  );
+  expect(screen.getByText("Agent researcher")).toBeTruthy();
+  expect(screen.getByRole("button", { name: "run-1" })).toBeTruthy();
+  expect(screen.queryByRole("region", { name: "Run cancellation" })).toBeNull();
+});

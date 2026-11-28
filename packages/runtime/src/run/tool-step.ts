@@ -2,6 +2,7 @@ import { encodeArtifactContent } from "../artifacts.js";
 import type { RunContext } from "../engine/index.js";
 import type { InMemoryEventLog } from "../events.js";
 import type { DeclaredTool, EventStore, ToolArtifactContext } from "../types/index.js";
+import type { ToolScope } from "./agents/types.js";
 import {
   artifactWriteEventPayload,
   createStagedArtifactContext,
@@ -24,21 +25,14 @@ export async function runToolStep(
   input: unknown,
   stepName: string,
   idempotencyKey: string,
+  scope: ToolScope = runScope(ctx.runId, events, eventStore),
 ): Promise<unknown> {
-  const started = events.all().find((event) => event.type === "run.started");
-  const threadId = started?.payload.threadId;
-  const context = started?.payload.context;
+  const { threadId, context } = scope;
   let staged: ReturnType<typeof createStagedArtifactContext> | undefined;
-  const workspaceId = threadId ? `${threadId}:workspace` : `${ctx.runId}:workspace`;
+  const workspaceId = threadId ? `${threadId}:workspace` : `${scope.workspaceRunId}:workspace`;
   const ensureStaged = async () => {
     if (staged) return staged;
-    const threadHistory =
-      threadId && eventStore?.getThreadRunEvents
-        ? (await eventStore.getThreadRunEvents(threadId)).filter(
-            (event) => event.runId !== ctx.runId,
-          )
-        : [];
-    staged = createStagedArtifactContext(ctx.runId, threadId, [...threadHistory, ...events.all()]);
+    staged = createStagedArtifactContext(scope.workspaceRunId, threadId, await scope.history());
     return staged;
   };
   const artifacts: ToolArtifactContext = {
@@ -100,6 +94,27 @@ export async function runToolStep(
     await events.append("artifact.file.written", artifactWriteEventPayload(write));
   }
   return recorded.result;
+}
+
+/** The scope of a run with no children: its own events after the thread's earlier runs. */
+export function runScope(
+  runId: string,
+  events: InMemoryEventLog,
+  eventStore: EventStore | undefined,
+): ToolScope {
+  const started = events.all().find((event) => event.type === "run.started");
+  const threadId = started?.payload.threadId;
+  return {
+    workspaceRunId: runId,
+    threadId,
+    context: started?.payload.context,
+    history: async () => [
+      ...(threadId && eventStore?.getThreadRunEvents
+        ? (await eventStore.getThreadRunEvents(threadId)).filter((event) => event.runId !== runId)
+        : []),
+      ...events.all(),
+    ],
+  };
 }
 
 function normalizeToolResult(value: unknown): unknown {

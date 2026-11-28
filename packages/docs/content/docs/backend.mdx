@@ -18,6 +18,8 @@ const thread = await plico.threads.create({ metadata: { userId: "u-1" } });
 await plico.threads.send(thread.id, "Summarise my open tickets", { context: { actor: "u-1" } });
 ```
 
+Pass `agent: "researcher"` to `threads.create` to bind a thread to a [specialist](/docs/multi-agent) instead of the entry agent.
+
 Call `await plico.close()` before the process exits. See [Threads](/docs/threads) for the programmatic API.
 
 ## Mount the API in your server

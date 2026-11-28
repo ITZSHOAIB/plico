@@ -248,6 +248,7 @@ it("records additive structured output fields without changing legacy output", a
           },
         },
         "summary": {
+          "agentId": "string",
           "endedAt": "string",
           "output": "string",
           "projectName": "string",

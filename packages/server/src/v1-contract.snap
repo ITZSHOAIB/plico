@@ -367,6 +367,7 @@
     {
       "id": "string",
       "payload": {
+        "agentId": "string",
         "context": {
           "userId": "string"
         },
@@ -407,6 +408,7 @@
       {
         "id": "string",
         "payload": {
+          "agentId": "string",
           "content": "string",
           "fileCount": "number",
           "fingerprint": "string",
@@ -466,6 +468,7 @@
   "GET /v1/schemas": {},
   "GET /v1/runs": [
     {
+      "agentId": "string",
       "endedAt": "string",
       "metadata": {
         "tenant": "string"
@@ -482,6 +485,7 @@
     }
   ],
   "GET /v1/runs/:id": {
+    "agentId": "string",
     "endedAt": "string",
     "output": "string",
     "projectName": "string",
@@ -494,6 +498,7 @@
     {
       "id": "string",
       "payload": {
+        "agentId": "string",
         "content": "string",
         "contentHash": "string",
         "fileCount": "number",
@@ -651,6 +656,7 @@
                 {
                   "id": "string",
                   "payload": {
+                    "agentId": "string",
                     "content": "string",
                     "fingerprint": "string",
                     "length": "number",
@@ -717,6 +723,7 @@
               {
                 "id": "string",
                 "payload": {
+                  "agentId": "string",
                   "content": "string",
                   "fingerprint": "string",
                   "length": "number",

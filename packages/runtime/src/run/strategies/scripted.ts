@@ -4,6 +4,7 @@ import { RuntimeDiagnosticError } from "../../errors.js";
 import type { InMemoryEventLog } from "../../events.js";
 import { approvalTimeoutMs, decideApproval } from "../../policy/approval.js";
 import type { DeclaredTool, DryRunScriptStep, EventStore } from "../../types/index.js";
+import type { AgentToolset } from "../agents/types.js";
 import { runToolStep } from "../tool-step.js";
 import { nameToolStep } from "../tracing.js";
 import { awaitApproval } from "./approval.js";
@@ -16,8 +17,10 @@ export async function runScriptedDryRun(
   eventStore: EventStore | undefined,
   config: ProjectConfig,
   mockTools = false,
+  toolset?: AgentToolset,
 ): Promise<string | undefined> {
-  const toolsByName = new Map(tools.map((tool) => [tool.name, tool]));
+  const delegates = toolset?.delegates ?? [];
+  const toolsByName = new Map([...tools, ...delegates].map((tool) => [tool.name, tool]));
   let output: string | undefined;
   let workspaceId: string | undefined;
   const artifactPaths = new Set<string>();
@@ -33,6 +36,13 @@ export async function runScriptedDryRun(
         });
       }
       continue;
+    }
+
+    if (step.type === "agent.call") {
+      throw new RuntimeDiagnosticError({
+        phase: "tool.validation",
+        message: `script step ${index + 1} agent.call belongs in a workflow's script. Delegate with a tool.call to delegate_${step.agentId}.`,
+      });
     }
 
     if (step.type === "assistant.output") {
@@ -91,6 +101,20 @@ export async function runScriptedDryRun(
       });
     }
 
+    if (toolset && delegates.includes(tool)) {
+      const result =
+        mockTools && step.script === undefined && "result" in step
+          ? step.result
+          : await toolset.delegate(
+              tool.name,
+              (parsedInput.value as { task: string }).task,
+              `d${index}-0`,
+              step.script,
+            );
+      await events.append("tool.result", { toolName: tool.name, result });
+      continue;
+    }
+
     const approval = decideApproval(tool, config);
     if (approval.required) {
       const requestId = `${ctx.runId}:${index}`;
@@ -144,6 +168,7 @@ export async function runScriptedDryRun(
         parsedInput.value,
         `tool:${index}`,
         idempotencyKey,
+        toolset?.scope,
       );
     } catch (error) {
       if (error instanceof RunCancelled) throw error;

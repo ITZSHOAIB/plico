@@ -1,0 +1,20 @@
+/**
+ * The specialists, the reply workflow and their scripted evals. `agent.md` delegates to the
+ * researcher; the workflow runs the writer and reviewer in a draft, review and revise loop.
+ */
+export function multiAgentFiles(): Record<string, string> {
+  return {
+    "agents/researcher.md":
+      "---\ndescription: Looks up context for a request, such as past tickets or who owns a system. Give it one clear question.\ntools: []\n---\n\n# Researcher\n\nYou answer one research question for the ops agent.\n\n- Answer only the question you were given, in two or three sentences.\n- Say plainly when you do not know. Never guess a ticket ID or an owner.\n",
+    "agents/writer.md":
+      "---\ndescription: Drafts and revises replies to ops requests.\ntools: []\n---\n\n# Writer\n\nYou write short, friendly replies to people who sent the internal ops team a request.\n\n- Lead with what happens next and when.\n- When you are asked to revise, apply every note and return only the new reply.\n",
+    "agents/reviewer.md":
+      "---\ndescription: Reviews a reply before it is sent.\ntools: []\n---\n\n# Reviewer\n\nYou review replies the ops team is about to send.\n\n- Approve a reply that is accurate, kind, and says what happens next.\n- Otherwise, do not approve it and give short, specific notes.\n",
+    "workflows/reply.ts":
+      'import { defineWorkflow } from "@plico-ai/sdk";\n\nconst verdict = {\n  type: "object",\n  required: ["approved"],\n  properties: { approved: { type: "boolean" }, notes: { type: "string" } },\n} as const;\n\n/** Draft a reply, then review and revise it until the reviewer approves, at most twice. */\nexport default defineWorkflow<{ request: string }>({\n  description: "Draft a reply to an ops request, review it, and revise it until it is approved.",\n  input: {\n    type: "object",\n    required: ["request"],\n    properties: { request: { type: "string" } },\n  },\n  maxAgentCalls: 5,\n  async run({ input, agent }) {\n    let reply: string = await agent("writer", { task: `Draft a reply to: ${input.request}` });\n    for (let round = 0; round < 2; round++) {\n      const review = await agent("reviewer", { task: `Review this reply:\\n${reply}`, output: verdict });\n      if (review.approved) break;\n      reply = await agent("writer", {\n        task: `Revise this reply:\\n${reply}\\n\\nReviewer notes: ${review.notes ?? "none"}`,\n      });\n    }\n    return reply;\n  },\n});\n',
+    "evals/delegate.script.json":
+      '{\n  "description": "The ops agent asks the researcher for context, then answers with it. Scripted, so it needs no model.",\n  "script": [\n    {\n      "type": "tool.call",\n      "toolName": "delegate_researcher",\n      "arguments": { "task": "Who owns the VPN?" },\n      "script": [{ "type": "assistant.output", "content": "The network team owns the VPN." }]\n    },\n    { "type": "assistant.output", "content": "The network team owns the VPN, so I will route it there." }\n  ],\n  "expect": { "status": "completed", "outputContains": "network team" }\n}\n',
+    "evals/reply.script.json":
+      '{\n  "description": "The reply workflow drafts, gets a rejection, revises, and is approved. Scripted, so it needs no model.",\n  "workflow": "reply",\n  "input": { "request": "My laptop will not connect to the VPN." },\n  "script": [\n    {\n      "type": "agent.call",\n      "agentId": "writer",\n      "script": [{ "type": "assistant.output", "content": "We got it." }]\n    },\n    {\n      "type": "agent.call",\n      "agentId": "reviewer",\n      "script": [{ "type": "assistant.output", "content": "{\\"approved\\":false,\\"notes\\":\\"Say what happens next.\\"}" }]\n    },\n    {\n      "type": "agent.call",\n      "agentId": "writer",\n      "script": [{ "type": "assistant.output", "content": "We got it. The network team will reach out within an hour." }]\n    },\n    {\n      "type": "agent.call",\n      "agentId": "reviewer",\n      "script": [{ "type": "assistant.output", "content": "{\\"approved\\":true}" }]\n    }\n  ],\n  "expect": { "status": "completed", "outputContains": "within an hour" }\n}\n',
+  };
+}

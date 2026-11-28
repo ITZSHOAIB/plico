@@ -18,8 +18,8 @@ export const threadRoutes: Route[] = [
     method: "POST",
     pattern: /^\/v1\/threads$/,
     handler: async (ctx) => {
-      const { metadata } = await readOptionalJsonBody(ctx.request);
-      return jsonResponse(201, await createThread(ctx.app, { metadata }));
+      const { metadata, agent } = await readOptionalJsonBody(ctx.request);
+      return jsonResponse(201, await createThread(ctx.app, { metadata, agent }));
     },
   },
   {

@@ -1,5 +1,12 @@
-import type { PlicoEvent, RunSummary } from "@plico-ai/contracts";
-import { type DryRunScriptStep, type RunResult, runProject } from "@plico-ai/runtime";
+import type { JsonValue, PlicoEvent, RunSummary } from "@plico-ai/contracts";
+import { loadProject, prepareRunMessage, resolveRunTarget } from "@plico-ai/core";
+import {
+  type DryRunScriptStep,
+  engineWaitTarget,
+  type RunProjectOptions,
+  type RunResult,
+  runProject,
+} from "@plico-ai/runtime";
 import { PlicoError } from "./errors.js";
 import { readMetadata } from "./metadata.js";
 import { inScope, scopedFilter, scopedMetadata } from "./scope.js";
@@ -12,10 +19,15 @@ export async function startRun(
     mockTools?: boolean;
     metadata?: unknown;
     context?: unknown;
+    agent?: string;
+    workflow?: string;
+    input?: JsonValue;
+    message?: string;
   } = {},
 ): Promise<{ runId: string }> {
   const metadata = scopedMetadata(deps, readMetadata(options.metadata));
   const context = readMetadata(options.context, "context") ?? deps.context;
+  const model = await modelRun(deps, options);
   let resolveStarted!: (runId: string) => void;
   let rejectStarted!: (error: unknown) => void;
   const started = new Promise<string>((resolve, reject) => {
@@ -29,9 +41,62 @@ export async function startRun(
     ...(options.mockTools === true ? { mockTools: true } : {}),
     ...(metadata === undefined ? {} : { metadata }),
     ...(context === undefined ? {} : { context }),
+    ...(options.agent === undefined ? {} : { agent: options.agent }),
+    ...(options.workflow === undefined ? {} : { workflow: options.workflow }),
+    ...(options.input === undefined ? {} : { input: options.input }),
+    ...model,
     onStarted: resolveStarted,
   }).catch(rejectStarted);
   return { runId: await started };
+}
+
+/**
+ * Without a script, a `message` or `input` runs the selected agent or workflow on the configured
+ * model. Anything else stays a run with no model.
+ */
+async function modelRun(
+  deps: AppDeps,
+  options: {
+    script?: unknown;
+    agent?: string;
+    workflow?: string;
+    input?: JsonValue;
+    message?: string;
+  },
+): Promise<Partial<RunProjectOptions>> {
+  if (
+    options.script !== undefined ||
+    (options.message === undefined && options.input === undefined)
+  )
+    return {};
+  if (!deps.provider)
+    throw new PlicoError(
+      "provider.unavailable",
+      "Configure a model provider before sending a message.",
+    );
+  const selection = {
+    ...(options.agent === undefined ? {} : { agent: options.agent }),
+    ...(options.workflow === undefined ? {} : { workflow: options.workflow }),
+  };
+  try {
+    await resolveRunTarget(await loadProject(deps.projectRoot), selection);
+  } catch (error) {
+    throw new PlicoError("request.invalid", error instanceof Error ? error.message : String(error));
+  }
+  const prepared = await prepareRunMessage(
+    deps.projectRoot,
+    { content: options.message, input: options.input },
+    selection,
+  );
+  if (!prepared.ok) throw new PlicoError("input.invalid", prepared.errors.join("; "));
+  if (prepared.message === undefined || !prepared.message.trim())
+    throw new PlicoError("message.invalid", "Message content must be a nonempty string.");
+  return {
+    message: prepared.message,
+    provider: deps.provider,
+    ...(deps.providerForModel ? { providerForModel: deps.providerForModel } : {}),
+    ...(deps.providerRecoveryKey ? { providerRecoveryKey: deps.providerRecoveryKey } : {}),
+  };
 }
 
 /** Runs the project to the end without a model and returns its result. */
@@ -47,12 +112,16 @@ export function runDry(
   });
 }
 
+/** Root runs, or the child runs of `parentRunId`. Every run stays readable by ID. */
 export async function listRuns(
   deps: AppDeps,
-  filter: { metadata?: unknown } = {},
+  filter: { metadata?: unknown; parentRunId?: string } = {},
 ): Promise<RunSummary[]> {
   const metadata = scopedFilter(deps, readMetadata(filter.metadata));
-  return deps.eventStore.listRuns(metadata === undefined ? {} : { metadata });
+  return deps.eventStore.listRuns({
+    ...(metadata === undefined ? {} : { metadata }),
+    ...(filter.parentRunId === undefined ? {} : { parentRunId: filter.parentRunId }),
+  });
 }
 
 export async function requireRun(deps: AppDeps, runId: string): Promise<RunSummary> {
@@ -62,8 +131,14 @@ export async function requireRun(deps: AppDeps, runId: string): Promise<RunSumma
   return run;
 }
 
+/** A child run shares its root's engine run, so only the root can be cancelled. */
 export async function cancelRun(deps: AppDeps, runId: string): Promise<string> {
-  await requireRun(deps, runId);
+  const run = await requireRun(deps, runId);
+  if (run.rootRunId !== undefined && run.rootRunId !== run.runId)
+    throw new PlicoError(
+      "run.child",
+      `Run ${runId} is a child run of ${run.rootRunId}. Cancel ${run.rootRunId}, which cancels every child run.`,
+    );
   return deps.engine.cancel(runId);
 }
 
@@ -96,9 +171,32 @@ async function sendSignal(
   name: string,
   value: unknown,
 ): Promise<string> {
-  await requireRun(deps, runId);
+  const run = await requireRun(deps, runId);
   if (!name) throw new PlicoError("request.invalid", "A signal name is required.");
-  return deps.engine.signal(runId, name, value);
+  const target = await engineTarget(deps, run, name);
+  return deps.engine.signal(target.runId, target.name, value);
+}
+
+/**
+ * Where a signal lands. A child's waits live in its root's engine run under prefixed names; an
+ * approval sent to the root for a child's request finds the child from the mirrored request.
+ */
+async function engineTarget(
+  deps: AppDeps,
+  run: RunSummary,
+  name: string,
+): Promise<{ runId: string; name: string }> {
+  if (run.rootRunId !== undefined && run.rootRunId !== run.runId)
+    return engineWaitTarget(run.runId, run.rootRunId, name);
+  if (name.startsWith("approval:")) {
+    const requestId = name.slice("approval:".length);
+    const asked = (await deps.eventStore.getEvents(run.runId)).find(
+      (event) => event.type === "approval.requested" && event.payload.requestId === requestId,
+    );
+    const childRunId = asked?.type === "approval.requested" ? asked.payload.runId : undefined;
+    if (childRunId !== undefined) return engineWaitTarget(childRunId, run.runId, name);
+  }
+  return { runId: run.runId, name };
 }
 
 /** Approval decisions are signals on the wait named `approval:<requestId>` (ADR 0008). */

@@ -1,4 +1,4 @@
-import type { JsonValue } from "@plico-ai/contracts";
+import type { JsonValue, ProjectConfig } from "@plico-ai/contracts";
 import type { Engine } from "../engine/index.js";
 import type { ModelProvider, ProviderMessage } from "./provider.js";
 import type { DryRunScriptStep } from "./script.js";
@@ -21,6 +21,17 @@ export interface RunProjectOptions {
   engine?: Engine;
   runId?: string;
   provider?: ModelProvider;
+  /**
+   * The provider for an agent whose `model` overrides the project's. Without it, or when it
+   * returns undefined, every agent uses `provider`.
+   */
+  providerForModel?: (model: NonNullable<ProjectConfig["model"]>) => ModelProvider | undefined;
+  /** The agent to run instead of `entry` or `main`. */
+  agent?: string;
+  /** The workflow to run instead of an agent. */
+  workflow?: string;
+  /** A workflow's typed input, checked against its `input` schema. Agents take `message`. */
+  input?: JsonValue;
   /** Opaque identity used to prevent recovery with a different provider configuration. */
   providerRecoveryKey?: string;
   message?: string;

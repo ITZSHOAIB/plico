@@ -1,5 +1,6 @@
 import { join } from "node:path";
 import type { ReadinessDiagnostic, ReadinessOptions, ReadinessReport } from "../types/index.js";
+import { checkAgentProviders } from "./checks/agent-providers.js";
 import { checkArtifactAccess } from "./checks/artifact-access.js";
 import { checkArtifacts } from "./checks/artifacts.js";
 import { checkEnv } from "./checks/env.js";
@@ -33,6 +34,7 @@ export async function checkReadiness(
   diagnostics.push(
     ...checkEnv(projectRoot),
     ...checkProvider(projectCheck.project.config.model),
+    ...(await checkAgentProviders(projectCheck.project)),
     ...(await checkRunOutput(projectCheck.project)),
     checkArtifactAccess(projectCheck.project.config),
     ...(await checkTools(projectCheck.project)),

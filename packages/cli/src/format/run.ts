@@ -78,6 +78,10 @@ export function formatRunResult(target: string, result: RunResult, dry = true): 
 
   if (result.status === "waiting") {
     lines.push(dry ? "Dry run waiting for approval." : "Run waiting for approval.");
+    if (dry)
+      lines.push(
+        'To continue a dry run, add { "type": "approval.decide", "approved": true } after the tool.call in a --script file.',
+      );
   } else if (result.status === "failed") {
     lines.push(dry ? "Dry run failed." : "Run failed.");
   }

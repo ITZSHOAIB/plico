@@ -25,6 +25,14 @@ export interface PlicoEventPayloads {
     threadId?: string;
     metadata?: Record<string, JsonValue>;
     context?: Record<string, JsonValue>;
+    /** The agent this run executes. Absent on runs recorded before named agents. */
+    agentId?: string;
+    /** The workflow a root run executes. */
+    workflowId?: string;
+    /** Set on a child run: the run that delegated to it or called it from a workflow. */
+    parentRunId?: string;
+    /** Set on a child run: the run whose engine run executes it. */
+    rootRunId?: string;
   };
   "instructions.composed": {
     length: number;
@@ -77,12 +85,16 @@ export interface PlicoEventPayloads {
   "tool.result": { toolName: string; result: unknown };
   "approval.requested": {
     requestId: string;
+    /** The child run that asked, when this is a copy in an ancestor's stream. */
+    runId?: string;
     toolName: string;
     arguments: unknown;
     approval: { required: boolean; reason?: string };
   };
   "approval.decided": {
     requestId: string;
+    /** The child run that asked, when this is a copy in an ancestor's stream. */
+    runId?: string;
     approved: boolean;
     /** The context of whoever decided, as the host passed it. */
     context?: Record<string, JsonValue>;
@@ -97,7 +109,22 @@ export interface PlicoEventPayloads {
   };
   "artifact.snapshot.created": { snapshotId: string; fileCount: number };
   "run.completed": { output?: string; structuredOutput?: JsonValue };
-  "run.waiting": { requestId: string; toolName: string; output?: string };
+  /** `runId` names the child run that waits, when this is a copy in an ancestor's stream. */
+  "run.waiting": { requestId: string; toolName: string; output?: string; runId?: string };
+  /** A supervisor delegated, or a workflow called an agent. `runId` is the child run. */
+  "agent.called": { runId: string; agentId: string; task: string };
+  /** The child run ended. Its usage is summed into this run. */
+  "agent.returned": {
+    runId: string;
+    agentId: string;
+    status: "completed" | "failed" | "cancelled";
+    output?: string;
+    structuredOutput?: JsonValue;
+    usage: { inputTokens: number; outputTokens: number };
+    error?: string;
+  };
+  /** A workflow began a durable `step(name, fn)`. */
+  "workflow.step": { name: string };
   "run.failed": { phase: string };
   "run.cancelled": Record<string, never>;
   "run.warning": { phase: string; message: string; serverId?: string };

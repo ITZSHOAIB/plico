@@ -96,7 +96,7 @@ it("loads a full skill through a tool call that is recorded as events", async ()
 
 it("never sends agent.md frontmatter to the model", async () => {
   const root = await scaffold({});
-  await writeFile(join(root, "agent.md"), "---\nmodel: fast\n---\n# Demo\n\nUse your skills.");
+  await writeFile(join(root, "agent.md"), "---\npersona: fast\n---\n# Demo\n\nUse your skills.");
 
   const run = await runProject(root);
 

@@ -2,7 +2,7 @@ import { copyFile, mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises"
 import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { getProjectPaths, validateProject } from "@plico-ai/core";
+import { getProjectPaths, readAgents, validateProject } from "@plico-ai/core";
 import {
   createConfiguredModelProvider,
   loadProjectEnv,
@@ -44,6 +44,15 @@ describe("createInternalOpsScaffold", () => {
     expect(await readFile(join(root, "README.md"), "utf8")).toContain(
       "Canonical internal-ops starter project",
     );
+  });
+
+  it("keeps the supervisor from calling project tools directly", async () => {
+    const root = await mkdtemp(join(tmpdir(), "plico-create-"));
+
+    await createInternalOpsScaffold({ targetDir: root });
+
+    const { agents } = await readAgents(root);
+    expect(agents.find((agent) => agent.id === "main")?.tools).toEqual([]);
   });
 
   it("refuses to overwrite a non-empty target directory", async () => {
@@ -171,8 +180,9 @@ describe("scaffold eval and dependencies", () => {
 
     const report = await runEvals(root);
 
-    expect(report.total).toBe(1);
-    expect(report.passed).toBe(1);
+    // smoke, plus the delegation and reply workflow cases.
+    expect(report.total).toBe(3);
+    expect(report.passed).toBe(3);
   });
 
   it("pins the provider adapter to a range instead of latest", async () => {
@@ -219,19 +229,18 @@ describe("scaffold agent instructions", () => {
     const evalCase = blocks.find((block) => block[1] === "json")?.[2] ?? "";
     await writeFile(
       join(root, "tools", "issue-refund.tool.ts"),
-      tool.replace(
-        'import { defineTool } from "@plico-ai/sdk";',
-        "const defineTool = <T>(t: T) => t;",
-      ),
+      tool.replace('import { defineTool } from "@plico-ai/sdk";', "").replace("defineTool(", "("),
       "utf8",
     );
     await writeFile(join(root, "evals", "refund.script.json"), evalCase, "utf8");
+    const main = await readFile(join(root, "agent.md"), "utf8");
+    await writeFile(join(root, "agent.md"), main.replace("tools: []", "tools: [issue_refund]"));
 
     const validation = await validateProject(root);
     const report = await runEvals(root);
 
-    expect(validation.ok).toBe(true);
+    expect(validation.errors).toEqual([]);
     expect(report.failed).toBe(0);
-    expect(report.passed).toBe(2);
+    expect(report.passed).toBe(4);
   });
 });

@@ -29,7 +29,7 @@ export default defineTool({
 
 | Field | Meaning |
 | --- | --- |
-| `name` | The name the model calls. Unique across the project; `list_files`, `read_file`, `write_file`, `edit_file` and `load_skill` are reserved. |
+| `name` | The name the model calls. Unique across the project; `list_files`, `read_file`, `write_file`, `edit_file`, `load_skill` and `task` are reserved. |
 | `description` | Tells the model when to use the tool. |
 | `inputSchema` | Zod or JSON Schema for the arguments. |
 | `capabilities` | Required list of labels for what the tool touches, such as `["ticket:write"]`. Plico records it in `tools.discovered` and does not enforce it. |
