@@ -1,5 +1,5 @@
 import type { JsonValue, PlicoEvent, RunSummary } from "@plico-ai/contracts";
-import { prepareRunMessage } from "@plico-ai/core";
+import { loadProject, prepareRunMessage, resolveRunTarget } from "@plico-ai/core";
 import {
   type DryRunScriptStep,
   engineWaitTarget,
@@ -74,13 +74,19 @@ async function modelRun(
       "provider.unavailable",
       "Configure a model provider before sending a message.",
     );
+  const selection = {
+    ...(options.agent === undefined ? {} : { agent: options.agent }),
+    ...(options.workflow === undefined ? {} : { workflow: options.workflow }),
+  };
+  try {
+    await resolveRunTarget(await loadProject(deps.projectRoot), selection);
+  } catch (error) {
+    throw new PlicoError("request.invalid", error instanceof Error ? error.message : String(error));
+  }
   const prepared = await prepareRunMessage(
     deps.projectRoot,
     { content: options.message, input: options.input },
-    {
-      ...(options.agent === undefined ? {} : { agent: options.agent }),
-      ...(options.workflow === undefined ? {} : { workflow: options.workflow }),
-    },
+    selection,
   );
   if (!prepared.ok) throw new PlicoError("input.invalid", prepared.errors.join("; "));
   if (prepared.message === undefined || !prepared.message.trim())

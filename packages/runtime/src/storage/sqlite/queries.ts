@@ -3,7 +3,7 @@ import type { EvalReport, JsonValue, PlicoEvent, RunStatus, RunSummary } from "@
 import { runStreamType } from "../../events.js";
 import { parseMetadata } from "../metadata.js";
 
-/** Root runs, or the child runs of `parentRunId`, newest first. */
+/** Root runs newest first, or the child runs of `parentRunId` oldest first, in the order they ran. */
 export function readRunSummaries(database: DatabaseSync, parentRunId?: string): RunSummary[] {
   const rows = database
     .prepare(
@@ -11,7 +11,7 @@ export function readRunSummaries(database: DatabaseSync, parentRunId?: string): 
         SELECT run_id, project_root, project_name, status, started_at, ended_at, output, structured_output_json, metadata_json, agent_id, workflow_id, parent_run_id, root_run_id
         FROM runs
         WHERE ${parentRunId === undefined ? "parent_run_id IS NULL" : "parent_run_id = ?"}
-        ORDER BY started_at DESC, run_id DESC
+        ORDER BY ${parentRunId === undefined ? "started_at DESC, run_id DESC" : "started_at ASC, run_id ASC"}
       `,
     )
     .all(...(parentRunId === undefined ? [] : [parentRunId])) as Array<Record<string, unknown>>;

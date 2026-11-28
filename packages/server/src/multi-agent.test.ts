@@ -153,8 +153,15 @@ describe("multi-agent projects", () => {
     const unknown = await post("/v1/threads", { agent: "nobody" });
     expect(unknown.status).toBe(400);
     expect(await unknown.json()).toMatchObject({
-      error: { message: expect.stringContaining('Unknown agent "nobody"') },
+      error: {
+        code: "request.invalid",
+        message: expect.stringContaining('Unknown agent "nobody"'),
+      },
     });
+
+    const unknownRun = await post("/v1/runs", { agent: "nobody", message: "hi" });
+    expect(unknownRun.status).toBe(400);
+    expect(await unknownRun.json()).toMatchObject({ error: { code: "request.invalid" } });
   });
 
   it("starts a selected workflow over the API", async () => {

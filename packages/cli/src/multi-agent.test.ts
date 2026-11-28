@@ -110,3 +110,36 @@ it("dry-runs a workflow whose agent declares an output schema", async () => {
   const result = JSON.parse(String(log.mock.calls.at(-1)?.[0])) as { output: string };
   expect(JSON.parse(result.output)).toEqual({ approved: true, notes: "stub" });
 }, 30_000);
+
+it("lists child runs oldest first", async () => {
+  const root = await project();
+  await writeFile(
+    join(root, "workflows", "pair.ts"),
+    'export default { async run({ agent }) { await agent("writer", { task: "first" }); await agent("writer", { task: "second" }); return "done"; } };\n',
+  );
+  const log = vi.spyOn(console, "log").mockImplementation(() => {});
+  const script = [1, 2].map((n) => ({
+    type: "agent.call",
+    agentId: "writer",
+    script: [{ type: "assistant.output", content: `draft ${n}` }],
+  }));
+  await writeFile(join(root, "pair.json"), JSON.stringify(script));
+  await main(
+    ["node", "plico", "run", "--dry", "--persist", "--json", "--workflow", "pair"].concat([
+      "--script",
+      join(root, "pair.json"),
+      root,
+    ]),
+  );
+  const { runId } = JSON.parse(String(log.mock.calls.at(-1)?.[0])) as { runId: string };
+
+  log.mockClear();
+  await main(["node", "plico", "runs", "--json", "--parent", runId, root]);
+  const children = JSON.parse(String(log.mock.calls.at(-1)?.[0])) as Array<{ startedAt: string }>;
+
+  expect(children).toHaveLength(2);
+  expect(children.map((child) => child.startedAt)).toEqual(
+    children.map((child) => child.startedAt).sort(),
+  );
+  expect(children[0]?.startedAt).not.toEqual(children[1]?.startedAt);
+}, 30_000);
